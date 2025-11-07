@@ -1,0 +1,230 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "PDFShowSetting";
+    string itemNameText = "單據設定";
+}
+@Html.Resource("css",
+    @<style>
+         .centerObject {
+             vertical-align: middle !important;
+             text-align: center;
+         }
+    </style>
+)
+
+
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="table-custom">
+                        <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                            <thead>
+                                <tr>
+                                    <th scope="col" style="min-width: 75px;">#</th>
+                                    <th class="text-center" scope="col" style="min-width: 200px;">項目</th>
+                                    <th class="text-center" scope="col" style="min-width: 250px;"> <button class="btn btn-primary" onclick="StatusSwitch@(itemName)('ALL')">PDF顯示設定(全相反)</button></th>
+                                    <th class="text-center" scope="col" style="min-width: 250px;"> 階段維護設定設定</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="page@(itemName)"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+            </div>
+            <div class="card-footer text-center text-lg-right">
+            </div>
+        </div>
+        <div class="card-footer text-center text-lg-right">
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let userId@(itemName);
+        let companyId@(itemName);
+
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+
+
+
+        });
+
+        function Expand@(itemName)() {
+            if (parseInt($("#CcId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                Query@(itemName)()
+                //Return@(itemName)();
+            } else {
+                alert("客訴單據資料錯誤", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            @*let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });*@
+
+
+            let targetUrl = "@Url.Action("GetCcPdfShowSetting", "CustomerComplaint")";
+            let postData = {
+                "CcId": $("#CcId").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let _row = (i + 1) + ".";
+                        var StageDataSetting = item.StageDataSetting;
+                        var stage = item.Subject.substring(0, 2)[1]
+                        console.log(item.Subject.substring(0, 2))
+                        console.log(stage)
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Subject}" style="max-width: 200px;">${item.Subject}</td>
+                                        <td class="text-center auth-status-switch">
+                                          <input type="checkbox" name="chkStatus@(itemName)" data-cc-id="${item.CcId}" data-stage="${item.Subject.substring(0, 2)}" data-model="ONE" ${item.Score == `A` ? `checked` : ``}/>
+                                        </td>
+                                        <td class="text-center un-auth auth-status-switch">${StatusName(`Status`, item.Score)}</td>
+                                        <td class="text-center auth-status-switch">
+                                          <input type="checkbox" name="chkStageDataStatus@(itemName)" data-cc-id="${item.CcId}" data-stage="${item.Subject.substring(0, 2)}" ${StageDataSetting[stage - 1] == `Y` ? `checked` : ``}/>
+                                        </td>
+                                        <td class="text-center un-auth auth-status-switch">${StatusName(`Status`, StageDataSetting[stage - 1])}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+
+            $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "啟用",
+                off: "停用",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStatus@(itemName)'][data-cc-id]").change(StatusSwitch@(itemName));
+
+            $("input[name='chkStageDataStatus@(itemName)']").bootstrapToggle({
+                on: "啟用",
+                off: "停用",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStageDataStatus@(itemName)'][data-cc-id]").change(StageDataSwitch@(itemName));
+
+        }
+
+        function Edit@(itemName)(Stage, CcStageDataId) {
+        }
+
+        function Save@(itemName)() {
+        }
+
+        function GetUserInfo@(itemName)() {
+        }
+
+        function StatusSwitch@(itemName)(Model) {
+            if (Model == "ALL") {
+                CcId = $("#CcId").val();
+                Stage = "";
+                Model = Model;
+            }
+            else {
+                CcId = $(this).data("cc-id");
+                Stage = $(this).data("stage");
+                Model = $(this).data("model");
+            }
+
+            let targetUrl = "@Url.Action("UpdatePdfShowSetting", "CustomerComplaint")";
+            let postData = {
+                "CcId": CcId,
+                "Stage": Stage,
+                "Model": Model,
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+            Query@(itemName)();
+           
+        }
+
+        function StageDataSwitch@(itemName)() {
+            CcId = $(this).data("cc-id");
+            Stage = $(this).data("stage");
+
+            let targetUrl = "@Url.Action("UpdateStageDataSetting", "CustomerComplaint")";
+            let postData = {
+                "CcId": CcId,
+                "Stage": Stage
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Query@(itemName)();
+            }
+        }
+
+        function Return@(itemName)() {
+            $("#Stage").val("")
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+    </script>
+)

@@ -1,0 +1,364 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewTemplateTask";
+    string itemNameText = "樣板任務";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="task-nav" id="nav@(itemName)">
+    <div class="container">
+        <div class="task-header">
+            <a class="set nav-close" href="javascript:void(0);">
+                <i class="fas fa-arrow-to-right"></i>
+            </a>
+            <div class="set-area">
+                <a class="set nav-menu far fa-ellipsis-v" href="javascript:void(0);"></a>
+                <ul class="set-block hide">
+                    <li class="auth-task-delete"><a class="delete-task" href="javascript:void(0);"> <i class="fas fa-trash-alt"></i>刪除任務</a></li>
+                </ul>
+            </div>
+            <input type="hidden" id="TemplateTaskId" name="TemplateTaskId" value="-1" />
+            <input type="hidden" id="ParentTaskId" name="ParentTaskId" value="-1" />
+        </div>
+        <h1 class="task-title">
+            <input type="text" class="title-input" id="txtTaskName@(itemName)" name="txtTaskName@(itemName)" placeholder="請輸入任務名稱"
+                   maxlength="50" autocomplete="off" />
+        </h1>
+        <div class="task-box mb-2">
+            <ul class="task-list-area">
+                <li class="task-list">
+                    <span class="title">
+                        樣板名稱
+                    </span>
+                    <span class="detail" id="desTemplateName@(itemName)"></span>
+                </li>
+                <li class="task-list">
+                    <span class="title">
+                        任務途徑
+                    </span>
+                    <span class="detail" id="desParentTaskName@(itemName)"></span>
+                </li>
+                <li class="task-list">
+                    <span class="title">
+                        參與人員
+                    </span>
+                    <span class="detail" id="desTemplateTaskUser@(itemName)"></span>
+                    <a class="link auth-member update-task-member" href="javascript:void(0);">編輯成員</a>
+                </li>
+                <li class="task-list">
+                    <span class="title">
+                        回報頻率
+                    </span>
+                    <div class="time-block" style="width: calc(100% - 81px);">
+                        <div class="input-group">
+                            <input type="number" class="form-control text-right time-input" id="txtDayReplyFrequency@(itemName)" name="txtDayReplyFrequency@(itemName)" step="1" min="0" value="0" />
+                            <span class="input-group-addon">天</span>
+                            <input type="number" class="form-control text-right time-input" id="txtHourReplyFrequency@(itemName)" name="txtHourReplyFrequency@(itemName)" step="1" min="0" max="23" value="0" />
+                            <span class="input-group-addon">小時</span>
+                            <input type="number" class="form-control text-right time-input" id="txtMinuteReplyFrequency@(itemName)" name="txtMinuteReplyFrequency@(itemName)" step="1" min="0" max="59" value="0" />
+                            <span class="input-group-addon">分</span>
+                        </div>
+                    </div>
+                </li>
+                <li class="task-list">
+                    <span class="title">
+                        持續時間
+                    </span>
+                    <div class="time-block" style="width: calc(100% - 81px);">
+                        <div class="input-group">
+                            <input type="number" class="form-control text-right time-input" id="txtDayDuration@(itemName)" name="txtDayDuration@(itemName)" step="1" min="0" value="0" />
+                            <span class="input-group-addon">天</span>
+                            <input type="number" class="form-control text-right time-input" id="txtHourDuration@(itemName)" name="txtHourDuration@(itemName)" step="1" min="0" max="23" value="0" />
+                            <span class="input-group-addon">小時</span>
+                            <input type="number" class="form-control text-right time-input" id="txtMinuteDuration@(itemName)" name="txtMinuteDuration@(itemName)" step="1" min="0" max="59" value="0" />
+                            <span class="input-group-addon">分</span>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let Tasks = new TaskControl();
+        let Datas = new DataControl();
+
+        function Add@(itemName)(TemplateTaskId) {
+            $("#TemplateTaskId").val(-1);
+            $("#ParentTaskId").val(TemplateTaskId);
+
+            Tasks.Initialize("#nav@(itemName)");
+            Tasks.LoadData();
+        }
+
+        function Edit@(itemName)(TemplateTaskId) {
+            $("#TemplateTaskId").val(TemplateTaskId);
+            $("#ParentTaskId").val(-1);
+
+            Tasks.Initialize("#nav@(itemName)");
+            Tasks.LoadData();
+        }
+
+        function TaskControl() {
+            addMethod(this, "Initialize", function (targetSelector) {
+                $(targetSelector).addClass("active");
+
+                $(".title-input, .time-input").off("change");
+
+                $(targetSelector).find(".nav-close").off("click").on("click", function (e) {
+                    $(".task-nav").removeClass("active");
+                });
+
+                $(targetSelector).find(".nav-menu").off("click").on("click", function (e) {
+                    $(targetSelector).find(".set-block").toggleClass("hide");
+                });
+
+                $(targetSelector).find(".delete-task").off("click").on("click", function (e) {
+                    Datas.DeleteTemplateTask();
+                });
+
+                $(targetSelector).find(".update-task-member").off("click").on("click", function (e) {
+                    PopViewTemplateTaskUser($("#TemplateTaskId").val());
+                });
+
+                $("body").off("click").on("click", function (e) {
+                    if ($(targetSelector).hasClass("active")) {
+                        if (!$(e.target).hasClass("task-nav")
+                            && !$(e.target).parents().hasClass("task-nav")
+                            && !$(e.target).hasClass("swal2-container")
+                            && !$(e.target).parents().hasClass("swal2-container")
+                            && !$(e.target).hasClass("modal")
+                            && !$(e.target).parents().hasClass("modal")
+                            && !$(e.target).parents().hasClass("dhx_popup")
+                        ) {
+                            $(".task-nav").removeClass("active");
+                        }
+                    }
+
+                    if (!$(targetSelector).find(".set-block").hasClass("hide") && !$(e.target).hasClass("nav-menu")) {
+                        if (!$(e.target).parents().hasClass("set-block")) {
+                            $(".set-block").addClass("hide");
+                        }
+                    }
+                });
+            });
+
+            addMethod(this, "LoadData", function () {
+                $(".detail").html("");
+                $(".title-input, .time-input").val("");
+
+                Datas.GetTemplate();
+
+                if (parseInt($("#ParentTaskId").val()) > 0) {
+                    Datas.GetParentTask();
+                }
+
+                if (parseInt($("#TemplateTaskId").val()) > 0) {
+                    Datas.GetTemplateTask();
+                }
+
+                $(".title-input").on("change", function (e) {
+                    let TemplateTaskId = parseInt($("#TemplateTaskId").val());
+                    let ParentTaskId = parseInt($("#ParentTaskId").val());
+
+                    if (TemplateTaskId <= 0) {
+                        Datas.AddTemplateTask(ParentTaskId);
+                    } else {
+                        Datas.UpdateTemplateTask(TemplateTaskId);
+                    }
+                });
+
+                $(".time-input").on("change", function (e) {
+                    let TemplateTaskId = parseInt($("#TemplateTaskId").val());
+
+                    if (TemplateTaskId > 0) {
+                        Datas.UpdateTemplateTask(TemplateTaskId);
+                    }
+                });
+            });
+
+            addMethod(this, "LoadViewData", function () {
+                switch (viewMode) {
+                    case "TemplateTask":
+                        InitDataTemplateTask();
+                        break;
+                    case "TemplateTaskGantt":
+                        InitDataTemplateTaskGantt();
+                        break;
+                }
+            });
+        }
+
+        function DataControl() {
+            addMethod(this, "GetTemplate", function () {
+                let targetUrl = "@Url.Action("GetTemplate", "PmisBasicInformation")";
+                let postData = {
+                    "TemplateId": $("#TemplateId").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#desTemplateName@(itemName)").html(item.TemplateName);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "GetParentTask", function () {
+                let targetUrl = "@Url.Action("GetTemplateTask", "PmisBasicInformation")";
+                let postData = {
+                    "TemplateTaskId": $("#ParentTaskId").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        let parentTaskName = (item.ParentTaskName ? `${item.ParentTaskName} > ` : ``) + item.TaskName;
+
+                        $("#desParentTaskName@(itemName)").html(parentTaskName);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "GetTemplateTask", function () {
+                let targetUrl = "@Url.Action("GetTemplateTask", "PmisBasicInformation")";
+                let postData = {
+                    "TemplateTaskId": $("#TemplateTaskId").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtTaskName@(itemName)").val(item.TaskName);
+                        $("#desParentTaskName@(itemName)").html(item.ParentTaskName);
+                        $("#desTemplateTaskUser@(itemName)").html(item.TemplateTaskUser);
+
+                        let replyFrequency = parseInt(item.ReplyFrequency);
+                        let days = parseInt(replyFrequency / 60 / 24);
+                        let hours = parseInt((replyFrequency % (60 * 24)) / 60);
+                        let minutes = parseInt(replyFrequency % 60);
+
+                        $("#txtDayReplyFrequency@(itemName)").val(days);
+                        $("#txtHourReplyFrequency@(itemName)").val(hours);
+                        $("#txtMinuteReplyFrequency@(itemName)").val(minutes);
+
+                        let duration = parseInt(item.Duration);
+                        days = parseInt(duration / 60 / 24);
+                        hours = parseInt((duration - days * 24 * 60) / 60);
+                        minutes = parseInt(duration - (days * 24 * 60) - (hours * 60));
+
+                        $("#txtDayDuration@(itemName)").val(days);
+                        $("#txtHourDuration@(itemName)").val(hours);
+                        $("#txtMinuteDuration@(itemName)").val(minutes);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "AddTemplateTask", function (ParentTaskId) {
+                let days = parseInt($("#txtDayReplyFrequency@(itemName)").val() ? $("#txtDayReplyFrequency@(itemName)").val() : 0) * 24 * 60;
+                let hours = parseInt($("#txtHourReplyFrequency@(itemName)").val() ? $("#txtHourReplyFrequency@(itemName)").val() : 0) * 60;
+                let minutes = parseInt($("#txtMinuteReplyFrequency@(itemName)").val() ? $("#txtMinuteReplyFrequency@(itemName)").val() : 0);
+                let replyFrequency = days + hours + minutes;
+
+                days = parseInt($("#txtDayDuration@(itemName)").val() ? $("#txtDayDuration@(itemName)").val() : 0) * 24 * 60;
+                hours = parseInt($("#txtHourDuration@(itemName)").val() ? $("#txtHourDuration@(itemName)").val() : 0) * 60;
+                minutes = parseInt($("#txtMinuteDuration@(itemName)").val() ? $("#txtMinuteDuration@(itemName)").val() : 0);
+                let duration = days + hours + minutes;
+
+                let targetUrl = "@Url.Action("AddTemplateTask", "PmisBasicInformation")";
+                let postData = {
+                    "TemplateId": $("#TemplateId").val(),
+                    "ParentTaskId": ParentTaskId,
+                    "TaskName": $("#txtTaskName@(itemName)").val(),
+                    "ReplyFrequency": replyFrequency,
+                    "Duration": duration
+                };
+
+                let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                if (data) {
+                    $.each(data.result, function (i, item) {
+                        $("#TemplateTaskId").val(item.TemplateTaskId);
+                    });
+
+                    Tasks.LoadViewData();
+                }
+            });
+
+            addMethod(this, "UpdateTemplateTask", function (TemplateTaskId) {
+                let days = parseInt($("#txtDayReplyFrequency@(itemName)").val() ? $("#txtDayReplyFrequency@(itemName)").val() : 0) * 24 * 60;
+                let hours = parseInt($("#txtHourReplyFrequency@(itemName)").val() ? $("#txtHourReplyFrequency@(itemName)").val() : 0) * 60;
+                let minutes = parseInt($("#txtMinuteReplyFrequency@(itemName)").val() ? $("#txtMinuteReplyFrequency@(itemName)").val() : 0);
+                let replyFrequency = days + hours + minutes;
+
+                days = parseInt($("#txtDayDuration@(itemName)").val() ? $("#txtDayDuration@(itemName)").val() : 0) * 24 * 60;
+                hours = parseInt($("#txtHourDuration@(itemName)").val() ? $("#txtHourDuration@(itemName)").val() : 0) * 60;
+                minutes = parseInt($("#txtMinuteDuration@(itemName)").val() ? $("#txtMinuteDuration@(itemName)").val() : 0);
+                let duration = days + hours + minutes;
+
+                let targetUrl = "@Url.Action("UpdateTemplateTask", "PmisBasicInformation")";
+                let postData = {
+                    "TemplateTaskId": TemplateTaskId,
+                    "TaskName": $("#txtTaskName@(itemName)").val(),
+                    "ReplyFrequency": replyFrequency,
+                    "Duration": duration
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, false);
+
+                if (result) {
+                    Tasks.LoadViewData();
+                }
+            });
+
+            addMethod(this, "DeleteTemplateTask", function () {
+                swal.fire({
+                    titleText: "確認要刪除嗎?",
+                    text: "此動作無法復原，請確認是否要執行!",
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (parseInt($("#TemplateTaskId").val()) > 0) {
+                            let targetUrl = "@Url.Action("DeleteTemplateTask", "PmisBasicInformation")";
+                            let postData = {
+                                "TemplateTaskId": $("#TemplateTaskId").val()
+                            };
+
+                            let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                            if (result) {
+                                $(".task-nav").removeClass("active");
+
+                                Tasks.LoadViewData();
+                            }
+                        } else {
+                            $(".task-nav").removeClass("active");
+
+                            Tasks.LoadViewData();
+                        }
+                    }
+                });
+            });
+        }
+    </script>
+)

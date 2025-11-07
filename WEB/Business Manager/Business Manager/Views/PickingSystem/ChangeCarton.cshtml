@@ -1,0 +1,337 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ChangeCarton";
+    string itemNameText = "物件換箱";
+
+    string DoId = Request["DoId"] ?? "";
+    string PickingCartonId = Request["PickingCartonId"] ?? "";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .item-detail-box {
+            padding-right: 35px;
+        }
+    </style>
+)
+
+<input type="hidden" id="DoId@(itemName)" value="" />
+<input type="hidden" id="PickingCartonId@(itemName)" value="" />
+<input type="hidden" id="ChangePickingCartonId@(itemName)" value="" />
+
+<header class="header-title">
+    <div class="link-area left-link">
+        <a href="javascript:history.back();">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+    </div>
+    <div class="title">@(itemNameText)</div>
+    <div class="link-area">
+        <a href="@Url.Action("Index", "PickingSystem")">
+            <i class="fas fa-home-lg-alt"></i>
+        </a>
+    </div>
+</header>
+
+<div class="wrapper wrap-boxtask">
+    <div class="section secction-picktask">
+        <div class="heading-pickup">
+            <div class="list-title">
+                <div class="number" id="PickingCarton@(itemName)"></div>
+            </div>
+        </div>
+        <div class="content-picktask">
+            <ul class="list-area" id="PickingItem@(itemName)"></ul>
+        </div>
+        <div class="btn-fixed">
+            <div class="btn-block">
+                <a class="btn btn-cancel" href="javascript:void(0);" onclick="Cancel@(itemName)()">取消</a>
+                <a class="btn btn-main" href="javascript:void(0);" onclick="Datas@(itemName).UpdatePickingItem@(itemName)()">儲存</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let Datas@(itemName) = new DataControl@(itemName)();
+
+        $(document).ready(function () {
+            $("#DoId@(itemName)").val("@(DoId)");
+            $("#PickingCartonId@(itemName)").val("@(PickingCartonId)");
+
+            InitData@(itemName)();
+        });
+
+        function InitData@(itemName)() {
+            Datas@(itemName).GetCartonDetail@(itemName)();
+            Datas@(itemName).GetChangeCarton@(itemName)();
+            Datas@(itemName).GetPickingItem@(itemName)();
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetCartonDetail@(itemName)", function () {
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetCartonDetail", "PickingSystem")";
+                let postData = {
+                    "DoId": $("#DoId@(itemName)").val(),
+                    "PickingCartonId": $("#PickingCartonId@(itemName)").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<div class="row">
+                                            <div class="col-12 col-md-5 col-lg-5 p-lg-0 p-md-0 text-center text-md-left text-lg-left">
+                                              <span class="number-cell">${item.CartonName}</span>
+                                              <span class="number-barcode">(${item.CartonBarcode})</span>
+                                            </div>
+                                            <div class="col-12 col-md-2 col-lg-2 p-0 text-center" style="line-height: 30px;">
+                                              <span>原</span>
+                                              <span style="padding-left: 5px; margin-right: -5px; color: #f5abab;"><i class="fad fa-chevron-double-right"></i></span>
+                                              <span style="padding-right: 5px; color: #eb5757;"><i class="fad fa-chevron-double-right"></i></span>
+                                              <span>新</span>
+                                            </div>
+                                            <div class="col-12 col-md-5 col-lg-5 p-lg-0 p-md-0 text-center text-md-right text-lg-right">
+                                              <span class="number-cell" id="desChangeCartonName@(itemName)"></span>
+                                              <span class="number-barcode" id="desChangeCartonBarcode@(itemName)"></span>
+                                            </div>
+                                          </div>
+                                          <div class="row">
+                                            <div class="col-12 p-lg-0 p-md-0">
+                                              ${item.DoId == -1 ? `<span class="number-warning">【注意】此物流箱未綁定出貨單</span>` : ``}
+                                            </div>
+                                          </div>`;
+                            @*innerHtml += `<span style="display: block;">
+                                            <span class="number-cell">${item.CartonName}</span>
+                                            <span class="number-barcode">(${item.CartonBarcode})</span>
+                                          </span>
+                                          <span style="display: block; text-align: right;">
+                                            <span style="padding-left: 5px; margin-right: -5px; color: #f5abab;"><i class="fad fa-chevron-double-right"></i></span>
+                                            <span style="padding-right: 5px; color: #eb5757;"><i class="fad fa-chevron-double-right"></i></span>
+                                            <span class="number-cell" id="desChangeCartonName@(itemName)"></span>
+                                            <span class="number-barcode" id="desChangeCartonBarcode@(itemName)"></span>
+                                          </span>`;*@
+
+                            $("#DoId@(itemName)").val(item.DoId != -1 ? item.DoId : "");
+                        });
+                    } else {
+                        innerHtml += `<div class="row">
+                                        <div class="col-12 col-md-5 col-lg-5 p-lg-0 p-md-0 text-center text-md-left text-lg-left">
+                                          <span class="number-cell">無物流箱</span>
+                                          <span class="number-barcode"></span>
+                                        </div>
+                                        <div class="col-12 col-md-2 col-lg-2 p-0 text-center" style="line-height: 30px;">
+                                          <span>原</span>
+                                          <span style="padding-left: 5px; margin-right: -5px; color: #f5abab;"><i class="fad fa-chevron-double-right"></i></span>
+                                          <span style="padding-right: 5px; color: #eb5757;"><i class="fad fa-chevron-double-right"></i></span>
+                                          <span>新</span>
+                                        </div>
+                                        <div class="col-12 col-md-5 col-lg-5 p-lg-0 p-md-0 text-center text-md-right text-lg-right">
+                                          <span class="number-cell" id="desChangeCartonName@(itemName)"></span>
+                                          <span class="number-barcode" id="desChangeCartonBarcode@(itemName)"></span>
+                                          </div>
+                                        </div>`;
+
+                        @*innerHtml += `<span style="display: block;">
+                                        <span class="number-cell">無物流箱</span>
+                                        <span class="number-barcode"></span>
+                                      </span>
+                                      <span style="display: block; text-align: right;">
+                                        <span style="padding-left: 5px; margin-right: -5px; color: #f5abab;"><i class="fad fa-chevron-double-right"></i></span>
+                                        <span style="padding-right: 5px; color: #eb5757;"><i class="fad fa-chevron-double-right"></i></span>
+                                        <span class="number-cell" id="desChangeCartonName@(itemName)"></span>
+                                        <span class="number-barcode" id="desChangeCartonBarcode@(itemName)"></span>
+                                      </span>
+                                      <span class="number-warning" id="ChangeCarton@(itemName)">是否將以下物件移至新物流箱</span>`;*@
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+                
+                $("#PickingCarton@(itemName)").html(innerHtml);
+            });
+
+            addMethod(this, "GetChangeCarton@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetChangeCarton", "PickingSystem")";
+                let postData = {
+                    "CartonBarcode": $.cookie("pickingCarton")
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#ChangePickingCartonId@(itemName)").val(item.PickingCartonId);
+                        $("#desChangeCartonName@(itemName)").html(item.CartonName);
+                        $("#desChangeCartonBarcode@(itemName)").html(`(${item.CartonBarcode})`);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+        
+            addMethod(this, "GetPickingItem@(itemName)", function () {
+                let innerHtml = '';
+
+                if ($.cookie("pickingItem").length > 0) {
+                    let targetUrl = "@Url.Action("GetPickingItem", "PickingSystem")";
+                    let postData = {
+                        "PickingItemIds": $.cookie("pickingItem")
+                    };
+
+                    let data = DataAccess.Get(targetUrl, postData, false);
+
+                    if (data.status == "success") {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<li class="list-box">
+                                            <div class="list-title">
+                                              <span class="number">
+                                                <span class="number-name">品名</span>
+                                                <span class="number-cell">${item.MtlItemName}</span>
+                                              </span>
+                                              <div class="icon-collapse" onclick="Toggle@(itemName)(${i})">
+                                                <i class="fas fa-caret-circle-up active"></i>
+                                              </div>
+                                            </div>
+                                            <div class="list-content" style="display: block;">
+                                              <div class="list-item">
+                                                ${DetailData@(itemName)(item.ItemDetail)}
+                                              </div>
+                                            </div>
+                                          </li>`;
+                        });
+                    } else {
+                        alert(data.msg, "alert", 0);
+                    }
+                } else {
+                    swal.fire({
+                        titleText: "物流箱已無物件!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: false,
+                        confirmButtonColor: '#0041c4',
+                        cancelButtonColor: '#bdbdbd',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            if ($("#DoId@(itemName)").val()) {
+                                location.href = `@Url.Action("DeliveryDetail", "PickingSystem")?DoId=${$("#DoId@(itemName)").val()}`;
+                            } else {
+                                location.href = `@Url.Action("CartonList", "PickingSystem")`;
+                            }
+                        }
+                    });
+                }
+
+                $("#PickingItem@(itemName)").html(innerHtml);
+
+                function DetailData@(itemName)(source, id) {
+                    let html = '';
+
+                    if (source) {
+                        html += `<span class="item-title">物件條碼/刻字碼</span>`;
+
+                        let json = JSON.parse(source);
+
+                        for (var i = 0; i < json.data.length; i++) {
+                            switch (json.data[i].ItemStatus) {
+                                case "B":
+                                    html += `<div class="item-detail-box">
+                                               <span class="delete-icon">
+                                                 <a href="javascript:void(0);" onclick="Delete@(itemName)(${json.data[i].PickingItemId})"><i class="fas fa-minus-circle"></i></a>
+                                               </span>
+                                               <span class="item-detail02">
+                                                 <span>${json.data[i].ItemBarcode}(${ItemTypeName(json.data[i].ItemType)})</span>
+                                                 <span>${json.data[i].LetteringNo}</span>
+                                               </span>
+                                             </div>`;
+                                    break;
+                                case "N":
+                                    html += `<div class="item-detail-box">
+                                               <span class="delete-icon">
+                                                 <a href="javascript:void(0);" onclick="Delete@(itemName)(${json.data[i].PickingItemId})"><i class="fas fa-minus-circle"></i></a>
+                                               </span>
+                                               <span class="item-detail02">
+                                                 <span>此物件為無條碼(${ItemTypeName(json.data[i].ItemType)})</span>
+                                               </span>
+                                             </div>`;
+                                    break;
+                                case "S":
+                                    html += `<div class="item-detail-box">
+                                               <span class="delete-icon">
+                                                 <a href="javascript:void(0);" onclick="Delete@(itemName)(${json.data[i].PickingItemId})"><i class="fas fa-minus-circle"></i></a>
+                                               </span>
+                                               <span class="item-detail02">
+                                                 <span>此物件為替代品(${ItemTypeName(json.data[i].ItemType)})</span>
+                                               </span>
+                                             </div>`;
+                                    break;
+                            }
+                        }
+                    }
+                    return html;
+                }
+
+                function ItemTypeName(itemType) {
+                    switch (itemType) {
+                        case "1":
+                            return "正常品";
+                            break;
+                        case "2":
+                            return "贈品";
+                            break;
+                        case "3":
+                            return "備品";
+                            break;
+                    }
+                }
+            });
+
+            addMethod(this, "UpdatePickingItem@(itemName)", function () {
+                let targetUrl = "@Url.Action("UpdatePickingItem", "PickingSystem")";
+                let postData = {
+                    "PickingItemIds": $.cookie("pickingItem").toString(),
+                    "CartonBarcode": $.cookie("pickingCarton").toString()
+                };
+
+                let passUrl = `@Url.Action("PickingItem", "PickingSystem")?PickingCartonId=${$("#ChangePickingCartonId@(itemName)").val()}`;
+
+                let result = DataAccess.EditPicking(targetUrl, postData, false, "儲存成功", passUrl);
+            });
+        }
+
+        function Delete@(itemName)(id) {
+            let cookieArr = $.cookie("pickingItem").split(",");
+
+            let index = cookieArr.indexOf(id.toString());
+
+            if (index > -1) {
+                cookieArr.splice(index, 1);
+            }
+
+            $.cookie('pickingItem', cookieArr.join(","), { path: '/', expires: 1 });
+
+            InitData@(itemName)();
+        }
+
+        function Cancel@(itemName)() {
+            if ($("#DoId@(itemName)").val()) {
+                location.href = `@Url.Action("DeliveryDetail", "PickingSystem")?DoId=${$("#DoId@(itemName)").val()}`;
+            } else {
+                location.href = `@Url.Action("CartonList", "PickingSystem")`;
+            }
+        }
+
+        function Toggle@(itemName)(id) {
+            $(".list-box").find($(".list-content")[id]).slideToggle(200);
+            $(".list-box").find($(".icon-collapse .fa-caret-circle-up")[id]).toggleClass("active");
+        }
+    </script>
+)

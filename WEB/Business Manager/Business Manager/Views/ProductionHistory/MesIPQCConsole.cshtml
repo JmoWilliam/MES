@@ -1,0 +1,214 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MesIPQCConsole";
+    string itemNameText = "工程檢資訊蒐集-製令";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+    //string UserId = "-1";
+    //UserId = Request["UserId"].ToString();
+}
+@Html.Resource("css",
+@<link href="@Url.Content("~/Content/mes_scan.min.css")?20220623v1" rel="stylesheet" />
+                                                                        )
+@Html.Resource("css",
+@<style>
+     /* login_03 */
+     .select-content {
+         display: flex;
+         justify-content: space-around;
+         flex-direction: row;
+     }
+
+         .select-content .select-item {
+             display: flex;
+             width: 50%;
+         }
+
+             .select-content .select-item .select-self {
+                 flex-direction: column;
+             }
+
+                 .select-content .select-item .select-self a, .select-content .select-item .select-self .select-font {
+                     color: #fff;
+                 }
+
+                 .select-content .select-item .select-self span {
+                     font-size: 18px;
+                     color: #fff;
+                 }
+
+     /* login_03 彈窗 機台&站別選擇表格 */
+     .dataselect_table {
+         display: table;
+         border-collapse: collapse;
+         text-align: center;
+         width: 100%;
+         /* margin-top: 0.5rem; */
+     }
+
+     .dataselect_td .button_choose {
+         padding: 10px 20px;
+         background-color: #a768f3;
+         color: #fff;
+         border-radius: 10px;
+         box-shadow: none;
+     }
+
+         .dataselect_td .button_choose:hover {
+             background-color: #a768f3;
+         }
+
+
+     .dataselect_td, .dataselect_th {
+         padding: 0.3rem;
+         font-size: 16px;
+         line-height: 2.2;
+         border-bottom: 1px solid #dee2e6;
+     }
+
+     .dataselect_th {
+         display: table-cell;
+         background-color: #ccc;
+         font-weight: bold;
+     }
+
+     .dataselect_tr:nth-of-type(odd) {
+         background-color: rgba(0,0,0,.03);
+     }
+
+
+     .line-active {
+         background-color: #e3b9ff;
+     }
+
+
+
+     .form-control {
+         font-size: 1rem;
+     }
+</style>
+                                                                        )
+<div class="container" id="MesConsole@(itemName)">
+    <div class="login-content">
+
+        <div class="login-form">
+            <div class="logo">
+                <a>
+                    <img src="@Url.Content("~/Content/images/logo.png")" />
+                </a>
+            </div>
+            <div class="input-group">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> 製令 | 條碼
+                </span>
+                <input type="text" class="form-control form-control-add" id="txtOtherInfo@(itemName)"
+                       aria-describedby="basic-addon13" placeholder="請輸入製令或條碼">
+            </div>
+            <div class="quick-links-grid mb-3 mt-3" id="divMoProcessId@(itemName)" style="display:none;">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> 製令製程
+                </span>
+                <select id="cboMoProcessId@(itemName)" class="form-control"></select>
+            </div>
+            <button id="sendMfg@(itemName)" type="button" class="btn-sure btn btn-success btn-flat mb-2 weight-600"
+                    onclick="javascript: EnterMesIPQC@(itemName)();">
+                確定
+            </button>
+            <div class="logout" style="width:unset;padding:unset;margin-top: 10px;">
+                <a class="btn" onclick="javascript:Logout@(itemName)();">
+                    登出<i class="fa fa-sign-out ml-1" style=""></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let MoId;
+        let MoProcessId;
+        let barcodeNo@(itemName) = "";
+
+        $(document).ready(function () {
+            if (!isMobile) {
+                $("#cboMoProcessId@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+        });
+
+        $("#txtOtherInfo@(itemName)").keypress(function (event) {
+            var keycode = (event.keyCode ? event.keyCode : event.which);
+            if (keycode == '13') {
+                EnterMesIPQC@(itemName)()
+            }
+        });
+
+        function EnterMesIPQC@(itemName)() {
+            let moProcessId = $("#cboMoProcessId@(itemName)").val();
+
+            if (!moProcessId) {
+                let otherInfo = $("#txtOtherInfo@(itemName)").val();
+                if (otherInfo == "") {
+                    alert("製令或條碼不能為空!", alert, 0);
+                    return false;
+                }
+                let targetUrl = "@Url.Action("GetManufactureOrder", "Production")";
+
+                let postData = {
+                    "OrderBy": "",
+                    "PageIndex": (objPage@(itemName).pageIndex + 1),
+                    "PageSize": objPage@(itemName).pageSize,
+                    "OtherInfo": otherInfo
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $("#divMoProcessId@(itemName)").show();
+                        $("#sendMfg@(itemName)").show();
+                        $.each(data.result, function (i, item) {
+                            if (item.BarcodeNo != null) {
+                                barcodeNo@(itemName) = item.BarcodeNo;
+                            }
+                            MoId = item.MoId;
+                            MoProcessId = item.MoProcessId;
+                            ComboBoxs.Default("#cboMoProcessId@(itemName)", "@Url.Action("GetMoProcess", "Production")", { "MoId": item.MoId }, "", "NA", "", "ProcessAlias", "MoProcessId");
+                        });
+                    }
+                    else {
+                        alert("查無此製令資訊!", "alert", 0);
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+            else {
+                //進工程檢主畫面
+                if (barcodeNo@(itemName) == "") {
+                    window.location.href = "@Url.Action("MesIPQC", "ProductionHistory")?MoId=" + MoId + "&MoProcessId=" + moProcessId
+                }
+                else {
+                    window.location.href = "@Url.Action("MesIPQC", "ProductionHistory")?MoId=" + MoId + "&MoProcessId=" + moProcessId + "&BarcodeNo=" + barcodeNo@(itemName)
+                }
+            }
+        }
+
+        function Logout@(itemName)() {
+            let targetUrl = "@Url.Action("Logout", "User")";
+            let postData = {
+            };
+
+            var result = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (result) window.location.reload();
+        }
+    </script>)

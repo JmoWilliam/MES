@@ -1,0 +1,261 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewCcFileShow";
+    string itemNameText = "檔案查看";
+}
+
+@Html.Resource("css",
+    @<style>
+        .slide {
+            width: 100%;
+            border: 1px solid #e5e9ec;
+        }
+
+        .slidesShow {
+            height: 500px;
+            width: 70%;
+            margin: auto;
+            padding: 15px;
+        }
+
+        .slidesShowItem {
+            height: 100%;
+        }
+
+            .slidesShowItem img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                object-position: center;
+            }
+
+        .carousel-control-prev {
+            border: unset;
+            background-color: unset;
+        }
+
+        .carousel-control-next {
+            border: unset;
+            background-color: unset;
+        }
+
+        .carousel-control-prev-icon {
+            background-image: unset;
+            color: black;
+            font-size: 36px
+        }
+
+        .carousel-control-next-icon {
+            background-image: unset;
+            color: black;
+            font-size: 36px
+        }
+
+        .section-header {
+            width: 12.5%;
+            background-color: lightskyblue;
+            border-radius: 4px 4px 0 0;
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            color: #212529;
+        }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">單據編號 <span class="sub-text" id="desQcItemName@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <section class="row-border pt-2">
+                            <div id="carouselExampleControls" class="carousel slide" data-ride="carousel" data-interval="false">
+                                <div class="carousel-inner slidesShow">
+                                </div>
+                                <button class="carousel-control-prev" type="button" data-target="#carouselExampleControls" data-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true">
+                                        <i class="fas fa-chevron-circle-left"></i>
+                                    </span>
+                                    <span class="sr-only">Previous</span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-target="#carouselExampleControls" data-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true">
+                                        <i class="fas fa-chevron-circle-right"></i>
+                                    </span>
+                                    <span class="sr-only">Next</span>
+                                </button>
+                            </div>
+                            <div class="noImgBlock" style="display:none">目前尚無資料</div>
+                        </section>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container" autocomplete="off" id="editForm@(itemName)">
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(stage, CcStageDataId) {
+
+            $("#CcStageDataId").val(CcStageDataId);
+            $("#desQcItemName@(itemName)").text(stage)
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+
+            ShowFile@(itemName)(stage)
+
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Pop@(itemName)2() {
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+
+            ShowCCFile@(itemName)();
+
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function ShowFile@(itemName)(Stage) {
+            let targetUrl = "@Url.Action("GetCcStageDataFile", "CustomerComplaint")";
+            let postData = {
+                "CcId": $("#CcId").val(),
+                "Stage": Stage,
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            var imgContent = ``;
+
+            if (data.status == "success") {
+
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.FileId != "null") {
+                            if (i == 0) {
+                                imgContent = `
+                                   <div class="carousel-item slidesShowItem active">
+                                     <img class="d-block w-100" alt="..." src="/Web/GetFile?fileId=${item.FileId}">
+                                   </div>
+                                  `
+                            } else {
+                                imgContent += `
+                                   <div class="carousel-item slidesShowItem ">
+                                     <img class="d-block w-100" alt="..." src="/Web/GetFile?fileId=${item.FileId}">
+                                   </div>
+                                  `
+                            }
+                        }
+
+
+                    })
+                    $(".noImgBlock").hide();
+                    $("#carouselExampleControls").show();
+                    $(".slidesShow").html(imgContent);
+                }
+                else {
+                    $("#carouselExampleControls").hide();
+                    $(".noImgBlock").show();
+                }
+            }
+            
+        }
+
+        function ShowCCFile@(itemName)() {
+            let targetUrl = "@Url.Action("GetCCMainFile", "CustomerComplaint")";
+            let postData = {
+                "CcId": $("#CcId").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            var imgContent = ``;
+
+            if (data.status == "success") {
+
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#desQcItemName@(itemName)").text(item.CcNo)
+
+                        if (item.FileId != "null") {
+                            if (i == 0) {
+                                imgContent = `
+                                   <div class="carousel-item slidesShowItem active">
+                                     <img class="d-block w-100" alt="..." src="/Web/GetFile?fileId=${item.FileId}">
+                                   </div>
+                                  `
+                            } else {
+                                imgContent += `
+                                   <div class="carousel-item slidesShowItem ">
+                                     <img class="d-block w-100" alt="..." src="/Web/GetFile?fileId=${item.FileId}">
+                                   </div>
+                                  `
+                            }
+                        }
+
+
+                    })
+                    $(".noImgBlock").hide();
+                    $("#carouselExampleControls").show();
+                    $(".slidesShow").html(imgContent);
+                }
+                else {
+                    $("#carouselExampleControls").hide();
+                    $(".noImgBlock").show();
+                }
+            }
+            
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+        )

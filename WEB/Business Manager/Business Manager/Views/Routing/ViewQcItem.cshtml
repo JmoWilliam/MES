@@ -1,0 +1,191 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewQcItem";
+    string itemNameText = "查看加工參數";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtItemNoQ@(itemName)" name="txtItemNoQ@(itemName)"
+                                               placeholder="請輸入屬性代碼" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtItemNameQ@(itemName)" name="txtItemNameQ@(itemName)"
+                                               placeholder="請輸入屬性名稱" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="max-width:200px; min-width: 100px;">屬性代碼</th>
+                                        <th scope="col" style="max-width:200px; min-width: 100px;">屬性名稱</th>
+                                        <th scope="col" style="max-width:250px; min-width: 100px;">屬性描述</th>
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                請勾選
+                                            </label>
+                                        </th>
+                                        <th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+        let processId@(itemName);
+        let tempNumber@(itemName) = 1;
+        let itemProcessId@(itemName);
+
+        function Pop@(itemName)(config) {
+            processId@(itemName) = config.processId;
+            itemProcessId@(itemName) = config.itemProcessId;
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetQcItem", "Routing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ProcessId": processId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ItemNo}" style="max-width:200px; min-width: 100px;">${item.ItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ItemName}" style="max-width:200px; min-width: 100px;">${item.ItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ItemDesc}" style="max-width:250px; min-width: 100px;">${item.ItemDesc}</td>
+                                        <td class="text-center">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-qcitem-id="${item.QcItemId}" data-item-no="${item.ItemNo}" data-item-name="${item.ItemName}" value="${item.QcItemId}" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $(".radio-mode").hide();
+            $(".checkbox-mode").show();
+        }
+
+        function Save@(itemName)() {
+            if ($("input[type='checkbox'][data-qcitem-id][data-item-no][data-item-name]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-qcitem-id][data-item-no][data-item-name]:checked"), function (i) {
+                    let qcItemId = $(this).val();
+                    let itemNo = $(this).data("item-no");
+                    let itemName = $(this).data("item-name");
+                    let inputData =
+                    {
+                        "TempNumber": tempNumber@(itemName),
+                        "ItemProcessId": itemProcessId@(itemName),
+                        "QcItemId": qcItemId,
+                        "ItemNo": itemNo,
+                        "ItemName": itemName
+                    }
+                    qcItemJson.qcItemInfo.push(inputData);
+                    tempNumber@(itemName)++;
+                });
+            }
+
+            ResetQcItem@(itemName)()
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+
+        function ResetQcItem@(itemName)() {
+            let innerHtml = '';
+            $.each(qcItemJson.qcItemInfo, function (i, item) {
+                innerHtml += `<div class="tag-group">
+                                <span>${item.ItemName}</span>
+                                <a href="javascript:DeleteTagViewRipQcItem('${item.TempNumber}');">
+                                    <i style="color:slategrey" class="fas fa-times"></i>
+                                </a>
+                              </div>`;
+            });
+            $(".qcitem-info").html(innerHtml);
+        }
+    </script>
+                )

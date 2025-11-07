@@ -1,0 +1,219 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "IFrameProductQuery";
+    string itemNameText = "製程查詢";
+    string authority = ViewBag.authority;
+
+    string WoSeq = Request["WoSeq"] ?? "";
+    string MoProcessId = Request["MoProcessId"] ?? "";
+    string WoErpFullNo = Request["WoErpFullNo"] ?? "";
+    string MoId = Request["MoId"] ?? "";
+    string ProcessId = Request["ProcessId"] ?? "";
+    string ProcessAlias = Request["ProcessAlias"] ?? "";
+    string Iframe = Request["Iframe"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+         .container {
+             margin-left: 0 !important;
+         }
+
+         .tbody-customized {
+             vertical-align: middle !important;
+         }
+
+         iframe {
+             width: 100%;
+             height: auto;
+             aspect-ratio: 16 / 9;
+         }
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-header">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-row align-items-center mb-2">
+                            <div class="col-lg-3 col-6">
+                                <label class="form-label" for="txtWoErpFullNoQ@(itemName)">製令</label>
+                                <input type="text" class="form-control query-search" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)" placeholder="請輸入製令" />
+                            </div>
+                            <div class="col-lg-3 col-6">
+                                <label class="form-label" for="cboProcessIdQ@(itemName)">製程</label>
+                                <select class="form-control" id="cboProcessIdQ@(itemName)" name="cboProcessIdQ@(itemName)"></select>
+                            </div>
+                            <div class="col-lg-3 col-6 mt-4">
+                                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 190px;">條碼</th>
+                                        <th scope="col" style="min-width: 150px;">狀態</th>
+                                        <th scope="col" style="min-width: 85px;">不良原因</th>
+                                        <th scope="col" style="min-width: 85px;">數量</th>
+                                        <th scope="col" style="min-width: 150px;">操作人員</th>
+                                        <th scope="col" style="min-width: 200px;">過站時間</th>
+                                        <th scope="col" style="min-width: 100px;">加工工時</th>
+                                        <th scope="col" style="min-width: 150px;">機台</th>
+                                        <th scope="col" class="text-center" style="min-width: 70px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 100
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        $(document).ready(function () {
+            if ("@Iframe" == "T") {
+                $(objForm@(itemName) + " input").attr("disabled", true);
+                $(objForm@(itemName) + " select").attr("disabled", true);
+            }
+
+            $("#txtWoErpFullNoQ@(itemName)").val("@(WoErpFullNo)");
+            ComboBoxs.Default("#cboProcessIdQ@(itemName)", "@Url.Action("GetProcess", "MesBasicInformation")", {}, "@(ProcessId)", "ALL", "", "ProcessName", "ProcessId");
+
+            if (!isMobile) {
+                $("#cboProcessIdQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+
+            $("#txtWoErpFullNoQ@(itemName)").keydown(DelayTrigger(function (e) {
+                Query@(itemName)();
+            }, 100));
+
+            $("#cboProcessIdQ@(itemName)").on("change", function () {
+                Query@(itemName)();
+            });
+
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 100;
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+            let targetUrl = "@Url.Action("GetMoProcess", "Production")";
+
+            let postData = {
+                "MoId": @MoId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+
+                   GetQryProcess@(itemName)(objPage@(itemName));
+                    
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            //$("#tblData@(itemName) tbody").html(innerHtml);
+            //Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        
+        function GetQryProcess@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+            let targetUrl = "@Url.Action("GetProductQuery", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MoId": @MoId,
+                "ProcessId": $("#cboProcessIdQ@(itemName)").val(),
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? data.result.length : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td class="tbody-customized">${_row}</td>
+                                        <td class="tbody-customized">${item.MoId}</td>
+                                        <td class="text-center active-content"></td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="9" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+        }
+        
+                       
+    </script>
+        )

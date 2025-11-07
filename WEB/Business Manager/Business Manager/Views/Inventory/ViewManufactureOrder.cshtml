@@ -1,0 +1,351 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewManufactureOrder";
+    string itemNameText = "查看MES製令資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)"
+                                               placeholder="請輸入製令單號(EX:5101-...)" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMoIdQ@(itemName)" name="txtMoIdQ@(itemName)"
+                                               placeholder="請輸入製令條碼(EX:19)" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboProdModeQ@(itemName)" name="cboProdModeQ@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 250px;">製令</th>
+                                        <th scope="col" style="min-width: 250px;">生產模式</th>
+                                        <th scope="col" style="min-width: 175px;">品號</th>
+                                        <th scope="col" style="min-width: 175px;">品名</th>
+                                        <th scope="col" style="min-width: 175px;">綁定途程</th>
+                                        <th scope="col" style="min-width: 175px;">預計產量</th>
+                                        <th scope="col" style="min-width: 175px;">已領套數</th>
+                                        <th scope="col" style="min-width: 175px;">已投入數量</th>
+                                        <th scope="col" style="min-width: 175px;">完工數量</th>
+                                        <th scope="col" style="min-width: 175px;">報廢數量</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let targetSelector@(itemName);
+        let moId@(itemName);
+        let quantity@(itemName);
+        let inventoryId@(itemName);
+        let uomId@(itemName);
+        let woErpFullNo@(itemName);
+        let mtlItemId@(itemName);
+        let mtlItemNo@(itemName);
+        let mtlItemName@(itemName);
+        let mtlItemSpec@(itemName);
+        let planQty@(itemName);
+        let requisitionSetQty@(itemName);
+        let docType@(itemName);
+        let stockInQty@(itemName);
+        let lotStatus@(itemName);
+        let mesQuantity@(itemName);
+        let inputQty@(itemName);
+        let modeId@(itemName);
+        let productionQty@(itemName);
+        let moScrapQty@(itemName);
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            moId@(itemName) = config.objectMoId;
+            quantity@(itemName) = config.objectQuantity;
+            inventoryId@(itemName) = config.objectInventoryId;
+            uomId@(itemName) = config.objectUomId;
+            woErpFullNo@(itemName) = config.objectWoErpFullNo;
+            mtlItemId@(itemName) = config.objectMtlItemId;
+            mtlItemNo@(itemName) = config.objectMtlItemNo;
+            mtlItemName@(itemName) = config.objectMtlItemName;
+            mtlItemSpec@(itemName) = config.objectMtlItemSpec;
+            mtlIPlanQtytemSpec@(itemName) = config.objectPlanQty;
+            planQty@(itemName) = config.objectPlanQty;
+            requisitionSetQty@(itemName) = config.objectRequisitionSetQty;
+            docType@(itemName) = config.docType;
+            lotStatus@(itemName) = config.objectLotStatus;
+            stockInQty@(itemName) = config.objectStockInQty;
+            mesQuantity@(itemName) = config.objectMesQuantity;
+            inputQty@(itemName) = config.objectInputQty;
+            modeId@(itemName) = config.objectModeId;
+            productionQty@(itemName) = config.objectProductionQty;
+            moScrapQty@(itemName) = config.objectMoScrapQty;
+
+            if (!isMobile) {
+                $("#cboProdModeQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboProdModeQ@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "NA", "", "txtProdModeWithText", "ModeId");
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#txtWoErpFullNoQ@(itemName), #txtMoIdQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetManufactureOrder", "Production")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+                "MoId": $("#txtMoIdQ@(itemName)").val(),
+                "ModeId": $("#cboProdModeQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})</td>
+                                        <td>${item.ModeNo} ${item.ModeName}</td>
+                                        <td>${item.MtlItemNo}</td>
+                                        <td>${item.MtlItemName}</td>
+                                        ${JudgeMoRouting(`${item.MoRoutingId}`)}
+                                        <td>${item.Quantity}</td>
+                                        <td>${item.RequisitionSetQty}</td>
+                                        <td>${item.InputQty}</td>
+                                        <td>${item.CompleteQty}</td>
+                                        <td>${item.ScrapQty}</td>
+                                        ${item.Status == `Ｙ` ? `<td class="text-center col-sticky"></td>`:`
+                                        <td class="text-center col-sticky">
+                                          ${JudgeMoRouting2(`${item.MoRoutingId}`, `${item.MoId}`)}
+                                          <input type="hidden" id="txtWoErpPrefix@(itemName)" data-mo-id="${item.MoId}" value="${item.WoErpPrefix}"/>
+                                          <input type="hidden" id="txtWoErpNo@(itemName)" data-mo-id="${item.MoId}" value="${item.WoErpNo}"/>
+                                          <input type="hidden" id="txtPlanQty@(itemName)" data-mo-id="${item.MoId}" value="${item.PlanQty}"/>
+                                          <input type="hidden" id="txtMesQuantity@(itemName)" data-mo-id="${item.MoId}" value="${item.Quantity}"/>
+                                          <input type="hidden" id="txtInputQty@(itemName)" data-mo-id="${item.MoId}" value="${item.InputQty}"/>
+                                          <input type="hidden" id="txtInventoryId@(itemName)" data-mo-id="${item.MoId}" value="${item.InventoryId}"/>
+                                          <input type="hidden" id="txtUomId@(itemName)" data-mo-id="${item.MoId}" value="${item.InventoryUomId }"/>
+                                          <input type="hidden" id="txtMtlItemId@(itemName)" data-mo-id="${item.MoId}" value="${item.MtlItemId}"/>
+                                          <input type="hidden" id="txtMtlItemNo@(itemName)" data-mo-id="${item.MoId}" value="${item.MtlItemNo}"/>
+                                          <input type="hidden" id="txtMtlItemName@(itemName)" data-mo-id="${item.MoId}" value="${item.MtlItemName}"/>
+                                          <input type="hidden" id="txtMtlItemSpec@(itemName)" data-mo-id="${item.MoId}" value="${item.MtlItemSpec}"/>
+                                          <input type="hidden" id="txtRequisitionSetQty@(itemName)" data-mo-id="${item.MoId}" value="${item.RequisitionSetQty}"/>
+                                          <input type="hidden" id="txtStockInQty@(itemName)" data-mo-id="${item.MoId}" value="${item.StockInQty}"/>
+                                          <input type="hidden" id="txtLotStatus@(itemName)" data-mo-id="${item.MoId}" value="${item.LotStatus}"/>
+                                          <input type="hidden" id="txtWoSeq@(itemName)" data-mo-id="${item.MoId}" value="${item.WoSeq}"/>
+                                          <input type="hidden" id="txtModeId@(itemName)" data-mo-id="${item.MoId}" value="${item.ModeId}"/>
+                                          <input type="hidden" id="txtProductionQty@(itemName)" data-mo-id="${item.MoId}" value="${item.ProductionQty}"/>
+                                          <input type="hidden" id="txtMoScrapQty@(itemName)" data-mo-id="${item.MoId}" value="${item.MoScrapQty}"/>
+                                        </td>`}
+                                      </tr>`;
+                    });
+
+                    function JudgeMoRouting(moRoutingId) {
+                        let innerHtml = '';
+                        if (moRoutingId != "null") {
+                            innerHtml += `<td>已綁定途程</td>`;
+                        }
+                        else {
+                            innerHtml += `<td>未綁定途程</td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeMoRouting2(moRoutingId, moId) {
+                        let innerHtml = '';
+                        if (moRoutingId != "null") {
+                            innerHtml += `<label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-mo-id="${moId}" value="${moId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>`;
+                        }
+                        else {
+                            innerHtml += `<label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-mo-id="${moId}" value="${moId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>`;
+                        }
+                        return innerHtml;
+                    }
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-mo-id]:checked") {
+                    let moId = $(this).data("mo-id");
+
+                    if (moId) {
+                        let woErpPrefix = $(`input[id="txtWoErpPrefix@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let woErpNo = $(`input[id="txtWoErpNo@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let planQty = $(`input[id="txtPlanQty@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let inventoryId = $(`input[id="txtInventoryId@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let uomId = $(`input[id="txtUomId@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let mtlItemId = $(`input[id="txtMtlItemId@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let mtlItemNo = $(`input[id="txtMtlItemNo@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let mtlItemName = $(`input[id="txtMtlItemName@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let mtlItemSpec = $(`input[id="txtMtlItemSpec@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let requisitionSetQty = $(`input[id="txtRequisitionSetQty@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let stockInQty = $(`input[id="txtStockInQty@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let lotStatus = $(`input[id="txtLotStatus@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let woSeq = $(`input[id="txtWoSeq@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let mesQuantity = $(`input[id="txtMesQuantity@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let inputQty = $(`input[id="txtInputQty@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let modeId = $(`input[id="txtModeId@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let productionQty = $(`input[id="txtProductionQty@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let moScrapQty = $(`input[id="txtMoScrapQty@(itemName)"][data-mo-id="${moId}"]`).val();
+
+                        if (moId@(itemName)) ElementSetValue(moId@(itemName), moId, "change");
+                        if (docType@(itemName) == "54" || docType@(itemName) == "55") {
+                            if (quantity@(itemName)) ElementSetValue(quantity@(itemName), parseFloat(mesQuantity) - parseFloat(requisitionSetQty), "change");
+                        }
+                        else if (docType@(itemName) == "56")
+                        {
+                            let quantity = parseFloat(requisitionSetQty) - parseFloat(productionQty) - parseFloat(moScrapQty);
+                            if (quantity < 0) quantity = 0;
+                            if (quantity@(itemName)) ElementSetValue(quantity@(itemName), quantity, "change");
+                        }
+                        else {
+                            if (quantity@(itemName)) ElementSetValue(quantity@(itemName), parseFloat(requisitionSetQty), "change");
+                        }
+                        if (inventoryId@(itemName)) ElementSetValue(inventoryId@(itemName), inventoryId, "change");
+                        if (uomId@(itemName)) ElementSetValue(uomId@(itemName), uomId, "change");
+                        if (woErpFullNo@(itemName)) ElementSetValue(woErpFullNo@(itemName), woErpPrefix + "-" + woErpNo + "(" + woSeq + ")", "change");
+                        if (mtlItemId@(itemName)) ElementSetValue(mtlItemId@(itemName), mtlItemId, "change");
+                        if (mtlItemNo@(itemName)) ElementSetValue(mtlItemNo@(itemName), mtlItemNo, "change");
+                        if (mtlItemName@(itemName)) ElementSetValue(mtlItemName@(itemName), mtlItemName, "change");
+                        if (mtlItemSpec@(itemName)) ElementSetValue(mtlItemSpec@(itemName), mtlItemSpec, "change");
+                        if (planQty@(itemName)) ElementSetValue(planQty@(itemName), planQty, "change");
+                        if (requisitionSetQty@(itemName)) ElementSetValue(requisitionSetQty@(itemName), requisitionSetQty, "change");
+                        if (stockInQty@(itemName)) ElementSetValue(stockInQty@(itemName), stockInQty, "change");
+                        if (lotStatus@(itemName)) ElementSetValue(lotStatus@(itemName), lotStatus, "change");
+                        if (mesQuantity@(itemName)) ElementSetValue(mesQuantity@(itemName), mesQuantity, "change");
+                        if (inputQty@(itemName)) ElementSetValue(inputQty@(itemName), inputQty, "change");
+                        if (modeId@(itemName)) ElementSetValue(modeId@(itemName), modeId, "change");
+                        if (productionQty@(itemName)) ElementSetValue(productionQty@(itemName), productionQty, "change");
+                        if (moScrapQty@(itemName)) ElementSetValue(moScrapQty@(itemName), moScrapQty, "change");
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+        )

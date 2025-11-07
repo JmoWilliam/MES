@@ -1,0 +1,426 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "RfqProductPackage";
+    string itemNameText = "產品包裝種類資料";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                                        )
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    @{
+                        string txtPackagingMethodQ = string.Format("txtPackagingMethodQ{0}", itemName);
+                        string cbxSustSupplyStatusQ = string.Format("cbxSustSupplyStatusQ{0}", itemName);
+                        string cbxStatusQ = string.Format("cbxStatusQ{0}", itemName);
+                    }
+                    <fieldset>
+                        <div class="form-group row">
+                            @Html.Label(txtPackagingMethodQ, "包裝方式", new { @class = "col-12 col-form-label" })
+                            <div class="col-12">
+                                @Html.TextBox(txtPackagingMethodQ, null, new { @class = "form-control", name = txtPackagingMethodQ, maxlength = "50", placeholder = "請輸入包裝方式關鍵字" })
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">客供盛盤</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    是
+                                    <input type="checkbox" id="@(cbxSustSupplyStatusQ + "Y")" name="@(cbxSustSupplyStatusQ)" value="Y" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    否
+                                    <input type="checkbox" id="@(cbxSustSupplyStatusQ + "N")" name="@(cbxSustSupplyStatusQ)" value="N" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    啟用
+                                    <input type="checkbox" id="@(cbxStatusQ + "A")" name="@(cbxStatusQ)" value="A" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    停用
+                                    <input type="checkbox" id="@(cbxStatusQ + "S")" name="@(cbxStatusQ)" value="S" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Add@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">RFQ包裝方式</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">客供盛盤</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">狀態</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--編輯-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    @Html.AntiForgeryToken()
+                    @{
+                        string txtPackagingMethod = string.Format("txtPackagingMethod{0}", itemName);
+                        string cbxSustSupplyStatus = string.Format("cbxSustSupplyStatus{0}", itemName);
+                    }
+                    <fieldset>
+                        @Html.Hidden("RfqPkTypeId", -1, new { id = "RfqPkTypeId" })
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="@(txtPackagingMethod)">RFQ包裝方式<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                @Html.TextBox(txtPackagingMethod, null, new { @class = "form-control", id = txtPackagingMethod, maxlength = "50"
+                               , data_msg_required = "請輸入RFQ包裝方式", data_rule_required="true" })
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="@(cbxSustSupplyStatus)">客供盛盤<span class="text-danger">*</span></label>
+                            <div id="boxSustSupplyStatus" class="col-12 col-md-9 col-lg-9">
+                                <input type="checkbox" id="@(cbxSustSupplyStatus)" name="@(cbxSustSupplyStatus)" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success btn-save" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            'pageIndex': 0,
+            'pageSize': 10
+        };
+
+        let objForm@(itemName) = '#editForm@(itemName)';
+
+        function Expand@(itemName)() {
+            if ($('#RfqProClassId').val() > 0) {
+                $('.advanced-block').slideDown('slow');
+                Return@(itemName)();
+            } else {
+                alert('請先儲存產品類型', 'alert');
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            $('#modalQuery@(itemName)').modal('hide');
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch('#listData@(itemName)', '#editData@(itemName)');
+            Query@(itemName)();
+        }
+
+        //query page
+        function QueryPage@(itemName)() {
+            InitData@(itemName)(objPage@(itemName));
+            $('#modalQuery@(itemName)').modal('hide');
+        }
+
+        //return page
+        function ReturnPage@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch('#listData@(itemName)', '#editData@(itemName)');
+            QueryPage@(itemName)();
+        }
+
+        function Add@(itemName)() {
+            $('.btn-save').show();
+            InitDetail@(itemName)(null, 'add');
+            ChangeToEnable('@(itemName)');
+        }
+
+        function Read@(itemName)(TargetId) {
+            $('.btn-save').hide();
+            InitDetail@(itemName)(TargetId, 'read');
+            ChangeToDisable('@(itemName)');
+        }
+
+        function Edit@(itemName)(TargetId) {
+            $('.btn-save').show();
+            InitDetail@(itemName)(TargetId, 'edit');
+            ChangeToEnable('@(itemName)');
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let statusList = [];
+            $.each($('input[name="cbxStatusQ@(itemName)"]:checked'), function () {
+                statusList.push($(this).val());
+            });
+
+            let sustSupplyStatusList = [];
+            $.each($('input[name="cbxSustSupplyStatusQ@(itemName)"]:checked'), function () {
+                sustSupplyStatusList.push($(this).val());
+            });
+
+            let targetUrl = '@Url.Action("GetRfqPackageType", "ScmBasicInformation")';
+            let postData = {
+                'OrderBy': '',
+                'PageIndex': (objPage.pageIndex + 1),
+                'PageSize': objPage.pageSize,
+                'RfqProClassId': $('#RfqProClassId').val(),
+                'PackagingMethod': $('#txtPackagingMethodQ@(itemName)').val(),
+                'Status': statusList.join(','),
+                'SustSupplyStatus': sustSupplyStatusList.join(',')
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == 'success') {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]['TotalCount']) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + '.';
+
+                        innerHtml += `<tr>
+<td><span class="stack-title">#</span>${_row}</td>
+<td class="ellipsis" data-toggle="tooltip" title="${item.PackagingMethod}">
+    <span class="stack-title">RFQ包裝方式</span>${item.PackagingMethod}
+</td>
+<td class="ellipsis" data-toggle="tooltip" title="${item.SustSupplyStatusName}">
+    <span class="stack-title">客供盛盤</span>${item.SustSupplyStatusName}
+</td>
+<td class="text-center auth-status-switch">
+    <span class="stack-title">狀態</span>
+    <input type="checkbox" name="chkStatus@(itemName)" data-rfqpktype-id="${item.RfqPkTypeId}" ${(item.Status == `A` ? `checked` : ``)} />
+</td>
+<td class="text-center active-content col-sticky">
+    <span class="stack-title">操作</span>
+    <a class="active-link auth-read" href="javascript:Read@(itemName)(${item.RfqPkTypeId});"><i class="fas fa-eye"></i></a>
+    ${item.CanEdit == `Y` ? `<a class="active-link auth-update" href="javascript:Edit@(itemName)(${item.RfqPkTypeId});"><i class="fas fa-edit"></i></a>` : `<a class="active-link auth-update active-disable" href="javascript:void(0);"><i class="fas fa-edit"></i></a>`}
+    ${item.CanEdit == `Y` ? `<a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.RfqPkTypeId});"><i class="fas fa-trash-alt"></i></a>` : `<a class="active-link auth-delete active-disable" href="javascript:void(0);"><i class="fas fa-trash-alt"></i></a>`}
+</td>
+</tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                </tr>`;
+                }
+
+                $('#tblData@(itemName) tbody').html(innerHtml);
+                Pager('#page@(itemName)', pageCount, objPage, InitData@(itemName));
+
+                $('input[name="chkStatus@(itemName)"]').bootstrapToggle({
+                    on: '啟用',
+                    off: '停用',
+                    onstyle: 'success',
+                    offstyle: 'danger',
+                    width: '62px',
+                    size: 'mini'
+                });
+                //狀態切換
+                $('input[name="chkStatus@(itemName)"][data-rfqpktype-id]').change(StatusSwitch@(itemName));
+            }
+        }
+
+        function InitDetail@(itemName)(TargetId, Channel) {
+
+            Switch('#editData@(itemName)', '#listData@(itemName)');
+            $('#RfqPkTypeId').val(TargetId);
+
+            if (TargetId > 0) {
+                let targetUrl = '@Url.Action("GetRfqPackageType", "ScmBasicInformation")';
+                let postData = {
+                    'RfqPkTypeId': TargetId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == 'success') {
+                    $.each(data.result, function (i, item) {
+                        $('#txtPackagingMethod@(itemName)').val(item.PackagingMethod);
+                        if (Channel == 'read') {
+                            $('#boxSustSupplyStatus').html(item.SustSupplyStatus == `Y` ? `<b style="color:#070;">${item.SustSupplyStatusName}</b>` : `<b style="color:#f00;">${item.SustSupplyStatusName}</b>`);
+                        }
+                        else {
+                            $('#boxSustSupplyStatus').html(`<input type="checkbox" id="cbxSustSupplyStatus@(itemName)" name="cbxSustSupplyStatus@(itemName)" ${(item.SustSupplyStatus == `Y` ? `checked` : ``)} />`);
+                            @*$('#cbxSustSupplyStatus@(itemName)').prop({ 'checked': item.SustSupplyStatus == 'Y' ? true : false });*@
+                        }
+                    });
+                } else {
+                    alert(data.msg, 'alert', 0);
+                }
+            }
+
+            $('input[name="cbxSustSupplyStatus@(itemName)"]').bootstrapToggle({
+                on: '是',
+                off: '否',
+                onstyle: 'success',
+                offstyle: 'danger',
+                width: '62px',
+                size: 'mini'
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let TargetId = $('#RfqPkTypeId').val();
+                let Token = $('input[name="__RequestVerificationToken"]').val();
+                let isChecked = $('#cbxSustSupplyStatus@(itemName)').is(':checked') ? 'Y' : 'N';
+
+                let targetUrl = '';
+                let postData = {};
+
+                if (TargetId <= 0) {
+                    targetUrl = '@Url.Action("AddRfqPackageType", "ScmBasicInformation")';
+                    postData = {
+                        '__RequestVerificationToken': Token,
+                        'RfqProClassId': $('#RfqProClassId').val(),
+                        'PackagingMethod': $('#txtPackagingMethod@(itemName)').val(),
+                        'SustSupplyStatus': isChecked
+                    };
+
+                    if (DataAccess.Add(targetUrl, postData, false, true)) {
+                        ReturnPage@(itemName)();
+                    }
+                } else {
+                    targetUrl = '@Url.Action("UpdateRfqPackageType", "ScmBasicInformation")';
+                    postData = {
+                        '__RequestVerificationToken': Token,
+                        'RfqPkTypeId': TargetId,
+                        'PackagingMethod': $('#txtPackagingMethod@(itemName)').val(),
+                        'SustSupplyStatus': isChecked
+                    };
+
+                    if (DataAccess.Update(targetUrl, postData, false, true)) {
+                        ReturnPage@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(TargetId) {
+            swal.fire({
+                title: '確定要刪除嗎?',
+                text: '此動作無法復原，請確認是否要執行!',
+                icon: 'warning',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = '@Url.Action("DeleteRfqPackageType", "ScmBasicInformation")';
+                    let postData = {
+                        'RfqPkTypeId': TargetId,
+                        '__RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    };
+
+                    if (DataAccess.Delete(targetUrl, postData, false, true)) {
+                        QueryPage@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function StatusSwitch@(itemName)() {
+            var TargetId = $(this).data('rfqpktype-id');
+
+            let targetUrl = '@Url.Action("UpdateRfqPackageTypeStatus", "ScmBasicInformation")';
+            let postData = {
+                'RfqPkTypeId': TargetId,
+                '__RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+            };
+
+            if (DataAccess.Update(targetUrl, postData, false, true)) {
+                QueryPage@(itemName)();
+            }
+        }
+
+        @*function SustSupplyStatusSwitch@(itemName)() {
+            var TargetId = $(this).data('rfqpktype-id');
+
+            let targetUrl = '@Url.Action("UpdateSustSupplyStatus", "ScmBasicInformation")';
+            let postData = {
+                'RfqPkTypeId': TargetId,
+                '__RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+            };
+
+            if (DataAccess.Update(targetUrl, postData, false, true)) {
+                QueryPage@(itemName)();
+            }
+        }*@
+
+    </script>)

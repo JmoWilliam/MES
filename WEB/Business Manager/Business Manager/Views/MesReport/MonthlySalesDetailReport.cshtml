@@ -1,0 +1,552 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MonthlySalesDetailReport";
+    string itemNameText = "每月業務撈取ERP銷貨明細";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .badge {
+             font-size: 90% !important;
+         }
+
+         .container {
+             margin-left: 0 !important;
+         }
+
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             vertical-align: middle !important;
+         }
+
+         .baseline .baseline-list {
+             padding-bottom: 9.6px !important;
+         }
+
+             .baseline .baseline-list:after {
+                 border: none !important;
+                 top: 27px !important;
+             }
+
+         .txt-skyblue {
+             font-size: 87.5%;
+         }
+
+         .amount-cell {
+             text-align: right !important;
+             font-weight: bold;
+         }
+
+         .summary-row {
+             background-color: #e9ecef !important;
+             font-weight: bold;
+         }
+
+         /* 無限滾動相關樣式 */
+         .table-scroll-container {
+             max-height: 600px;
+             overflow-y: auto;
+             border: 1px solid #dee2e6;
+             border-radius: 0.25rem;
+         }
+
+             .table-scroll-container thead th {
+                 position: sticky;
+                 top: 0;
+                 background-color: #f8f9fa;
+                 z-index: 10;
+             }
+
+         .loading-indicator {
+             text-align: center;
+             padding: 20px;
+             color: #6c757d;
+             background-color: #f8f9fa;
+             border-top: 1px solid #dee2e6;
+         }
+
+             .loading-indicator.hidden {
+                 display: none;
+             }
+
+         .data-stats {
+             background-color: #f8f9fa;
+             padding: 10px 15px;
+             border-bottom: 1px solid #dee2e6;
+             font-size: 14px;
+             color: #6c757d;
+         }
+
+         .no-more-data {
+             text-align: center;
+             padding: 15px;
+             color: #6c757d;
+             font-style: italic;
+             background-color: #f8f9fa;
+             border-top: 1px solid #dee2e6;
+         }
+
+         .summary-card {
+             position: sticky;
+             bottom: 0;
+             background-color: #fff;
+             border-top: 2px solid #007bff;
+             box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+         }
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋條件</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtYearMonthQ@(itemName)">查詢年月</label>
+                            <div class="col-12">
+                                <input type="month" class="form-control" id="txtYearMonthQ@(itemName)" name="txtYearMonthQ@(itemName)"
+                                       data-msg-required="請選擇查詢年月" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboSalesPersonQ@(itemName)">業務人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSalesPersonQ@(itemName)" name="cboSalesPersonQ@(itemName)" multiple>
+                                    <option value="">-- 請選擇業務人員 --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboCustomerQ@(itemName)">客戶</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCustomerQ@(itemName)" name="cboCustomerQ@(itemName)" multiple>
+                                    <option value="">-- 請選擇客戶 --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="form-label" for="txtStartDateQ@(itemName)">開始日期</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       placeholder="請輸入開始日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <label class="form-label" for="txtEndDateQ@(itemName)">結束日期</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       placeholder="請輸入結束日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="form-label" for="txtSalesOrderNoQ@(itemName)">銷貨單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtSalesOrderNoQ@(itemName)" name="txtSalesOrderNoQ@(itemName)" placeholder="請輸入銷貨單號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="form-label" for="txtProductNoQ@(itemName)">品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtProductNoQ@(itemName)" name="txtProductNoQ@(itemName)" placeholder="請輸入品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboProductCategoryQ@(itemName)">產品分類</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboProductCategoryQ@(itemName)" name="cboProductCategoryQ@(itemName)" multiple>
+                                    <option value="">-- 請選擇產品分類 --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-header">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn file-excel auth-excel" href="javascript:Excel@(itemName)();"><i class="fas fa-file-excel"></i>匯出</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- 資料統計資訊 -->
+                <div class="data-stats" id="dataStats@(itemName)">
+                    <i class="fas fa-info-circle"></i> 準備載入資料...
+                </div>
+
+                <!-- 可滾動的表格容器 -->
+                <div class="table-scroll-container" id="tableContainer@(itemName)">
+                    <table class="table table-bordered table-striped mb-0" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th class="text-center" scope="col" style="min-width: 60px;">#</th>
+                                <th class="text-center" scope="col" style="min-width: 80px;">單據類別</th>
+                                <th class="text-center" scope="col" style="min-width: 100px;">銷售日期</th>
+                                <th class="text-center" scope="col" style="min-width: 100px;">產品分類</th>
+                                <th class="text-center" scope="col" style="min-width: 150px;">客戶</th>
+                                <th class="text-center" scope="col" style="min-width: 100px;">業務人員</th>
+                                <th class="text-center" scope="col" style="min-width: 120px;">銷貨單號</th>
+                                <th class="text-center" scope="col" style="min-width: 120px;">品號</th>
+                                <th class="text-center" scope="col" style="min-width: 200px;">品名</th>
+                                <th class="text-center" scope="col" style="min-width: 80px;">銷貨數量</th>
+                                <th class="text-center" scope="col" style="min-width: 100px;">本幣金額</th>
+                                <th class="text-center" scope="col" style="min-width: 100px;">台幣金額</th>
+                                <th class="text-center" scope="col" style="min-width: 80px;">毛利</th>
+                                <th class="text-center" scope="col" style="min-width: 80px;">毛利率</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+
+                    <!-- 載入指示器 -->
+                    <div class="loading-indicator" id="loadingIndicator@(itemName)">
+                        <i class="fas fa-spinner fa-spin"></i> 載入中...
+                    </div>
+
+                    <!-- 無更多資料提示 -->
+                    <div class="no-more-data hidden" id="noMoreData@(itemName)">
+                        <i class="fas fa-check-circle"></i> 已載入所有資料
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合計資訊卡片 -->
+        <div class="card summary-card">
+            <div class="card-body p-3">
+                <div class="row">
+                    <div class="col-12">
+                        <table class="table table-sm mb-0">
+                            <tr class="summary-row">
+                                <td colspan="9" class="text-center"><strong>合計</strong></td>
+                                <td class="text-center"><strong id="totalQuantity@(itemName)">0</strong></td>
+                                <td class="text-center amount-cell"><strong id="totalLocalAmount@(itemName)">0</strong></td>
+                                <td class="text-center amount-cell"><strong id="totalTwdAmount@(itemName)">0</strong></td>
+                                <td class="text-center amount-cell"><strong id="totalProfit@(itemName)">0</strong></td>
+                                <td class="text-center"><strong id="avgProfitRate@(itemName)">0%</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        // 分頁和載入狀態管理
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 20  // 每次載入20筆資料
+        };
+
+        // 無限滾動狀態變數
+        let isLoading@(itemName) = false;
+        let hasMoreData@(itemName) = true;
+        let totalCount@(itemName) = 0;
+        let loadedCount@(itemName) = 0;
+
+        // 累計統計變數
+        let totalQuantity@(itemName) = 0;
+        let totalLocalAmount@(itemName) = 0;
+        let totalTwdAmount@(itemName) = 0;
+        let totalProfit@(itemName) = 0;
+        let totalSales@(itemName) = 0;
+
+        if (!isMobile) {
+            $("#cboSalesPersonQ@(itemName), #cboCustomerQ@(itemName), #cboProductCategoryQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        $(document).ready(function () {
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+
+            // 設置默認查詢年月為當前月份
+            let currentDate = new Date();
+            let currentYearMonth = currentDate.getFullYear() + "-" + String(currentDate.getMonth() + 1).padStart(2, '0');
+            $("#txtYearMonthQ@(itemName)").val(currentYearMonth);
+
+            // 設置默認日期範圍為當月
+            let firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            let lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", firstDay);
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", lastDay);
+
+            // 初始化下拉選單
+            ComboBoxs.WithText("#cboSalesPersonQ@(itemName)", "@Url.Action("GetSalesReportBasicData", "MesReport")", { "DataType":"SALESPERSON","UserNo": "" }, "", "NA", "", "SalesPersonName", "業務人員");
+            ComboBoxs.WithText("#cboCustomerQ@(itemName)", "@Url.Action("GetSalesReportBasicData", "MesReport")", { "DataType": "CUSTOMER","UserNo": "" }, "", "NA", "", "CustomerName", "客戶代碼");
+            ComboBoxs.WithText("#cboProductCategoryQ@(itemName)", "@Url.Action("GetSalesReportBasicData", "MesReport")", { "DataType": "PRODUCTCATEGORY","UserNo": "" }, "", "NA", "", "CategoryName", "產品分類");
+
+            // 初始化滾動監聽器
+            InitScrollListener@(itemName)();
+
+            // 自動執行第一次查詢
+            setTimeout(function() {
+                Query@(itemName)();
+            }, 1000);
+        });
+
+        // 初始化滾動監聽器
+        function InitScrollListener@(itemName)() {
+            $("#tableContainer@(itemName)").scroll(function() {
+                let container = $(this);
+                let scrollTop = container.scrollTop();
+                let scrollHeight = container[0].scrollHeight;
+                let clientHeight = container[0].clientHeight;
+
+                // 當滾動到距離底部100px時載入更多資料
+                if (scrollTop + clientHeight >= scrollHeight - 100) {
+                    LoadMoreData@(itemName)();
+                }
+            });
+        }
+
+        // 載入更多資料
+        function LoadMoreData@(itemName)() {
+            if (isLoading@(itemName) || !hasMoreData@(itemName)) {
+                return;
+            }
+
+            objPage@(itemName).pageIndex++;
+            InitData@(itemName)(objPage@(itemName), true);
+        }
+
+        // 搜尋功能
+        function Query@(itemName)() {
+            // 重置狀態
+            objPage@(itemName).pageIndex = 0;
+            isLoading@(itemName) = false;
+            hasMoreData@(itemName) = true;
+            totalCount@(itemName) = 0;
+            loadedCount@(itemName) = 0;
+
+            // 重置統計
+            totalQuantity@(itemName) = 0;
+            totalLocalAmount@(itemName) = 0;
+            totalTwdAmount@(itemName) = 0;
+            totalProfit@(itemName) = 0;
+            totalSales@(itemName) = 0;
+
+            // 清空表格
+            $("#tblData@(itemName) tbody").empty();
+            $("#noMoreData@(itemName)").addClass("hidden");
+
+            // 開始載入資料
+            InitData@(itemName)(objPage@(itemName), false);
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        // 資料載入主函數
+        function InitData@(itemName)(objPage, isAppend = false) {
+            if (isLoading@(itemName)) return;
+
+            isLoading@(itemName) = true;
+            $("#loadingIndicator@(itemName)").removeClass("hidden");
+
+            let targetUrl = "@Url.Action("GetMonthlySalesDetailReport", "MesReport")";
+            let postData = {
+                "YearMonth": $("#txtYearMonthQ@(itemName)").val(),
+                "SalesPersonCode": $("#cboSalesPersonQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "CustomerCode": $("#cboCustomerQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val(),
+                "SalesOrderNo": $("#txtSalesOrderNoQ@(itemName)").val(),
+                "ProductNo": $("#txtProductNoQ@(itemName)").val(),
+                "ProductCategory": $("#cboProductCategoryQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "OrderBy": "銷售日期 DESC",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                let innerHtml = '';
+
+                // 取得總筆數（第一次載入時）
+                if (objPage.pageIndex === 0) {
+                    totalCount@(itemName) = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                }
+
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        loadedCount@(itemName)++;
+                        let _row = loadedCount@(itemName) + ".";
+                        let salesDate = item.銷售日期 || '';
+                        let quantity = parseFloat(item.銷貨數量) || 0;
+                        let localAmount = parseFloat(item.本幣金額) || 0;
+                        let twdAmount = parseFloat(item.台幣金額) || 0;
+                        let profit = parseFloat(item.毛利) || 0;
+                        let profitRate = parseFloat(item.毛利率) || 0;
+
+                        // 累加統計
+                        totalQuantity@(itemName) += quantity;
+                        totalLocalAmount@(itemName) += localAmount;
+                        totalTwdAmount@(itemName) += twdAmount;
+                        totalProfit@(itemName) += profit;
+                        totalSales@(itemName) += localAmount;
+
+                        innerHtml += `<tr>
+                                        <td class="text-center">${_row}</td>
+                                        <td class="text-center">${item.單據類別 || ''}</td>
+                                        <td class="text-center">${salesDate}</td>
+                                        <td class="text-center">${item.產品分類 || ''}</td>
+                                        <td class="text-left">${item.客戶 || ''}</td>
+                                        <td class="text-center">${item.業務人員 || ''}</td>
+                                        <td class="text-center">${item.銷貨單號 || ''}</td>
+                                        <td class="text-center">${item.品號 || ''}</td>
+                                        <td class="text-left">${item.品名 || ''}</td>
+                                        <td class="text-center">${formatNumber@(itemName)(quantity, 0)}</td>
+                                        <td class="text-right amount-cell">${formatNumber@(itemName)(localAmount, 2)}</td>
+                                        <td class="text-right amount-cell">${formatNumber@(itemName)(twdAmount, 2)}</td>
+                                        <td class="text-right amount-cell">${formatNumber@(itemName)(profit, 2)}</td>
+                                        <td class="text-center">${formatNumber@(itemName)(profitRate, 2)}%</td>
+                                      </tr>`;
+                    });
+
+                    // 檢查是否還有更多資料
+                    if (data.result.length < objPage.pageSize || loadedCount@(itemName) >= totalCount@(itemName)) {
+                        hasMoreData@(itemName) = false;
+                        $("#noMoreData@(itemName)").removeClass("hidden");
+                    }
+                } else {
+                    if (objPage.pageIndex === 0) {
+                        innerHtml = `<tr>
+                                        <td class="text-center" colspan="14" style="background-color: #fff3cd;">
+                                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                     </tr>`;
+                    }
+                    hasMoreData@(itemName) = false;
+                    $("#noMoreData@(itemName)").removeClass("hidden");
+                }
+
+                // 更新表格內容
+                if (isAppend) {
+                    $("#tblData@(itemName) tbody").append(innerHtml);
+                } else {
+                    $("#tblData@(itemName) tbody").html(innerHtml);
+                }
+
+                // 更新統計資訊
+                UpdateDataStats@(itemName)();
+                UpdateSummary@(itemName)();
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#loadingIndicator@(itemName)").addClass("hidden");
+            isLoading@(itemName) = false;
+            TableComponentInit();
+        }
+
+        // 更新資料統計資訊
+        function UpdateDataStats@(itemName)() {
+            let statsText = `已載入 ${loadedCount@(itemName)} 筆資料`;
+            if (totalCount@(itemName) > 0) {
+                statsText += ` / 共 ${totalCount@(itemName)} 筆`;
+                let percentage = Math.round((loadedCount@(itemName) / totalCount@(itemName)) * 100);
+                statsText += ` (${percentage}%)`;
+            }
+            if (hasMoreData@(itemName)) {
+                statsText += ` - 滾動至底部載入更多`;
+            }
+            $("#dataStats@(itemName)").html(`<i class="fas fa-info-circle"></i> ${statsText}`);
+        }
+
+        // 更新合計資訊
+        function UpdateSummary@(itemName)() {
+            // 計算平均毛利率
+            let avgProfitRate = totalSales@(itemName) > 0 ? (totalProfit@(itemName) / totalSales@(itemName) * 100) : 0;
+
+            // 更新合計
+            $("#totalQuantity@(itemName)").text(formatNumber@(itemName)(totalQuantity@(itemName), 0));
+            $("#totalLocalAmount@(itemName)").text(formatNumber@(itemName)(totalLocalAmount@(itemName), 2));
+            $("#totalTwdAmount@(itemName)").text(formatNumber@(itemName)(totalTwdAmount@(itemName), 2));
+            $("#totalProfit@(itemName)").text(formatNumber@(itemName)(totalProfit@(itemName), 2));
+            $("#avgProfitRate@(itemName)").text(formatNumber@(itemName)(avgProfitRate, 2) + '%');
+        }
+
+        function formatNumber@(itemName)(number, decimals) {
+            if (isNaN(number)) return '0';
+            return parseFloat(number).toLocaleString('zh-TW', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        function Excel@(itemName)() {
+            let targetUrl = "@Url.Action("ExcelMonthlySalesDetailReport", "MesReport")";
+            let postData = {
+                "YearMonth": $("#txtYearMonthQ@(itemName)").val(),
+                "SalesPersonCode": $("#cboSalesPersonQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "CustomerCode": $("#cboCustomerQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val(),
+                "SalesOrderNo": $("#txtSalesOrderNoQ@(itemName)").val(),
+                "ProductNo": $("#txtProductNoQ@(itemName)").val(),
+                "ProductCategory": $("#cboProductCategoryQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "OrderBy": "銷售日期 DESC",
+                "PageIndex": -1,
+                "PageSize": -1,
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+            if (data) {
+                alert("匯出成功!!!!", "success");
+                FileAccess.AjaxDownload(targetUrl, postData, false);
+            }
+        }
+
+        function Return@(itemName)() {
+            window.history.back();
+        }
+    </script>
+        )

@@ -1,0 +1,190 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewJudgeReturnMoProcess";
+    string itemNameText = "製程清單管理";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+    </style>
+                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 250px;">製程順序</th>
+                                        <th scope="col" style="min-width: 250px;">製程名稱</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let targetSelector@(itemName);
+        let moId@(itemName);
+        let moProcessId@(itemName);
+        let processAlias@(itemName);
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            moId@(itemName) = config.objectMoId;
+            moProcessId@(itemName) = config.objectMoProcessId;
+            processAlias@(itemName) = config.objectProcessAlias;
+
+
+            //ComboBoxs.Default("#cboProdModeQ@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "NA", "", "txtProdModeWithText", "ModeId");
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetJudgeReturnMoProcess", "Abnormalquality")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MoId": $("#MoId").val() ? $("#MoId").val() :0
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            console.log(data);
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.SortNumber}</td>
+                                        <td>${item.ProcessAlias}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-mo-id="${item.MoId}" value="${item.MoProcessId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" id="txtProcessAlias@(itemName)" data-mo-id="${item.MoId}" value="${item.ProcessAlias}"/>
+                                          <input type="hidden" id="txtMoProcessId@(itemName)" data-mo-id="${item.MoId}" value="${item.MoProcessId}"/>
+                                        </td>
+                                      </tr>`;
+                    });
+
+                    
+
+
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-mo-id]:checked") {
+                    let moId = $(this).data("mo-id");
+
+                    if (moId) {
+
+                        let processAlias = $(`input[id="txtProcessAlias@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let moProcessId = $(`input[id="txtMoProcessId@(itemName)"][data-mo-id="${moId}"]`).val();
+
+                        if (moId@(itemName)) ElementSetValue(moId@(itemName), moId, "change");
+                        
+                        if (processAlias@(itemName)) ElementSetValue(processAlias@(itemName), processAlias, "change");
+                        if (moProcessId@(itemName)) ElementSetValue(moProcessId@(itemName), moProcessId, "change");
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+                )

@@ -1,0 +1,178 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewAiCheck";
+    string itemNameText = "判定面型結果";
+}
+
+@Html.Resource("css",
+    @<style>
+         .modal-body {
+             max-height: 45vh;
+             overflow-y: auto;
+         }
+
+        .image-style {
+            display: flex;
+            justify-content: center;
+            overflow: scroll;
+        }
+
+        .pre-icon-style {
+            background-color: #0d0930;
+            width: 30px;
+            height: 30px;
+            margin-bottom: 250px;
+        }
+
+        .pass-style {
+            padding: 5px;
+            background-color: #09d56f;
+        }
+
+        .ng-style {
+            padding: 5px;
+            background-color: #ef2f59;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">製令: <span class="sub-text" id="desWoErpFullNo@(itemName)">5101-123123</span></span>
+                    <span class="sub-title">工程檢站別: <span class="sub-text" id="desProcessAlias@(itemName)">精車</span></span>
+                    <span class="sub-title">目前條碼: <span class="sub-text" id="desCurrentBarcodeNo@(itemName)">260001</span></span>
+                    <span class="sub-title">目前檔名: <span class="sub-text" id="desCurrentFileName@(itemName)">C-63-R1-R1-1</span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12 image-style">
+                        <div id="carouselCaptions@(itemName)" class="carousel slide" data-ride="carousel" data-interval="false">
+                            <ol class="carousel-indicators">
+                                <li data-target="#carouselCaptions@(itemName)" data-slide-to="0" class="active"></li>
+                            </ol>
+                            <div class="carousel-inner">
+                                
+                            </div>
+                            <a class="carousel-control-prev" href="#carouselExampleCaptions" role="button" data-slide="prev">
+                                <span class="carousel-control-prev-icon pre-icon-style" aria-hidden="true"></span>
+                                <span class="sr-only">Previous</span>
+                            </a>
+                            <a class="carousel-control-next" href="#carouselExampleCaptions" role="button" data-slide="next">
+                                <span class="carousel-control-next-icon pre-icon-style" aria-hidden="true"></span>
+                                <span class="sr-only">Next</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button class="btn btn-success" onclick="AiPass@(itemName)()"><i class="fas fa-check-circle"></i>良品</button>
+                <button class="btn btn-danger" onclick="AiNg@(itemName)()"><i class="fas fa-times-circle"></i>不良品</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+    let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 3
+        };
+    let objForm@(itemName) = "#queryForm@(itemName)";
+
+    let moId@(itemName);
+    let qcNoticeItemSpecId@(itemName);
+    let barcodeNo@(itemName);
+
+    function Pop@(itemName)(moId, woErpFullNo, processAlias, checkUser, barcodeNo, lettering, qcNoticeItemSpecId) {
+        moId@(itemName) = moId;
+        qcNoticeItemSpecId@(itemName) = qcNoticeItemSpecId;
+        barcodeNo@(itemName) = barcodeNo;
+
+        $(".carousel").carousel({
+            interval: false
+        })
+
+        $("#desWoErpFullNo@(itemName)").html(woErpFullNo);
+        $("#desProcessAlias@(itemName)").html(processAlias);
+        $("#desCheckUser@(itemName)").html(checkUser);
+        $("#desCurrentBarcodeNo@(itemName)").html(barcodeNo);
+        $("#desCurrentLettering@(itemName)").html(lettering);
+
+        if (!isMobile) {
+            $("#cboProdModeQ@(itemName)").select2({
+                width: "100%"
+            });
+        }
+
+        Query@(itemName)();
+
+        $("#modal@(itemName)").modal({
+            backdrop: "static",
+            keyboard: false,
+            show: true
+        });
+    }
+
+    function Query@(itemName)() {
+        InitData@(itemName)();
+    }
+
+    function InitData@(itemName)() {
+        let innerHtml = '';
+
+        let targetUrl = "@Url.Action("GetQcFile", "ProductionHistory")";
+
+        let postData = {
+            "QcNoticeItemSpecId": qcNoticeItemSpecId@(itemName)
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+        
+        if (data.result.length > 0) {
+            $.each(data.result, function (i, item) {
+                $("#desCurrentFileName@(itemName)").html(item.FileName);
+                innerHtml += `<div data-ai-barcode-no="${barcodeNo@(itemName)}" class="carousel-item active">
+                                <img src="/Web/GetFile?fileId=${item.FileId}"  class="d-block w-100" alt="...">
+                                <div class="carousel-caption d-none d-md-block">
+                                    <h5>${item.FileName}</h5>
+                                    <p>${item.FileSize}</p>
+                                </div>
+                              </div>`;
+            });
+        }
+        
+        $(".carousel-inner").html(innerHtml);
+        TableComponentInit();
+    }
+
+    function AiPass@(itemName)() {
+        $("div[data-ai-barcode-no='" + barcodeNo@(itemName) + "']").removeClass("ng-style");
+        $("div[data-ai-barcode-no='" + barcodeNo@(itemName) + "']").addClass("pass-style");
+
+        tempQcItemJson.tempQcItemInfo[0]["MeasureValue"] = "P";
+        $("input[data-barcode-no='" + barcodeNo@(itemName) + "'][data-qc-notice-item-spec-id='" + qcNoticeItemSpecId@(itemName) + "']").val("P");
+        Close@(itemName)();
+    }
+
+    function AiNg@(itemName)() {
+        $("div[data-ai-barcode-no='" + barcodeNo@(itemName) + "']").removeClass("pass-style");
+        $("div[data-ai-barcode-no='" + barcodeNo@(itemName) + "']").addClass("ng-style");
+
+        tempQcItemJson.tempQcItemInfo[0]["MeasureValue"] = "F";
+        $("input[data-barcode-no='" + barcodeNo@(itemName) + "'][data-qc-notice-item-spec-id='" + qcNoticeItemSpecId@(itemName) + "']").val("F");
+        Close@(itemName)();
+    }
+
+    function Close@(itemName)() {
+        $("#modal@(itemName)").modal('hide');
+    }
+</script>
+            )

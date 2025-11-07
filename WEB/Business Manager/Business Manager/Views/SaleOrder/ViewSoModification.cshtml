@@ -1,0 +1,335 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewSoModification";
+    string itemNameText = "訂單變更";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-12 text-right">
+                                        <button type="button" class="btn btn-info auth-modify" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 125px;">版次</th>
+                                        <th scope="col" style="min-width: 250px;">變更原因</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">確認</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <div class="tab">
+                            <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link" data-toggle="tab" href="#tabSoModification">
+                                        <i class="fas fa-shopping-bag"></i> 訂單單頭
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-toggle="tab" href="#tabSomDetail">
+                                        <i class="fas fa-paperclip"></i> 訂單單身
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="tab-content">
+                            <div class="tab-pane" id="tabSoModification">
+                                @Html.Partial("SoModification")
+                            </div>
+                            <div class="tab-pane" id="tabSomDetail">
+                                @Html.Partial("SomDetail")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer som-mode">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let soId@(itemName);
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let somJson = JSON.parse('{ "detail" : []}');
+
+        function Pop@(itemName)(SoId) {
+            soId@(itemName) = SoId;
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetSoModification", "SaleOrder")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "SoId": soId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.Version}</td>
+                                        <td>${item.ModiReason}</td>
+                                        <td class="text-center">${StatusName(`ConfirmStatus`, item.ConfirmStatus)}</td>
+                                        <td class="text-center active-content">
+                                          ${item.ConfirmStatus == `N` ? `<a class="active-link auth-modify" href="javascript:Edit@(itemName)(${item.SomId});"><i class="fas fa-edit"></i></a>` : ``}
+                                          ${item.ConfirmStatus == `N` && item.TransferStatus == `N` ? `<a class="active-link auth-modify" href="javascript:Delete@(itemName)(${item.SomId});"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                          ${item.ConfirmStatus == `N` ? `<a class="active-link auth-modify" href="javascript:Confirm@(itemName)(${item.SomId});" ><i class="fas fa-check-circle"></i><span>確認</span></a>` : ``}
+                                          ${item.ConfirmStatus == `Y` && item.TransferStatus == `Y` ? `<a class="active-link auth-modify" href="javascript:ReConfirm@(itemName)(${item.SomId});"><i class="fas fa-undo-alt"></i><span>反確認</span></a>` : ``}
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(SomId) {
+            $("#SomId").val(SomId ? SomId : 0);
+
+            $("#editData@(itemName) .nav-tabs > .nav-item").first().find("a").trigger("click");           
+
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+            if (SomId > 0) {
+                let targetUrl = "@Url.Action("GetSoModification", "SaleOrder")";
+                let postData = {
+                    "SomId": SomId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        somJson.SoErpPrefix = item.SoErpPrefix;
+                        somJson.SoErpNo = item.SoErpNo;
+                        somJson.DocDate = item.DocDate;
+                        somJson.CustomerPurchaseOrder = item.CustomerPurchaseOrder;
+                        somJson.CustomerId = item.CustomerId;
+                        somJson.DepartmentId = item.DepartmentId;
+                        somJson.SalesmenId = item.SalesmenId;
+                        somJson.SoRemark = item.SoRemark;
+                        somJson.ModiReason = item.ModiReason;
+                        somJson.CustomerAddressFirst = item.CustomerAddressFirst;
+                        somJson.CustomerAddressSecond = item.CustomerAddressSecond;
+                        somJson.Currency = item.Currency;
+                        somJson.ExchangeRate = item.ExchangeRate;
+                        somJson.TaxNo = item.TaxNo;
+                        somJson.Taxation = item.Taxation;
+                        somJson.BusinessTaxRate = item.BusinessTaxRate;
+                        somJson.TradeTerm = item.TradeTerm;
+                        somJson.PriceTerm = item.PriceTerm;
+                        somJson.PaymentTerm = item.PaymentTerm;
+                        somJson.DepositPartial = item.DepositPartial;
+                        somJson.DetailMultiTax = item.DetailMultiTax;
+                        somJson.DepositRate = item.DepositRate;
+                        somJson.ShipMethod = item.ShipMethod;
+                        somJson.ConfirmStatus = item.ConfirmStatus;
+
+                        somJson.detail = JSON.parse(item.SomDetail).data;
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            } else {
+                let targetUrl = "@Url.Action("GetSaleOrder", "SaleOrder")";
+                let postData = {
+                    "SoId": soId@(itemName)
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        somJson.SoErpPrefix = item.SoErpPrefix;
+                        somJson.SoErpNo = item.SoErpNo;
+                        somJson.DocDate = item.DocDate;
+                        somJson.CustomerPurchaseOrder = item.CustomerPurchaseOrder;
+                        somJson.CustomerId = item.CustomerId;
+                        somJson.DepartmentId = item.DepartmentId;
+                        somJson.SalesmenId = item.SalesmenId;
+                        somJson.SoRemark = item.SoRemark;
+                        somJson.CustomerAddressFirst = item.CustomerAddressFirst;
+                        somJson.CustomerAddressSecond = item.CustomerAddressSecond;
+                        somJson.Currency = item.Currency;
+                        somJson.ExchangeRate = item.ExchangeRate;
+                        somJson.TaxNo = item.TaxNo;
+                        somJson.Taxation = item.Taxation;
+                        somJson.BusinessTaxRate = item.BusinessTaxRate;
+                        somJson.TradeTerm = item.TradeTerm;
+                        somJson.PriceTerm = item.PriceTerm;
+                        somJson.PaymentTerm = item.PaymentTerm;
+                        somJson.DepositPartial = item.DepositPartial;
+                        somJson.DetailMultiTax = item.DetailMultiTax;
+                        somJson.DepositRate = item.DepositRate;
+                        somJson.ShipMethod = item.ShipMethod;
+                        somJson.ConfirmStatus = item.ConfirmStatus;
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            InitDataSoModification();
+            InitDataSomDetail();  
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let SomId = parseInt($("#SomId").val());
+                let SomDetailId = parseInt($("#SomDetailId").val());
+
+                if (SomId <= 0) {
+                    let targetUrl = "@Url.Action("AddSoModification", "SaleOrder")";
+                    let postData = {
+                        "SoId": $("#SoId").val(),
+                        "SoErpPrefix": $("#cboSoErpPrefixSoModification").val(),
+                        "SoErpNo": $("#txtSoErpNoSoModification").val(),
+                        "DocDate": $("#txtDocDateSoModification").val(),
+                        "CustomerPurchaseOrder": $("#txtCustomerPurchaseOrderSoModification").val(),
+                        "CustomerId": $("#cboCustomerIdSoModification").val(),
+                        "DepartmentId": $("#cboDepartmentIdSoModification").val(),
+                        "SalesmenId": $("#cboSalesmenIdSoModification").val(),
+                        "SoRemark": $("#txtSoRemarkSoModification").val(),
+                        "ModiReason": $("#txtModiReasonSoModification").val(),
+                        "CustomerAddressFirst": $("#txtCustomerAddressFirstSoModification").val(),
+                        "CustomerAddressSecond": $("#txtCustomerAddressSecondSoModification").val(),
+                        "Currency": $("#cboCurrencySoModification").val(),
+                        "ExchangeRate": $("#txtExchangeRateSoModification").val(),
+                        "TaxNo": $("#cboTaxNoSoModification").val(),
+                        "Taxation": $("#cboTaxationSoModification").val(),
+                        "BusinessTaxRate": $("#txtBusinessTaxRateSoModification").val(),
+                        "TradeTerm": $("#cboTradeTermSoModification").val(),
+                        "PriceTerm": $("#txtPriceTermSoModification").val(),
+                        "PaymentTerm": $("#cboPaymentTermSoModification").val(),
+                        "DepositPartial": $("input[name='chkDepositPartialSoModification']:checked").val(),
+                        "DepositRate": $("#txtDepositRateSoModification").val(),
+                        "DetailMultiTax": $("input[name='chkDetailMultiTaxSoModification']:checked").val(),
+                        "ShipMethod": $("#cboShipMethodSoModification").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateSoModification", "SaleOrder")";
+                    let postData = {
+                        "SomDetailId": SomDetailId,
+                        @*"SoSequence": $("#txtSoSequence@(itemName)").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "SoMtlItemName": $("#txtMtlItemName@(itemName)").val(),
+                        "SoMtlItemSpec": $("#txtMtlItemSpec@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "UomId": $("#cboUomId@(itemName)").val(),
+                        "CustomerMtlItemNo": $("#cboCustomerMtlItemNo@(itemName)").val(),
+                        "SoQty": $("#txtSoQty@(itemName)").val(),
+                        "FreebieQty": $("#txtFreebieQty@(itemName)").val(),
+                        "UnitPrice": $("#txtUnitPrice@(itemName)").val(),
+                        "Amount": $("#txtAmount@(itemName)").val(),
+                        "SoPriceQty": $("#txtSoPriceQty@(itemName)").val(),
+                        "SoPriceUomId": $("#cboSoPriceUomId@(itemName)").val(),
+                        "TaxNo": $("#cboTaxNo@(itemName)").val(),
+                        "BusinessTaxRate": $("#txtBusinessTaxRate@(itemName)").val(),
+                        "PromiseDate": $("#txtPromiseDate@(itemName)").val(),
+                        "Project": $("#txtProject@(itemName)").val(),
+                        "SoDetailRemark": $("#txtSoDetailRemark@(itemName)").val()*@
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Return@(itemName)() {
+            //ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

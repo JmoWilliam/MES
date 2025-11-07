@@ -1,0 +1,978 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MissionReport";
+    string itemNameText = "任務回報區";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+
+}
+
+
+<link href="@Url.Content("~/Content/task-manage.min.css")?@dateCache" rel="stylesheet" />
+
+
+@Html.Resource("css",
+    @<style>
+
+         /* ******* */
+         .task-area {
+             background-color: #ebecf0;
+             border-radius: 6px;
+             width: 100%;
+             padding: 10px;
+         }
+         @@media screen and (min-width: 1024px) {
+            .task-area {
+                min-height: 100vh;
+            }
+         }
+
+         .area-head {
+             padding: 10px;
+             text-align: center;
+             font-size: 18px;
+             font-weight: bold;
+             margin-bottom: 15px;
+             border-bottom: 2px solid #ddd;
+         }
+
+         .task-card {
+             background-color: white;
+             border-radius: 4px;
+             padding: 15px;
+             margin-bottom: 10px;
+             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+             cursor: pointer;
+             transition: transform 0.2s, box-shadow 0.2s;
+             position: relative;
+         }
+
+             .task-card:hover {
+                 transform: translateY(-2px);
+                 box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+             }
+
+             .task-card.dragging {
+                 opacity: 0.5;
+                 transform: scale(0.95);
+             }
+
+         .task-title {
+             font-weight: bold;
+             margin-bottom: 5px;
+             color: #333;
+         }
+
+         .task-description {
+             font-size: 14px;
+             color: #666;
+             margin-bottom: 8px;
+         }
+        .task-setting{
+            text-align:right;
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #888;
+        }
+
+         .task-owner {
+             background-color: #e3f2fd;
+             color: #1976d2;
+             padding: 3px 6px;
+             border-radius: 3px;
+         }
+
+         .task-due-date {
+             color: #f44336;
+         }
+
+         .column-drop-indicator {
+             height: 2px;
+             background-color: #2196f3;
+             margin: 5px 0;
+             display: none;
+         }
+
+         .drag-handle {
+             cursor: grab;
+             position: absolute;
+             top: 5px;
+             right: 10px;
+             font-size: 24px;
+             color: #aaa;
+         }
+
+         /*拖拉相關*/
+         .dragging {
+             opacity: 0.5;
+         }
+
+         .column-drop-indicator {
+             display: none;
+             height: 5px;
+             background-color: red;
+             margin: 5px 0;
+         }
+
+         .placeholder {
+             border: 2px dashed #bbb;
+             background-color: #f9f9f9;
+             height: 150px;
+             margin-bottom: 10px;
+         }
+
+
+         /*回覆區*/
+         .report-area {
+             background-color: #c7bbbb17;
+             margin-top: 20px;
+             padding: 10px 10px !important;
+             min-height: 130px;
+             overflow: scroll;
+             position: relative;
+             border-radius: 10px;
+         }
+
+         .report-list, .reportItem {
+             padding: 5px 0px;
+         }
+
+         .report-edit {
+             position: sticky;
+             bottom: 0px;
+         }
+
+         .reportUser {
+             font-size: 18px;
+             letter-spacing: 2px;
+             font-weight: bold;
+         }
+
+         .reportItem p {
+             margin-bottom: 0;
+             font-size: 18px;
+             letter-spacing: 2px;
+         }
+
+         .subDetail {
+             color: #69696991;
+             font-family: monospace;
+         }
+</style>
+                                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtTaskNameQ@(itemName)">任務名稱</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtTaskNameQ@(itemName)" name="txtTaskNameQ@(itemName)" placeholder="請輸入設備名稱" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboAttendUserQ@(itemName)">參與者</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboAttendUserQ@(itemName)" name="cboAttendUserQ@(itemName)"
+                                        data-msg-required="請選擇參與者" data-rule-required="true" multiple></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    開始
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)A" name="cbxStatusQ@(itemName)" value="S" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    結案
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)A" name="cbxStatusQ@(itemName)" value="C" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    即將截止
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)S" name="cbxStatusQ@(itemName)" value="D" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    作廢
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)S" name="cbxStatusQ@(itemName)" value="V" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12 col-lg-4">
+        <div class="area-head" style="background-color:#FFD54F;">
+            未開始
+        </div>
+        <div class="column-drop-indicator"></div>
+        <div class="task-area card card-shadow mb-4" data-area="N" id="reportAreaN" style="background-color:#fffdf5;">
+            <div class="task-card" data-id="1" data-Sort="1" data-status="N">
+                <div class="drag-handle">⋮⋮</div>
+                <div class="task-title">系統需求分析1</div>
+                <div class="task-description">收集並分析客戶需求，制定系統規格文檔</div>
+                <div class="task-meta">
+                    <span class="task-owner">王小明</span>
+                    <span class="task-due-date">2025/03/01</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="area-head" style="background-color:#81C784;">
+            進行中
+        </div>
+        <div class="column-drop-indicator"></div>
+        <div class="task-area card card-shadow mb-4" data-area="S" id="reportAreaS" style="background-color:#e5efe5;">
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="area-head" style="background-color:#CFD8DC;">
+            追蹤中
+        </div>
+        <div class="column-drop-indicator"></div>
+        <div class="task-area card card-shadow mb-4" data-area="T" id="reportAreaT" style="background-color:#e6e7e7;">
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="TdId" name="TdId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtStartDate@(itemName)">任務開始日<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtStartDate@(itemName)" name="txtStartDate@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" data-rule-required="true" disabled />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtTaskName@(itemName)">任務名稱 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtTaskName@(itemName)" name="txtTaskName@(itemName)" placeholder="請輸入任務名稱"
+                                       data-msg-required="請輸入設備名稱" data-rule-required="true"
+                                       data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtTaskContent@(itemName)">任務描述 </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <textarea type="text" class="form-control" id="txtTaskContent@(itemName)" name="txtTaskContent@(itemName)" placeholder="請輸入任務描述"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboAttendUser@(itemName)">參與者 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboAttendUser@(itemName)" name="cboAttendUser@(itemName)"
+                                        data-msg-required="請選擇參與者" data-rule-required="true" multiple></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtExpectedDate@(itemName)">任務預計結束日</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtExpectedDate@(itemName)" name="txtExpectedDate@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtReturnFrequency@(itemName)">回報頻率(天) </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtReturnFrequency@(itemName)" name="txtReturnFrequency@(itemName)" placeholder="請輸入回報頻率(天)" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let userId@(itemName);
+        let companyId@(itemName);
+        let userNo@(itemName);
+
+
+
+        $(document).ready(function () {
+            GetUserInfo@(itemName)()
+
+            ComboBoxs.Default("#cboAttendUserQ@(itemName)", "@Url.Action("GetUser", "TaskManager")", { "Status": "A" }, "", "NA", "", "UserWithNo", "UserId"); //確認者
+
+            Query@(itemName)()
+
+            if (!isMobile) {
+                $("#cboAttendUserQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            initDragAndDrop()
+            $("#modalQuery@(itemName)").modal("hide");
+
+        }
+
+        function InitData@(itemName)(objPage) {
+
+            let innerHtml = '';
+            let innerHtmlN = '';
+            let innerHtmlS = '';
+            let innerHtmlT = '';
+            let pageCount = 0;
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+            let targetUrl = "@Url.Action("GetMissionReport", "TaskManager")";
+            let postData = {
+                "TaskName": $("#txtTaskNameQ@(itemName)").val(),
+                @*"StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "ExpectedDate": $("#txtExpectedDateeQ@(itemName)").val().trim(),*@
+                "Status": statusList.join(",")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        let UserFull = GetAttendUserData('UseTask',item.AttendUser)
+                        let AttendUserArr = UserFull.split(',')
+                        let membersHtml = AttendUserArr.map(member => `<span class="member-tag">${member}</span>`).join('');
+
+                        let CardStatus = ""
+                        let CardIcon = ""
+
+                        switch (item.TaskStatus) {
+                            case "N":
+                                CardStatus = ""
+                                CardIcon = `<i class="fas fa-pencil-alt"></i>`
+                                break
+                            case "S":
+                                CardStatus = "status-start"
+                                CardIcon = `<i class="far fa-running"></i>`
+                                break
+                            case "C":
+                                CardStatus = "status-complete"
+                                CardIcon = `<i class="fas fa-check-circle"></i>`
+                                break
+                            case "V":
+                                CardStatus = "status-void"
+                                CardIcon =`<i class="fas fa-times-circle"></i>`
+                                break
+                            case "D":
+                                CardStatus = "status-danger"
+                                CardIcon = `<i class="fas fa-exclamation-triangle"></i>`
+                                break
+                        }
+                        let repeatSetting = ""
+                        switch (item.RepeatType) {
+                            case "DAILY":
+                                repeatSetting = "每日回報"
+                                switch (item.RepeatEndType) {
+                                    case "NEVER":
+                                        repeatSetting = `每日回報,永不結束`
+                                        break;
+                                    case "COUNT":
+                                        repeatSetting = `每日回報,需回報${item.RepeatEndValue}次`
+
+                                        break;
+                                    case "UNTIL":
+                                        repeatSetting = `每日回報,直到${item.ExpectedDate}`
+                                        break;
+                                }
+                                break
+                            case "WEEKLY":
+                                switch (item.RepeatEndType) {
+                                    case "NEVER":
+                                        repeatSetting = `每周${item.RepeatValue}回報,永不結束`
+                                        break;
+                                    case "COUNT":
+                                        repeatSetting = `每周${item.RepeatValue}回報,需回報${item.RepeatEndValue}次`
+
+                                        break;
+                                    case "UNTIL":
+                                        repeatSetting = `每周${item.RepeatValue}回報,直到${item.ExpectedDate}`
+                                        break;
+                                }
+                                break
+                            case "INTERVAL":
+                                switch (item.RepeatEndType) {
+                                    case "NEVER":
+                                        repeatSetting = `每${item.RepeatValue}天回報,永不結束`
+                                        break;
+                                    case "COUNT":
+                                        repeatSetting = `每${item.RepeatValue}天回報,需回報${item.RepeatEndValue}次`
+
+                                        break;
+                                    case "UNTIL":
+                                        repeatSetting = `每${item.RepeatValue}天回報,直到${item.ExpectedDate}`
+                                        break;
+                                }
+                                break
+                            case "NONE":
+                                repeatSetting = `回報一次`
+                                break
+                        }
+
+                        innerHtml = `
+                            <div class="task-card" id="taskCard${item.MrId}" data-mrid="${item.MrId}" data-sort="${item.Sort}" data-status="${item.ReportStatus}">
+                                <div class="taskArea" onclick="Detail@(itemName)(${item.MrId},false)">
+                                    <div class="drag-handle" onclick="event.stopPropagation();">⋮⋮</div>
+                                    <div class="task-title">#${item.Sort}</span>  ${item.TaskName}</div>
+                                    <div class="task-description">${item.TaskContent}</div>
+                                    <div class="task-setting">
+                                        ${repeatSetting}
+                                    </div>
+                                    <div class="task-meta">
+                                        <div class="member-list">${membersHtml}</div>
+                                        <span class="task-due-date">${item.StartDate}~${item.ExpectedDate}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+
+                        switch (item.ReportStatus) {
+                            case "N":
+                                innerHtmlN += innerHtml
+                                break
+                            case "S":
+                                innerHtmlS += innerHtml
+                                break
+                            case "T":
+                                innerHtmlT += innerHtml
+                                break
+                        }
+
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#reportAreaN").html(innerHtmlN);
+            $("#reportAreaS").html(innerHtmlS);
+            $("#reportAreaT").html(innerHtmlT);
+        }
+
+        function Detail@(itemName)(MrId,Change) {
+
+            let innerHtml = ``
+            let reportContent = ""
+            let reportUserOption = `<option value="">全部</option>`
+            let UserFull = ""
+            if ($(`#taskCard${MrId}`).children(".report-area").length > 0 && Change == false) {
+                $(`#taskCard${MrId}`).children(".report-area").remove();
+            } else {
+                let ReportUserId = $(`#cboReportUserIdQ@(itemName)${MrId}`).val()
+
+                let targetUrl = "@Url.Action("GetMrDetail", "TaskManager")";
+                let postData = {
+                    "MrId": MrId,
+                    "ReportUserId": ReportUserId,
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        reportContent += `
+                        <div class="reportItem">
+                            <span class="reportUser">${item.UserName}</span>
+                            <p>${item.ReportContent}</p>
+                            <span class="subDetail">${item.row} ${item.ReportDate}</span>
+                        </div>
+                    `
+                        if (UserFull == "") {
+                            UserFull = GetAttendUserData('UseReportUser',item.AttendUser)
+                        }
+                    })
+                }
+                else {
+                    alert(data.msg, "alert", 0);
+                    return
+                }
+                if (UserFull != "") {
+                    let AttendUserArr = UserFull.split(',')
+                    AttendUserArr.forEach((v) => {
+                        reportUserOption += `<option value="${v.split('-')[0]}" ${v.split('-')[0] == ReportUserId ? `selected` : ``}>${v.split('-')[1]}</option>`
+                    })
+                }
+
+                innerHtml = `
+                    <div class="report-area">
+                        <select class="form-control" id="cboReportUserIdQ@(itemName)${MrId}" name="cboTaskStatusQ@(itemName)"
+                                        data-msg-required="請選擇任務狀態" data-rule-required="true" onchange="Detail@(itemName)(${MrId},true)">
+                            ${reportUserOption}
+                        </select>
+                        <div class="report-list">
+                            ${reportContent}
+                        </div>
+                        <div class="report-edit">
+                           <textarea type="text" class="form-control" id="txtReportContent@(itemName)${MrId}" name="txtreportContent@(itemName)${MrId}" placeholder="請回報任務" onkeydown="Save@(itemName)(${MrId},-1)"></textarea>
+                        </div>
+                    </div>
+                `
+                $(`#taskCard${MrId}`).children(".report-area").remove();
+
+                $(`#taskCard${MrId}`).append(innerHtml);
+            }
+        }
+
+        function UpdateMsStatusSort(MrId, TargetState, TargetSort) {
+            let targetUrl = "@Url.Action("UpdateMsStatusSort", "TaskManager")";
+            let postData = {
+                "MrId": MrId,
+                "TargetState": TargetState,
+                "TargetSort": TargetSort.join(',')
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            alert(data.msg, "success", 0);
+            Return@(itemName)();
+        }
+
+        function GetAttendUserData(Type,AttendUser) {
+            let UserFull = ""
+            let UseReportUser = ""
+            let content = ""
+            let targetUrl = "@Url.Action("GetAttendUserData", "TaskManager")";
+            let postData = {
+                "AttendUser": AttendUser
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    UserFull = item.UserFull
+                    UseReportUser = item.UseReportUser
+                });
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            switch (Type) {
+                case "UseTask":
+                    content = UserFull
+                    break
+                case "UseReportUser":
+                    content = UseReportUser
+                    break
+            }
+            return content
+        }
+
+        function Save@(itemName)(MrId, MrDetailId) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // 防止換行
+
+                if (MrDetailId <= 0) {
+                    let targetUrl = "@Url.Action("AddMrDetail", "TaskManager")";
+                    let postData = {
+                        "MrId": MrId,
+                        "ReportContent": $(`#txtReportContent@(itemName)${MrId}`).val()
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        Detail@(itemName)(MrId,true)
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateTaskDistribution", "TaskManager")";
+                    let postData = {
+                        "MrDetailId": MrDetailId,
+                        "MrId": MrId,
+                        "ReportContent": $(`#txtReportContent@(itemName)${MrId}`).val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+
+        }
+
+        function Delete@(itemName)(MrId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMissionReport", "TaskManager")";
+                    let postData = {
+                        "MrId": MrId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function GetUserInfo@(itemName)() {
+            let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+            let postData = {
+                "UserNo": $.cookie("Login"),
+                "KeyText": $.cookie("LoginKey")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                userId@(itemName) = data.returnData.UserId;
+                companyId@(itemName) = data.returnData.CompanyId;
+                userNo@(itemName) = data.returnData.UserNo;
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function initDragAndDrop() {
+            let draggedItem = null;
+            let dragStartY = 0;
+            let dragStartX = 0;
+            let placeholder = $('<div class="placeholder"></div>');
+            let mouseOffsetY = 0;
+            let mouseOffsetX = 0;
+            let isDragging = false; // 是否正在拖動
+
+            let MrId = "";
+            let OrState = "";
+            let dragElement = null; // 克隆的拖曳元素
+
+            $(document).on('dragstart', function (e) {
+                e.preventDefault();
+            });
+
+            // 鼠標按下
+            $('.task-card .drag-handle').on('mousedown', function (e) {
+                //draggedItem = $(this);
+                draggedItem = $(this).closest('.task-card'); // 獲取父層 task-card
+                OrState = draggedItem.data('status');
+                MrId = draggedItem.data('mrid');
+                isDragging = false; // 開始時重置拖動狀態
+
+                const rect = this.getBoundingClientRect();
+                mouseOffsetY = e.clientY - rect.top;
+                mouseOffsetX = e.clientX - rect.left;
+
+                dragStartY = e.clientY;
+                dragStartX = e.clientX;
+
+                setTimeout(() => {
+                    if (!isDragging) {
+                        //alert("點擊事件觸發，非拖拉");
+                        // 這裡可以加點擊的相關邏輯，例如開啟編輯視窗
+                    }
+                }, 200); // 設定短暫延遲，避免誤判點擊
+
+                e.preventDefault();
+            });
+
+            // 鼠標移動
+            $(document).on('mousemove', function (e) {
+                if (draggedItem) {
+                    let distanceX = Math.abs(e.clientX - dragStartX);
+                    let distanceY = Math.abs(e.clientY - dragStartY);
+
+                    if (distanceX > 5 || distanceY > 5) { // 滑鼠移動超過 5px 視為拖拉
+                        isDragging = true;
+                    }
+
+                    if (isDragging) {
+                        if (!dragElement) {
+                            // 創建一個克隆元素來跟隨鼠標
+                            dragElement = draggedItem.clone().addClass('dragging').css({
+                                'position': 'fixed',
+                                'width': draggedItem.outerWidth() + 'px',
+                                'pointer-events': 'none',
+                                'z-index': 1000,
+                                'left': e.clientX - mouseOffsetX + 'px',
+                                'top': e.clientY - mouseOffsetY + 'px'
+                            });
+                            $('body').append(dragElement);
+
+                            placeholder.insertAfter(draggedItem);
+                            draggedItem.hide();
+                        }
+
+                        dragElement.css({
+                            'left': e.clientX - mouseOffsetX + 'px',
+                            'top': e.clientY - mouseOffsetY + 'px'
+                        });
+
+                        checkForPageScroll(e.clientY);
+                        checkForColumnScroll(e.clientY, placeholder.closest('.task-area'));
+
+                        let targetColumn = null;
+
+                        $('.task-area').each(function () {
+                            const rect = this.getBoundingClientRect();
+                            if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                                e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                                targetColumn = $(this);
+                                let closestItem = null;
+                                let closestDistance = Infinity;
+
+                                targetColumn.find('.task-card ').each(function () {
+                                    if ($(this).is(draggedItem)) return;
+
+                                    const itemRect = this.getBoundingClientRect();
+                                    const itemCenter = itemRect.top + itemRect.height / 2;
+                                    const distance = Math.abs(e.clientY - itemCenter);
+
+                                    if (distance < closestDistance) {
+                                        closestDistance = distance;
+                                        closestItem = $(this);
+                                    }
+                                });
+
+                                if (closestItem) {
+                                    const itemRect = closestItem[0].getBoundingClientRect();
+                                    const itemCenter = itemRect.top + itemRect.height / 2;
+
+                                    if (e.clientY < itemCenter) {
+                                        placeholder.insertBefore(closestItem);
+                                    } else {
+                                        placeholder.insertAfter(closestItem);
+                                    }
+                                } else {
+                                    targetColumn.append(placeholder);
+                                }
+                                return false;
+                            }
+                        });
+
+                        e.preventDefault();
+                    }
+                }
+            });
+
+            // 鼠標釋放
+            $(document).on('mouseup', function (e) {
+
+                if (draggedItem && isDragging) {
+                    let currentColumn = placeholder.closest('.task-area');
+                    let TargetState = currentColumn.attr('data-area');
+
+                    if (TargetState === "N" && OrState !== "N") {
+                        alert("已開始任務不可以回到未開始狀態!!!");
+                        draggedItem.insertAfter(draggedItem);
+                    } else {
+                        draggedItem.insertAfter(placeholder);
+                        let TargetSort = [];
+                        currentColumn.find('.task-card ').each(function () {
+                            let itemId = $(this).attr('data-mrid');
+                            TargetSort.push(itemId);
+                        });
+
+                        UpdateMsStatusSort(MrId, TargetState, TargetSort);
+                    }
+
+                    draggedItem.show();
+                    dragElement.remove();
+                    placeholder.detach();
+                }
+
+                draggedItem = null;
+                dragElement = null;
+                isDragging = false; // 重置拖拉狀態
+
+                e.preventDefault();
+            });
+        }
+
+        // 列內自動滾動變量
+        let columnScrollInterval = null;
+        let columnScrollSpeed = 5;
+        let columnScrollThreshold = 40; // 距離列頂部或底部多少像素開始滾動
+
+        // 頁面自動滾動設置
+        let pageScrollInterval = null;
+        let pageScrollSpeed = 10;
+        let pageScrollThreshold = 50; // 距離視窗邊緣多少像素開始滾動
+
+        // 檢查是否需要自動滾動頁面
+        function checkForPageScroll(clientY) {
+            const windowHeight = $(window).height();
+            const scrollTop = $(window).scrollTop();
+
+            // 如果靠近底部，向下滾動
+            if (clientY > windowHeight - pageScrollThreshold) {
+                startPageScroll('down');
+            }
+            // 如果靠近頂部，向上滾動
+            else if (clientY < pageScrollThreshold + scrollTop) {
+                startPageScroll('up');
+            }
+            // 否則停止自動滾動
+            else {
+                stopPageScroll();
+            }
+        }
+
+        // 開始頁面自動滾動
+        function startPageScroll(direction) {
+            if (pageScrollInterval) return; // 如果已經在滾動中，不要重複設置
+
+            pageScrollInterval = setInterval(function () {
+                if (direction === 'down') {
+                    window.scrollBy(0, pageScrollSpeed);
+                } else {
+                    window.scrollBy(0, -pageScrollSpeed);
+                }
+            }, 20);
+        }
+
+        // 停止頁面自動滾動
+        function stopPageScroll() {
+            if (pageScrollInterval) {
+                clearInterval(pageScrollInterval);
+                pageScrollInterval = null;
+            }
+        }
+
+        // 檢查是否需要列內滾動
+        function checkForColumnScroll(clientY, column) {
+            if (!column || column.length === 0) return;
+
+            const columnRect = column[0].getBoundingClientRect();
+            const relativeY = clientY - columnRect.top;
+
+            // 如果靠近列底部，向下滾動
+            if (relativeY > columnRect.height - columnScrollThreshold) {
+                startColumnScroll(column, 'down');
+            }
+            // 如果靠近列頂部，向上滾動
+            else if (relativeY < columnScrollThreshold) {
+                startColumnScroll(column, 'up');
+            }
+            // 否則停止列內滾動
+            else {
+                stopColumnScroll();
+            }
+        }
+
+        // 開始列內自動滾動
+        function startColumnScroll(column, direction) {
+            if (columnScrollInterval) return; // 如果已經在滾動中，不要重複設置
+
+            columnScrollInterval = setInterval(function () {
+                if (direction === 'down') {
+                    column.scrollTop(column.scrollTop() + columnScrollSpeed);
+                } else {
+                    column.scrollTop(column.scrollTop() - columnScrollSpeed);
+                }
+            }, 20);
+        }
+
+        // 停止列內自動滾動
+        function stopColumnScroll() {
+            if (columnScrollInterval) {
+                clearInterval(columnScrollInterval);
+                columnScrollInterval = null;
+            }
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            Query@(itemName)();
+        }
+
+
+    </script>
+                        )

@@ -1,0 +1,370 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "DfmDetail";
+    string itemNameText = "量測數據詳細資料";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                                        )
+
+<div style="height: 75%; width: 100%;" id="spreadsheet"></div>
+
+<!--選擇項目-->
+<div class="modal fade" id="modalDfmItem@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">選擇項目</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">項目</label>
+                            <div class="col-12">
+                                <select id="cboDfmItemId@(itemName)" class="form-control"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                @*<button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let spreadsheet@(itemName);
+        let spreadsheetData@(itemName);
+        let dfmId@(itemName);
+
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfo: []
+        }
+
+        function Expand@(itemName)() {
+            if (parseInt($("#DfmId").val()) > 0) {
+                dfmId@(itemName) = $("#DfmId").val();
+
+                $(".advanced-block").slideDown("slow");
+
+                ResetSpreadsheet@(itemName)();
+
+                $("#spreadsheet").css("height", "1100px");
+
+                spreadsheet@(itemName).clear();
+
+                Return@(itemName)();
+
+                if (!isMobile) {
+                    $("#cboDfmItemId@(itemName)").select2({
+                        width: "100%"
+                    });
+                }
+
+                ComboBoxs.Default("#cboDfmItemId@(itemName)", "@Url.Action("GetDfmItem", "DfmInformation")", {}, "", "ALL", "", "DfmFullItemNo", "DfmItemId");
+
+                spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                    if (cell.indexOf("A") != -1 && cell != "A1") {
+                        ComboBoxs.Default("#cboDfmItemId@(itemName)", "@Url.Action("GetDfmItem", "DfmInformation")", {}, "", "ALL", "", "DfmFullItemNo", "DfmItemId");
+                        $("#modalDfmItem@(itemName)").modal("show");
+                    }
+                });
+
+                spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                    if (id == "SaveTempJson") {
+                        SaveTempSpreadSheet@(itemName)();
+                    }
+                    else if (id == "UploadJson") {
+                        UploadSpreatsheet@(itemName)();
+                    }
+                    else if (id == "DeleteTempSpreadsheet") {
+                        DeleteTempSpreadsheet@(itemName)();
+                    }
+                    else if (id == "DownloadExcel") {
+                        DownloadExcel@(itemName)();
+                    }
+                });
+            } else {
+                alert("DFM單頭資料有誤，無法展開單身!!", "alert");
+            }
+        }
+
+        function InitData@(itemName)() {
+            let targetUrl = "@Url.Action("GetDesignForManufacturingForSpreadsheer", "DfmInformation")";
+            let postData = {
+                "DfmId": dfmId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.result.length > 0) {
+                if (data.status = "success") {
+                    $.each(data.result, function (i, item) {
+                        if (item.SpreadsheetData != null) {
+                            let dataset = JSON.parse(item.SpreadsheetData);
+                            spreadsheet@(itemName).parse(dataset);
+                            spreadsheetData@(itemName) = dataset;
+                        }
+                        else {
+                            let dataset = JSON.parse(item.DefaultSpreadsheetData);
+                            spreadsheet@(itemName).parse(dataset);
+                            spreadsheetData@(itemName) = dataset;
+                        }
+                    });
+                }
+            }
+        }
+
+        $("#cboDfmItemId@(itemName)").change(function (e) {
+            let cell = spreadsheet@(itemName).selection.getSelectedCell();
+            let dfmItemFullNo = $("#cboDfmItemId@(itemName) option:selected").text();
+            let dfmItemId = $("#cboDfmItemId@(itemName)").val();
+            let row = cell.split('A')[1];
+
+            $("#modalDfmItem@(itemName)").modal("hide");
+
+            spreadsheet@(itemName).setValue("A" + row, dfmItemFullNo);
+        });
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#spreadsheet").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("spreadsheet", {
+                menu: true
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-save",
+                tooltip: "儲存數據",
+                id: "SaveTempJson"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-arrow-alt-square-up",
+                tooltip: "上傳數據",
+                id: "UploadJson"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-trash-alt",
+                tooltip: "刪除暫存數據",
+                id: "DeleteTempSpreadsheet"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-download",
+                tooltip: "下載當前EXCEL",
+                id: "DownloadExcel"
+            });
+        }
+
+        function ReLoadSpreadsheetData@(itemName)() {
+            spreadsheetJson@(itemName).spreadsheetInfo = [];
+            spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+            $.each(spreadsheetData@(itemName).sheets[0].data, function (i, item) {
+                let cell = item.cell;
+
+                if (cell.length == 2 && cell.split('')[1] == "1") {
+                    return;
+                }
+
+                //量測項目
+                if (cell.split('')[0] == "A") {
+                    let inputSpreadsheetInfo =
+                    {
+                        "DfmItemFullNo": item.value,
+                        "Row": cell.split('A')[1]
+                    };
+
+                    spreadsheetJson@(itemName).spreadsheetInfo.push(inputSpreadsheetInfo);
+                }
+
+                //項目標準
+                if (cell.split('')[0] == "B") {
+                    let row = cell.split('B')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["Standard"] = item.value;
+                        }
+                    });
+                }
+
+                //項目標準
+                if (cell.split('')[0] == "C") {
+                    let row = cell.split('C')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["FinalSpec"] = item.value;
+                        }
+                    });
+                }
+
+                //客戶規格
+                if (cell.split('')[0] == "D") {
+                    let row = cell.split('D')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["CustomerSpec"] = item.value;
+                        }
+                    });
+                }
+
+                //RD建議規格
+                if (cell.split('')[0] == "E") {
+                    let row = cell.split('E')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["SuggestSpec"] = item.value;
+                        }
+                    });
+                }
+
+                //RD研發評論
+                if (cell.split('')[0] == "F") {
+                    let row = cell.split('F')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["RdRemark"] = item.value;
+                        }
+                    });
+                }
+
+                //RD與客戶回應
+                if (cell.split('')[0] == "G") {
+                    let row = cell.split('G')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["CustomerFeedback"] = item.value;
+                        }
+                    });
+                }
+            });
+        }
+
+        function SaveTempSpreadSheet@(itemName)() {
+            spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+            let targetUrl = "@Url.Action("UploadDfmDetailTempSpreadsheetJson", "DfmInformation")";
+            let postData = {
+                "DfmId": dfmId@(itemName),
+                "SpreadsheetData": JSON.stringify(spreadsheetData@(itemName))
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function UploadSpreatsheet@(itemName)() {
+            swal.fire({
+                titleText: "確認要上傳數據嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ReLoadSpreadsheetData@(itemName)();
+                    let targetUrl = "@Url.Action("UploadDfmDetail", "DfmInformation")";
+                    let postData = {
+                        "DfmId": dfmId@(itemName),
+                        "SpreadsheetJson": JSON.stringify(spreadsheetJson@(itemName)),
+                        "SpreadsheetData": JSON.stringify(spreadsheetData@(itemName))
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function DeleteTempSpreadsheet@(itemName)() {
+            swal.fire({
+                titleText: "確認要刪除暫存數據嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDfmDetailTempSpreadsheet", "DfmInformation")";
+                    let postData = {
+                        "DfmId": dfmId@(itemName)
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function DownloadExcel@(itemName)() {
+            spreadsheet@(itemName).export.xlsx();
+        }
+
+        function Return@(itemName)() {
+            InitData@(itemName)();
+        }
+    </script>
+                                        )

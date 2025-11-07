@@ -1,0 +1,368 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewDfmQiMaterial";
+    string itemNameText = "物料管理";
+}
+
+@Html.Resource("css",
+    @<style>
+        
+    </style>
+                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">目前報價項目 <span class="sub-text" id="desModeId@(itemName)"></span></span>
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto" style="margin-left: auto;">
+                                        <a class="btn btn-warning" id="AllEdit@(itemName)" href="javascript:AllEdit@(itemName)();"><i class="far fa-chalkboard-teacher"></i>操作</a>
+                                        <a class="btn btn-info" id="AddNewItem@(itemName)" href="javascript:NewDetail@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                                        <a class="btn btn-success" id="AllSave@(itemName)" href="javascript:AllSave@(itemName)();"><i class="fas fa-save"></i>全部儲存</a>
+                                        <a class="btn btn-danger" id="SelectDelete@(itemName)" href="javascript:SelectDelete@(itemName)();"><i class="fas fa-trash-alt"></i>項目刪除</a>
+                                        <a class="btn btn-secondary" id="Cancel@(itemName)" href="javascript:Return@(itemName)();"><i class="far fa-house-leave"></i>取消</a>
+                                        <a class="btn btn-success" id="Confirm@(itemName)" href="javascript:Confirm@(itemName)();"><i class="fas fa-cloud-upload"></i>確認</a>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">物料代碼</th>
+                                        <th scope="col" style="min-width: 150px;">物料名稱</th>
+                                        <th scope="col" style="min-width: 150px;">參考報價方案</th>
+                                        <th scope="col" style="min-width: 150px;">數量</th>
+                                        <th scope="col" style="min-width: 150px;">單價</th>
+                                        <th scope="col" style="min-width: 150px;">材料金額</th>
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="baseData@(itemName)"></tbody>
+                                <tbody class="newItem@(itemName)"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+             </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        var listNum@(itemName) = 0;
+        var MaxId@(itemName) = 0;
+        var MaterialStatus@(itemName) = "";
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(DfmQiId, ProdModeWithText) {
+            $("#DfmQiId").val(DfmQiId)
+            MaterialStatus@(itemName) =""
+            $("#desModeId@(itemName)").text(ProdModeWithText)
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+        }
+
+        function Query@(itemName)() {
+            listNum@(itemName) = 0;
+            $("#AllEdit@(itemName)").show()
+            $("#AllSave@(itemName)").hide()
+            $("#SelectDelete@(itemName)").hide()
+            $("#Cancel@(itemName)").hide()
+            $("#AddNewItem@(itemName)").hide()
+            $(".newItem@(itemName)").html("")
+            $("#cbxSelectAll@(itemName)").prop("checked",false)
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 999;
+
+            let targetUrl = "@Url.Action("GetDfmQiMaterial", "DfmInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "DfmQiId": $("#DfmQiId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+
+                if (data.result.length > 0) {
+                    listNum@(itemName) += data.result.length
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        MaxId@(itemName) = item.MaxId
+                        MaterialStatus@(itemName) = item.MaterialStatus
+                        innerHtml += `<tr id="dfmqmItem@(itemName)${item.DfmQiMaterialId}" data-database-action="Update">
+                                        <td class="dfmqmItem@(itemName)" data-dfmqm-id="${item.DfmQiMaterialId}" >${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="MaterialNo" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtMaterialNo@(itemName)${item.DfmQiMaterialId}" name="inputStyle" value="${item.MaterialNo}" data-dfmqm-id="${item.DfmQiMaterialId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="MaterialName" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtMaterialName@(itemName)${item.DfmQiMaterialId}" name="inputStyle" value="${item.MaterialName}" data-dfmqm-id="${item.DfmQiMaterialId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="SolutionQtyFlag" style="max-width: 150px;">
+                                            <select class="form-control" id="cboSolutionQtyFlag@(itemName)${item.DfmQiMaterialId}" name="inputStyle" value="${item.SolutionQtyFlag}" data-dfmqm-id="${item.DfmQiMaterialId}" style="width: 100%;" disabled>
+                                                <option value=1 ${item.SolutionQtyFlag == 1 ? `selected` : ``}>是</option>
+                                                <option value=2 ${item.SolutionQtyFlag == 2 ? `selected` : ``}>否</option>
+                                            </select>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="Quantity" style="max-width: 150px;"><input type="number" class="form-control inputStyle text-right" id="txtQuantity@(itemName)${item.DfmQiMaterialId}" name="inputStyle" value="${item.Quantity}" data-dfmqm-id="${item.DfmQiMaterialId}" style="width: 100%;" readonly onchange="AmountChange(${item.DfmQiMaterialId})"/> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="UnitPrice" style="max-width: 150px;"><input type="number" class="form-control inputStyle text-right" id="txtUnitPrice@(itemName)${item.DfmQiMaterialId}" name="inputStyle" value="${item.UnitPrice}" data-dfmqm-id="${item.DfmQiMaterialId}" style="width: 100%;" readonly onchange="AmountChange(${item.DfmQiMaterialId})"/> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="Amount" style="max-width: 150px;"><input type="number" class="form-control inputStyle text-right" id="txtAmount@(itemName)${item.DfmQiMaterialId}" name="inputStyle" value="${item.Amount}" data-dfmqm-id="${item.DfmQiMaterialId}" style="width: 100%;" readonly /> </td>
+                                        <td class="text-center active-content">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-type="DfmQiMaterialId" id="cbxDfmQiMaterialId@(itemName)${item.DfmQiMaterialId}" name="cbxDfmQiMaterialId@(itemName)" value="${item.DfmQiMaterialId}">
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                    console.log(MaterialStatus@(itemName))
+                    if (MaterialStatus@(itemName) == "Y") {
+                        $("#AllEdit@(itemName)").hide()
+                        $("#Confirm@(itemName)").hide()
+                    } else {
+                        $("#AllEdit@(itemName)").show()
+                        $("#Confirm@(itemName)").show()
+                    }
+                } else {
+                    innerHtml += `<tr class="noData@(itemName)">
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料
+                                    </td>
+                                  </tr>`;
+                    MaterialStatus@(itemName) == ""
+                    $("#AllEdit@(itemName)").show()
+                    $("#Confirm@(itemName)").show()
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) .baseData@(itemName)").html(innerHtml);
+            TableComponentInit();
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][name='cbxDfmQiMaterialId@(itemName)']").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][name='cbxDfmQiMaterialId@(itemName)']").not(":disabled").prop("checked", false);
+                }
+            });
+        }
+        function NewDetail@(itemName)() {
+            listNum@(itemName)++
+            MaxId@(itemName)++
+            $(".noData@(itemName)").hide()
+
+            console.log(MaxId@(itemName))
+            console.log("MaxId@(itemName)")
+            let innerHtml = ""
+            innerHtml += `<tr id="dfmqmItem@(itemName)${MaxId@(itemName)}" data-database-action="Create">
+                        <td class="dfmqmItem@(itemName)" data-dfmqm-id="${MaxId@(itemName)}">${listNum@(itemName)}</td>
+                        <td class="ellipsis" data-toggle="tooltip" title="MaterialNo" style="max-width: 150px;"><input class="form-control" type="text" id="txtMaterialNo@(itemName)${MaxId@(itemName)}" class="inputStyle" name="inputStyle" value="" data-dfmqm-id="${MaxId@(itemName)}" style="width: 100%;" /> </td>
+                        <td class="ellipsis" data-toggle="tooltip" title="MaterialName" style="max-width: 150px;"><input class="form-control" type="text" id="txtMaterialName@(itemName)${MaxId@(itemName)}" class="inputStyle" name="inputStyle" value="" data-dfmqm-id="${MaxId@(itemName)}" style="width: 100%;" /> </td>
+                        <td class="ellipsis" data-toggle="tooltip" title="SolutionQtyFlag" style="max-width: 150px;">
+                            <select class="form-control" id="cboSolutionQtyFlag@(itemName)${MaxId@(itemName)}" name="inputStyle" data-dfmqm-id="${MaxId@(itemName)}" style="width: 100%;">
+                                <option value=1>是</option>
+                                <option value=2>否</option>
+                            </select>
+                        </td>
+                        <td class="ellipsis" data-toggle="tooltip" title="Quantity" style="max-width: 150px;"><input class="form-control text-right" type="number" id="txtQuantity@(itemName)${MaxId@(itemName)}" class="inputStyle" name="inputStyle" value="" data-dfmqm-id="${MaxId@(itemName)}" style="width: 100%;" onchange="AmountChange(${MaxId@(itemName)})"/> </td>
+                        <td class="ellipsis" data-toggle="tooltip" title="UnitPrice" style="max-width: 150px;"><input class="form-control text-right" type="number" id="txtUnitPrice@(itemName)${MaxId@(itemName)}" class="inputStyle" name="inputStyle" value="" data-dfmqm-id="${MaxId@(itemName)}" style="width: 100%;" onchange="AmountChange(${MaxId@(itemName)})"/> </td>
+                        <td class="ellipsis" data-toggle="tooltip" title="Amount" style="max-width: 150px;"><input class="form-control text-right" type="number" id="txtAmount@(itemName)${MaxId@(itemName)}" class="inputStyle" name="inputStyle" value="" data-dfmqm-id="${MaxId@(itemName)}" style="width: 100%;" readonly/> </td>
+                        <td class="text-center active-content">
+                            <a class="active-link" href="javascript:RemoveDetail@(itemName)(${MaxId@(itemName)});"><i class="fas fa-trash-alt"></i></a>
+                        </td>
+                    </tr>`;
+            $("#tblData@(itemName) .newItem@(itemName)").append(innerHtml);
+        }
+        function RemoveDetail@(itemName)(MaxId) {
+            console.log(MaxId)
+            console.log("MaxId")
+            $(`#dfmqmItem@(itemName)${MaxId}`).remove()
+            if ($(".newItem@(itemName)").html() == "") {
+                $(".noData@(itemName)").show()
+            }
+        }
+
+        function AllEdit@(itemName)() {
+            $.each($("input[name='inputStyle']"), function () {
+                $(this).removeClass("inputStyle")
+                $(this).attr("readonly", false);
+            });
+            $.each($("select[name='inputStyle']"), function () {
+                $(this).attr("disabled", false);
+            });
+            $("#AllEdit@(itemName)").hide()
+            $("#AllSave@(itemName)").show()
+            $("#SelectDelete@(itemName)").show()
+            $("#Cancel@(itemName)").show()
+            $("#AddNewItem@(itemName)").show()
+        }
+
+        function AllSave@(itemName)() {
+            let innerHtml = ""
+            innerHtml += `<tr class="newItem@(itemName)"> </tr>`;
+
+            //let noWriteDfmItemId = []
+            //$.each($("select[name='inputStyle']"), function () {
+            //    $(this).next("span").removeClass("noWriteDfmItem")
+            //    if ($(this).val() == "") {
+            //        noWriteDfmItemId.push($(this).data("dfmqm-id"))
+            //        $(this).next("span").addClass("noWriteDfmItem")
+            //    }
+            //});
+            //if (noWriteDfmItemId.length > 0) {
+            //    alert("項目尚未維護完成不能儲存!!!")
+            //    return
+            //}
+
+            let dfmqmItemList = [];
+            $.each($(".dfmqmItem@(itemName)"), function () {
+                var DfmQiMaterialId = $(this).data("dfmqm-id")
+                dfmqmItemList.push(DfmQiMaterialId);
+            });
+
+            let dfmqmContentList = [];
+            dfmqmItemList.forEach(function (item) {
+                var DfmQiMaterialId = item
+                var MaterialNo = $(`#txtMaterialNo@(itemName)${DfmQiMaterialId}`).val()
+                var MaterialName = $(`#txtMaterialName@(itemName)${DfmQiMaterialId}`).val()
+                let SolutionQtyFlag = $(`#cboSolutionQtyFlag@(itemName)${DfmQiMaterialId}`).val();
+                var Quantity = $(`#txtQuantity@(itemName)${DfmQiMaterialId}`).val()
+                var UnitPrice = $(`#txtUnitPrice@(itemName)${DfmQiMaterialId}`).val()
+                var Amount = $(`#txtAmount@(itemName)${DfmQiMaterialId}`).val()
+                var DatabaseAction = $(`#dfmqmItem@(itemName)${DfmQiMaterialId}`).data("database-action")
+
+                var str = DfmQiMaterialId + "❤" + MaterialNo + "❤" + MaterialName + "❤" + SolutionQtyFlag + "❤" + Quantity + "❤" + UnitPrice + "❤" + Amount + "❤" + DatabaseAction
+
+                dfmqmContentList.push(str);
+            })
+
+            console.log(dfmqmContentList);
+
+            let targetUrl = "@Url.Action("AddDfmQiMaterial", "DfmInformation")";
+            let postData = {
+                "DfmQiId": $("#DfmQiId").val(),
+                "DfmqmContentList": dfmqmContentList.join(','),
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (result) {
+
+                Return@(itemName)();
+                $("#tblData@(itemName) .newItem@(itemName)").html("");
+                $("#AllEdit@(itemName)").show()
+                $("#AllSave@(itemName)").hide()
+                $("#AddNewItem@(itemName)").hide()
+            }
+        }
+
+        function SelectDelete@(itemName)() {
+            var DfmQiMaterialIdList = []
+            $.each($("input[name='cbxDfmQiMaterialId@(itemName)']:checked"), function () {
+                DfmQiMaterialIdList.push($(this).val())
+            });
+
+            swal.fire({
+                title: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDfmQiMaterial", "DfmInformation")";
+                    let postData = {
+                        "DfmQiMaterialIdList": DfmQiMaterialIdList.join(',')
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)()
+                    }
+                }
+            });
+        }
+
+        function Confirm@(itemName)() {
+            let targetUrl = "@Url.Action("updateConfirmDfmDataStatus", "DfmInformation")";
+            let postData = {
+                "DfmQiId": $("#DfmQiId").val(),
+                "Data": "Material"
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                console.log(data)
+                console.log(data.result)
+                if (data.result == "Finish") {
+                    console.log("成功!!!!!")
+                    ComboBoxs.Default("#cboDfmProcessStatusDesignForManufacturingManagement", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "DesignForManufacturing.DfmProcessStatus" }, "3", "NA", "", "StatusName", "StatusNo");
+                }
+                Return@(itemName)()
+                alert("確認成功", "success", 0);
+            }
+        }
+
+        function AmountChange(Id) {
+            var Quantity = $(`#txtQuantity@(itemName)${Id}`).val()
+            var UnitPrice = $(`#txtUnitPrice@(itemName)${Id}`).val()
+            var Amount = Quantity * UnitPrice
+            $(`#txtAmount@(itemName)${Id}`).val(Amount)
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+            ReturnDfmQuotationItem()
+        }
+
+        function Return@(itemName)() {
+
+            Query@(itemName)();
+        }
+</script>
+        )

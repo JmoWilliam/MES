@@ -1,0 +1,123 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "IFrameFlowPreview";
+    string itemNameText = "流程預覽";
+
+    ViewBag.Title = itemNameText;
+
+    string SourceId = Request["SourceId"] ?? "";
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+}
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/dhtmlx/diagram.commercial/5.0.0/diagram.min.css")" rel="stylesheet" />
+)
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/demand.min.css")?@dateCache" rel="stylesheet" />
+)
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <section class="demand-chart-container">
+                    <div class="demand-title">
+                        <span>目前流程：</span>
+                        <span class="text-primary" id="desSourceName@(itemName)"></span>
+                    </div>
+                    <div class="demand-flow" id="diagram"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script src="@Url.Content("~/Scripts/dhtmlx/diagram.commercial/5.0.0/diagram.min.js")"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let previewDiagram@(itemName);
+        let diagramData@(itemName);
+
+        $(document).ready(function () {
+            Datas@(itemName).GetDemandSource@(itemName)();
+            Datas@(itemName).GetSourceFlowSettingDiagram@(itemName)();
+        });
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetDemandSource@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetDemandSource", "SsoBasicInformation")";
+                let postData = {
+                    "SourceId": "@SourceId"
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#desSourceName@(itemName)").html(item.SourceName);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "GetSourceFlowSettingDiagram@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetSourceFlowSettingDiagram", "SsoSystemSetting")";
+                let postData = {
+                    "SourceId": "@SourceId"
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    diagramData@(itemName) = data.dataShapes.concat(data.dataLines);
+
+                    console.log(JSON.stringify(diagramData@(itemName)));
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                if (diagramData@(itemName)) LoadDiagram@(itemName)();
+            });
+        }
+
+        function LoadDiagram@(itemName)() {
+            dhx.i18n.setLocale("diagram", diagramLocales);
+
+            let flowTemplate = ({ flowName, flowImage, flowUser }) => (`
+                <section class="flow-card">
+                    <img src="${flowImage}" />
+                    <span class="flow-name">${flowName}</span>
+                    <span class="flow-user">${flowUser}</span>
+                </section>
+            `);
+
+            previewDiagram@(itemName) = new dhx.Diagram("diagram", {
+                defaultShapeType: "template",
+                lineConfig: {
+                    lineGap: 25
+                }
+            });
+
+            previewDiagram@(itemName).addShape("template", {
+                template: flowTemplate,
+                defaults: {
+                    height: 140,
+                    width: 140
+                }
+            });
+
+            previewDiagram@(itemName).data.parse(diagramData@(itemName));
+        }
+    </script>
+)

@@ -1,0 +1,123 @@
+﻿@using Business_Manager.Helpers;
+@{
+    string controllerName = Convert.ToString(HttpContext.Current.Request.RequestContext.RouteData.Values["Controller"]);
+}
+
+<div class="sub-company-header">
+    <span class="sub-company-text">
+        資料來源【<a href="javascript:void(0);" onclick="PopViewCompanySwitch()"><span id="desCompanyName"></span></a>】
+        登入人員【<a href="javascript:void(0);" onclick="PopViewLoginStatus()"><span id="desUserName"></span></a>】
+    </span>
+</div>
+
+<div class="side_bar dark_blue side_bg_img">
+    <ul id="side-bar-menu" class="sidebar-menu tree">
+        <li class="main_menu">
+            <div class="menu_title">現在位置</div>
+            <span class="custom-dropdown big">
+                <select id="systemMenu"></select>
+            </span>
+        </li>
+    </ul>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let currentSystem = "SYS";
+        let userId;
+
+        $(document).ready(function () {
+            let targetUrl = "@Url.Action("GetModule", "BasicInformation")";
+            let postData = {
+                "ModuleCode": "@controllerName"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    currentSystem = item.SystemCode;
+                });
+            } else {
+                alert("選單載入錯誤", "alert", 0);
+            }
+
+            ComboBoxs.WithText("#systemMenu", "@Url.Action("GetSystemMenu", "BasicInformation")", {}, currentSystem, "CHOOSE", "", "SystemName", "SystemCode");
+
+            ModuleMenu(currentSystem);
+
+            $("#systemMenu").change(function () {
+                let system = $("#systemMenu").val() ? $("#systemMenu").val() : "SYS";
+                ModuleMenu(system);
+            });
+
+            LoadConnection();
+        });
+
+        function ModuleMenu(system) {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetModuleMenu", "BasicInformation")";
+            let postData = {
+                "SystemCode": system
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    innerHtml += `<li class="menu_sub">
+                                    <a href="javascript:void(0);">${decodeURI(item.ThemeIcon)} <span>${item.ModuleName}</span> <i class="fa fa-angle-down aftertext"></i></a>
+                                    <ul class="down_menu">
+                                      ${FunctionMenu(item.ModuleCode, item.FunctionData)}
+                                    </ul>
+                                  </li>`;
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("li").remove(".menu_sub");
+            $(".main_menu").after(innerHtml);
+            $("#side-bar-menu").dcAccordion();
+        }
+
+        function FunctionMenu(moduleCode, source) {
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<li class="down_menu_child">
+                               <a href="/${moduleCode}/${json.data[x].FunctionCode}" target="${json.data[x].UrlTarget}">${json.data[x].FunctionName}</a>
+                             </li>`;
+                }
+            }
+
+            return html;
+        }
+
+        function LoadConnection() {
+            let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+            let postData = {
+                "UserNo": $.cookie("Login"),
+                "KeyText": $.cookie("LoginKey")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                userId = data.returnData.UserId
+                $("#desUserName").html(data.returnData.UserName);
+                $("#desCompanyName").html(data.returnData.CompanyName);
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function PasswordEdit() {
+            PopViewUserPassword(userId);
+        }
+    </script>
+)

@@ -1,0 +1,157 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "ViewEditWorkTime";
+    string itemNameText = "工時修改";
+    string authority = ViewBag.authority;
+}
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <input type="hidden" id="CncProgramWorkId@(itemName)" name="CncProgramWorkId@(itemName)" />
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <div class="col-12">
+                        <div class="card card-shadow mb-4">
+                            <div class="col-12">
+                                <fieldset>
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12 ">
+                                            <div class="form-group row">
+                                                <label class="form-label col-12" for="txtWorkBeginTime@(itemName)">開工時間 <span class="text-danger">*</span></label>
+                                                <div class="col-12">
+                                                    <input type="text" class="form-control timedropper" id="txtWorkBeginTime@(itemName)" name="txtWorkBeginTime@(itemName)"
+                                                           data-msg-required="請輸入開工時間" data-rule-required="true"
+                                                           data-msg-maxlength="必須少於 8 個字元" maxlength="8" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="form-label col-12">開工日期</label>
+                                                <div class="col-12">
+                                                    <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                                           data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                                           readonly />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12 ">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label" for="txtWorkEndTime@(itemName)">完工時間 <span class="text-danger">*</span></label>
+                                                <div class="col-12">
+                                                    <input type="text" class="form-control timedropper" id="txtWorkEndTime@(itemName)" name="txtWorkEndTime@(itemName)"
+                                                           data-msg-required="請輸入開工時間" data-rule-required="true"
+                                                           data-msg-maxlength="必須少於 8 個字元" maxlength="8" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label">完工日期</label>
+                                                <div class="col-12">
+                                                    <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                                           data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                                           readonly />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div class="card-footer text-center text-lg-right">
+                                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>   
+    let objForm@(itemName) = "#editForm@(itemName)";
+    $(document).ready(function () {        
+        Suites.DateDropper("#txtStartDateQ@(itemName),#txtEndDateQ@(itemName)");
+
+        let tmSetting = {
+            format: "HH:mm",
+            autoswitch: true,
+            meridians: false,
+            mousewheel: false,
+            init_animation: "fadeIn",
+            setCurrentTime: false,
+            customClass: "custom-timedropper"
+        }
+        $(".td-wrap").remove();
+        $("#txtWorkBeginTime@(itemName)").timeDropper(tmSetting);
+        $("#txtWorkEndTime@(itemName)").timeDropper(tmSetting);
+        
+    });
+
+    function InitData@(itemName)(CncProgramWorkId) {
+        $("#CncProgramWorkId@(itemName)").val(CncProgramWorkId);        
+        let targetUrl = "@Url.Action("GetCncProgramWork", "MasterCam")";
+        let postData = {            
+            "CncProgramWorkId": CncProgramWorkId
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {
+                const StartWorkDate = item.StartWorkDate.split("T", 2);
+                $("#txtWorkBeginTime@(itemName)").val(StartWorkDate[1]);
+                $("#txtStartDateQ@(itemName)").val(StartWorkDate[0]);
+                
+                const EndWorkDate = item.EndWorkDate.split("T", 2);
+                $("#txtWorkEndTime@(itemName)").val(EndWorkDate[1]);
+                $("#txtEndDateQ@(itemName)").val(EndWorkDate[0]);                
+                
+            });
+        }
+    }
+
+    function Save@(itemName)() {
+        if ($("#CncProgramWorkId@(itemName)").val() != -1) {
+            let startDateTime = $("#txtStartDateQ@(itemName)").val() + " " + $("#txtWorkBeginTime@(itemName)").val();
+            let endDateTime = $("#txtEndDateQ@(itemName)").val() + " " + $("#txtWorkEndTime@(itemName)").val();
+            let WorkCT = TimeDifference(startDateTime, endDateTime);
+            if ((Date.parse(endDateTime)).valueOf() <= (Date.parse(startDateTime)).valueOf()) {
+                alert("日期時間欄位輸入錯誤！");
+                return false;
+            } else {
+                targetUrl = "@Url.Action("UpdateCncProgramWork", "MasterCam")";
+                postData = {
+                    "CncProgramWorkId": $("#CncProgramWorkId@(itemName)").val(),                    
+                    "StartWorkDate": startDateTime,
+                    "EndWorkDate": endDateTime,
+                    "WorkCT": WorkCT
+                };
+                data = DataAccess.Add(targetUrl, postData, false, true);
+                if (data.status == "success") {
+                    Close@(itemName)();
+                } else {
+                    alert(data.msg);
+                }
+            }
+        } else {
+            alert("報工時間修改失敗");
+        }
+    }
+
+    function Close@(itemName)() {
+        $("#modal@(itemName)").modal("hide");
+        $("#CncProgramWorkId@(itemName)").val(-1);  
+        QueryCncProgramLog();
+    }
+</script>
+)

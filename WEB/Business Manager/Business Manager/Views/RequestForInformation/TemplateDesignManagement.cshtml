@@ -1,0 +1,459 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TemplateDesignManagement";
+    string itemNameText = "RFI 新設計樣板管理";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .toggle-on {
+            top: 1px;
+        }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo mr-1"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtProTypeGroupNameQ@(itemName)">產品群組</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtProTypeGroupNameQ@(itemName)" name="txtProTypeGroupNameQ@(itemName)" placeholder="請輸入產品群組">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtRfqProductClassNameQ@(itemName)">產品類型</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtRfqProductClassNameQ@(itemName)" name="txtRfqProductClassNameQ@(itemName)" placeholder="請輸入產品類型">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-4 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    啟用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)A" name="cbxStatusQ@(itemName)" value="A" checked>
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    停用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)S" name="cbxStatusQ@(itemName)" value="S">
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3 justify-content-between">
+                    <div class="col-auto col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        @*<a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>*@
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 30px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">產品群組</th>
+                                        <th scope="col" style="min-width: 100px;">產品類型</th>
+                                        <th scope="col" style="min-width: 100px;">是否鍍膜</th>
+                                        <th scope="col" style="min-width: 100px;">建立者</th>
+                                        <th scope="col" style="min-width: 150px;">建立時間</th>
+                                        <th scope="col" style="min-width: 100px;">狀態</th>
+                                        <th class="text-center" scope="col" style="min-width: 75px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)" novalidate="novalidate">
+                    <fieldset disabled>
+                        <input type="hidden" id="ProTypeGroupId" name="ProTypeGroupId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtProTypeGroupName@(itemName)">產品群組<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtProTypeGroupName@(itemName)" name="txtProTypeGroupName@(itemName)" placeholder="請輸入產品群組"
+                                       data-msg-required="請輸入產品群組" data-rule-required="true"
+                                       data-msg-maxlength="必須少於 50 個字元" maxlength="50" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="chkCoatingFlag@(itemName)">是否鍍膜<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            是
+                                            <input type="radio" id="chkCoatingFlag@(itemName)Y" name="chkCoatingFlag@(itemName)" value="Y">
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            否
+                                            <input type="radio" id="chkCoatingFlag@(itemName)N" name="chkCoatingFlag@(itemName)" value="N">
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="chkStatus@(itemName)">狀態<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            啟用
+                                            <input type="radio" id="chkStatus@(itemName)A" name="chkStatus@(itemName)" value="A">
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            停用
+                                            <input type="radio" id="chkStatus@(itemName)S" name="chkStatus@(itemName)" value="S">
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right read-hide">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--其他分頁-->
+<div class="advanced-block">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav flag-tabs nav-fill" role="tablist">
+                <li class="flag-item">
+                    <a class="flag-link active" data-toggle="tab" href="#tabTemplateSpecParameter">
+                        <i class="fas fa-sort-size-down mr-1"></i>設計規格樣板管理
+                    </a>
+                </li>
+                <li class="flag-item">
+                    <a class="flag-link " data-toggle="tab" href="#tabTemplateDesignSignFlow">
+                        <i class="fas fa-list-ol mr-1"></i>新設計申請單流程管理
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane active" id="tabTemplateSpecParameter">
+            @Html.Partial("TemplateSpecParameter")
+        </div>
+        <div class="tab-pane" id="tabTemplateDesignSignFlow">
+            @Html.Partial("TemplateDesignSignFlow")
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            pageIndex: 0,
+            pageSize: 10
+        }
+
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            Query@(itemName)();
+
+            $(".advanced-block a[data-toggle='tab']").on("shown.bs.tab", function (e) {
+                InitParameter@(itemName)($(this));
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetProductTypeGroup", "ScmBasicInformation")";
+            let data = DataAccess.Get(targetUrl,
+                {
+                    PageIndex: (objPage.pageIndex + 1),
+                    PageSize: objPage.pageSize,
+                    ProTypeGroupName: $("#txtProTypeGroupNameQ@(itemName)").val(),
+                    RfqProductTypeGroupName: $("#txtRfqProductClassNameQ@(itemName)").val(),
+                    Status: $("input[name='cbxStatusQ@(itemName)']:checked").toArray().map(item => item.value).join(",")
+                }, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProTypeGroupName}"><span class="stack-title">產品群組</span>${item.ProTypeGroupName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.RfqProductClassName}"><span class="stack-title">產品類型</span>${item.RfqProductClassName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CoatingFlagName}"><span class="stack-title">是否鍍膜</span>${item.CoatingFlagName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserName}"><span class="stack-title">建立者</span><span class="fas fa-user-edit"></span>${item.UserName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}"><span class="stack-title">建立時間</span>${item.CreateDate}</td>
+                                        <td class="text-center">
+                                          <span class="stack-title">狀態</span>
+                                          <input type="checkbox" name="chkStatus@(itemName)" class="auth-status-switch" data-productuse-id="${item.ProTypeGroupId}" ${(item.Status == `A` ? `checked` : ``)} />
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="操作">
+                                            <span class="stack-title">操作</span>
+                                            <input type="hidden" name="row-name-${item.ProTypeGroupId}" value="${item.ProTypeGroupName}" />
+                                            <a class="active-link" auth-update href="javascript:Edit@(itemName)(${item.ProTypeGroupId});"><i class="fas fa-edit"></i></a>
+                                        </td>
+                                      </tr>`;
+                        //<a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.ProTypeGroupId});"><i class="fas fa-trash-alt"></i></a>
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料，請先建立產品應用資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("#listData@(itemName) input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "啟用",
+                off: "關閉",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini",
+                width: "75px"
+            });
+
+            $("#listData@(itemName) input[name='chkStatus@(itemName)'][data-productuse-id]").change(StatusSwitch@(itemName));
+        }
+
+
+        function Edit@(itemName)(poTypeGroupId) {
+            $("#ProTypeGroupId").val(poTypeGroupId ? poTypeGroupId : -1);
+
+            Switch("#editData@(itemName), .unit-block, .advanced-block", "#listData@(itemName)");
+
+            $(`#editData@(itemName) input[name="chkStatus@(itemName)"]`).removeAttr(`checked`);
+
+            if (poTypeGroupId > 0) {
+                let targetUrl = "@Url.Action("GetProductTypeGroup", "ScmBasicInformation")";
+                let postData = {
+                    "ProTypeGroupId": poTypeGroupId
+                }
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtProTypeGroupName@(itemName)").val(item.ProTypeGroupName);
+                        $(`#chkStatus@(itemName)${item.Status}`).attr('checked', true);
+                        $(`#chkCoatingFlag@(itemName)${item.CoatingFlag}`).attr('checked', true);
+                    });
+
+                    ExpandTemplateSpecParameter();
+
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            InitFlagTabs@(itemName)()
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let poTypeGroupId = parseInt($("#ProTypeGroupId").val());
+
+                if (poTypeGroupId <= 0) {
+                    let targetUrl = "@Url.Action("AddProductTypeGroup", "RequestForInformation")";
+                    let postData = {
+                        "ProTypeGroupName": $("#txtProTypeGroupName@(itemName)").val(),
+                        "Status": $(`#editData@(itemName) input[name="chkStatus@(itemName)"]:checked`).first().val()
+                    }
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        $.each(data.result, function (i, item) {
+                            $("#ProTypeGroupId").val(item.ProTypeGroupId);
+                        });
+                        Return@(itemName)();
+                    }
+                    else {
+                        alert(data.msg, "alert", 0);
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateProductTypeGroup", "RequestForInformation")";
+                    let postData = {
+                        "ProTypeGroupId": poTypeGroupId,
+                        "ProTypeGroupName": $("#txtProTypeGroupName@(itemName)").val(),
+                        "Status": $(`#editData@(itemName) input[name="chkStatus@(itemName)"]:checked`).first().val()
+                    }
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(poTypeGroupId) {
+            let row_name = $(`input[name="row-name-${poTypeGroupId}"]`).val();
+            swal.fire({
+                titleText: `確認要刪除${row_name}嗎?`,
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteProductTypeGroup", "RequestForInformation")";
+                    let postData = {
+                        "ProTypeGroupId": poTypeGroupId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function InitFlagTabs@(itemName)() {
+            $(".advanced-block .flag-tabs > .flag-item > .flag-link").show();
+            if ($(".advanced-block .flag-tabs > .flag-item > .flag-link").first().hasClass("active")) {
+                InitParameter@(itemName)($(".advanced-block .flag-tabs > .flag-item").first().find("a"));
+            } else {
+                $(".advanced-block .flag-tabs > .flag-item").first().find("a").trigger("click");
+            }
+        }
+
+        function InitParameter@(itemName)(selector) {
+            let initFnString = "Expand";
+            let content = selector.attr("href").split('#tab')[1];
+
+            switch (content) {
+                case "TemplateSpecParameter":
+                    initFnString += "TemplateSpecParameter";
+                    break;
+                case "TemplateDesignSignFlow":
+                    initFnString += "TemplateDesignSignFlow";
+                    break;
+            }
+
+            let initFn = window[initFnString];
+            if (initFn && typeof (initFn) == "function") {
+                initFn();
+            }
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            Query@(itemName)();
+        }
+
+        function StatusSwitch@(itemName)() {
+            var poTypeGroupId = $(this).data("productuse-id");
+
+            let targetUrl = "@Url.Action("UpdateProductTypeGroupStatus", "RequestForInformation")";
+            let postData = {
+                "ProTypeGroupId": poTypeGroupId,
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+</script>
+)

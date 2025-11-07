@@ -1,0 +1,262 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProcessStatistics";
+    string itemNameText = "人員加工統計";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+
+
+
+}
+
+@Html.Resource("css",
+    @<style>
+         .container {
+             margin-left: 0 !important;
+         }
+
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             vertical-align: middle !important;
+         }
+
+         iframe {
+             width: 100%;
+             height: auto;
+             aspect-ratio: 16 / 9;
+         }
+    </style>
+                                        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 65vh; overflow: scroll;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">產品品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)"
+                                       placeholder="請輸入產品條碼">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">機台</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)"
+                                       placeholder="請輸入製令">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">加工模式</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">加工製程</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">完工人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">開工/完工日期 <input type="checkbox" id="cbxUseDate@(itemName)" checked /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtFinishDateQ@(itemName)" name="txtFinishDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    @*<div class="col-6 col-sm-6 col-md-6">
+                            <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                        </div>*@
+                    @*<div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>*@
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 115px;">品號</th>
+                                        <th scope="col" style="max-width: 200px;">品名</th>
+                                        <th scope="col" style="max-width: 200px;">量測項目</th>
+                                        <th scope="col" style="max-width: 200px;">量測機台</th>
+                                        <th scope="col" style="max-width: 200px;">花費時間</th>
+                                        <th scope="col" style="max-width: 200px;">操作</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*@Html.Partial("ViewMeasureData")*@
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        $(document).ready(function () {
+
+
+            ComboBoxs.Default("#cboUserIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", {}, "", "ALL", "", "UserName", "UserId");
+            if (!isMobile) {
+                $("#cboUserIdQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+
+           Query@(itemName)();
+
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            $("#txtBarcodeNoQ@(itemName)").val("");
+            $("#txtWoErpFullNoQ@(itemName)").val("");
+            $("#cboUserIdQ@(itemName)").val("");
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetBarcodeProcessEvent", "MesReport")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "BarcodeNo": $("#txtBarcodeNoQ@(itemName)").val(),
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "FinishDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtFinishDateQ@(itemName)").val() : ""),
+                "UserId":$("#cboUserIdQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        defaultFileId@(itemName) = item.DefaultFileId;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}" style="max-width: 200px;">${item.BarcodeNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="max-width: 200px;">${item.ProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="max-width: 200px;">${item.ProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="max-width: 200px;">${item.ProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="max-width: 200px;">${item.ProcessAlias}</td>
+
+                                      </tr>`;
+
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+         function DetailData@(itemName)(source){
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<tr>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].TypeName}" style="width: 100px; max-width: 100px;">${json.data[x].TypeName}</td>
+                               <td style="width: 100px;">${json.data[x].ProcessEventName}</td>
+                               <td style="width: 100px;">${json.data[x].StartDate}</td>
+                               <td style="width: 100px;">${json.data[x].FinishDate}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].UserName}" style="width: 100px; max-width: 100px;">${json.data[x].UserName}</td>
+                             </tr>`;
+                }
+            }
+
+            return html;
+        }
+    </script>
+                        )

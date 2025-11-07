@@ -1,0 +1,245 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemNameText = "庫存異動系統";
+
+    ViewBag.Title = itemNameText;
+
+    string authority = ViewBag.authority;
+}
+
+<style>
+    .logo {
+        position: relative !important;
+    }
+
+    .order-menu {
+        display: flex;
+        /* flex-direction: column; */
+        justify-content: space-between;
+        margin-bottom: 25px;
+    }
+
+    .take {
+        width: 100%;
+        padding: 18px;
+        background: #d5cbbd;
+        /* border-radius: 12px; */
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+        .take:hover {
+            background: #cddfd9;
+        }
+
+    .push {
+        width: 100%;
+        padding: 18px;
+        background: #adaee5;
+        /* border-radius: 12px; */
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+        .push:hover {
+            background: #cddfd9;
+        }
+
+    .transfer {
+        width: 100%;
+        padding: 18px;
+        background: #84a8d5;
+        /* border-radius: 12px; */
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+        .transfer:hover {
+            background: #cddfd9;
+        }
+
+    .doc-type {
+        display: flex;
+        /* flex-direction: column; */
+        justify-content: space-between;
+        margin-bottom: 25px;
+    }
+
+    .dep {
+        width: 100%;
+        padding: 18px;
+        background: #75baed;
+        /* border-radius: 12px; */
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+        .dep:hover {
+            background: #cddfd9;
+        }
+
+    .mr {
+        width: 100%;
+        padding: 18px;
+        background: #bfc7a1;
+        /* border-radius: 12px; */
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+        .mr:hover {
+            background: #cddfd9;
+        }
+
+    .pre-btn {
+        width: 100%;
+        padding: 18px;
+        background: #c2d5ca;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+    }
+        .pre-btn:hover {
+            background: #cddfd9;
+        }
+
+    .user-info {
+        padding: 12px;
+        text-align: center;
+        background: #f1f1f1;
+        font-weight: 600;
+        font-size: 18px;
+        color: #526f89;
+    }
+</style>
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="body-bg">
+    <div class="wrapper wrap-index">
+        <div class="content-index">
+            <div class="logo">
+                <img src="@Url.Content("~/Content/images/logo.png")" />
+            </div>
+            <div class="pick-menu">
+                <div class="user-info">
+                    目前登入人員: <i class="fas fa-user"></i> <span id="desUserFullNo"></span>
+                </div>
+                <div class="order-menu">
+                    @*<a class="take auth-test" href="javascript: Order('take');">
+                            <i class="fas fa-external-link-alt"></i> 提取
+                        </a>
+                        <a class="push" href="javascript: Order('push');">
+                            <i class="fas fa-person-booth"></i> 放入
+                        </a>
+                        <a class="transfer" href="../InventoryTransaction/TransferDocument">
+                            <i class="fas fa-dolly-flatbed"></i> 轉撥
+                      </a>*@
+                </div>
+                <div class="doc-type" style="display: none;">
+                    <a class="dep" href="../InventoryTransaction/InventoryTransactionNote">
+                        <i class="fas fa-building"></i> 部門費用
+                    </a>
+                    <a class="mr" href="../InventoryTransaction/MaterialRequisition">
+                        <i class="fas fa-file-invoice"></i> 領退料流程
+                    </a>
+                </div>
+                <div class="doc-type" style="display: none;">
+                    <a class="pre-btn" href="javascript: Pre();">
+                        <i class="fas fa-arrow-left"></i> 上一步
+                    </a>
+                </div>
+                <a href="javascript:Logout();" class="nav-link nav-cancel">
+                    <i class="fas fa-sign-out-alt"></i>登出
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(document).ready(function () {
+            GetUserInfo();
+            GetAuthority();
+        });
+
+        function Order(docType) {
+            $(".order-menu").hide();
+            $(".doc-type").show();
+
+            $(`a[class="dep"]`).prop("href", `../InventoryTransaction/InventoryTransactionNote?DocType=${docType}`)
+            $(`a[class="mr"]`).prop("href", `../InventoryTransaction/MaterialRequisition?DocType=${docType}`)
+        }
+
+        function Pre() {
+            $(".order-menu").show();
+            $(".doc-type").hide();
+        }
+
+        function GetAuthority() {
+            let innerHtml = '';
+            let targetUrl = "@Url.Action("GetAuthority", "InventoryTransaction")";
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.DetailCode == "take") {
+                            innerHtml += `<a class="take auth-test" href="javascript: Order('take');">
+                                              <i class="fas fa-external-link-alt"></i> 提取
+                                          </a>`;
+                        }
+                        else if (item.DetailCode == "push") {
+                            innerHtml += `<a class="push" href="javascript: Order('push');">
+                                              <i class="fas fa-person-booth"></i> 放入
+                                          </a>`;
+                        }
+                        else if (item.DetailCode == "transfer") {
+                            innerHtml += `<a class="transfer" href="../InventoryTransaction/TransferDocument">
+                                              <i class="fas fa-dolly-flatbed"></i> 轉撥
+                                          </a>`;
+                        }
+                    });
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+
+            if (innerHtml == "") {
+                innerHtml += `目前尚未開通任何權限，請聯絡IT部門窗口!!`;
+            }
+
+            $(".order-menu").html(innerHtml);
+        }
+
+        function GetUserInfo() {
+            let targetUrl = "@Url.Action("GetLoginUserInfo", "InventoryTransaction")";
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#desUserFullNo").html(item.UserNo + ' ' + item.UserName);
+                    });
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+    </script>
+                )

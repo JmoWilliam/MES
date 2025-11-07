@@ -1,0 +1,132 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "InStockLabel";
+    string itemNameText = "入庫標籤";
+    string authority = ViewBag.authority;
+}
+
+<div class="row" id="editData@(itemName)">
+    <input type="hidden" id="QcNoticeId" name="QcNoticeId" value="-1" />
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12">
+                            <div class="form-group row">
+                                <label class="form-label col-12" for="txtBarcodeNo@(itemName)">模仁條碼<span class="text-danger">*</span></label>
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="txtBarcodeNo@(itemName)"
+                                           placeholder="請輸入模仁條碼" daat-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" readonly />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12">
+                            <div class="form-group row">
+                                <label class="form-label col-12" for="txtMtlItemNo@(itemName)">品號<span class="text-danger">*</span></label>
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="txtMtlItemNo@(itemName)"
+                                           placeholder="請輸入品號" daat-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" readonly />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12">
+                            <div class="form-group row">
+                                <label class="form-label col-12" for="txtMtlItemName@(itemName)">品名</label>
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="txtMtlItemName@(itemName)"
+                                           placeholder="請輸入品名" daat-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" readonly />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12">
+                            <div class="form-group row">
+                                <label class="form-label col-12" for="txtWarehouse@(itemName)">入庫庫別</label>
+                                <div class="col-12">
+                                    <select class="form-control" id="cboWarehouse@(itemName)" name="cboWarehouse@(itemName)"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12">
+                            <div class="form-group row">
+                                <label class="form-label col-12" for="txtWorkStage@(itemName)">加工階段</label>
+                                <div class="col-12">
+                                    <select class="form-control" id="cboWorkStage@(itemName)" name="cboWarehouse@(itemName)"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12">
+                            <div class="form-group row">
+                                <label class="form-label col-12" for="txtScrapReason@(itemName)">報廢原因<span class="text-danger">*</span></label>
+                                <div class="col-12">
+                                    <input type="number" class="form-control" id="txtScrapReason@(itemName)"
+                                           placeholder="請輸入報廢原因" daat-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button id="Print@(itemName)" type="button" class="btn btn-success" onclick="Print@(itemName)()"><i class="fas fa-save"></i>列印</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+    $(document).ready(function () {
+        if (!isMobile) {
+            $("#cboWarehouse@(itemName)").select2({
+                width: "100%"
+            });
+        }
+        ComboBoxs.Default("#cboWarehouse@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "InStockWarehouse" }, "", "ALL", "", "TypeDesc", "TypeName");
+    });
+
+    $("#txtBarcodeNo@(itemName)").change(function () {
+        let targetUrl = "@Url.Action("GetBarcode", "PrintLabel")";
+        let postData = {           
+            "BarcodeNo": $("#txtBarcodeNo@(itemName)").val()
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {
+                $("#txtMtlItemNo@(itemName)").val(item.MtlItemNo);
+                $("#txtMtlItemName@(itemName)").val(item.MtlItemName);
+                if (!isMobile) {
+                    $("#cboWarehouse@(itemName)").select2({
+                        width: "100%"
+                    });
+                }
+                ComboBoxs.Default("#cboWorkStage@(itemName)", "@Url.Action("GetWorkStage", "PrintLabel")", { "BarcodeNo": $("#txtBarcodeNo@(itemName)").val() }, "", "ALL", "", "TypeDesc", "TypeName");
+            });
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+    });
+
+    function Print@(itemName)() {
+        let targetUrl = "@Url.Action("PrintQcNoticeNo", "PrintLabel")";
+        let postData = {
+            "BarcodeNo": $("#txtBarcodeNo@(itemName)").val(),
+            "MtlItemNo":  $("#txtMtlItemNo@(itemName)").val(),
+            "MtlItemName": $("#txtMtlItemName@(itemName)").val(),
+            "Warehouse": $("#cboWarehouse@(itemName)").val(),
+            "WorkStage": $("#cboWorkStage@(itemName)").val()
+        };
+        FileAccess.AjaxDownload(targetUrl, postData, false);
+    }
+</script>
+)

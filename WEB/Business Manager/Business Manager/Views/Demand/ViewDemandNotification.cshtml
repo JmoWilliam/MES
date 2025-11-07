@@ -1,0 +1,177 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewDemandNotification";
+    string itemNameText = "需求通知列表";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <button class="close" type="button" onclick="Close@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="notification-panel">
+                            <div class="notification-panel-header">
+                                <a href="javascript:ReadAll@(itemName)();">全部已讀</a>
+                            </div>
+                            <div class="notification-panel-content">
+                                <div class="notification-empty"><span>目前尚無訊息</span></div>
+                                <ul class="notification-list" id="dataNotificationLog@(itemName)">
+                                    <li class="active">
+                                        <a href="javascript:void(0);">
+                                            <div class="notification-header">
+                                                【系統通知】
+                                            </div>
+                                            <div class="notification-content">
+                                                品號已建立完成<br />
+                                                請盡速通知研發人員開立BOM。
+                                            </div>
+                                            <div class="notification-footer">
+                                                <span>2023-08-01 14:23</span>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="javascript:void(0);">
+                                            <div class="notification-header">
+                                                【系統通知】
+                                            </div>
+                                            <div class="notification-content">
+                                                BOM已建立完成<br />
+                                                請盡速通知製程人員開立途程。
+                                            </div>
+                                            <div class="notification-footer">
+                                                <span>2023-08-05 08:45</span>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li class="open">
+                                        <a href="javascript:void(0);">
+                                            <div class="notification-header">
+                                                【系統通知】
+                                            </div>
+                                            <div class="notification-content">
+                                                途程已建立完成<br />
+                                                請盡速通知生管人員開立製令。
+                                            </div>
+                                            <div class="notification-footer">
+                                                <span>2023-08-05 08:45</span>
+                                            </div>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        function Pop@(itemName)() {
+            InitData@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function InitData@(itemName)() {
+            $(".notification-empty").hide();
+
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetNotificationLog", "SystemSetting")";
+            let postData = {
+                "TriggerFunction": "DemandPlatform"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false); 
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<li class="${item.ReadStatus == `N` ? `active` : ``}" data-log-id="${item.LogId}">
+                                        <a href="javascript:${item.ReadStatus == `N` ? `Read@(itemName)(${item.LogId})` : `void(0)`};">
+                                          <div class="notification-header">
+                                            ${item.LogTitle}
+                                          </div>
+                                          <div class="notification-content">
+                                            ${item.LogContent}
+                                          </div>
+                                          <div class="notification-footer">
+                                            <span class="full-date">${item.LogDate}</span>
+                                            <span class="short-date">${item.LogShortDate}</span>
+                                          </div>
+                                        </a>
+                                      </li>`;
+                    });
+                } else {
+                    $(".notification-empty").show();
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#dataNotificationLog@(itemName)").html(innerHtml);
+
+            $(".notification-panel li a").off("click").on("click", DelayTrigger(function () {
+                let isOpen = $(this).parent("li").hasClass("open");
+
+                $(this).parent("li").removeClass("active");
+                $(".notification-panel li").removeClass("open");
+
+                if (!isOpen) {
+                    $(this).parent("li").addClass("open");
+                }
+            }, 100));
+        }
+
+        function Read@(itemName)(LogId) {
+            let targetUrl = "@Url.Action("UpdateNotificationLogReadStatus", "SystemSetting")";
+            let postData = {
+                "LogId": LogId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (result) {
+                DatasDemandPlatform.GetNotificationLogDemandPlatform();
+            }
+        }
+
+        function ReadAll@(itemName)() {
+            let targetUrl = "@Url.Action("UpdateNotificationLogReadStatus", "SystemSetting")";
+            let postData = {
+                TriggerFunction: "DemandPlatform"
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (result) {
+                InitData@(itemName)();
+                DatasDemandPlatform.GetNotificationLogDemandPlatform();
+            }
+        }
+
+        function Close@(itemName)() {
+            DatasDemandPlatform.GetNotificationLogDemandPlatform();
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

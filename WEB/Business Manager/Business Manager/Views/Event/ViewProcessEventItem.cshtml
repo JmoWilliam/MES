@@ -1,0 +1,234 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewProcessEventItem";
+    string itemNameText = "查看製程加工事件";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                @*<div class="form-row align-items-center mb-2">
+
+                                    <label class="col-12 col-md-2 col-lg-2 col-form-label" for="">選擇生產模式<span class="text-danger">*</span></label>
+                                    <div class="col-12 col-md-3 col-lg-3">
+                                        <select class="form-control" id="cboModeIdQ@(itemName)" name="cboModeIdQ@(itemName)"></select>
+                                    </div>
+                                    <div class="col-12 col-md-3 col-lg-3" style="margin-top:auto;margin-bottom:3px;">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>*@
+
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 250px;">生產模式</th>
+                                        <th scope="col" style="min-width: 250px;">製程</th>
+                                        <th scope="col" style="min-width: 175px;">加工模式</th>
+                                        <th scope="col" style="min-width: 175px;">事件名稱</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 100px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let processEventItemId@(itemName);
+        let processEventName@(itemName);
+        let modeId@(itemName);
+        let modeName@(itemName);
+        let parameterId@(itemName);
+        let processName@(itemName);
+        let typeName@(itemName);
+        let targetSelector@(itemName);
+
+        let moid@(itemName);
+
+        function Pop@(itemName)(config) {
+            processEventItemId@(itemName) = config.objectProcessEventItemId;
+            processEventName@(itemName) = config.objectProcessEventName;
+            modeId@(itemName) = config.objectModeId;
+            modeName@(itemName) = config.objectModeName;
+            parameterId@(itemName) = config.objectParameterId;
+            processName@(itemName) = config.objectProcessName;
+            typeName@(itemName) = config.objectTypeName;
+            targetSelector@(itemName) = config.targetSelector;
+
+            if (!isMobile) {
+                $("#cboModeIdQ@(itemName), #cboParameterIdQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            @*ComboBoxs.Default("#cboModeIdQ@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "NA", "", "ModeName", "ModeId");
+            ComboBoxs.Default("#cboParameterIdQ@(itemName)", "@Url.Action("GetProcessEventSetting", "MesBasicInformation")", {}, "", "NA", "", "ProcessName", "ParameterId");*@
+            console.log(5421,modeId@(itemName))
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetProcessEventSetting", "MesBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ModeId": modeId@(itemName),
+                //"ParameterId": $("#cboParameterIdQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.ModeName}</td>
+                                        <td>${item.ProcessName}</td>
+                                        <td>${item.TypeName}</td>
+                                        <td>${item.ProcessEventName}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-process-event-item-id="${item.ProcessEventItemId}" value="${item.ProcessEventItemId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" id="txtProcessEventName@(itemName)" data-process-event-item-id="${item.ProcessEventItemId}" value="${item.ProcessEventName}"/>
+                                          <input type="hidden" id="txtModeId@(itemName)" data-process-event-item-id="${item.ProcessEventItemId}" value="${item.ModeId}"/>
+                                          <input type="hidden" id="txtModeName@(itemName)" data-process-event-item-id="${item.ProcessEventItemId}" value="${item.ModeName}"/>
+                                          <input type="hidden" id="txtParameterId@(itemName)" data-process-event-item-id="${item.ProcessEventItemId}" value="${item.ParameterId}"/>
+                                          <input type="hidden" id="txtProcessName@(itemName)" data-process-event-item-id="${item.ProcessEventItemId}" value="${item.ProcessName}"/>
+                                          <input type="hidden" id="txtTypeName@(itemName)" data-process-event-item-id="${item.ProcessEventItemId}" value="${item.TypeName}"/>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-process-event-item-id]:checked") {
+                    let processEventItemId = $(this).data("process-event-item-id");
+
+                    if (processEventItemId) {
+                        let processEventName = $(`input[id="txtProcessEventName@(itemName)"][data-process-event-item-id="${processEventItemId}"]`).val();
+                        let modeId = $(`input[id="txtModeId@(itemName)"][data-process-event-item-id="${processEventItemId}"]`).val();
+                        let modeName = $(`input[id="txtModeName@(itemName)"][data-process-event-item-id="${processEventItemId}"]`).val();
+                        let parameterId = $(`input[id="txtParameterId@(itemName)"][data-process-event-item-id="${processEventItemId}"]`).val();
+                        let processName = $(`input[id="txtProcessName@(itemName)"][data-process-event-item-id="${processEventItemId}"]`).val();
+                        let typeName = $(`input[id="txtTypeName@(itemName)"][data-process-event-item-id="${processEventItemId}"]`).val();
+
+                        if (processEventItemId@(itemName)) ElementSetValue(processEventItemId@(itemName), processEventItemId, "change");
+                        if (processEventName@(itemName)) ElementSetValue(processEventName@(itemName), processEventName, "change");
+                        if (modeId@(itemName)) ElementSetValue(modeId@(itemName), modeId, "change");
+                        if (modeName@(itemName)) ElementSetValue(modeName@(itemName), modeName, "change");
+                        if (parameterId@(itemName)) ElementSetValue(parameterId@(itemName), parameterId, "change");
+                        if (processName@(itemName)) ElementSetValue(processName@(itemName), processName, "change");
+                        if (typeName@(itemName)) ElementSetValue(typeName@(itemName), typeName, "change");
+
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+        )

@@ -1,0 +1,498 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "PurchasePriceTrend";
+    string itemNameText = "商品採購單價漲跌記錄";
+    string authority = ViewBag.authority;
+
+    string BarcodeNo = Request["BarcodeNo"] ?? "";
+    string Iframe = Request["Iframe"] ?? "";
+    ViewBag.Title = itemNameText;
+
+}
+
+@Html.Resource("css",
+    @<style>
+         .container {
+             margin-left: 0 !important;
+         }
+
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             vertical-align: middle !important;
+         }
+
+         .baseline .baseline-list {
+             padding-bottom: 9.6px !important;
+         }
+
+             .baseline .baseline-list:after {
+                 border: none !important;
+                 top: 27px !important;
+             }
+
+         .txt-skyblue {
+             font-size: 87.5%;
+         }
+
+         iframe {
+             width: 100%;
+             height: 80vh;
+             aspect-ratio: 16 / 9;
+         }
+    </style>
+                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<!--搜尋內容-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 450px;overflow-y: auto;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">採購建單日期 <input type="checkbox" id="cbxChooseStartDateQ@(itemName)" checked /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtChooseStartDateQ@(itemName)" name="txtChooseStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtChooseEndDateQ@(itemName)" name="txtChooseEndDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    單價減少
+                                    <input type="checkbox" id="cbxPriceDownQ@(itemName)" name="cbxPriceDownQ@(itemName)" value="D" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    單價增加
+                                    <input type="checkbox" id="cbxPriceUpQ@(itemName)" name="cbxPriceUpQ@(itemName)" value="U" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    單價持平
+                                    <input type="checkbox" id="cbxPriceKeepQ@(itemName)" name="cbxPriceKeepQ@(itemName)" value="K" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboCompareModeQ@(itemName)">當前模式</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCompareModeQ@(itemName)" name="cboCompareModeQ@(itemName)">
+                                    <option selected>去年商品最後一個價格相比</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">產品品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入產品品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNameQ@(itemName)">產品品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)" placeholder="請輸入產品品名" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboSupplierNoQ@(itemName)">供應商編號</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSupplierNoQ@(itemName)" name="cboSupplierNoQ@(itemName)"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+                <button type="button" class="btn btn-success  auth-excel" onclick="Excel@(itemName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>匯出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="PopViewOrder@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    資料彙總
+                    <span class="sub-title" style="color:red;">負數是下降 </span>
+                    <span class="sub-title" style="color:green;">正數是上升 </span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <form class="container" autocomplete="off" id="listDataPopOrder@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboPoErpPrefixQ1@(itemName)" name="cboPoErpPrefixQ1@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboSupplierNoQ1@(itemName)" name="cboSupplierNoQ1@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-success" onclick="Reset()" style="margin: auto;">重置</button>
+                                    </div>
+                                </div>
+</fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblPopOrder@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">月份</th>
+                                        <th scope="col" style="min-width: 100px;">差距金額</th>
+                                        <th scope="col" style="min-width: 200px;">起伏百分比</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="ClosePopView()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-header">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                        <button type="button" class="btn btn-success  auth-excel" onclick="SelectOrder()" style="margin: auto;"><i class="fas fa-search"></i>彙總資料</button>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <div id="totalAmout"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">單據</th>
+                                        <th scope="col" style="min-width: 150px;">供應商</th>
+                                        <th scope="col" style="min-width: 150px;">品號</th>
+                                        <th scope="col" style="min-width: 150px;">品名</th>
+                                        <th scope="col" style="min-width: 120px;">差距金額</th>
+                                        <th scope="col" style="min-width: 120px;">單價比較</th>
+                                        <th scope="col" style="min-width: 120px;">價格比較</th>
+                                        <th scope="col" style="min-width: 120px;">採購數量</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 100
+        };
+
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let moProcessList = [];
+
+        $(document).ready(function () {
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            $("#tblData@(itemName)").hide();
+
+            if ("@Iframe" == "T") {
+                $(objForm@(itemName) + " input").attr("disabled", true);
+                $(objForm@(itemName) + " select").attr("disabled", true);
+            }
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtChooseEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.DatePicker("txtChooseStartDateQ@(itemName)", currentDate);
+
+            ComboBoxs.Default("#cboPoErpPrefixQ1@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "PoErpPrefix" }, "", "CHOOSE", "請選擇採購單別", "PoFullName", "PoErpPrefix"); //採購單別
+            ComboBoxs.Default("#cboSupplierNoQ@(itemName)", "@Url.Action("GetSupplier", "ScmBasicInformation")", { "PermitStatus": "1" }, "", "NA", "", "SupplierWithNo", "SupplierNo");
+            ComboBoxs.Default("#cboSupplierNoQ1@(itemName)", "@Url.Action("GetSupplier", "ScmBasicInformation")", { "PermitStatus": "1" }, "", "CHOOSE", "請選擇供應商", "SupplierWithNo", "SupplierNo");
+
+            //Query@(itemName)()
+            
+            $("#cboPoErpPrefixQ1@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+            $("#cboSupplierNoQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+            $("#cboSupplierNoQ1@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+            
+            $("#cboSupplierNoQ1@(itemName), #cboPoErpPrefixQ1@(itemName)").change(function () {
+                let PoPrefix = $("#cboPoErpPrefixQ1@(itemName)").val()
+                if (PoPrefix == "3302" || PoPrefix == "3308") {
+                    alert("單別3302和3308資料合併計算")
+                }
+                GetSourceOrder('Y')
+            });
+            
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+
+            InitData@(itemName)(objPage@(itemName));
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+            $("#tblData@(itemName)").show();
+
+            let innerHtml = '';
+            let totalAmout = 0;
+
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetPurchasePriceTrend", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "ChooseStartDate": ($("#cbxChooseStartDateQ@(itemName)").is(":checked") ? $("#txtChooseStartDateQ@(itemName)").val() : ""),
+                "ChooseEndDate": ($("#cbxChooseStartDateQ@(itemName)").is(":checked") ? $("#txtChooseEndDateQ@(itemName)").val() : ""),
+                "PriceDown": ($("#cbxPriceDownQ@(itemName)").is(":checked") ? $("#cbxPriceDownQ@(itemName)").val() : ""),
+                "PriceUp": ($("#cbxPriceUpQ@(itemName)").is(":checked") ? $("#cbxPriceUpQ@(itemName)").val() : ""),
+                "PriceKeep": ($("#cbxPriceKeepQ@(itemName)").is(":checked") ? $("#cbxPriceKeepQ@(itemName)").val() : ""),
+                "SupplierNo": $("#cboSupplierNoQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        var colorStyle = "";
+                        if (item.nowCost > item.lastCost) {
+                            colorStyle = "green"
+                        }
+                        else {
+                            colorStyle = "red"
+                        }
+                        totalAmout += parseInt(item.diffCost)
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.OderFull}</td>
+                                        <td>${item.Supplier}</td>
+                                        <td>${item.MtlItemNo}</td>
+                                        <td>${item.MtlItemName}</td>
+                                        <td><span style="color:${colorStyle}">${item.diffCost}<span></td>
+                                        <td>現在單價價格:${item.price}<br>
+                                            去年單價價格:${item.lastPrice}<br>
+                                        </td>
+                                        <td>現在價格:${item.nowCost}<br>
+                                            去年價格:${item.lastCost}<br>
+                                        </td>
+                                        <td>${item.Qty}</td>
+                                      <tr></tr>`;
+
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        //前置單據視窗開啟
+        function SelectOrder() {
+            $("#PopViewOrder@(itemName)").modal("show");
+
+            GetSourceOrder("First")
+        }
+
+        let RestData = ""
+
+        function Reset() {
+            $("#PopViewOrder@(itemName)").modal("show");
+            ComboBoxs.Default("#cboSupplierNoQ1@(itemName)", "@Url.Action("GetSupplier", "ScmBasicInformation")", { "PermitStatus": "1" }, "", "NA", "", "SupplierWithNo", "SupplierNo");
+            ComboBoxs.Default("#cboPoErpPrefixQ1@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "PoErpPrefix" }, "", "CHOOSE", "請選擇採購單別", "PoFullName", "PoErpPrefix"); //採購單別
+
+            GetSourceOrder()
+        }
+
+
+
+        //前置單據視窗-取得暫出單資料
+        function GetSourceOrder(OpenStatus) {
+            if (RestData.length > 0 && OpenStatus !== "Y") {
+                $("#tblPopOrder@(itemName) tbody").html(RestData);
+                return
+            }
+
+            let innerHtml = "";
+            let targetUrl = "@Url.Action("GetPurchasePriceTrendSummary", "MesReport")";
+            let postData = {
+                "PoPrefix": $("#cboPoErpPrefixQ1@(itemName)").val(),
+                "SupplierNo": $("#cboSupplierNoQ1@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+
+                if (data.result.length >0) {
+
+                    $.each(data.result, function (i, item) {
+                        var colorStyle = "";
+                        var sign = parseFloat(item.diffCostSum)
+                        if (isNaN(sign)) {
+                            //sign = '輸入不是有效數字';
+                        } else if (sign> 0) {
+                            colorStyle = "green"
+                        } else if (sign < 0) {
+                            colorStyle = "red"
+                        }
+                        //if (item.diffCostPer > 0) {
+                        //    colorStyle = "green"
+                        //}
+                        //else if (item.diffCostPer < 0)  {
+                        //    colorStyle = "red"
+                        //}
+                        innerHtml += `<tr>
+                                        <td>${i+1}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.YearMonth}" style="max-width: 165px;">
+                                          ${item.YearMonth}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.diffCostSum}" style="max-width: 165px;color:${colorStyle}">
+                                          ${item.diffCostSum}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.diffCostPer}" style="max-width: 165px;color:${colorStyle}">
+                                          ${item.diffCostPer}
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            if (OpenStatus == "First") {
+                RestData = innerHtml
+            }
+            $("#tblPopOrder@(itemName) tbody").html(innerHtml);
+        }
+
+        //前置單據視窗關閉
+        function ClosePopView() {
+            $("#PopViewOrder@(itemName)").modal("hide");
+        }
+
+
+
+        function Excel@(itemName)() {
+
+            let targetUrl = "@Url.Action("ExcelPurchasePriceTrend", "MesReport")";
+            let postData = {
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "ChooseStartDate": ($("#cbxChooseStartDateQ@(itemName)").is(":checked") ? $("#txtChooseStartDateQ@(itemName)").val() : ""),
+                "ChooseEndDate": ($("#cbxChooseStartDateQ@(itemName)").is(":checked") ? $("#txtChooseEndDateQ@(itemName)").val() : ""),
+                "SupplierNo": $("#cboSupplierNoQ@(itemName)").val(),
+                "PriceDown": ($("#cbxPriceDownQ@(itemName)").is(":checked") ? $("#cbxPriceDownQ@(itemName)").val() : ""),
+                "PriceUp": ($("#cbxPriceUpQ@(itemName)").is(":checked") ? $("#cbxPriceUpQ@(itemName)").val() : ""),
+                "PriceKeep": ($("#cbxPriceKeepQ@(itemName)").is(":checked") ? $("#cbxPriceKeepQ@(itemName)").val() : ""),
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+
+        }
+
+    </script>
+                                )

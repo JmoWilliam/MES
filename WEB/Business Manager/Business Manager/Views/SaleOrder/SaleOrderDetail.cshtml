@@ -1,0 +1,871 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "SaleOrderDetail";
+}
+
+@Html.Resource("css",
+    @<style>
+        .table-detail {
+            margin: 0;
+            padding: 0;
+            max-height: 30vh;
+            display: none;
+        }
+
+            .table-detail.active {
+                display: block;
+                margin-bottom: .75rem;
+            }
+
+            .table-detail th {
+                background-color: #d7ecfa !important;
+            }
+
+            .table-detail th, .table-detail td {
+                padding: 5px 0;
+                text-align: center;
+            }
+
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .btn-blue {
+            background-color:#003cff;
+            color:#fff;
+        }
+            .btn-blue:hover {
+                color:#ffd800;
+            }
+    </style>
+)
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6"></div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right read-hide@(itemName)">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                        <a class="btn btn-danger auth-bpm-transfer" href="javascript:TransferBpm@(itemName)();"><i class="fas fa-exchange-alt"></i>拋轉BPM</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 85px;">流水號</th>
+                                        <th scope="col" style="min-width: 230px;">品號</th>
+                                        <th scope="col" style="min-width: 220px;">品名</th>
+                                        <th scope="col" style="min-width: 150px;">規格</th>
+                                        <th scope="col" style="min-width: 100px;" class="text-right">訂單數量</th>
+                                        <th scope="col" style="min-width: 100px;">類型</th>
+                                        <th scope="col" style="min-width: 85px;" class="text-right">贈品量</th>
+                                        <th scope="col" style="min-width: 85px;" class="text-right">備品量</th>
+                                        <th scope="col" style="min-width: 100px;">幣別</th>
+                                        <th scope="col" style="min-width: 100px;" class="text-right">計價數量</th>
+                                        <th scope="col" style="min-width: 100px;" class="text-right">單價</th>
+                                        <th scope="col" style="min-width: 100px;" class="text-right">金額</th>
+                                        <th scope="col" style="min-width: 100px;" class="text-right">營業稅率</th>
+                                        <th scope="col" style="min-width: 150px;" class="text-center">預計出貨日</th>
+                                        <th scope="col" style="min-width: 200px;">備註</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 150px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <div class="subject-content">
+                    <label>&nbsp訂單總數量：<span class="text-danger" id="desTotalQty@(itemName)" name="desTotalQty@(itemName)"></span></label>
+                    <label>&nbsp訂單總金額：<span class="text-danger" id="desAmount@(itemName)" name="desAmount@(itemName)"></span></label>
+                    <label>&nbsp訂單總稅額：<span class="text-danger" id="desTaxAmount@(itemName)" name="desTaxAmount@(itemName)"></span></label>
+                    <label>&nbsp合計：<span class="text-danger" id="desTotalAmount@(itemName)" name="desTotalAmount@(itemName)"></span></label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <input type="hidden" id="txtCustomerId@(itemName)" />
+                    <input type="hidden" id="txtMtlItemId@(itemName)" name="txtMtlItemId@(itemName)" />
+                    <fieldset>
+                        <input type="hidden" id="SoDetailId" name="SoDetailId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSoSequence@(itemName)">流水號 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="txtSoSequence@(itemName)" name="txtSoSequence@(itemName)" placeholder="請輸入流水號"
+                                           data-msg-required="請輸入流水號" data-rule-required="true"
+                                           ata-msg-maxlength="必須少於 4 個字元" maxlength="4"
+                                           readonly />
+                                    <div class="input-group-append">
+                                        <a class="btn btn-danger" href="javascript:void(0);" onclick="TakeNumber@(itemName)()"><i class="fa fa-random"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group row auth-cust-po">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label cust-po-item" for="cboPurchaseOrder@(itemName)">採購單明細</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group cust-po-item">
+                                    <select class="form-control" id="cboPurchaseOrder@(itemName)" name="cboPurchaseOrder@(itemName)" disabled="disabled"></select>
+                                    <div class="input-group-append">
+                                        <a class="btn btn-blue" href="javascript:void(0);" onclick="ClearPurchaseOrder@(itemName)()"><i class="fas fa-eraser"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMtlItem@(itemName)">品號/品名/客戶品號</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="txtMtlItem@(itemName)" />
+                                    <div class="input-group-append">
+                                        <a class="btn btn-success" href="javascript:void(0);" onclick="MtlItemSearch@(itemName)()"><i class="fas fa-search"></i></a>
+                                        <a class="btn btn-warning" href="javascript:void(0);" onclick="NonMtlItem@(itemName)()">無品號<i class="fas fa-question"></i></a>
+                                    </div>
+                                </div>
+                                <dl class="help-block">
+                                    <dt>品號</dt>
+                                    <dd id="desMtlItemNo@(itemName)"></dd>
+                                    <dt>品名</dt>
+                                    <dd id="desMtlItemName@(itemName)"></dd>
+                                    <dt>規格</dt>
+                                    <dd id="desMtlItemSpec@(itemName)"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="table-custom table-detail">
+                                    <table class="table" id="tblMtlItem@(itemName)">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">品號</th>
+                                                <th scope="col">品名</th>
+                                                <th scope="col">客戶品號</th>
+                                                <th scope="col">規格</th>
+                                                <th scope="col">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row manual-mtl-item" style="display: none;">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSoMtlItemName@(itemName)">品名</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtSoMtlItemName@(itemName)" name="txtSoMtlItemName@(itemName)" placeholder="請輸入品名"
+                                       data-msg-maxlength="必須少於 120 個字元" maxlength="120" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboQuotationErp@(itemName)">ERP報價單</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboQuotationErp@(itemName)" name="cboQuotationErp@(itemName)" disabled="disabled"></select>
+                                    <div class="input-group-append">
+                                        <a class="btn btn-blue" href="javascript:void(0);" onclick="ClearPurchaseOrder@(itemName)()"><i class="fas fa-eraser"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboInventoryId@(itemName)">庫別 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboInventoryId@(itemName)" name="cboInventoryId@(itemName)"
+                                        data-msg-required="請選擇庫別" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSoQty@(itemName)">數量 X 單價 = 金額 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="number" class="form-control amount-calculate" id="txtSoQty@(itemName)" name="txtSoQty@(itemName)" placeholder="請輸入訂單數量"
+                                           data-msg-required="請輸入訂單數量" data-rule-required="true" step="1" />
+                                    <span class="input-group-addon">X</span>
+                                    <input type="number" class="form-control amount-calculate" id="txtUnitPrice@(itemName)" name="txtUnitPrice@(itemName)" placeholder="請輸入單價"
+                                           data-msg-required="請輸入單價" data-rule-required="true" step="0.0001" />
+                                    <span class="input-group-addon">=</span>
+                                    <input type="number" class="form-control amount-calculate" id="txtAmount@(itemName)" name="txtAmount@(itemName)" placeholder="請輸入金額"
+                                           data-msg-required="請輸入金額" data-rule-required="true"
+                                           readonly />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboProductType@(itemName)">類型 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboProductType@(itemName)" name="cboProductType@(itemName)"
+                                        data-msg-required="請選擇類型" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtFreebieOrSpareQty@(itemName)">贈/備品數量<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="fas fa-gift"></i></span>
+                                    <input type="number" class="form-control" id="txtFreebieOrSpareQty@(itemName)" name="txtFreebieOrSpareQty@(itemName)" placeholder="請輸入贈/備品數量"
+                                           data-msg-required="請輸入贈/備品數量" data-rule-required="true" value="0" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtPromiseDate@(itemName)">預計出貨日 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtPromiseDate@(itemName)" name="txtPromiseDate@(itemName)" placeholder="請輸入預計出貨日"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       data-msg-required="請輸入預計出貨日" data-rule-required="true"
+                                       readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboProject@(itemName)">專案連結</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboProject@(itemName)" name="cboProject@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSoDetailRemark@(itemName)">單身備註</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <textarea class="form-control" id="txtSoDetailRemark@(itemName)" name="txtSoDetailRemark@(itemName)"
+                                          cols="2" data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success read-hide@(itemName)" onclick="CheckCreditLimit@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let totalAmount@(itemName);
+
+        $(function () {
+            let currentDate = new Date();
+            Suites.DatePicker("txtPromiseDate@(itemName)", currentDate);
+        });
+
+        function Expand@(itemName)() {
+            let soId = parseInt($("#SoId").val());
+            $(".advanced-block").slideDown("slow");
+            if (soId > 0) {
+                Return@(itemName)();
+            } else {
+                $("#tblData@(itemName) tbody").html("");
+                $(`.read-hide@(itemName)`).hide();
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            Calculate@(itemName)();
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetSoDetail02", "SaleOrder")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "SoId": $("#SoId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">流水號</span>${item.SoSequence}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="width: 230px; max-width: 230px;"><span class="stack-title">品號</span>${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoMtlItemName}" style="width: 230px; max-width: 230px;"><span class="stack-title">品名</span>${item.SoMtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoMtlItemSpec}" style="width: 150px; max-width: 150px;"><span class="stack-title">規格</span>${item.SoMtlItemSpec}</td>
+                                        <td class="ellipsis text-right"><span class="stack-title">數量</span>${item.SoQty.toLocaleString(`en`)} <code>${item.UomNo}</code></td>
+                                        <td class="ellipsis"><span class="stack-title">類型</span>${item.ProductTypeName}</td>
+                                        <td class="ellipsis text-right"><span class="stack-title">贈品量</span>${item.FreebieQty}</td>
+                                        <td class="ellipsis text-right"><span class="stack-title">備品量</span>${item.SpareQty}</td>
+                                        <td class="ellipsis"><span class="stack-title">幣別</span>${item.Currency}</td>
+                                        <td class="ellipsis text-right"><span class="stack-title">計價數量</span>${item.SoPriceQty.toLocaleString(`en`)}</td>
+                                        <td class="ellipsis text-right"><span class="stack-title">單價</span>${item.UnitPrice.toLocaleString(`en`)}</td>
+                                        <td class="ellipsis text-right"><span class="stack-title">金額</span>${item.Amount.toLocaleString(`en`)}</td>
+                                        <td class="ellipsis text-right"><span class="stack-title">營業稅率</span>${item.BusinessTaxRate}</td>
+                                        <td class="ellipsis text-center"><span class="stack-title">預計出貨日</span>${item.PromiseDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoDetailRemark}" style="width: 200px; max-width: 200px;"><span class="stack-title">備註</span>${item.SoDetailRemark}</td>
+                                        <td class="text-center active-content col-sticky">
+                                            <div class="form-inline">
+                                            <span class="stack-title">操作</span>
+                                            <a class="active-link" href="javascript:Read@(itemName)(${item.SoDetailId});"><i class="fas fa-eye"></i></a>
+                                            <div class="read-hide@(itemName)" style="margin-left:4px;">
+                                            ${item.ConfirmStatus == `N` ? `<a class="active-link auth-update" href="javascript:Edit@(itemName)(${item.SoDetailId});"><i class="fas fa-edit"></i></a>` : ``}
+                                            ${item.ConfirmStatus == `N` ? `<a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.SoDetailId});"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                            </div>
+                                            </div>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="17" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            if ($("#ViewMode").val() == "read") {
+                $(`.read-hide@(itemName)`).hide();
+            }
+            else {
+                $(`.read-hide@(itemName)`).show();
+            }
+        }
+
+        function GetData@(itemName)(SoDetailId) {
+            $("#SoDetailId").val(SoDetailId ? SoDetailId : 0);
+
+            $(objForm@(itemName) + " fieldset").attr("disabled", false);
+            $(objForm@(itemName) + " select").attr("disabled", false);
+            $("#editData@(itemName) .help-block").hide();
+            $("#txtMtlItemId@(itemName)").val(-1);
+
+            $(".manual-mtl-item").hide();
+
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", { "Status": "A" }, "", "NA", "", "InventoryWithNo", "InventoryId");
+            ComboBoxs.WithText("#cboProject@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Project" }, "", "CHOOSE", "請選擇專案", "ProjectName", "Project");
+            ComboBoxs.Default("#cboProductType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "SoDetail.ProductType" }, "", "1", "", "TypeName", "TypeNo");     //類型(贈[DEF]/備品)
+            ComboBoxs.Default("#cboPurchaseOrder@(itemName)", "@Url.Action("GetSoDetailTemp", "SaleOrder")", { "SoId": $("#SoId").val(), "SoDetailId": $("#SoDetailId").val() }, "", "NA", "", "cboText", "SoDetailTempId"); 
+            ComboBoxs.Default("#cboQuotationErp@(itemName)", "@Url.Action("GetQuotationErp", "SaleOrder")", { "SoId": -1, "MtlItemId": -1 }, "", "NA", "", "QuotationFullNoErp", "QuotationFullNoErp");
+            
+
+            if (SoDetailId > 0) {
+                let targetUrl = "@Url.Action("GetSoDetail02", "SaleOrder")";
+                let postData = {
+                    "SoDetailId": SoDetailId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtSoSequence@(itemName)").val(item.SoSequence);
+                        $("#txtMtlItemId@(itemName)").val(item.MtlItemId);
+
+                        if (item.MtlItemId > 0) {
+                            $("#txtMtlItem@(itemName)").val(item.MtlItemNo);
+                            $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                            $("#desMtlItemName@(itemName)").html(item.SoMtlItemName);
+                            $("#desMtlItemSpec@(itemName)").html(item.SoMtlItemSpec);
+                            $("#editData@(itemName) .help-block").css("display", "grid");
+                            ComboBoxs.Default("#cboQuotationErp@(itemName)", "@Url.Action("GetQuotationErp", "SaleOrder")", { "SoId": item.SoId, "MtlItemId": item.MtlItemId }, "", "NA", "", "QuotationFullNoErp", "QuotationFullNoErp");
+                            $("#cboQuotationErp@(itemName)").val(item.QuotationErp).trigger("change");
+
+                        } else {
+                            NonMtlItem@(itemName)();
+                            $("#txtSoMtlItemName@(itemName)").val(item.SoMtlItemName);
+                        }
+
+                        $("#cboPurchaseOrder@(itemName)").val(item.SoDetailTempId);
+                        $("#cboInventoryId@(itemName)").val(item.InventoryId);
+                        $("#txtSoQty@(itemName)").val(item.SoQty);
+                        $("#txtUnitPrice@(itemName)").val(item.UnitPrice);
+                        $("#txtAmount@(itemName)").val(item.Amount);
+                        $("#cboProductType@(itemName)").val(item.ProductType);
+                        $("#txtFreebieOrSpareQty@(itemName)").val(item.ProductType == "1" ? item.FreebieQty : item.SpareQty);
+                        $("#txtPromiseDate@(itemName)").val(item.PromiseDate);
+                        $("#cboProject@(itemName)").val(item.Project);
+                        $("#txtSoDetailRemark@(itemName)").val(item.SoDetailRemark);
+                        $("#txtCustomerId@(itemName)").val(item.CustomerId); 
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            } else {
+                TakeNumber@(itemName)();
+            }
+
+            $("#txtMtlItem@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    MtlItemSearch@(itemName)();
+                }
+            });
+
+            $(".amount-calculate").off("change").on("change", function () {
+                let qty = parseFloat($("#txtSoQty@(itemName)").val());
+                let unitPrice = parseFloat($("#txtUnitPrice@(itemName)").val());
+
+                $("#txtAmount@(itemName)").val(qty * unitPrice);
+            });
+
+            $("#cboPurchaseOrder@(itemName)").off("change").on("change", function (e) {
+                let soDetailTempId = !e.target.value ? -1 : parseInt(e.target.value);
+                if (soDetailTempId > 0) {
+                    let targetUrl = "@Url.Action("GetSoDetailTemp", "SaleOrder")";
+                    let postData = {
+                        "SoId": $("#SoId").val(),
+                        "SoDetailTempId": soDetailTempId,
+                        //"Status": "N"
+                    };
+                    let data = DataAccess.Get(targetUrl, postData, false);
+                    if (data.status == "success") {
+                        $(".cust-po-item input, .cust-po-item select, .cust-po-item button").removeAttr("disabled");
+
+                        if (data.result.length > 0) {
+                            if (data.result.filter(f => !!f.SoDetailId && f.SoDetailId != SoDetailId).length > 0) {
+                                let item = data.result[0];
+                                alert(`${item.TD001}-${item.TD002}-${item.TD003} <br/>已綁定其他單身資料，不得使用!`, "error", 0);
+                            }
+                            else {
+                                $(".cust-po-item input, .cust-po-item select, .cust-po-item button").attr("disabled", true);
+                                $.each(data.result, function (i, item) {
+                                    $("#txtMtlItem@(itemName)").val(item.CustomerMtlItemNo);
+                                    $("#txtMtlItemId@(itemName)").val(item.MtlItemId);
+                                    $("#txtSoMtlItemName@(itemName)").val(item.MtlItemName);
+                                    $("#cboInventoryId@(itemName)").val(item.InventoryId).trigger("change");
+                                    $("#txtSoQty@(itemName)").val(item.TD008);
+                                    $("#txtUnitPrice@(itemName)").val(item.TD010);
+                                    $("#txtAmount@(itemName)").val(item.TD011);
+                                });
+                            }
+                            console.log(data.result);
+                        }
+                        else {
+                            alert(`無法取得採購明細資料`, "error", 0);
+                        }
+                    }
+                }
+            });
+
+            $("#cboInventoryId@(itemName), #cboProject@(itemName), #cboProductType@(itemName), #cboQuotationErp@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function Edit@(itemName)(SoDetailId) {
+            GetData@(itemName)(SoDetailId);
+            $(objForm@(itemName) + " fieldset").attr("disabled", false);
+            $(objForm@(itemName) + " select").attr("disabled", false);
+            if (parseInt($("#cboPurchaseOrder@(itemName)").val()) > 0) $(".cust-po-item input, .cust-po-item select, .cust-po-item button").attr("disabled", true);
+        }
+
+
+        function Read@(itemName)(SoDetailId) {
+            GetData@(itemName)(SoDetailId);
+            $(objForm@(itemName) + " fieldset").attr("disabled", true);
+            $(objForm@(itemName) + " select").attr("disabled", true);
+        }
+
+        function MtlItemSearch@(itemName)() {
+            let innerHtml = '';
+
+            $("#editData@(itemName) .table-detail").addClass("active");
+
+            if ($("#txtMtlItem@(itemName)").val().length > 1) {
+                let targetUrl = "@Url.Action("GetMtlItem", "Product")";
+                let postData = {
+                    "SearchKey": $("#txtMtlItem@(itemName)").val(),
+                    "TransferStatus": "Y",
+                    "Status": "A"
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            let CustomerMtlItemRow = 0;
+                            let CustomerMtlItem;
+                            if (item.CustomerMtlItem) {
+                                CustomerMtlItem = JSON.parse(item.CustomerMtlItem);
+                                CustomerMtlItemRow = CustomerMtlItem.data.length;
+                            }
+
+                            innerHtml += `<tr>
+                                            <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)} class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 175px;">${item.MtlItemNo}</td>
+                                            <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)} class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 175px;">${item.MtlItemName}</td>
+                                            ${CustomerMtlItemRow > 0
+                                                ? `<td class="ellipsis" data-toggle="tooltip" title="${CustomerMtlItem.data[0].CustomerMtlItemNo}(${CustomerMtlItem.data[0].CustomerNo})" style="max-width: 200px;">${CustomerMtlItem.data[0].CustomerMtlItemNo}<code>(${CustomerMtlItem.data[0].CustomerNo})</code></td>`
+                                                : `<td ${(CustomerMtlItemRow > 1 ? `rowspan="${CustomerMtlItemRow}"` : ``)}></td>`
+                                            }
+                                            <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)} class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 150px;">${item.MtlItemSpec}</td>
+                                            <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)} class="text-center">
+                                              <input type="radio" name="chkMtlItemId@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemId}" />
+                                              <input type="hidden" name="txtMtlItemNo@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemNo}" />
+                                              <input type="hidden" name="txtMtlItemName@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemName}" />
+                                              <input type="hidden" name="txtMtlItemSpec@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemSpec}" />
+                                              <input type="hidden" name="txtInventoryId@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.InventoryId}" />
+                                            </td>
+                                          </tr>
+                                          ${CustomerMtlItem@(itemName)(item.CustomerMtlItem)}`;
+                        });
+                    } else {
+                        innerHtml += `<tr>
+                                        <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                      </tr>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            } else {
+                $("#txtMtlItemId@(itemName)").val("-1");
+                $("#editData@(itemName) .help-block").hide();
+
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                  <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                              </tr>`;
+            }
+
+            $("#tblMtlItem@(itemName) tbody").html(innerHtml);
+
+            $("input[type='radio']").click(function () {
+                if ("[data-mtl-item-id]:checked") {
+                    let mtlItemId = $(this).data("mtl-item-id");
+
+                    if (mtlItemId) {
+                        let mtlItemNo = $(`input[name="txtMtlItemNo@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let mtlItemName = $(`input[name="txtMtlItemName@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let mtlItemSpec = $(`input[name="txtMtlItemSpec@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let inventoryId = $(`input[name="txtInventoryId@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let soId = $("#SoId").val()
+                        ComboBoxs.Default("#cboQuotationErp@(itemName)", "@Url.Action("GetQuotationErp", "SaleOrder")", { "SoId": soId, "MtlItemId": mtlItemId }, "", "NA", "", "QuotationFullNoErp", "QuotationFullNoErp"); 
+
+
+                        $("#txtMtlItemId@(itemName)").val(mtlItemId);
+                        $("#txtMtlItem@(itemName)").val(mtlItemNo);
+                        $("#desMtlItemNo@(itemName)").html(mtlItemNo);
+                        $("#desMtlItemName@(itemName)").html(mtlItemName);
+                        $("#desMtlItemSpec@(itemName)").html(mtlItemSpec);
+                        $("#cboInventoryId@(itemName)").val(inventoryId).trigger("change");
+
+                        $("#editData@(itemName) .help-block").css("display", "grid");
+                    }
+
+                    $("#editData@(itemName) .table-detail").removeClass("active");
+                }
+            });
+
+            function CustomerMtlItem@(itemName)(source) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    for (let x = 1; x < json.data.length; x++) {
+                        html += `<tr>
+                                   <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].CustomerMtlItemNo}(${json.data[x].CustomerNo})" style="max-width: 200px;">${json.data[x].CustomerMtlItemNo}<code>(${json.data[x].CustomerNo})</code></td>
+                                 </tr>`;
+                    }
+                }
+
+                return html;
+            }
+        }
+
+        function CheckCreditLimit@(itemName)() {
+            let result = GetSoDetailTxAmount@(itemName)();
+            Calculate@(itemName)();
+            let targetUrl = "@Url.Action("CheckCreditLimit", "SaleOrder")";
+            let postData = {
+                "CustomerNo": result.CustomerNo,
+                "Currency": result.Currency,
+                "TotalAmount": totalAmount@(itemName),
+                "DocType": "SaleOrder",
+                "Amount": parseFloat(result.Amount) + parseFloat(result.TaxAmount)
+            }
+            data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "ok") {
+                Save@(itemName)();
+            }
+            else if (data.status == "warning") {
+                swal.fire({
+                    titleText: "請注意!!",
+                    text: data.msg,
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Save@(itemName)();
+                    }
+                });
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+
+        function GetSoDetailTxAmount@(itemName)() {
+            let result;
+            let targetUrl = "@Url.Action("GetSoDetailTxAmount", "SaleOrder")";
+            let postData = {
+                "SoId": $("#SoId").val(),
+                "UnitPrice": $("#txtUnitPrice@(itemName)").val(),
+                "SoPriceQty": $("#txtSoQty@(itemName)").val()
+            }
+            data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                result = data.result;
+            }
+            else {
+                alert(data.msg);
+            }
+
+            return result;
+        }
+
+        function Save@(itemName)() {
+            if (parseInt($("#SoId").val()) < 0) {
+                alert("請先儲存訂單單頭", "alert");
+                return false;
+            }
+
+            if ($(objForm@(itemName)).valid()) {
+                let SoDetailId = parseInt($("#SoDetailId").val());
+
+                if (SoDetailId <= 0) {
+                    let targetUrl = "@Url.Action("AddSoDetail", "SaleOrder")";
+                    let postData = {
+                        "SoId": $("#SoId").val(),
+                        "SoDetailTempId": $("#cboPurchaseOrder@(itemName) :selected").val(),
+                        "SoSequence": $("#txtSoSequence@(itemName)").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "SoMtlItemName": $("#txtSoMtlItemName@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "SoQty": $("#txtSoQty@(itemName)").val(),
+                        "UnitPrice": $("#txtUnitPrice@(itemName)").val(),
+                        "Amount": $("#txtAmount@(itemName)").val(),
+                        "ProductType": $("#cboProductType@(itemName)").val(),
+                        "FreebieOrSpareQty": $("#txtFreebieOrSpareQty@(itemName)").val(),
+                        "PromiseDate": $("#txtPromiseDate@(itemName)").val(),
+                        "Project": $("#cboProject@(itemName)").val(),
+                        "SoDetailRemark": $("#txtSoDetailRemark@(itemName)").val(),
+                        "QuotationErp": $("#cboQuotationErp@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateSoDetail", "SaleOrder")";
+                    let postData = {
+                        "SoId": $("#SoId").val(),
+                        "SoDetailId": SoDetailId,
+                        "SoDetailTempId": $("#cboPurchaseOrder@(itemName) :selected").val(),
+                        "SoSequence": $("#txtSoSequence@(itemName)").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "SoMtlItemName": $("#txtSoMtlItemName@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "SoQty": $("#txtSoQty@(itemName)").val(),
+                        "UnitPrice": $("#txtUnitPrice@(itemName)").val(),
+                        "Amount": $("#txtAmount@(itemName)").val(),
+                        "ProductType": $("#cboProductType@(itemName)").val(),
+                        "FreebieOrSpareQty": $("#txtFreebieOrSpareQty@(itemName)").val(),
+                        "PromiseDate": $("#txtPromiseDate@(itemName)").val(),
+                        "Project": $("#cboProject@(itemName)").val(),
+                        "SoDetailRemark": $("#txtSoDetailRemark@(itemName)").val(),
+                        "QuotationErp": $("#cboQuotationErp@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(SoDetailId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteSoDetail02", "SaleOrder")";
+                    let postData = {
+                        "SoId": $("#SoId").val(),
+                        "SoDetailId": SoDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+
+        function Calculate@(itemName)() {
+            let targetUrl = "@Url.Action("GetTotal", "SaleOrder")";
+            let postData = {
+                "SoId": $("#SoId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    $("#desTotalQty@(itemName)").html(item.TotalQty.toLocaleString('en'));
+                    $("#desAmount@(itemName)").html(item.Amount.toLocaleString('en'));
+                    $("#desTaxAmount@(itemName)").html(item.TaxAmount.toLocaleString('en'));
+                    $("#desTotalAmount@(itemName)").html(item.TotalAmount.toLocaleString('en'));
+                    totalAmount@(itemName) = parseFloat(item.Amount) + parseFloat(item.TaxAmount);
+                });
+
+                if (data.result.length <= 0) {
+                    $("#desTotalQty@(itemName)").html("0");
+                    $("#desAmount@(itemName)").html("0");
+                    $("#desTaxAmount@(itemName)").html("0");
+                    $("#desTotalAmount@(itemName)").html("0");
+                    totalAmount@(itemName) = 0;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function TakeNumber@(itemName)() {
+            let targetUrl = "@Url.Action("GetSoSequence", "SaleOrder")";
+            let postData = {
+                "SoId": $("#SoId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    var seq = parseInt(item.SoSequence);
+
+                    if (seq == 0) {
+                        seq = 1;
+                    } else {
+                        seq = seq + 1;
+                    }
+                    var serial = "0000" + seq;
+
+                    $("#txtSoSequence@(itemName)").val(serial.substr(serial.length - 4));
+                });
+
+                if (data.result.length <= 0) {
+                    $("#txtSoSequence@(itemName)").val("0001");
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function ClearPurchaseOrder@(itemName)() {
+            ResetForm(objForm@(itemName));
+            TakeNumber@(itemName)();
+            $(`${objForm@(itemName)} select`).prop("selectedIndex", 0).trigger("change")
+            $(".cust-po-item input, .cust-po-item select, .cust-po-item button").removeAttr("disabled");
+        }
+
+        function TransferBpm@(itemName)() {
+            swal.fire({
+                titleText: "確認要拋轉BPM嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateSoTransferBpm", "SaleOrder")";
+                    let postData = {
+                        "SoId": $("#SoId").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        QuerySaleOrderManagement();
+                    }
+                }
+            });
+        }
+
+        function NonMtlItem@(itemName)() {
+            $(".manual-mtl-item").show();
+            $("#txtSoMtlItemName@(itemName)").val("");
+        }
+    </script>
+)

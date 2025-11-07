@@ -1,0 +1,155 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TaskStructure";
+    string itemNameText = "任務結構";
+}
+
+@Html.Resource("css",
+    @<style>
+        .user-task {
+          
+            font-weight: bold;
+            color: #0f78d3;
+        }
+
+        .other-task {
+            color: #4e4e4e;
+        }
+        .tree-list {
+            border-bottom: solid #efefef 1px;
+        }
+    </style>
+)
+
+<form autocomplete="off" id="queryForm@(itemName)" style="max-width: 1140px; padding-left: 15px; padding-right: 15px; margin: auto;">
+    <fieldset>
+        <div class="form-row align-items-center mb-2">
+            <div class="col-auto">
+                <input type="text" class="form-control" id="txtProjectQ@(itemName)" name="txtProjectQ@(itemName)" placeholder="請輸入專案代碼.名稱" />
+            </div>
+            <div class="col-auto">
+                <input type="text" class="form-control" id="txtTaskNameQ@(itemName)" name="txtTaskNameQ@(itemName)" placeholder="請輸入任務名稱" />
+            </div>
+            <div class="col-6 input-group">
+                <select class="form-control" id="cboTaskStatusQ@(itemName)" name="cboTaskStatusQ@(itemName)" multiple></select>
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-danger" onclick="$('#cboTaskStatusQ@(itemName)').val('').trigger('change')" title="清除">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+            </div>
+        </div>
+    </fieldset>
+</form>
+<div class="data-structure"></div>
+
+@Html.Resource("js",
+    @<script>
+        let tree@(itemName);
+
+        function Expand@(itemName)() {
+            ComboBoxs.WithText("#cboTaskStatusQ@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { StatusSchema: "ProjectTask.TaskStatus" }, "", "CHOOSE-NUMBER", "", "StatusName", "StatusNo");
+
+            if (!isMobile) {
+                $("#cboTaskStatusQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            $("#cboTaskStatusQ@(itemName)").val(["B", "I"]).trigger("change");
+
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetTaskStructure", "Task")";
+            let postData = {
+                Project: $("#txtProjectQ@(itemName)").val(),
+                TaskName: $("#txtTaskNameQ@(itemName)").val(),
+                TaskStatus: $("#cboTaskStatusQ@(itemName)").val().join(),
+                OpenedLevel: 5
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            $(".data-structure").html("");
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<div class="col-12">
+                                        <div class="card card-shadow mb-4">
+                                          <div class="card-body task-card-body">
+                                            <div class="container">
+                                              <h3 class="text-muted">${item.ProjectName}<code>${item.ProjectNo}</code></h3>
+                                              <div class="tree-container" style="margin-top: 10px;">
+                                                <div id="tree@(itemName)_${item.ProjectId}"></div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>`;
+                    });
+                } else {
+                    innerHtml += `<div class="col-12">
+                                    <div class="card card-shadow mb-4">
+                                      <div class="card-body">
+                                        <div class="container">
+                                          <span class="text-center" style="background-color: #fff3cd; display: block;">
+                                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>`;
+                }
+
+                $(".data-structure").html(innerHtml);
+
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let userTask = JSON.parse(item.ProjectTask);
+
+                        tree = new dhx.Tree(`tree@(itemName)_${item.ProjectId}`, {
+                            editable: false,
+                            checkbox: false,
+                            template: ({ value, id }, isFolder) => {
+                                let template = ``;
+
+                                template = `<div class="tree-list" data-tree-index="${id}">
+                                              <span class="tree-text ${getObjects(userTask, `ProjectTaskId`, id).length > 0 ? `user-task` : `other-task`}">${value}</span>
+                                            </div>`;
+
+                                return template;
+                            }
+                        });
+
+                        tree.data.parse([item.TaskTree]);
+
+                        tree.events.on("itemDblClick", function (id, e) {
+                            if (getObjects(userTask, `ProjectTaskId`, id).length > 0) {
+                                InitDataViewTask(id);
+                            }
+                        });
+
+                        tree.events.on("afterExpand", function (id) {
+                            DelayFn(function () { PageAuthorityControl(); }, 50);
+                        });
+                    });
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+</script>
+)

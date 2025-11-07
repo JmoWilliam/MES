@@ -1,0 +1,265 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QmmDetail";
+    string itemNameText = "機台列表";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                                                                                )
+
+<input type="hidden" id="txtMachineId@(itemName)" />
+
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMachineNoQ@(itemName)">機台編號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMachineNoQ@(itemName)" name="txtMachineNoQ@(itemName)" placeholder="請輸入機台編號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMachineNameQ@(itemName)">機型名稱</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMachineNameQ@(itemName)" name="txtMachineNameQ@(itemName)" placeholder="請輸入機台名稱" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    啟用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)A" name="cbxStatusQ@(itemName)" value="A" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    停用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)S" name="cbxStatusQ@(itemName)" value="S" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-detail pop-view" href="javascript:void(0);"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">機台編號</th>
+                                        <th scope="col" style="min-width: 200px;">機台名稱</th>
+                                        <th scope="col" style="min-width: 200px;">機台描述</th>
+                                        <th scope="col" style="min-width: 200px;">所屬車間</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">狀態</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Partial("ViewMachine")
+@Html.Partial("ViewMtlItem")
+
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            let popConfig = {
+                targetSelector: "#txtMachineId@(itemName)",
+                popFunction: "PopViewMachine",
+                objectMoId: "#MachineId@(itemName)"
+            };
+            InitPopView(popConfig);
+        });
+
+        function Expand@(itemName)() {
+            if (parseInt($("#QcMachineModeId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+            } else {
+                alert("量測機型資料錯誤", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+            let targetUrl = "@Url.Action("GetQmmDetail", "QmsBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "QmmDetailId": $("#QmmDetailId").val(),
+                "QcMachineModeId": $("#QcMachineModeId").val(),
+                "MachineNo": $("#txtMachineNoQ@(itemName)").val(),
+                "MachineName": $("#txtMachineNameQ@(itemName)").val(),
+                "Status": statusList.join(",")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineNo}" style="max-width: 150px;">${item.MachineNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineName}" style="max-width: 150px;">${item.MachineName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineDesc}" style="max-width: 150px;">${item.MachineDesc}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ShopName}" style="max-width: 150px;">${item.ShopName}</td>
+                                        <td class="text-center auth-detail">
+                                          <input type="checkbox" name="chkStatus@(itemName)" data-qmmdetail-id="${item.QmmDetailId}" ${item.Status == `A` ? `checked` : ``} />
+                                        </td>
+                                        <td class="text-center un-auth auth-detail">${StatusName(`Status`, item.Status)}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link auth-detail" href="javascript:Delete@(itemName)(${item.QmmDetailId });"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "啟用",
+                off: "停用",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStatus@(itemName)'][data-qmmdetail-id]").change(StatusSwitch@(itemName));
+        }
+
+        function Delete@(itemName)(QmmDetailId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteQmmDetail", "QmsBasicInformation")";
+                    let postData = {
+                        "QmmDetailId": QmmDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function StatusSwitch@(itemName)() {
+            var QmmDetailId = $(this).data("qmmdetail-id");
+
+            let targetUrl = "@Url.Action("UpdateQmmDetailStatus", "QmsBasicInformation")";
+            let postData = {
+                "QmmDetailId": QmmDetailId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function Return@(itemName)() {
+            //ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+    </script>
+                                                        )

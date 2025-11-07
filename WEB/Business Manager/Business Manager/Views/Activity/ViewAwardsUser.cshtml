@@ -1,0 +1,280 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewAwardsUser";
+    string itemNameText = "獎項人員資料";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">獎項名稱 <span class="sub-text" id="desAwardsName@(itemName)"></span></span>
+                </h5>
+                <button class="close" type="button" onclick="Close@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-12 col-md-auto col-lg-auto mb-2 mb-md-0 mb-lg-0">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)" 
+                                               placeholder="請輸入使用者工號/姓名/姓名" />
+                                    </div>
+                                    <div class="col-12 col-md-auto col-lg-auto text-right text-md-left text-lg-left">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        <button type="button" class="btn btn-info" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="data-checklist"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                            <fieldset>
+                                <div class="form-group row">
+                                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtGroupName@(itemName)">群組名稱</label>
+                                    <div class="col-12 col-md-9 col-lg-9">
+                                        <input type="text" class="form-control" id="txtGroupName@(itemName)" name="txtGroupName@(itemName)" placeholder="請輸入群組名稱"
+                                               data-msg-maxlength="必須少於 50 個字元" maxlength="50" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboUsers@(itemName)">獎項人員 <span class="text-danger">*</span></label>
+                                    <div class="col-12 col-md-9 col-lg-9">
+                                        <select class="form-control" id="cboUsers@(itemName)" name="cboUsers@(itemName)"
+                                                data-msg-required="請選擇獎項人員" data-rule-required="true" multiple></select>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtRemark@(itemName)">備註</label>
+                                    <div class="col-12 col-md-9 col-lg-9">
+                                        <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)"
+                                                  rows="2" placeholder="請輸入備註"
+                                                  data-msg-maxlength="必須少於 500 個字元" maxlength="500"></textarea>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let awardsId@(itemName);
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(awardsId) {
+            awardsId@(itemName) = awardsId;
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            Datas@(itemName).GetAwards@(itemName)();
+            Datas@(itemName).GetAwardsUser@(itemName)();
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetAwards@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetAwards", "Activity")";
+                let postData = {
+                    "AwardsId": awardsId@(itemName)
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#desAwardsName@(itemName)").html(item.AwardsName);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "GetAwardsUser@(itemName)", function () {
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetAwardsUser", "Activity")";
+                let postData = {
+                    "AwardsId": awardsId@(itemName),
+                    "SearchKey": $("#txtSearchKeyQ@(itemName)").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    console.log(data.result.length);
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<div class="row">
+                                        <div class="col-12">
+                                          <h3 class="text-muted mb-2">${item.GroupName}</h3>
+                                          <div class="table-custom">
+                                            <table class="table table-bordered table-striped table-sticky table-stack">
+                                              <thead>
+                                                <tr>
+                                                  <th scope="col" style="min-width: 75px;">#</th>
+                                                  <th scope="col" style="min-width: 200px;">獎項人員</th>
+                                                  <th scope="col" style="min-width: 350px;">備註</th>
+                                                  <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                              ${UserList@(itemName)(item.AwardsUser)}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        </div>
+                                      </div>`;
+                        });
+                    } else {
+                        innerHtml += `<div class="row">
+                                        <div class="col-12">
+                                          <table class="table">
+                                            <tr>
+                                              <td class="text-center" style="background-color: #fff3cd;">
+                                                <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                              </td>
+                                            </tr>
+                                          </table>
+                                        </div>
+                                      </div>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $(".data-checklist").html(innerHtml);
+
+                TableComponentInit();
+
+                function UserList@(itemName)(source) {
+                    let html = '';
+
+                    if (source) {
+                        let json = JSON.parse(source);
+
+                        for (let x = 0; x < json.data.length; x++) {
+                            html += `<tr>
+                                       <td><span class="stack-title">#</span>${x + 1}.</td>
+                                       <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].DepartmentNo} ${json.data[x].DepartmentName}" style="max-width: 200px;"><span class="stack-title">獎項人員</span>${json.data[x].LogoIcon == -1 ? `` : `<img class="company-logo" src="/Web/GetFile?fileId=${json.data[x].LogoIcon}" />`}${json.data[x].UserNo} ${json.data[x].UserName}</td>
+                                       <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].Remark}" style="max-width: 350px;"><span class="stack-title">備註</span>${json.data[x].Remark}</td>
+                                       <td class="text-center active-content">
+                                         <span class="stack-title">操作</span>
+                                         <a class="active-link auth-delete" href="javascript:Delete@(itemName)(${json.data[x].UserId});"><i class="fas fa-trash-alt"></i></a>
+                                       </td>
+                                     </tr>`;
+                        }
+                    }
+
+                    return html;
+                }
+            });
+        }
+
+        function Edit@(itemName)() {
+            Switch("#editData@(itemName), #modal@(itemName) .edit-mode", "#listData@(itemName)");
+
+            ComboBoxs.Default("#cboUsers@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "CHOOSE-NUMBER", "", "UserWithNo", "UserId");
+
+            $("#cboUsers@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("AddAwardsUser", "Activity")";
+                let postData = {
+                    "AwardsId": awardsId@(itemName),
+                    "GroupName": $("#txtGroupName@(itemName)").val(),
+                    "Users": $("#cboUsers@(itemName) option:selected").toArray().map(item => item.value).join(),
+                    "Remark": $("#txtRemark@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function Delete@(itemName)(UserId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteAwardsUser", "Activity")";
+                    let postData = {
+                        "AwardsId": awardsId@(itemName),
+                        "UserId": UserId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), #modal@(itemName) .edit-mode");
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), #modal@(itemName) .edit-mode");
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

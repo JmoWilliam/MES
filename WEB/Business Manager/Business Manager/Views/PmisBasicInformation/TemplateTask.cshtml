@@ -1,0 +1,125 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TemplateTask";
+    string itemNameText = "樣板任務";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body task-card-body">
+                <div class="container">
+                    <div class="tree-container">
+                        <div id="tree@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let tree;
+
+        function Expand@(itemName)() {
+            if (parseInt($("#TemplateId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+
+                InitData@(itemName)();
+            } else {
+                alert("請先儲存樣板資料", "alert");
+            }
+        }
+
+        function InitData@(itemName)() {
+            if (tree) tree.destructor();
+
+            let targetUrl = "@Url.Action("GetTemplateTaskTree", "PmisBasicInformation")";
+            let postData = {
+                TemplateId: $("#TemplateId").val(),
+                OpenedLevel: 5
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                tree = new dhx.Tree("tree@(itemName)", {
+                    editable: false,
+                    checkbox: false,
+                    template: ({ value, id }, isFolder) => {
+                        let template;
+
+                        switch (id) {
+                            case "-1":
+                                template = `<div class="tree-list" data-tree-index="${id}">
+                                              <span class="tree-text">${value}</span>
+                                              <div class="tree-active">
+                                                <a class="tree-link tree-add auth-task-add" title="新增" href="javascript:AddViewTemplateTask(${id});">
+                                                  <i class="far fa-plus tree-icon"></i>
+                                                </a>
+                                              </div>
+                                            </div>`;
+                                break;
+                            default:
+                                template = `<div class="tree-list" data-tree-index="${id}">
+                                              <span class="tree-text">${value}</span>
+                                              <div class="tree-active">
+                                                <a class="tree-link tree-sort-top auth-task-sort" title="前移" href="javascript:Sort@(itemName)(${id}, 'top');">
+                                                  <i class="far fa-arrow-alt-from-bottom tree-icon"></i>
+                                                </a>
+                                                <a class="tree-link tree-sort-bottom auth-task-sort" title="後移" href="javascript:Sort@(itemName)(${id}, 'bottom');">
+                                                  <i class="far fa-arrow-alt-from-top tree-icon"></i>
+                                                </a>
+                                                <a class="tree-link tree-add auth-task-add" title="新增" href="javascript:AddViewTemplateTask(${id});">
+                                                  <i class="far fa-plus tree-icon"></i>
+                                                </a>
+                                              </div>
+                                            </div>`;
+                                break;
+                        }
+
+                        return template;
+                    }
+                });
+
+                tree.data.parse(data.result);
+
+                tree.events.on("itemDblClick", function (id, e) {
+                    if (id != "-1") {
+                        EditViewTemplateTask(id);
+                    }
+                });
+
+                tree.events.on("afterExpand", function (id) {
+                    DelayFn(function () { PageAuthorityControl(); }, 50);
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            DelayFn(function () { PageAuthorityControl(); }, 50);
+        }
+
+        function Sort@(itemName)(TemplateTaskId, SortType) {
+            let targetUrl = "@Url.Action("UpdateTemplateTaskSort", "PmisBasicInformation")";
+            let postData = {
+                TemplateTaskId: TemplateTaskId,
+                SortType: SortType
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (result) {
+                InitData@(itemName)();
+
+                DelayFn(function () { ScrollPosition(0, GetElementPosition(`[data-tree-index="${TemplateTaskId}"]`).y); }, 50);
+            }
+        }
+    </script>
+)

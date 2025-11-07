@@ -1,0 +1,233 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMachine";
+    string itemNameText = "機台資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMachineNoQ@(itemName)" name="txtMachineNoQ@(itemName)"
+                                               placeholder="請輸入編號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input class="form-control" id="txtMachineNameQ@(itemName)" name="txtMachineNameQ@(itemName)"
+                                               placeholder="請輸入名稱" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">機台代碼</th>
+                                        <th scope="col" style="min-width: 175px;">機台名稱</th>
+                                        <th scope="col" style="min-width: 175px;">機台描述</th>
+                                        <th scope="col" style="min-width: 175px;">所屬車間</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let targetSelector@(itemName);
+        let machineId@(itemName);
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            machineId@(itemName) = config.objectMachineId;
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetMachine", "MesBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "MachineNo": $("#txtMachineNoQ@(itemName)").val().trim(),
+                "MachineName": $("#txtMachineNameQ@(itemName)").val().trim()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td>${i+1}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineNo}" style="max-width: 150px;">${item.MachineNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineName}" style="max-width: 200px;">${item.MachineName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineDesc}" style="max-width: 200px;">${item.MachineDesc}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ShopName}" style="max-width: 150px;">${item.ShopName}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--checkbox">
+                                            <input type="checkbox" id="cbxMachineId@(itemName)${item.MachineId}" name="cbxMachineId@(itemName)" value="${item.MachineId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function Save@(itemName)() {
+            console.log(2)
+            if ($(objForm@(itemName)).valid()) {
+                let QcMachineModeId = parseInt($("#QcMachineModeId").val());
+
+                let machineIdList = [];
+                $.each($("input[name='cbxMachineId@(itemName)']:checked"), function () {
+                    machineIdList.push($(this).val());
+                });
+
+                let targetUrl = "@Url.Action("AddQiMachineMode", "QmsBasicInformation")";
+
+                let postData = {
+                    "QcMachineModeId": $("#QcMachineModeId").val(),
+                    "MachineId": machineIdList.join(",")
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    QueryQmmDetail();
+                    objPageQmmDetail.pageIndex = 0;
+                    InitDataQmmDetail(objPageQmmDetail);
+
+                    $("#modalQuery@(itemName)").modal("hide");
+                    Close@(itemName)()
+                }
+
+            }
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+
+
+        //region shift選取
+        var v = $("input[name='cbxMachineId@(itemName)']").is(":checked");
+        let BarcodeListY = [];
+        let BarcodeListN = [];
+
+        $.each($("input[name='cbxMachineId@(itemName)']"), function () {
+            console.log($(this))
+            if ($(this).is(":checked")) {
+                BarcodeListY.push($(this).val());
+            }
+            else {
+                if (!$(this).is(":disabled")) {
+                    BarcodeListN.push($(this).val());
+                }
+            }
+        });
+
+        const checkboxs = document.querySelectorAll('input[type=checkbox]')
+        console.log(checkboxs)
+        let lastCheckbox;
+
+        function clickCheckbox(e) {
+            console.log("TEST")
+            // check事件
+            let inBetween = false;
+            if (e.shiftKey && this.checked) {
+                // https://developer.mozilla.org/zh-TW/docs/Web/API/KeyboardEvent/shiftKey
+                // 按下shift和點選checkbox.check時
+                checkboxs.forEach(checkbox => {
+                    console.log(checkbox);
+                    if (checkbox === this || checkbox === lastCheckbox) {
+                        inBetween = !inBetween
+                        // console.log('check');
+                    }
+                    if (inBetween) {
+                        checkbox.checked = true;
+                    }
+                    // 利用flag控制按住shift和第一個選取checkbox產生checkbox.checked
+                })
+            }
+
+            lastCheckbox = this
+            // console.log('this', this, 'lastCheckbox', lastCheckbox)
+        }
+
+        checkboxs.forEach(checkbox => {
+            checkbox.addEventListener('click', clickCheckbox)
+        })
+        //endregion
+
+    </script>
+        )

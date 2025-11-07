@@ -1,0 +1,571 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MillMachineTool";
+    string itemNameText = "銑床機台刀具維護頁面";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboWorkShop@(itemName)">車間<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboWorkShopQ@(itemName)" name="cboWorkShopQ@(itemName)"
+                                        data-msg-required="請選擇車間" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboMachine@(itemName)">機台<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboMachineQ@(itemName)" name="cboMachineQ@(itemName)"
+                                        data-msg-required="請選擇機台" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">機台</th>
+                                        <th scope="col" style="min-width: 150px;">刀具</th>
+                                        <th scope="col" style="min-width: 150px;">刀座編號</th>
+                                        <th scope="col" style="min-width: 150px;">刀座名稱</th>
+                                        <th scope="col" style="min-width: 150px;">直徑D</th>
+                                        <th scope="col" style="min-width: 150px;">下半徑R1</th>
+                                        <th scope="col" style="min-width: 150px;">錐角B</th>
+                                        <th scope="col" style="min-width: 150px;">刀刃長度FL</th>
+                                        <th scope="col" style="min-width: 150px;">總長度L</th>
+                                        <th scope="col" style="min-width: 150px;">刀柄直徑d</th>
+                                        <th scope="col" style="min-width: 150px;">首角r</th>
+                                        <th scope="col" style="min-width: 150px;">轉速RPM</th>
+                                        <th scope="col" style="min-width: 150px;">進給值FPR</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="MillMachineToolId" name="MillMachineToolId" value="-1" />
+                        <div style="display:none">
+                            <!-- 暫存機台刀具資訊，用途判斷刀具過站使用 -->
+                            <!--原機台-->
+                            <div class="form-group row">
+                                <label class="col-12 col-md-3 col-lg-3 col-form-label" for="OricboMachine@(itemName)">機台<span class="text-danger">*</span></label>
+                                <div class="col-12 col-md-9 col-lg-9">
+                                    <select class="form-control" id="OricboMachine@(itemName)" name="OricboMachine@(itemName)"
+                                            data-msg-required="請選擇機台" data-rule-required="true" disabled></select>
+                                </div>
+                            </div>
+                            <!--原刀具-->
+                            <div class="form-group row">
+                                <label class="col-12 col-md-3 col-lg-3 col-form-label" for="OrictxtToolNo@(itemName)">刀具編號<span class="text-danger">*</span></label>
+                                <div class="col-10 col-md-9 col-lg-9">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="OrictxtToolNo@(itemName)" name="OrictxtToolNo@(itemName)"
+                                               data-msg-required="請輸入刀具編號" data-rule-required="true" placeholder="請輸入刀具編號" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+
+
+
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboWorkShop@(itemName)">車間<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboWorkShop@(itemName)" name="cboWorkShop@(itemName)"
+                                        data-msg-required="請選擇車間" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboMachine@(itemName)">機台<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboMachine@(itemName)" name="cboMachine@(itemName)"
+                                        data-msg-required="請選擇機台" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtToolNo@(itemName)">刀具編號<span class="text-danger">*</span></label>
+                            <div class="col-10 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="txtToolNo@(itemName)" name="txtToolNo@(itemName)"
+                                           data-msg-required="請輸入刀具編號" data-rule-required="true" placeholder="請輸入刀具編號" />
+                                    <div class="input-group-append">
+                                        <button class="btn btn-success" type="button" onclick="QueryToolSpec@(itemName)()">匯入規格</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtToolBlockSeq@(itemName)">刀座編號<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtToolBlockSeq@(itemName)" name="txtToolBlockSeq@(itemName)"
+                                       data-msg-required="請輸入【刀座編號】" data-rule-required="true" placeholder="請輸入【刀座編號】" readonly/>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtToolBlockName@(itemName)">刀座名稱<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtToolBlockName@(itemName)" name="txtToolBlockName@(itemName)"
+                                       data-msg-required="請輸入【刀座名稱】" data-rule-required="true" placeholder="請輸入【刀座名稱】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolD@(itemName)">直徑D<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolD@(itemName)" name="txtMillToolD@(itemName)"
+                                       data-msg-required="請輸入【直徑D】" data-rule-required="true" placeholder="請輸入【直徑D】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolRone@(itemName)">下半徑R1<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolRone@(itemName)" name="txtMillToolRone@(itemName)"
+                                       data-msg-required="請輸入【下半徑R1】" data-rule-required="true" placeholder="請輸入【下半徑R1】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolB@(itemName)">錐角B<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolB@(itemName)" name="txtMillToolB@(itemName)"
+                                       data-msg-required="請輸入【錐角B】" data-rule-required="true" placeholder="請輸入【錐角B】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolFL@(itemName)">刀刃長度FL<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolFL@(itemName)" name="txtMillToolFL@(itemName)"
+                                       data-msg-required="請輸入【刀刃長度FL】" data-rule-required="true" placeholder="請輸入【刀刃長度FL】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolL@(itemName)">總長度L<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolL@(itemName)" name="txtMillToolL@(itemName)"
+                                       data-msg-required="請輸入【總長度L】" data-rule-required="true" placeholder="請輸入【總長度L】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolHD@(itemName)">刀柄直徑D1<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolHD@(itemName)" name="txtMillToolHD@(itemName)"
+                                       data-msg-required="請輸入【刀柄直徑D1】" data-rule-required="true" placeholder="請輸入【刀柄直徑D1】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolR@(itemName)">首角R<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolR@(itemName)" name="txtMillToolR@(itemName)"
+                                       data-msg-required="請輸入【首角R】" data-rule-required="true" placeholder="請輸入【首角R】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolRPM@(itemName)">轉速RPM<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolRPM@(itemName)" name="txtMillToolRPM@(itemName)"
+                                       data-msg-required="請輸入【轉速RPM】" data-rule-required="true" placeholder="請輸入【轉速RPM】" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMillToolFPR@(itemName)">進給值FPR<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMillToolFPR@(itemName)" name="txtMillToolFPR@(itemName)"
+                                       data-msg-required="請輸入【進給值FPR】" data-rule-required="true" placeholder="請輸入【進給值FPR】" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right read-hide">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 10
+    };
+    let objForm@(itemName) = "#editForm@(itemName)";
+
+    $(document).ready(function () {
+        Query@(itemName)();
+
+    });
+
+    function Query@(itemName)() {
+        if (!isMobile) {
+            $("#cboWorkShopQ@(itemName),#cboMachineQ@(itemName)").select2({
+                width: "100%"
+            });
+        }
+        var ShopId;
+        ComboBoxs.Default("#cboWorkShopQ@(itemName)", "@Url.Action("GetWorkShop", "MesBasicInformation")", {}, "", "NA", "", "ShopName", "ShopId");
+        $("#cboWorkShopQ@(itemName)").change(function () {
+            ShopId = $("#cboWorkShopQ@(itemName)").val();
+            ComboBoxs.Default("#cboMachineQ@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineDescFull", "MachineId");
+        });
+        ComboBoxs.Default("#cboMachineQ@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineDescFull", "MachineId");
+
+        objPage@(itemName).pageIndex = 0;
+        InitData@(itemName)(objPage@(itemName));
+        $("#modalQuery@(itemName)").modal("hide");
+    }
+
+    function InitData@(itemName)(objPage) {
+        let innerHtml = '';
+        let pageCount = 0;
+
+        let targetUrl = "@Url.Action("GetMillMachineTool", "MasterCam")";
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage.pageIndex + 1),
+            "PageSize": objPage.pageSize,
+            "MachineId": $("#cboWorkShopQ@(itemName)").val()         
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+            if (pageCount > 0) {
+                objPage = PageCaculate(pageCount, objPage);
+
+                $.each(data.result, function (i, item) {
+                    let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                    innerHtml += `<tr>
+                                    <td>${_row}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MachineDesc}" style="max-width: 200px;">${item.MachineDesc}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.ToolNo}" style="max-width: 200px;">${item.ToolNo}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.ToolBlockSeq}" style="max-width: 200px;">${item.ToolBlockSeq}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.ToolBlockName}" style="max-width: 200px;">${item.ToolBlockName}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolD}" style="max-width: 200px;">${item.MillToolD}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolRone}" style="max-width: 200px;">${item.MillToolRone}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolB}" style="max-width: 200px;">${item.MillToolB}</td>      
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolFL}" style="max-width: 200px;">${item.MillToolFL}</td>   
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolL}" style="max-width: 200px;">${item.MillToolL}</td> 
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolHD}" style="max-width: 200px;">${item.MillToolHD}</td> 
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolR}" style="max-width: 200px;">${item.MillToolR}</td> 
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolRPM}" style="max-width: 200px;">${item.MillToolRPM}</td> 
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MillToolFPR}" style="max-width: 200px;">${item.MillToolFPR}</td>
+                                    <td class="text-center active-content">
+                                        <a class="active-link auth-update" href="javascript:Edit@(itemName)(${item.MillMachineToolId});"><i class="fas fa-edit"></i></a>
+                                        <a class="active-link auth-update" href="javascript:Delete@(itemName)(${item.MillMachineToolId});"><i class="fas fa-trash-alt"></i></a>
+                                    </td>
+                                    </tr>`;
+                });
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                                </tr>`;
+            }
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+
+        $("#tblData@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+        Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+    }
+
+    function Edit@(itemName)(MillMachineToolId) {
+        if (!isMobile) {
+            $("#cboWorkShop@(itemName),#cboMachine@(itemName)").select2({
+                width: "100%"
+            });
+        }
+        ComboBoxs.Default("#cboWorkShop@(itemName)", "@Url.Action("GetWorkShop", "MesBasicInformation")", {}, "", "NA", "", "ShopName", "ShopId");
+        $("#cboWorkShop@(itemName)").change(function () {
+            var ShopId = $("#cboWorkShop@(itemName)").val();            
+            ComboBoxs.Default("#cboMachine@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineDescFull", "MachineId");
+        });
+
+        $("#MillMachineToolId").val(MillMachineToolId ? MillMachineToolId : 0);
+        $(objForm@(itemName) + " fieldset").attr("disabled", false);
+        $(objForm@(itemName) + " select").attr("disabled", false);
+        $(".read-hide").show();
+
+        Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+        
+        if (MillMachineToolId > 0) {
+            if (!isMobile) {
+                $("#cboWorkShop@(itemName),#cboMachine@(itemName)").select2({
+                    width: "100%"
+                });
+            }         
+
+            let targetUrl = "@Url.Action("GetMillMachineTool", "MasterCam")";
+            let postData = {
+                "MillMachineToolId": MillMachineToolId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {                    
+
+                    ComboBoxs.Default("#cboWorkShop@(itemName)", "@Url.Action("GetWorkShop", "MesBasicInformation")", {}, "", "NA", "", "ShopName", "ShopId");
+                    ComboBoxs.Default("#cboMachine@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": item.ShopId}, "", "NA", "", "MachineDescFull", "MachineId");
+                    ComboBoxs.Default("#OricboMachine@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": item.ShopId}, "", "NA", "", "MachineDescFull", "MachineId");
+
+                    $("#cboMachine@(itemName)").change(function () {
+                        /*根據輸入的機台，帶出最新的刀座編號 */
+                        let targetUrl = "@Url.Action("GetMaxToolBlockSeq", "MasterCam")";
+                        let postData = {
+                            "MachineId": $("#cboMachine@(itemName)").val()
+                        };
+                        let data = DataAccess.Get(targetUrl, postData, false);
+                        if (data.status == "success") {
+                            console.log(data.result);
+                            if (data.result == "") {
+                                 $("#txtToolBlockSeq@(itemName)").val(1);
+                            } else {
+                                $.each(data.result, function (i, item) {
+                                    let ToolBlockSeq = parseInt(item.ToolBlockSeq ? item.ToolBlockSeq : 0);
+                                    if (ToolBlockSeq > 30) {
+                                        alert("超過機台最大刀具限制")
+                                    } else {
+                                        $("#txtToolBlockSeq@(itemName)").val(ToolBlockSeq+1);
+                                    }
+                                });
+                            }
+                        } else {
+                            alert(data.msg, "alert", 0);
+                        }
+                    });
+                    $("#OricboMachine@(itemName)").val(item.MachineId);
+                    $("#OrictxtToolNo@(itemName)").val(item.ToolNo);
+                    $("#txtToolNo@(itemName)").val(item.ToolNo);
+                    $("#cboWorkShop@(itemName)").val(item.ShopId);
+                    $("#cboMachine@(itemName)").val(item.MachineId);
+                    $("#txtToolBlockSeq@(itemName)").val(item.ToolBlockSeq);
+                    $("#txtToolBlockName@(itemName)").val(item.ToolBlockName);
+                    $("#txtMillToolD@(itemName)").val(item.MillToolD);
+                    $("#txtMillToolRone@(itemName)").val(item.MillToolRone);
+                    $("#txtMillToolB@(itemName)").val(item.MillToolB);
+                    $("#txtMillToolFL@(itemName)").val(item.MillToolFL);
+                    $("#txtMillToolL@(itemName)").val(item.MillToolL);
+                    $("#txtMillToolHD@(itemName)").val(item.MillToolHD);
+                    $("#txtMillToolR@(itemName)").val(item.MillToolR);
+                    $("#txtMillToolRPM@(itemName)").val(item.MillToolRPM);
+                    $("#txtMillToolFPR@(itemName)").val(item.MillToolFPR);
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        } else {
+            $("#cboMachine@(itemName)").change(function () {
+                /*根據輸入的機台，帶出最新的刀座編號 */
+                let targetUrl = "@Url.Action("GetMaxToolBlockSeq", "MasterCam")";
+                let postData = {
+                    "MachineId": $("#cboMachine@(itemName)").val()
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    console.log(data.result);
+                    if (data.result == "") {
+                         $("#txtToolBlockSeq@(itemName)").val(1);
+                    } else {
+                        $.each(data.result, function (i, item) {
+                            let ToolBlockSeq = parseInt(item.ToolBlockSeq ? item.ToolBlockSeq : 0);
+                            if (ToolBlockSeq > 30) {
+                                alert("超過機台最大刀具限制")
+                            } else {
+                                $("#txtToolBlockSeq@(itemName)").val(ToolBlockSeq+1);
+                            }
+                        });
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+        }
+    }
+
+    function Save@(itemName)() {
+        if ($(objForm@(itemName)).valid()) {
+            let MillMachineToolId = parseInt($("#MillMachineToolId").val());
+            if (MillMachineToolId <= 0) {
+                let targetUrl = "@Url.Action("AddMillMachineTool", "MasterCam")";
+                let postData = {
+                    "ToolNo": $("#txtToolNo@(itemName)").val(),
+                    "MachineId": $("#cboMachine@(itemName)").val(),
+                    "ToolBlockSeq": $("#txtToolBlockSeq@(itemName)").val(),
+                    "ToolBlockName": $("#txtToolBlockName@(itemName)").val(),
+                    "MillToolD": $("#txtMillToolD@(itemName)").val(),
+                    "MillToolRone": $("#txtMillToolRone@(itemName)").val(),
+                    "MillToolB": $("#txtMillToolB@(itemName)").val(),
+                    "MillToolFL": $("#txtMillToolFL@(itemName)").val(),
+                    "MillToolL": $("#txtMillToolL@(itemName)").val(),
+                    "MillToolHD": $("#txtMillToolHD@(itemName)").val(),
+                    "MillToolR": $("#txtMillToolR@(itemName)").val(),
+                    "MillToolRPM": $("#txtMillToolRPM@(itemName)").val(),
+                    "MillToolFPR": $("#txtMillToolFPR@(itemName)").val()
+                };
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+                if (result) {
+                    Return@(itemName)();
+                }
+            } else {
+                let targetUrl = "@Url.Action("UpdateMillMachineTool", "MasterCam")";
+                let postData = {
+                    "MillMachineToolId": MillMachineToolId,
+                    "ToolNo": $("#txtToolNo@(itemName)").val(),
+                    "MachineId": $("#cboMachine@(itemName)").val(),
+                    "ToolBlockSeq": $("#txtToolBlockSeq@(itemName)").val(),
+                    "ToolBlockName": $("#txtToolBlockName@(itemName)").val(),
+                    "MillToolD": $("#txtMillToolD@(itemName)").val(),
+                    "MillToolRone": $("#txtMillToolRone@(itemName)").val(),
+                    "MillToolB": $("#txtMillToolB@(itemName)").val(),
+                    "MillToolFL": $("#txtMillToolFL@(itemName)").val(),
+                    "MillToolL": $("#txtMillToolL@(itemName)").val(),
+                    "MillToolHD": $("#txtMillToolHD@(itemName)").val(),
+                    "MillToolR": $("#txtMillToolR@(itemName)").val(),
+                    "MillToolRPM": $("#txtMillToolRPM@(itemName)").val(),
+                    "MillToolFPR": $("#txtMillToolFPR@(itemName)").val(),
+                    "OriMachineId": $("#OricboMachine@(itemName)").val(),
+                    "OriToolNo": $("#OrictxtToolNo@(itemName)").val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+    }
+
+    function Delete@(itemName)(MillMachineToolId) {
+        /*不刪除刀具，改用用虛擬刀*/        
+        let targetUrl = "@Url.Action("DeleteMillMachineTool", "MasterCam")";
+        let postData = {
+            "MillMachineToolId": MillMachineToolId
+        };
+        let result = DataAccess.Update(targetUrl, postData, false, true);
+        if (result) {
+            Return@(itemName)();
+        }
+    }
+
+    function QueryToolSpec@(itemName)() {
+        let targetUrl = "@Url.Action("GetMillToolSpec", "MasterCam")";
+        let postData = {
+            "ToolNo": $("#txtToolNo@(itemName)").val()
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {
+                switch (item.ToolSpecNo) {
+                    case 'L':
+                        $("#txtMillToolL@(itemName)").val(item.ToolSpecValue);
+                    case 'D':
+                        $("#txtMillToolD@(itemName)").val(item.ToolSpecValue);
+                    case 'R':
+                        $("#txtMillToolR@(itemName)").val(item.ToolSpecValue);
+                    case 'D1':
+                        $("#txtMillToolHD@(itemName)").val(item.ToolSpecValue);
+                    case 'FL':
+                        $("#txtMillToolFL@(itemName)").val(item.ToolSpecValue);
+                    case 'R1':
+                        $("#txtMillToolRone@(itemName)").val(item.ToolSpecValue);
+                    case 'B':
+                        $("#txtMillToolB@(itemName)").val(item.ToolSpecValue);
+                    case 'RPM':
+                        $("#txtMillToolRPM@(itemName)").val(item.ToolSpecValue);
+                    case 'FPR':
+                        $("#txtMillToolFPR@(itemName)").val(item.ToolSpecValue);
+                }
+            });
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+    }
+
+
+
+    function Return@(itemName)() {
+        ResetForm(objForm@(itemName));
+        Switch("#listData@(itemName)", "#editData@(itemName), .unit-block");
+        Query@(itemName)();
+    }
+
+
+</script>
+)

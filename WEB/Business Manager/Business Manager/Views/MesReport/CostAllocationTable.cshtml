@@ -1,0 +1,391 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "CostAllocationTable";
+    string itemNameText = "成本核算分配表";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+
+}
+
+@Html.Resource("css",
+    @<style>
+         .btn-secondary {
+             color: #6c757d;
+             background-color: #fff;
+             border-color: #6c757d;
+         }
+
+         .myChart {
+             max-width: 800px;
+             margin: 20px auto;
+         }
+    </style>
+
+                                                                                                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<!--搜尋內容-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 450px;overflow-y: auto;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtYearMonthQ@(itemName)">
+                                <span class="text-danger">*</span> 年月
+                            </label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtYearMonthQ@(itemName)" name="txYearMonthQ@(itemName)" placeholder="請輸入年份 EX:202411" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+                <button type="button" class="btn btn-success" onclick="Excel@(itemName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>匯出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <h1 style="text-align: left;">人工成本分配</h1>
+                            <table class="table table-bordered table-striped table-sticky table-stack " style="text-align: center" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 125px;">类别</th>
+                                        <th scope="col" style="min-width: 125px;">线别名称</th>
+                                        <th scope="col" style="min-width: 100px;">人工产能  </th>
+                                        <th scope="col" style="min-width: 100px;">机器产能</th>
+                                        <th scope="col" style="min-width: 100px;">直接人工</th>
+                                        <th scope="col" style="min-width: 100px;">需摊人工</th>
+                                        <th scope="col" style="min-width: 100px;">全厂共摊人工</th>
+                                        <th scope="col" style="min-width: 100px;">分配到部门人工(一)</th>
+                                        <th scope="col" style="min-width: 100px;">分配到部门人工(二)</th>
+                                        <th scope="col" style="min-width: 100px;">人工成本</th>
+                                        <th scope="col" style="min-width: 100px;">有效制费成本</th>
+                                        <th scope="col" style="min-width: 100px;">无效制费成本</th>
+                                        <th scope="col" style="min-width: 100px;">单位人工</th>
+                                        <th scope="col" style="min-width: 100px;">有效单位制费</th>
+                                        <th scope="col" style="min-width: 100px;">合计</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--List 分頁-->
+
+<div class="card card-shadow mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12">
+                <div class="table-custom">
+                    <h1 style="text-align: left;">制费成本分配</h1>
+                    <table class="table table-bordered table-striped table-sticky table-stack " style="text-align: center" id="tblData2@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="min-width: 125px;">类别</th>
+                                <th scope="col" style="min-width: 125px;">线别名称</th>
+                                <th scope="col" style="min-width: 100px;">有效机时  </th>
+                                <th scope="col" style="min-width: 100px;">无效机时</th>
+                                <th scope="col" style="min-width: 100px;">机器产能</th>
+                                <th scope="col" style="min-width: 100px;">有效制费</th>
+                                <th scope="col" style="min-width: 100px;">无效制费</th>
+                                <th scope="col" style="min-width: 125px;">有效分配部门制费(一)</th>
+                                <th scope="col" style="min-width: 125px;">无效分配部门制费(一)</th>
+                                <th scope="col" style="min-width: 100px;">有效共摊制费</th>
+                                <th scope="col" style="min-width: 100px;">无效共摊制费</th>
+                                <th scope="col" style="min-width: 125px;">有效分配部门制费(二)</th>
+                                <th scope="col" style="min-width: 125px;">无效分配部门制费(二)</th>
+                                <th scope="col" style="min-width: 100px;">全厂有效共摊制费</th>
+                                <th scope="col" style="min-width: 100px;">全厂无效共摊制费</th>
+                                <th scope="col" style="min-width: 125px;">有效分配部门制费(三)</th>
+                                <th scope="col" style="min-width: 125px;">无效分配部门制费(三)</th>
+                                <th scope="col" style="min-width: 125px;">有效制费合计</th>
+                                <th scope="col" style="min-width: 125px;">无效制费合计</th>
+                                <th scope="col" style="min-width: 125px;">制费成本合计</th>
+                                <th scope="col" style="min-width: 100px;">无效单位制费</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+@Html.Resource("js",
+        @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+            
+
+        $(document).ready(function () {
+
+
+            
+            //搜尋動作
+            Query@(itemName)();
+
+            
+
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let innerHtml2 = '';
+            let pageCount = 0;
+
+            
+            let YearMonth = $("#txtYearMonthQ@(itemName)").val();
+
+            if (YearMonth == "" ) {
+                alert("請输入年月進行搜尋!!");
+                return false;
+
+            }
+
+            
+
+            let targetUrl = "@Url.Action("GetCostAllocationTable", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "YearMonth": YearMonth
+            }
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            console.log(data);
+
+            //人工成本分配
+            if (data.status == "success") {
+                lengthCount = data.result.LaborCostResult.length;
+
+                console.log(5278, data.result.LaborCostResult.length);
+
+                if (lengthCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result.LaborCostResult, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">类别</span>${item.PurposeType}</td>
+                                        <td><span class="stack-title">线别名称</span>${item.CategoryName}</td>
+                                        <td><span class="stack-title">人工产能</span>${addThousandsSeparator(item.ManualOutput)}</td>
+                                        <td><span class="stack-title">机器产能</span>${addThousandsSeparator(item.MachineOutput)}</td>
+                                        <td><span class="stack-title">直接人工</span>${addThousandsSeparator(item.DirectLabor)}</td>
+                                        <td><span class="stack-title">需摊人工</span>${addThousandsSeparator(item.distributedLabour)}</td>
+                                        <td><span class="stack-title">全厂共摊人工</span>${addThousandsSeparator(item.allHandsShared)}</td>
+                                        <td><span class="stack-title">分配到部门人工(一)</span>${addThousandsSeparator(item.departmentalLabor01)}</td>
+                                        <td><span class="stack-title">分配到部门人工(二)</span>${addThousandsSeparator(item.departmentalLabor02)}</td>
+                                        <td><span class="stack-title">人工成本</span>${addThousandsSeparator(item.LaborCost)}</td>
+                                        <td><span class="stack-title">有效制费成本</span>${addThousandsSeparator(item.EffectiveChargeCost)}</td>
+                                        <td><span class="stack-title">无效制费成本</span>${addThousandsSeparator(item.InvalidChargeCost)}</td>
+                                        <td><span class="stack-title">单位人工</span>${addThousandsSeparator(item.LaborPerUnit)}</td>
+                                        <td><span class="stack-title">有效单位制费</span>${addThousandsSeparator(item.EffectiveUnitCost)}</td>
+                                        <td><span class="stack-title">合计</span>${addThousandsSeparator(item.TotalCost)}</td>
+                                     </tr>`;
+  
+                    });
+
+                   
+
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="14" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            //制费成本分配
+            if (data.status == "success") {
+                lengthCount2 = data.result.ManufacturCostResult.length;
+                console.log(5279, data.result.ManufacturCostResult.length);
+                if (lengthCount2 > 0) {
+                    objPage2 = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result.ManufacturCostResult, function (i, item) {
+                        let _row = (objPage2.pageSize * objPage2.pageIndex + (i + 1)) + ".";
+
+                        innerHtml2 += `<tr>
+                                        <td><span class="stack-title">类别</span>${item.PurposeType}</td>
+                                        <td><span class="stack-title">线别名称</span>${item.CategoryName}</td>
+                                        <td><span class="stack-title">有效机时</span>${addThousandsSeparator(item.EffectiveTime)}</td>
+                                        <td><span class="stack-title">无效机时</span>${addThousandsSeparator(item.DeadTime)}</td>
+                                        <td><span class="stack-title">机器产能</span>${addThousandsSeparator(item.MachineCapacity)}</td>
+                                        <td><span class="stack-title">有效制费</span>${addThousandsSeparator(item.EffectiveCharge)}</td>
+                                        <td><span class="stack-title">无效制费</span>${addThousandsSeparator(item.InvalidCharge)}</td>
+                                        <td><span class="stack-title">有效分配部门制费(一)</span>${addThousandsSeparator(item.EffectiveChargeDep01)}</td>
+                                        <td><span class="stack-title">无效分配部门制费(一)</span>${addThousandsSeparator(item.InvalidChargeDep01)}</td>
+                                        <td><span class="stack-title">有效共摊制费</span>${addThousandsSeparator(item.EffectiveCoayments)}</td>
+                                        <td><span class="stack-title">无效共摊制费</span>${addThousandsSeparator(item.InvalidCoayments)}</td>
+                                        <td><span class="stack-title">有效分配部门制费(二)</span>${addThousandsSeparator(item.EffectiveChargeDep02)}</td>
+                                        <td><span class="stack-title">无效分配部门制费(二)</span>${addThousandsSeparator(item.InvalidChargeDep02)}</td>
+                                        <td><span class="stack-title">全厂有效共摊制费</span>${addThousandsSeparator(item.EffectivePSE)}</td>
+                                        <td><span class="stack-title">全厂无效共摊制费</span>${addThousandsSeparator(item.InvalidPSE)}</td>
+                                        <td><span class="stack-title">有效分配部门制费(三)</span>${addThousandsSeparator(item.EffectiveChargeDep03)}</td >
+                                        <td><span class="stack-title">无效分配部门制费(三)</span>${addThousandsSeparator(item.InvalidChargeDep03)}</td>
+                                        <td><span class="stack-title">有效制费合计</span>${addThousandsSeparator(item.TotalEffectiveManufee)}</td>
+                                        <td><span class="stack-title">无效制费合计</span>${addThousandsSeparator(item.TotalInvalidManufee)}</td>
+                                        <td><span class="stack-title">制费成本合计</span>${addThousandsSeparator(item.TotalManufee)}</td>
+                                        <td><span class="stack-title">无效单位制费</span>${addThousandsSeparator(item.InvalidUnitfee)}</td>
+                                     </tr>`;
+
+                    });
+
+                    
+
+                } else {
+                    innerHtml2 += `<tr>
+                                    <td class="text-center" colspan="14" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+               
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            $("#tblData2@(itemName) tbody").html(innerHtml2);
+
+             // 调用合并单元格的函数
+            // 获取表格并合并第一列（列索引为0）
+            let table = document.getElementById('tblData@(itemName)');
+            mergeColumn(table, 0);//合并类别列
+            mergeColumn(table, 5);//合并需摊人工列
+            mergeColumn(table, 6);//合并全厂共摊人工列
+            let table2 = document.getElementById('tblData2@(itemName)');
+            mergeColumn(table2, 0);//合并类别列
+            mergeColumn(table2, 9);//合并有效共摊制费列
+            mergeColumn(table2, 10);//合并无效共摊制费列
+            mergeColumn(table2, 13);//合并全厂有效共摊制费列
+            mergeColumn(table2, 14);//合并全厂无效共摊制费列
+
+           // changeNumber(table);
+            
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+
+
+            }
+
+
+            //合并合并单元格的函数
+            function mergeColumn(table, colIndex) {
+                let rows = table.rows;
+                let prevCell = null;
+                let startRow = 1; // 从第二行开始（跳过表头）
+
+                for (let i = startRow; i < rows.length - 1; i++) {
+                    let currentCell = rows[i].cells[colIndex];
+
+                    if (prevCell && currentCell.textContent === prevCell.textContent) {
+                        // 如果当前单元格与前一个单元格内容相同，则合并
+                        prevCell.rowSpan = (prevCell.rowSpan || 1) + 1;
+                        currentCell.style.display = 'none';
+                    } else {
+                        // 否则，更新 prevCell 为当前单元格
+                        prevCell = currentCell;
+                    }
+
+
+                }
+            }
+
+
+            // 定义一个函数，用于将数字转换为带有千位分隔符的字符串
+            function addThousandsSeparator(num) {
+                return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+
+
+
+            
+            
+
+
+
+            function Excel@(itemName)() {
+
+                
+            let targetUrl = "@Url.Action("ExcelCostAllocationTable", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                //"PageIndex": (objPage.pageIndex + 1),
+                //"PageSize": objPage.pageSize,
+                "YearMonth": $("#txtYearMonthQ@(itemName)").val()
+            }
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                alert("匯出成功!!!!", "success")
+                FileAccess.AjaxDownload(targetUrl, postData, false);
+            }
+        }
+
+
+        </script>
+                                                                                                            )

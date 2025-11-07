@@ -1,0 +1,957 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DfmQuotationItem";
+    string itemNameText = "報價項目";
+}
+
+
+@Html.Resource("css",
+    @<style>
+         .inputStyle {
+             border: 0;
+             outline: 0;
+             background-color: unset;
+         }
+
+         .selectStyle {
+             background-color: #9B9B9B;
+             color: #FFFFFF;
+             border: unset;
+             padding: 8px;
+             border-radius: 5px;
+             font-weight: bolder;
+         }
+
+         .treeButton {
+             width: unset;
+             box-shadow: 1px 1px;
+             padding: 15px;
+             background-color: #FEEFA3;
+             border-radius: 5px;
+             margin: 0 5px;
+             color: #8F7E7B;
+             opacity: 0.7;
+         }
+
+         .treeButtonDisabled {
+             width: unset;
+             box-shadow: 1px 1px 1px #6B9DC7;
+             padding: 15px;
+             background-color: #CACACA;
+             border-radius: 5px;
+             margin: 0 5px;
+             color: #FFFFFF;
+             opacity: 0.7;
+         }
+
+             .treeButtonDisabled:hover {
+                 color: #FFFFFF;
+             }
+
+         .treeButton:hover {
+             background-color: #ffe352;
+             opacity: 1;
+         }
+
+         .treeIcon {
+             margin-right: 5px;
+         }
+
+         .finshStyle {
+             background-color: #052d09;
+             color: #ffffff;
+             box-shadow: 1px 1px #430d01;
+         }
+
+         .finshIcon {
+             color: #ffc963 !important;
+         }
+
+         .treeButton:hover .finshIcon {
+             color: #36a2f5 !important;
+         }
+
+         /*.selectStyle option {
+             background-color: palevioletred;
+             line-height: 100px;
+             padding: 20px;
+         }*/
+         /*.setShow {
+
+         }
+        .setNotShow {
+            display: none;
+        }*/
+    </style>
+                                                                )
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)"></form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-12 col-sm-12 col-md-12 text-right">
+                        <a class="btn btn-success " id="Confirm@(itemName)" href="javascript:Confirm@(itemName)();"><i class="fas fa-cloud-upload"></i>確認</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card card-shadow mb-4">
+                            <div class="card-body task-card-body">
+                                <div class="container">
+                                    <div class="tree-container">
+                                        <div id="tree@(itemName)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtParentModeName@(itemName)">父層項目類型</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="hidden" id="ParentDfmQiId" name="ParentDfmQiId" value="-1" />
+                                <input type="text" class="form-control" id="txtParentModeName@(itemName)" name="txtParentModeName@(itemName)" placeholder="請輸入父層項目"
+                                       data-msg-required="請輸入父層項目類型" readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboModeId@(itemName)">當前項目類型</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboModeId@(itemName)" name="cboModeId@(itemName)" data-rule-required="true"
+                                        data-msg-required="當前項目類型"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDfmQuotationName@(itemName)">項目名稱 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtDfmQuotationName@(itemName)" name="txtDfmQuotationName@(itemName)" placeholder="請輸入項目名稱"
+                                       data-msg-required="請輸入項目名稱" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboMfgFlag@(itemName)">是否製造件 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboMfgFlag@(itemName)" name="cboMfgFlag@(itemName)" data-rule-required="true"
+                                        data-msg-required="是否製造件"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row" id="StandardCost">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtStandardCost@(itemName)">標準金額</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtStandardCost@(itemName)" name="txtStandardCost@(itemName)" placeholder="標準金額" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboMaterialStatus@(itemName)">是否需考慮物料<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9 col-form-label">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            是
+                                            <input type="radio" id="cboMaterialStatus@(itemName)A" name="cboMaterialStatus@(itemName)" value="A"
+                                                   data-msg-required="請選擇是否需考慮物料" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            否
+                                            <input type="radio" id="cboMaterialStatus@(itemName)S" name="cboMaterialStatus@(itemName)" value="S"
+                                                   data-msg-required="請選擇是否需考慮物料" data-rule-required="true" checked />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboDfmQiProcessStatus@(itemName)">是否需考慮製程<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9 col-form-label">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            是
+                                            <input type="radio" id="cboDfmQiProcessStatus@(itemName)A" name="cboDfmQiProcessStatus@(itemName)" value="A"
+                                                   data-msg-required="請選擇是否需考慮製程" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            否
+                                            <input type="radio" id="cboDfmQiProcessStatus@(itemName)S" name="cboDfmQiProcessStatus@(itemName)" value="S"
+                                                   data-msg-required="請選擇是否需考慮製程" data-rule-required="true" checked />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cbxQuoteModel@(itemName)">報價數量依據<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9 col-form-label">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            報價方案
+                                            <input type="radio" id="cbxQuoteModel@(itemName)1" name="cbxQuoteModel@(itemName)" value="1"
+                                                   data-msg-required="請選擇是否需考慮製程" data-rule-required="true" checked/>
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            固定數量
+                                            <input type="radio" id="cbxQuoteModel@(itemName)2" name="cbxQuoteModel@(itemName)" value="2"
+                                                   data-msg-required="請選擇是否需考慮製程" data-rule-required="true"  />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row" id="QuoteModel">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtQuoteNum@(itemName)">數量</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtQuoteNum@(itemName)" name="txtQuoteNum@(itemName)" placeholder="數量"　value="0" />
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtTotalManHours@(itemName)">總人力工時</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtTotalManHours@(itemName)" name="txtTotalManHours@(itemName)" placeholder="總人力工時" disabled />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtTotalMachineHours@(itemName)">總機時</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtTotalMachineHours@(itemName)" name="txtTotalMachineHours@(itemName)" placeholder="總機時" disabled />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtTotalOspAmount@(itemName)">總預估外包費用</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtTotalOspAmount@(itemName)" name="txtTotalOspAmount@(itemName)" placeholder="總預估外包費用" disabled />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtTotalMtlAmount@(itemName)">總材料費用</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtTotalMtlAmount@(itemName)" name="txtTotalMtlAmount@(itemName)" placeholder="總材料費用" disabled />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtOspAmount@(itemName)">總委外費用</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtOspAmount@(itemName)" name="txtOspAmount@(itemName)" placeholder="總委外費用" disabled />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" id="ReadSave@(itemName)" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                @*<button type="button" class="btn btn-success" onclick="Calculate@(itemName)()"><i class="fas fa-abacus"></i>計算</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+@*@Html.Partial("ViewDfmQiMaterial")*@
+@Html.Partial("ViewDfmQiMaterialExcel")
+@Html.Partial("ViewDfmQiOSP")
+@*@Html.Partial("ViewDfmQiProcess")*@
+@Html.Partial("ViewDfmQiProcessExcel")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let projectStatus = "P";
+        let tree;
+
+        var DfmItemCategoryList = []
+
+
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            $("#StandardCost").hide()
+            $("#QuoteModel").hide()
+
+            $("#cboMfgFlag@(itemName)").change(function () {
+                if ($("#cboMfgFlag@(itemName)").val() == "N") {
+                    $("#StandardCost").show()
+                    $("#txtStandardCost@(itemName)").val(0)
+                }
+                else {
+                    $("#StandardCost").hide()
+                }
+            })
+            $("input[name='cbxQuoteModel@(itemName)']").change(function () {
+                var selectedValue = $("input[name='cbxQuoteModel@(itemName)']:checked").val();
+                if (selectedValue == "2") {
+                    $("#QuoteModel").show()
+                    $("#txtQuoteNum@(itemName)").val("")
+                }
+                else {
+                    $("#QuoteModel").hide()
+                    $("#txtQuoteNum@(itemName)").val(0)
+                }
+            })
+        });
+
+        function Expand@(itemName)() {
+            if (parseInt($("#DfmId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+
+            } else {
+                alert("DFM資料錯誤", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            GetDfmItemUserAuthority@(itemName)()
+
+            if (tree) tree.destructor();
+
+            let targetUrl = "@Url.Action("GetDfmQuotationItemTree", "DfmInformation")";
+            let postData = {
+                "DfmId": $("#DfmId").val(),
+                "OpenedLevel": 5
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                var DfmProcessStatus = $("#cboDfmProcessStatusDesignForManufacturingManagement").val()
+                tree = new dhx.Tree("tree@(itemName)", {
+                    editable: false,
+                    checkbox: false,
+                    template: ({ value, id, ModeId, MfgFlag, QuoteModel, QuoteNum, MaterialStatus, DfmQiOSPStatus, DfmQiProcessStatus, DfmQuotationName, DfmItemCategoryId }, isFolder) => {
+                        let template;
+                        console.log(QuoteModel)
+                        console.log("QuoteModel")
+
+                        console.log(QuoteNum)
+                        console.log("QuoteNum")
+
+                        switch (projectStatus) {
+                            case "P":
+                                switch (id) {
+                                    case "-1":
+                                        template = `<div class="tree-list" data-tree-index="${id}">
+                                                      <span class="tree-text">${value}</span>
+                                                      <div class="tree-active">
+                                                        ${DfmProcessStatus == `1` ?
+                                                                `<a class="treeButton tree-link tree-add" title="新增" href="javascript:AddItem@(itemName)(${id});">
+                                                                    <i class="far fa-plus tree-icon"></i>
+                                                                </a>`
+                                                                : ``}
+                                                        ${DfmProcessStatus == `1` ?
+                                                            `<a class="treeButton tree-link tree-add" title="刪除" href="javascript:Delete@(itemName)(${id});">
+                                                              <i class="far fa-trash-alt tree-icon"></i>
+                                                            </a>` :``}
+                                                      </div>
+                                                    </div>`;
+                                        break;
+                                    default:
+                                        template = `<div class="tree-list" data-tree-index="${id}">
+                                                      <span class="tree-text">${DfmQuotationName} ${QuoteModel == `2` ? `(報價數量:` + QuoteNum + `)` : `(依方案數量報價)`  }</span>
+                                                      <div class="tree-active">
+                                                        ${DfmProcessStatus != `1` ?
+                                            MaterialStatus != `S` ?
+                                                `<a class="treeButton tree-link tree-add ${setShow(DfmItemCategoryId,`Material`)} ${MaterialStatus == `Y` || MaterialStatus == `S` ? `finshStyle` : ``}" data-dfmitemcategory-id="${DfmItemCategoryId}" title="物料管理" href="javascript:PopViewOnChange@(itemName)(${id} ,'DfmQiMater',\'${DfmQuotationName}\');">
+                                                              <i class="far fa-clipboard-list-check tree-icon treeIcon ${MaterialStatus == `Y` || MaterialStatus == `S` ? `finshIcon` : ``}"></i>物料管理
+                                                            </a>`: ``
+                                                            : MaterialStatus != `S` ?
+                                                            `<a class="treeButtonDisabled tree-link tree-add ${MaterialStatus == `Y` || MaterialStatus == `S` ? `finshStyle`:``}" title="物料管理" href="javascript:void(0);">
+                                                              <i class="far fa-clipboard-list-check tree-icon "></i>物料管理
+                                                            </a>`: ``}
+                                                        ${DfmProcessStatus != `1` ?
+                                                            DfmQiProcessStatus != `S` ?
+                                                `<a class="treeButton tree-link tree-add ${setShow(DfmItemCategoryId, `Process`)} ${DfmQiProcessStatus == `Y` || DfmQiProcessStatus == `S` ? `finshStyle` : ``}" title="製程管理" href="javascript:PopViewOnChange@(itemName)(${id} ,'DfmQiProce',\'${DfmQuotationName}\',${ModeId});">
+                                                              <i class="far fa-wrench tree-icon treeIcon ${DfmQiProcessStatus == `Y` || DfmQiProcessStatus == `S` ? `finshIcon` : ``}"></i>製程管理
+                                                            </a>`: ``
+                                                            : DfmQiProcessStatus != `S` ?
+                                                            `<a class="treeButtonDisabled tree-link tree-add ${DfmQiProcessStatus == `Y` || DfmQiProcessStatus == `S` ? `finshStyle` : ``}" title="製程管理" href="javascript:void(0);">
+                                                              <i class="far fa-wrench tree-icon"></i>製程管理
+                                                            </a>`: ``}
+                                                        ${DfmProcessStatus != `1` ?
+                                                            DfmQiOSPStatus != `S` ?
+                                                `<a class="treeButton tree-link tree-add ${DfmQiOSPStatus == `Y` || DfmQiOSPStatus == `S` ? `finshStyle` : ``}" title="托外管理" href="javascript:PopViewOnChange@(itemName)(${id} ,'DfmQiOSP',\'${DfmQuotationName}\');">
+                                                              <i class="far fa-money-check-edit-alt tree-icon treeIcon ${DfmQiOSPStatus == `Y` || DfmQiOSPStatus == `S` ? `finshIcon` : ``}"></i>托外管理
+                                                            </a>`: ``
+                                                            : DfmQiOSPStatus != `S` ?
+                                                            `<a class="treeButtonDisabled tree-link tree-add" title="托外管理" href="javascript:javascript:void(0);">
+                                                              <i class="far fa-money-check-edit-alt tree-icon"></i>托外管理
+                                                            </a>`: ``}
+                                                        ${DfmProcessStatus == `1` ?
+                                                                `<a class="treeButton tree-link tree-add" title="編輯" href="javascript:Edit@(itemName)(${id});">
+                                                                    <i class="far fa-edit tree-icon"></i>
+                                                                </a>`: `` }
+                                                        ${DfmProcessStatus == `1` ?
+                                                            MfgFlag == `Y` ?
+                                                                `<a class="treeButton tree-link tree-add" title="新增" href="javascript:AddItem@(itemName)(${id});">
+                                                                    <i class="far fa-plus tree-icon"></i>
+                                                                </a>`: ``:`` }
+                                                        ${DfmProcessStatus == `1` ?
+                                                            `<a class="treeButton tree-link tree-add" title="刪除" href="javascript:Delete@(itemName)(${id});">
+                                                              <i class="far fa-trash-alt tree-icon"></i>
+                                                            </a>`: ``}
+                                                      </div>
+                                                    </div>`;
+                                        break;
+                                }
+                                break;
+                            default:
+                                template = `<div class="tree-list" data-tree-index="${id}">
+                                              <span class="tree-text">${value}</span>
+                                            </div>`;
+                                break;
+                        }
+
+
+                        return template;
+                    }
+                });
+                tree.data.parse(data.result);
+
+                tree.events.on("itemDblClick", function (id, e) {
+                    if (id != "-1") {
+                        switch (projectStatus) {
+                            case "P":
+                                Read@(itemName)(id);
+                                break;
+                            default:
+                                Init@(itemName)(id);
+                                break;
+                        }
+                    }
+                });
+
+                tree.events.on("afterExpand", function (id) {
+                    DelayFn(function () { PageAuthorityControl(); }, 50);
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            DelayFn(function () { PageAuthorityControl(); }, 50);
+        }
+
+        function AddItem@(itemName)(DfmQiId) {
+            alert("新增頁面", "success", 0);
+            $("#StandardCost").hide()
+            $("#QuoteModel").hide()
+            $("#DfmQiId").val(DfmQiId ? DfmQiId : 0);
+            if (DfmQiId == -1) {
+                $("#ParentDfmQiId").val(-1)
+            }
+            $("#txtDfmQuotationName@(itemName)").attr("readonly", false);
+            $("#cboModeId@(itemName)").attr("disabled", false);
+            $("#cboMfgFlag@(itemName)").attr("disabled", false);
+
+            $("#txtTotalManHours@(itemName)").attr("readonly", true);
+            $("#txtTotalMachineHours@(itemName)").attr("disabled", true);
+            $("#txtTotalOspAmount@(itemName)").attr("disabled", true);
+            $("#txtTotalMtlAmount@(itemName)").attr("disabled", true);
+            $("#txtOspAmount@(itemName)").attr("readonly", true);
+
+            //生產模式
+            ComboBoxs.Default("#cboModeId@(itemName)", "@Url.Action("GetDfmItemCategory", "PdmBasicInformation")", {}, "", "NA", "", "DfmItemCategoryName", "DfmItemCategoryId");
+            ComboBoxs.Default(`#cboMfgFlag@(itemName)`, "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DfmQuotationItem.MfgFlag" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.Default(`#cboMaterialStatus@(itemName)`, "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "Boolean" }, "", "NA", "", "StatusName", "StatuseNo");
+
+            $("#cboRepairCauseUserId@(itemName)").val()
+
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            if (!isMobile) {
+                $("#QuotationTypeId@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            if (DfmQiId > 0) {
+
+                let targetUrl = "@Url.Action("GetDfmQuotationItem", "DfmInformation")";
+                let postData = {
+                    "DfmQiId": DfmQiId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#DfmQiId").val(0);
+                        $("#txtParentModeName@(itemName)").val(item.DfmItemCategoryName);
+                        $("#ParentDfmQiId").val(item.DfmQiId);
+
+                    });;
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+            if (!isMobile) {
+                $(`#cboModeId@(itemName) ,#cboMfgFlag@(itemName) ,#cboMaterialStatus@(itemName)`).select2({
+                    width: "100%"
+                });
+            }
+        }
+
+        function Read@(itemName)(DfmQiId) {
+            alert("檢視頁面", "success", 0);
+            $("#ReadSave@(itemName)").hide()
+            $("#DfmQiId").val(DfmQiId ? DfmQiId : 0);
+
+            $("#txtDfmQuotationName@(itemName)").attr("readonly", true);
+            $("#cboModeId@(itemName)").attr("disabled", true);
+            $("#cboMfgFlag@(itemName)").attr("disabled", true);
+
+            $("#txtTotalManHours@(itemName)").attr("readonly", true);
+            $("#txtTotalMachineHours@(itemName)").attr("disabled", true);
+            $("#txtTotalOspAmount@(itemName)").attr("disabled", true);
+            $("#txtTotalMtlAmount@(itemName)").attr("disabled", true);
+            $("#txtOspAmount@(itemName)").attr("disabled", true);
+
+            //生產模式
+            ComboBoxs.Default("#cboModeId@(itemName)", "@Url.Action("GetDfmItemCategory", "PdmBasicInformation")", {}, "", "NA", "", "DfmItemCategoryName", "DfmItemCategoryId");
+            ComboBoxs.Default(`#cboMfgFlag@(itemName)`, "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DfmQuotationItem.MfgFlag" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.Default(`#cboMaterialStatus@(itemName)`, "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "Boolean" }, "", "NA", "", "StatusName", "StatuseNo");
+
+            $("#cboRepairCauseUserId@(itemName)").val()
+
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            if (!isMobile) {
+                $("#QuotationTypeId@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            if (DfmQiId > 0) {
+                let targetUrl = "@Url.Action("GetDfmQuotationItem", "DfmInformation")";
+                let postData = {
+                    "DfmQiId": DfmQiId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#DfmQiId").val(item.DfmQiId);
+                        $("#txtDfmQuotationName@(itemName)").val(item.DfmQuotationName)
+                        $("#txtParentModeName@(itemName)").val(item.ParentDfmQuotationName);
+                        $("#cboModeId@(itemName)").val(item.DfmItemCategoryId);
+                        $("#cboMfgFlag@(itemName)").val(item.MfgFlag);
+                        if (item.MfgFlag == "N") {
+                            $("#StandardCost").show()
+                            $("#txtStandardCost@(itemName)").val(item.StandardCost);
+                        }
+                        else if (item.MfgFlag == "Y") {
+                            $("#StandardCost").hide()
+                        }
+                        if (item.QuoteModel == "2") {
+                            $("#cbxQuoteModel@(itemName)2").prop("checked", true);
+                            $("#QuoteModel").show()
+                            $("#txtQuoteNum@(itemName)").val(item.QuoteNum);
+                        }
+                        else if (item.QuoteModel == "1") {
+                            $("#cbxQuoteModel@(itemName)1").prop("checked", true);
+                            $("#QuoteModel").hide()
+                        }
+                        if (item.MaterialStatus == "Y" || item.MaterialStatus == "A") $("#cboMaterialStatus@(itemName)A").prop("checked", true);
+                        if (item.MaterialStatus == "S") $("#cboMaterialStatus@(itemName)N").prop("checked", true);
+                        if (item.DfmQiProcessStatus == "Y" || item.DfmQiProcessStatus == "A") $("#cboDfmQiProcessStatus@(itemName)A").prop("checked", true);
+                        if (item.DfmQiProcessStatus == "S") $("#cboDfmQiProcessStatus@(itemName)N").prop("checked", true);
+                        $("#txtTotalManHours@(itemName)").val(item.TotalManHours);
+                        $("#txtTotalMachineHours@(itemName)").val(item.TotalMachineHours);
+                        $("#txtTotalOspAmount@(itemName)").val(item.TotalOspAmount);
+                        $("#txtTotalMtlAmount@(itemName)").val(item.TotalMtlAmount);
+                        $("#txtOspAmount@(itemName)").val(item.OspAmount);
+                    });;
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+            if (!isMobile) {
+                $(`#cboModeId@(itemName) ,#cboMfgFlag@(itemName) ,#cboMaterialStatus@(itemName)`).select2({
+                    width: "100%"
+                });
+            }
+        }
+
+        function Edit@(itemName)(DfmQiId) {
+            alert("修改頁面", "success", 0);
+
+            $("#DfmQiId").val(DfmQiId ? DfmQiId : 0);
+
+            $("#txtDfmQuotationName@(itemName)").attr("readonly", false);
+            $("#cboModeId@(itemName)").attr("disabled", false);
+            $("#cboMfgFlag@(itemName)").attr("disabled", false);
+
+            $("#txtTotalManHours@(itemName)").attr("readonly", true);
+            $("#txtTotalMachineHours@(itemName)").attr("disabled", true);
+            $("#txtTotalOspAmount@(itemName)").attr("disabled", true);
+            $("#txtTotalMtlAmount@(itemName)").attr("disabled", true);
+            $("#txtOspAmount@(itemName)").attr("readonly", true);
+
+            //生產模式
+            ComboBoxs.Default("#cboModeId@(itemName)", "@Url.Action("GetDfmItemCategory", "PdmBasicInformation")", {}, "", "NA", "", "DfmItemCategoryName", "DfmItemCategoryId");
+            ComboBoxs.Default(`#cboMfgFlag@(itemName)`, "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DfmQuotationItem.MfgFlag" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.Default(`#cboMaterialStatus@(itemName)`, "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "Boolean" }, "", "NA", "", "StatusName", "StatuseNo");
+
+            $("#cboRepairCauseUserId@(itemName)").val()
+
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            if (!isMobile) {
+                $("#QuotationTypeId@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            if (DfmQiId > 0) {
+                let targetUrl = "@Url.Action("GetDfmQuotationItem", "DfmInformation")";
+                let postData = {
+                    "DfmQiId": DfmQiId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#DfmQiId").val(item.DfmQiId);
+                        $("#txtDfmQuotationName@(itemName)").val(item.DfmQuotationName)
+                        $("#txtParentModeName@(itemName)").val(item.ParentDfmQuotationName);
+                        $("#cboModeId@(itemName)").val(item.DfmItemCategoryId);
+                        $("#cboMfgFlag@(itemName)").val(item.MfgFlag);
+                        if (item.MfgFlag == "N") {
+                            $("#StandardCost").show()
+                            $("#txtStandardCost@(itemName)").val(item.StandardCost);
+                        }
+                        else if (item.MfgFlag == "Y") {
+                            $("#StandardCost").hide()
+                        }
+                        if (item.QuoteModel == "2") {
+                            $("#cbxQuoteModel@(itemName)2").prop("checked", true);
+                            $("#QuoteModel").show()
+                            $("#txtQuoteNum@(itemName)").val(item.QuoteNum);
+                        }
+                        else if (item.QuoteModel == "1") {
+                            $("#cbxQuoteModel@(itemName)1").prop("checked", true);
+                            $("#QuoteModel").hide()
+                        }
+                        if (item.MaterialStatus == "Y" || item.MaterialStatus == "A") $("#cboMaterialStatus@(itemName)A").prop("checked", true);
+                        if (item.MaterialStatus == "S") $("#cboMaterialStatus@(itemName)N").prop("checked", true);
+                        if (item.DfmQiProcessStatus == "Y" || item.DfmQiProcessStatus == "A") $("#cboDfmQiProcessStatus@(itemName)A").prop("checked", true);
+                        if (item.DfmQiProcessStatus == "S") $("#cboDfmQiProcessStatus@(itemName)N").prop("checked", true);
+                        $("#txtTotalManHours@(itemName)").val(item.TotalManHours);
+                        $("#txtTotalMachineHours@(itemName)").val(item.TotalMachineHours);
+                        $("#txtTotalOspAmount@(itemName)").val(item.TotalOspAmount);
+                        $("#txtTotalMtlAmount@(itemName)").val(item.TotalMtlAmount);
+                        $("#txtOspAmount@(itemName)").val(item.OspAmount);
+                    });;
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+            if (!isMobile) {
+                $(`#cboModeId@(itemName) ,#cboMfgFlag@(itemName) ,#cboMaterialStatus@(itemName)`).select2({
+                    width: "100%"
+                });
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let DfmQiId = parseInt($("#DfmQiId").val());
+                if (DfmQiId <= 0) {
+                    let targetUrl = "@Url.Action("AddDfmQuotationItem", "DfmInformation")";
+                    let postData = {
+                        "DfmId": $("#DfmId").val(),
+                        "DfmQuotationName": $("#txtDfmQuotationName@(itemName)").val(),
+                        "DfmItemCategoryId": $("#cboModeId@(itemName)").val(),
+                        "ParentDfmQiId": $("#ParentDfmQiId").val(),
+                        "MfgFlag": $("#cboMfgFlag@(itemName)").val(),
+                        "MaterialStatus": $("input[name='cboMaterialStatus@(itemName)']:checked").val(),
+                        "DfmQiProcessStatus": $("input[name='cboDfmQiProcessStatus@(itemName)']:checked").val(),
+                        "StandardCost": $("#txtStandardCost@(itemName)").val(),
+                        "QuoteModel": $("input[name='cbxQuoteModel@(itemName)']:checked").val(),
+                        "QuoteNum": $("#txtQuoteNum@(itemName)").val()
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        Return@(itemName)();
+
+                        let DfmQiId = -1;
+                        let QuotationLevel = -1;
+                        $.each(data.result, function (i, item) {
+                            DfmQiId = item.DfmQiId;
+                        });
+
+                        $.each(tree.data.serialize()[0].items, function (i, item) {
+                            if (item.id.toString() == DfmQiId.toString()) {
+                                QuotationLevel = item.level;
+                                return false;
+                            }
+                            else {
+                                QuotationLevel = GetQuotationLevel(DfmQiId, item);
+                            }
+                        });
+
+                        function GetQuotationLevel(DfmQiId, item) {
+                            $.each(item.items, function (j, item2) {
+                                if (item2.id.toString() == DfmQiId.toString()) {
+                                    QuotationLevel = item2.level;
+                                    return false;
+                                }
+                                else {
+                                    GetQuotationLevel(DfmQiId, item2);
+                                }
+                            });
+
+                            return QuotationLevel;
+                        }
+
+                        let targetUrl = "@Url.Action("UpdateDfmQuotationItemLevel", "DfmInformation")";
+                        let postData = {
+                            "DfmQiId": DfmQiId,
+                            "QuotationLevel": QuotationLevel
+                        };
+
+                        let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                        if (result) {
+                            Return@(itemName)();
+                        }
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateDfmQuotationItem", "DfmInformation")";
+                    let postData = {
+                        "DfmQiId": DfmQiId,
+                        "DfmId": $("#DfmId").val(),
+                        "DfmQuotationName": $("#txtDfmQuotationName@(itemName)").val(),
+                        "DfmItemCategoryId": $("#cboModeId@(itemName)").val(),
+                        "MfgFlag": $("#cboMfgFlag@(itemName)").val(),
+                        "MaterialStatus": $("input[name='cboMaterialStatus@(itemName)']:checked").val(),
+                        "DfmQiProcessStatus": $("input[name='cboDfmQiProcessStatus@(itemName)']:checked").val(),
+                        "StandardCost": $("#txtStandardCost@(itemName)").val(),
+                        "QuoteModel": $("input[name='cbxQuoteModel@(itemName)']:checked").val(),
+                        "QuoteNum": $("#txtQuoteNum@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(DfmQiId) {
+            if (DfmQiId <= 0) {
+                swal.fire({
+                    title: "確認要全部報價項目刪除嗎?",
+                    text: "此動作無法復原，請確認是否要執行!",
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let targetUrl = "@Url.Action("DeleteDfmQuotationItem", "DfmInformation")";
+                        let postData = {
+                            "DfmId": $("#DfmId").val()
+                        };
+
+                        let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                        if (result) {
+                            Return@(itemName)()
+                        }
+                    }
+                });
+            }
+            else {
+                swal.fire({
+                    title: "確認要刪除該筆報價項目嗎?",
+                    text: "此動作無法復原，請確認是否要執行!",
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let targetUrl = "@Url.Action("DeleteDfmQuotationItem", "DfmInformation")";
+                        let postData = {
+                            "DfmQiId": DfmQiId
+                        };
+
+                        let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                        if (result) {
+                            Return@(itemName)()
+                        }
+                    }
+                });
+            }
+        }
+
+        function Confirm@(itemName)() {
+            swal.fire({
+                title: "確認是否送出全部報價項目嗎?",
+                text: "此動作會發送E-maill，通知下一個關人員維護相關資料!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("updateConfirmDfm", "DfmInformation")";
+                    let postData = {
+                        "DfmId": $("#DfmId").val(),
+                    };
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+                    if (data) {
+                        $("#cboDfmProcessStatusDesignForManufacturingManagement").val(2)
+                        Return@(itemName)()
+                        QueryDesignForManufacturingManagement();
+                        alert("確認成功", "success", 0);
+                    }
+                }
+            });
+        }
+
+        function Calculate@(itemName)() {
+            let targetUrl = "@Url.Action("updateDfmQuotationItem", "DfmInformation")";
+            let postData = {
+                "DfmId": $("#DfmId").val()
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                Return@(itemName)()
+                alert("更新成功", "success", 0);
+            }
+        }
+
+        function PopViewOnChange@(itemName)(DfmQiId, ProdModeWithText, DfmQuotationName, ModeId) {
+            switch (ProdModeWithText)
+            {
+                case "DfmQiMater":
+                    //PopViewDfmQiMaterial(DfmQiId, ProdModeWithText)
+                    PopViewDfmQiMaterialExcel(DfmQiId, ProdModeWithText, DfmQuotationName)
+                    break;
+                case "DfmQiOSP":
+                    PopViewDfmQiOSP(DfmQiId, ProdModeWithText, DfmQuotationName)
+                    break;
+                case "DfmQiProce":
+                    //PopViewDfmQiProcess(DfmQiId, ProdModeWithText, ModeId)
+                    PopViewDfmQiProcessExcel(DfmQiId, ProdModeWithText, DfmQuotationName, ModeId)
+                    break;
+            }
+        }
+
+        function GetDfmItemUserAuthority@(itemName)() {
+            let targetUrl = "@Url.Action("GetDfmItemUserAuthority", "DfmInformation")";
+            let postData = {
+                "DfmId": $("#DfmId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        DfmItemCategoryList.push(item)
+                    });
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+        function setShow(SubProdId, SubProdType) {
+            var setShow = "setNotShow"
+            DfmItemCategoryList.forEach(function (v) {
+                if (v.split(',')[0] == SubProdId && v.split(',')[1] == SubProdType) {
+                    setShow ="setShow" 
+                }
+            })
+            return setShow
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            $("#DfmQiId").val("")
+            DfmItemCategoryList = []
+            $("#ReadSave@(itemName)").show()
+            Query@(itemName)();
+            if ($("#cboDfmProcessStatusDesignForManufacturingManagement").val() != 1) {
+                $("#Confirm@(itemName)").hide()
+            }
+            else{
+                $("#Confirm@(itemName)").show()
+
+            }
+
+        }
+    </script>
+                                                                )

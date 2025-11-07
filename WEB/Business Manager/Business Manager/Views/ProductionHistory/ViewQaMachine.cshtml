@@ -1,0 +1,172 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewQaMachine";
+    string itemNameText = "查看量測機台資訊";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .span-style{
+             font-size: 18px;
+         }
+    </style>
+                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">量測項目: <span class="sub-text" id="desQcItemNo@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <i class="fas fa-exclamation-circle"></i><span class="span-style"> 1. 選擇機型</span>
+                        <select id="cboQcMachineModeId@(itemName)" class="form-control"></select>
+                    </div>
+                    <div class="col-12">
+                        <i class="fas fa-exclamation-circle"></i><span class="span-style"> 2. 選擇機台</span>
+                        <select id="cboQmmDetailId@(itemName)" class="form-control"></select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="Save@(itemName)()">
+                    <i class="fas fa-check"> 確認</i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let qcItemId@(itemName);
+        let qcItemName@(itemName);
+        let makeCount@(itemName);
+        let moProcessId@(itemName);
+        let qcNoticeItemSpecId@(itemName);
+        let userId@(itemName);
+        let qcItemType@(itemName);
+
+        function Pop@(itemName)(QcItemId, QcItemName, MakeCount, MoProcessId, qcNoticeItemSpecId, qcItemType, userId) {
+            qcItemId@(itemName) = QcItemId;
+            qcItemName@(itemName) = QcItemName;
+            makeCount@(itemName) = MakeCount;
+            moProcessId@(itemName) = MoProcessId;
+            qcNoticeItemSpecId@(itemName) = qcNoticeItemSpecId;
+            qcItemType@(itemName) = qcItemType;
+            userId@(itemName) = userId;
+            $("#desQcItemNo@(itemName)").html(QcItemName);
+
+            ComboBoxs.Default("#cboQcMachineModeId@(itemName)", "@Url.Action("GetQiDetail", "QmsBasicInformation")", { "QcItemId": QcItemId }, "", "NA", "", "QcMachineFullNo", "QcMachineModeId");
+            $("#cboQmmDetailId@(itemName)").val("");
+
+            $.each(tempQcItemJson.tempQcItemInfo, function (i, item) {
+                if (item.BarcodeNo == $(".page-style").val() && item.QcItemId == qcItemId@(itemName) && item.MakeCount == makeCount@(itemName)) {
+                    $("#cboQcMachineModeId@(itemName)").val(item.QcMachineModeId);
+                    ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QmsBasicInformation")", { "QcMachineModeId": $("#cboQcMachineModeId@(itemName)").val() }, "", "NA", "", "MachineDesc", "QmmDetailId");
+                    $("#cboQmmDetailId@(itemName)").val(item.QmmDetailId);
+                    return false;
+                }
+            });
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        $("#cboQcMachineModeId@(itemName)").change(function (i, item) {
+            ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QmsBasicInformation")", { "QcMachineModeId": $("#cboQcMachineModeId@(itemName)").val() }, "", "NA", "", "MachineDesc", "QmmDetailId");
+        });
+
+        function Save@(itemName)() {
+            let qcMachineModeId = $("#cboQcMachineModeId@(itemName)").val();
+            let qmmDetailId = $("#cboQmmDetailId@(itemName)").val();
+            let machineDesc = $("#cboQmmDetailId@(itemName) option:selected").text();
+            if (qcMachineModeId == "" || qmmDetailId == "") {
+                alert("請選擇機台!", alert, 0);
+                return false;
+            }
+
+            let MeasureValue = -1;
+            let Remark = "";
+            $.each(tempQcItemJson.tempQcItemInfo, function (i, item) {
+                if (item.BarcodeNo == $(".page-style").val() && item.QcItemId == qcItemId@(itemName) && item.MakeCount == makeCount@(itemName)) {
+                    MeasureValue = item.MeasureValue;
+                    Remark = item.Remark;
+                    tempQcItemJson.tempQcItemInfo.splice(i, 1);
+                    return false;
+                }
+            });
+
+            let inputQcItemInfo =
+            {
+                "QcNoticeItemSpecId": qcNoticeItemSpecId@(itemName),
+                "BarcodeNo": $(".page-style").val(),
+                "MoProcessId": moProcessId@(itemName),
+                "QcItemId": qcItemId@(itemName),
+                "QcItemName": qcItemName@(itemName),
+                "MakeCount": makeCount@(itemName),
+                "MeasureValue": MeasureValue,
+                "QcMachineModeId": qcMachineModeId,
+                "QmmDetailId": qmmDetailId,
+                "Remark": Remark,
+                "CreateUserId": userId@(itemName)
+            };
+
+            tempQcItemJson.tempQcItemInfo.push(inputQcItemInfo);
+
+            if (qcItemType@(itemName) != "2" && qcItemType@(itemName) != "3") {
+                $("input[id='txt" + qcItemName@(itemName) + "MesIPQC'][data-barcode-no='" + $(".page-style").val() + "'][data-make-count='" + makeCount@(itemName) + "']").prop("readonly", false);
+                $("input[id='txt" + qcItemName@(itemName) + "MesIPQC'][data-barcode-no='" + $(".page-style").val() + "'][data-make-count='" + makeCount@(itemName) + "']").focus();
+            }
+
+            $("span[id='des" + qcItemName@(itemName) + "'][data-make-count='" + makeCount@(itemName) + "'][data-barcode-no='" + $(".page-style").val() + "']").html(" (" + machineDesc + ")");
+            $("span[id='des" + qcItemName@(itemName) + "'][data-make-count='" + makeCount@(itemName) + "'][data-barcode-no='" + $(".page-style").val() + "']").attr("data-qmm-detail-id", qmmDetailId);
+            $("span[id='des" + qcItemName@(itemName) + "'][data-make-count='" + makeCount@(itemName) + "'][data-barcode-no='" + $(".page-style").val() + "']").attr("data-qc-machine-mode-id", qcMachineModeId);
+            $("#txtQmmDetailIdMesIPQC" + qcItemName@(itemName) + makeCount@(itemName)).val(qmmDetailId);
+            $("#txtQmmDetailIdMesIPQC" + qcItemName@(itemName) + makeCount@(itemName)).attr("data-qc-machine-mode-id", qcMachineModeId);
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+</script>
+                )

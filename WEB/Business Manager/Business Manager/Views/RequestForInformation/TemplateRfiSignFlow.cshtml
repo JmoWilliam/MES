@@ -1,0 +1,649 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TemplateRfiSignFlow";
+    string itemNameText = "RFI 市場評估審批流程";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    啟用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)A" name="cbxStatusQ@(itemName)" value="A" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    停用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)S" name="cbxStatusQ@(itemName)" value="S" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-wrench mr-1"></i>套用</button>
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal"><i class="fas fa-times mr-1"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-header">
+                @*<div class="tab" style="white-space:unset;">
+                    <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="tabActive" data-toggle="tab" href="#tabTrade">
+                                <i class="fas fa-folder"></i> 交易資料
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#tabInvoice">
+                                <i class="far fa-file-invoice-dollar"></i> 部門
+                            </a>
+                        </li>
+                    </ul>
+                </div>*@
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <a href="javascript:void(0);" class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)">
+                            <i class="fal fa-search mr-1"></i>搜尋
+                        </a>
+                        <div class="form-group ml-2 mb-0">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">部門</span>
+                                </div>
+                                <select id="cboDepartmentId@(itemName)" class="form-control"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center text-right">
+                        <div id="flow-actions"></div>
+                        <a href="javascript:Add@(itemName)();" class="btn btn-info auth-add"><i class="fas fa-plus mr-1"></i>新增</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <input type="hidden" id="DepartmentId" name="DepartmentId" value="-1" />
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;" class="text-center">關卡順序</th>
+                                        <th scope="col" style="min-width: 150px;">公司別</th>
+                                        <th scope="col" style="min-width: 150px;">人員所屬部門</th>
+                                        <th scope="col" style="min-width: 150px;">關卡人</th>
+                                        <th scope="col" style="min-width: 150px;">職稱</th>
+                                        <th scope="col" style="min-width: 150px;">關卡狀態</th>
+                                        <th scope="col" style="min-width: 150px;">E-Mail</th>
+                                        <th scope="col" class="col-sticky" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAdd@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">關卡人設置</h5>
+                <button class="close" type="button" onclick="CloseAdd@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="addForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="TempRfiSfId" name="TempRfiSfId" value="-1" />
+                        <input type="hidden" id="txtUsers@(itemName)" name="txtUsers@(itemName)" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboUsers@(itemName)">流程部門</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="txtDepartmentName@(itemName)" name="txtDepartmentName@(itemName)" readonly disabled />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboUsers@(itemName)">關卡人</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboUsers@(itemName)" name="cboUsers@(itemName)"></select>
+                                    <div class="input-group-append">
+                                        <a class="btn btn-success pop-view" href="javascript:void(0);" title="搜尋"><i class="fal fa-search"></i></a>
+                                        <button type="button" class="btn btn-outline-danger" onclick="$('#cboUsers@(itemName)').val('-1').trigger('change')" title="清除">
+                                            <i class="fas fa-eraser"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save mr-1"></i>儲存</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="CloseAdd@(itemName)()"><i class="fas fa-times mr-1"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCopy@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">流程複製</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="input-group input-group-sm">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">流程來源部門</span>
+                            </div>
+                            <select id="cboBaseDept@(itemName)" class="form-control"></select>
+                        </div>
+                        <div class="table-custom mt-2">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblView@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;" class="text-center">關卡順序</th>
+                                        <th scope="col" style="min-width: 150px;">公司別</th>
+                                        <th scope="col" style="min-width: 150px;">人員所屬部門</th>
+                                        <th scope="col" style="min-width: 150px;">關卡人</th>
+                                        <th scope="col" style="min-width: 150px;">職稱</th>
+                                        <th scope="col" style="min-width: 150px;">關卡狀態</th>
+                                        <th scope="col" style="min-width: 150px;">E-Mail</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="CopySave@(itemName)()"><i class="fas fa-save"></i>確定複製</button>
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<select class="form-control" id="tempFlowStatus@(itemName)" name="tempFlowStatus@(itemName)" data-msg-required="請選擇關卡人" data-rule-required="true" hidden></select>
+
+@Html.Partial("ViewUser")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            pageIndex: 0,
+            pageSize: 10
+        }
+
+        let objForm@(itemName) = "#addForm@(itemName)";
+        let userId@(itemName);
+        let companyId@(itemName);
+        let userNo@(itemName);
+        const flowDeptNames = "業務,市場";
+
+        $(document).ready(function () {
+            GetUserInfo@(itemName)()
+
+            ComboBoxs.Default("#tempFlowStatus@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { Status: "A", StatusSchema: "RfiDetail.FlowStatus" }, "", "CHOOSE", "", "StatusName", "StatusNo");
+            ComboBoxs.Default("#cboDepartmentId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { CompanyNo: "JMO", Status: "A", SearchKeys: flowDeptNames }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+
+            $("#cboDepartmentId@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#cboDepartmentId@(itemName)").change((e) => {
+                Expand@(itemName)();
+            });
+        });
+
+        function Expand@(itemName)() {
+            if (parseInt($("#ProTypeGroupId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                Query@(itemName)();
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        let FlowStatusList@(itemName) = [];
+
+        function InitData@(itemName)(objPage) {
+            const DepartmentId = $("#cboDepartmentId@(itemName)").val() || 0;
+            let pageCount = 0;
+
+            let innerHtml = ``;
+            $("#flow-actions").html("");
+
+            if (!DepartmentId) {
+                innerHtml = `<tr><td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                <i class="fal fa-exclamation-circle mr-1"></i>請選擇部門。
+                            </td></tr>`;
+            }
+            else {
+                let statusList = [];
+                $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                    statusList.push($(this).val());
+                });
+
+                let targetUrl = "@Url.Action("GetTemplateRfiSignFlow", "ScmBasicInformation")";
+
+                let data = DataAccess.Get(targetUrl,
+                    {
+                        ProTypeGroupId: $("#ProTypeGroupId").val(),
+                        DepartmentId,
+                        Status: statusList.join(",")
+                    }, false);
+
+                if (data.status == "success") {
+                    pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                    if (pageCount > 0) {
+                        objPage = PageCaculate(pageCount, objPage);
+
+                        $("#txtUsers@(itemName)").val(JSON.stringify(data.result.map(m => { return { TempRfiSfId: m.TempRfiSfId, FlowUserId: m.FlowUserId } })));
+
+                        FlowStatusList@(itemName) = data.result.map(m => { return { TempRfiSfId: m.TempRfiSfId, FlowStatus: m.FlowStatus } });
+
+                        $.each(data.result, function (i, item) {
+                            let _row = (objPage.pageSize * objPage.pageIndex + (i + 1));
+
+                            innerHtml += `<tr id="${item.TempRfiSfId}">
+                                            <td data-toggle="tooltip" title="順序${item.SortNumber}" style="max-width: 100px;" class="text-center active-content auth-update">
+                                                <a class="active-link sort-handle" href="javascript:void(0);"><i class="fas fa-arrows-alt"></i><span>順序</span>${item.SortNumber}</a>
+                                            </td>
+                                            <td data-toggle="tooltip" title="${item.CompanyName}" style="max-width: 200px;"><span class="stack-title">公司別</span>
+                                                ${item.LogoIcon > 0 ? `<img class="company-logo" src="/Web/GetFile?fileId=${item.LogoIcon}" />` : ``}${item.CompanyName}
+                                            </td>
+                                            <td data-toggle="tooltip" title="${item.DepartmentName}" style="max-width: 200px;"><span class="stack-title">部門</span>${item.DepartmentName}</td>
+                                            <td data-toggle="tooltip" title="${item.FlowUserName}(${item.FlowUserNo})" style="max-width: 200px;"><span class="stack-title">關卡人</span>
+                                                ${item.FlowUserNo ? item.FlowGender == `M` ? `<span class="gender-male"><i class="fas fa-male"></i></span>` : `<span class="gender-female"><i class="fas fa-female"></i></span>` : ``}
+                                                ${item.FlowUserNo ? `${item.FlowUserNo} ${item.FlowUserName}` : ``}
+                                            </td>
+                                            <td data-toggle="tooltip" title="${item.FlowJobName}" style="max-width: 200px;"><span class="stack-title">職稱</span>
+                                                <input type="text" class="form-control" id="txtFlowJobName@(itemName)-${item.TempRfiSfId}" name="txtFlowJobName@(itemName)" data-temprfisf-id="${item.TempRfiSfId}" placeholder="職稱(選填)"
+                                                    data-msg-maxlength="必須少於50個字元" maxlength="50" value="${item.FlowJobName}">
+                                            </td>
+                                            <td data-toggle="tooltip" style="max-width: 200px;"><span class="stack-title">關卡狀態</span>
+                                                <select class="form-control" id="cboFlowStatus@(itemName)-${item.TempRfiSfId}" name="cboFlowStatus@(itemName)" data-temprfisf-id="${item.TempRfiSfId}"
+                                                    data-msg-required="請選擇關卡狀態" data-rule-required="true">${$(`#tempFlowStatus@(itemName)`).html()}</select>
+                                            </td>
+                                            <td data-toggle="tooltip" title="${item.FlowEmail}" style="max-width: 200px;"><span class="stack-title">E-Mail</span>${item.FlowEmail}</td>
+                                            <td data-toggle="tooltip" title="修改/移除" class="active-content col-sticky"><span class="stack-title">操作</span>
+                                                <a class="active-link auth-update" href="javascript:Edit@(itemName)(${item.TempRfiSfId});" title="修改"><i class="fas fa-edit"></i></a>
+                                                <a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.TempRfiSfId });" title="移除"><i class="fas fa-trash-alt"></i></a>
+                                            </td>
+                                          </tr>`;
+                        });
+                    } else {
+                        innerHtml = `<tr><td class="text-center" colspan="8" style="background-color: #fff3cd;"><i class="fal fa-exclamation-circle mr-1"></i>目前尚無資料。</td></tr>`;
+                        $("#flow-actions").prepend(`<button type="button" id="btnCopy@(itemName)" class="btn btn-outline-warning auth-add mr-2"><i class="fad fa-copy mr-1"></i>複製流程</button>`);
+                    }
+                }
+                else alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("#btnCopy@(itemName)").off("click").on("click", function () {
+                CopyFlow@(itemName)();
+            });
+
+            $.each($("input[name='txtFlowJobName@(itemName)']"), function (i, e) {
+                $(e).off("change").on("change", function () {
+                    Update@(itemName)(e.dataset.temprfisfId);
+                });
+            });
+
+            $.each($("[name='cboFlowStatus@(itemName)']"), function (i, e) {
+                const TempRfiSfId = e.dataset.temprfisfId;
+
+                let d = FlowStatusList@(itemName).find(f => f.TempRfiSfId == TempRfiSfId);
+                if (d) $(e).val(d.FlowStatus);
+
+                $(e).select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+
+                $(e).off("change").on("change", function () {
+                    Update@(itemName)(TempRfiSfId);
+                });
+            });
+
+            $("#tblData@(itemName) tbody").sortable({
+                cancel: ".disabled-sort",
+                handle: ".sort-handle",
+                update: function (event, ui) {
+                    let targetUrl = "@Url.Action("UpdateTemplateRfiSignFlowSort", "ScmBasicInformation")";
+
+                    let result = DataAccess.Update(targetUrl,
+                        {
+                            ProTypeGroupId: $("#ProTypeGroupId").val(),
+                            DepartmentId: $("#cboDepartmentId@(itemName)").val(),
+                            SortList: $(this).sortable("toArray", { attribute: 'id' }).join()
+                        }, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function CopyFlow@(itemName)() {
+            $("#DepartmentId").val($("#cboDepartmentId@(itemName)").val());
+
+            ComboBoxs.Default("#cboBaseDept@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { CompanyNo: "JMO", Status: "A", SearchKey: "業務" }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+
+            $("#cboBaseDept@(itemName)").off("change").on("change", (e) => {
+                const DepartmentId = e.currentTarget.value;
+
+                let innerHtml = "";
+                if (!DepartmentId) {
+                    innerHtml = `<tr><td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle mr-1"></i>請選擇流程來源部門。
+                                 </td></tr>`;
+                }
+                else {
+                    let targetUrl = "@Url.Action("GetTemplateRfiSignFlow", "ScmBasicInformation")";
+                    let data = DataAccess.Get(targetUrl,
+                        {
+                            DepartmentId,
+                            ProTypeGroupId: $("#ProTypeGroupId").val(),
+                        }, false);
+
+                    if (data.status == "success") {
+                        if (data.result.length) {
+                            $.each(data.result, (i, item) => {
+                                let _row = i + 1;
+
+                                innerHtml += `<tr>
+                                            <td data-toggle="tooltip" title="順序${item.SortNumber}">${item.SortNumber}</td>
+                                            <td data-toggle="tooltip" title="${item.CompanyName}" style="max-width: 200px;">
+                                                <span class="stack-title">公司別</span>${item.LogoIcon > 0 ? `<img class="company-logo" src="/Web/GetFile?fileId=${item.LogoIcon}" />` : ``}${item.CompanyName}
+                                            </td>
+                                            <td data-toggle="tooltip" title="${item.DepartmentName}" style="max-width: 200px;"><span class="stack-title">部門</span>${item.DepartmentName}</td>
+                                            <td data-toggle="tooltip" title="${item.FlowUserName}(${item.FlowUserNo})" style="max-width: 200px;"><span class="stack-title">關卡人</span>
+                                                ${item.FlowUserNo ? item.FlowGender == `M` ? `<span class="gender-male"><i class="fas fa-male"></i></span>` : `<span class="gender-female"><i class="fas fa-female"></i></span>` : ``}
+                                                ${item.FlowUserNo ? `${item.FlowUserNo} ${item.FlowUserName}` : ``}
+                                            </td>
+                                            <td data-toggle="tooltip" title="${item.FlowJobName}" style="max-width: 200px;"><span class="stack-title">職稱</span>${item.FlowJobName}</td>
+                                            <td data-toggle="tooltip" style="max-width: 200px;"><span class="stack-title">關卡狀態</span>
+                                                ${$(`#tempFlowStatus@(itemName) option[value="${item.FlowStatus}"]`).text()}
+                                            </td>
+                                            <td data-toggle="tooltip" title="${item.FlowEmail}" style="max-width: 200px;"><span class="stack-title">E-Mail</span>${item.FlowEmail}</td>
+                                          </tr>`;
+                            });
+                        }
+                        else {
+                            innerHtml = `<tr><td class="text-center" colspan="7" style="background-color: #fff3cd;"><i class="fal fa-exclamation-circle mr-1"></i>目前尚無資料。</td></tr>`
+                        }
+                    }
+                    else alert(data.msg, "alert", 0);
+                }
+
+                $("#tblView@(itemName) tbody").html(innerHtml);
+            });
+
+            $("#cboBaseDept@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#modalCopy@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Update@(itemName)(TempRfiSfId) {
+            let targetUrl = "@Url.Action("UpdateTemplateRfiSignFlow", "RequestForInformation")";
+
+            let result = DataAccess.Update(targetUrl,
+                {
+                    TempRfiSfId,
+                    FlowStatus: $(`#cboFlowStatus@(itemName)-${TempRfiSfId} :selected`).val(),
+                    FlowJobName: $(`#txtFlowJobName@(itemName)-${TempRfiSfId}`).val()
+                }, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function Add@(itemName)() {
+            $("#TempRfiSfId").val(-1);
+
+            $("#txtDepartmentName@(itemName)").val($("#cboDepartmentId@(itemName) :selected").text());
+            $("#DepartmentId").val($("#cboDepartmentId@(itemName)").val());
+
+            ComboBoxs.Default("#cboUsers@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { Status: "A" }, "", "CHOOSE-NUMBER", "", "UserWithNo", "UserId");
+
+            $("#modalAdd@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#cboUsers@(itemName)").val(-1).prop("multiple", true).select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            InitPopView(
+            {
+                targetSelector: "#cboUsers@(itemName)",
+                popFunction: "PopViewUser",
+                objectUserId: "#cboUsers@(itemName)",
+                objectCompanyId: companyId@(itemName),
+                type: "checkbox"
+            });
+        }
+
+        function Edit@(itemName)(TempRfiSfId) {
+            $("#TempRfiSfId").val(TempRfiSfId ? TempRfiSfId : -1);
+
+            $("#txtDepartmentName@(itemName)").val($("#cboDepartmentId@(itemName) :selected").text());
+
+            ComboBoxs.Default("#cboUsers@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { Status: "A" }, "", "CHOOSE-NUMBER", "-不設定-", "UserWithNo", "UserId");
+
+            $("#modalAdd@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            if ($("#txtUsers@(itemName)").val().length) {
+                let d = JSON.parse($("#txtUsers@(itemName)").val()).find(f => f.TempRfiSfId == TempRfiSfId);
+                $("#cboUsers@(itemName)").val(d.FlowUserId).trigger("change");
+            }
+
+            $("#cboUsers@(itemName)").prop("multiple", false).select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            InitPopView(
+            {
+                targetSelector: "#cboUsers@(itemName)",
+                popFunction: "PopViewUser",
+                objectUserId: "#cboUsers@(itemName)",
+                objectCompanyId: companyId@(itemName),
+                type: "radio"
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let tempRfiSfId = parseInt($("#TempRfiSfId").val());
+
+                if (tempRfiSfId <= 0) {
+                    let targetUrl = "@Url.Action("AddTemplateRfiSignFlow", "RequestForInformation")";
+
+                    let data = DataAccess.EditContinued(targetUrl,
+                        {
+                            ProTypeGroupId: $("#ProTypeGroupId").val(),
+                            DepartmentId: $("#DepartmentId").val(),
+                            UserList: $("#cboUsers@(itemName)").val().join(",")
+                        }, false);
+
+                    if (data) {
+                        CloseAdd@(itemName)();
+                        Return@(itemName)();
+                    }
+                    else {
+                        alert(data.msg, "alert", 0);
+                    }
+                }
+                else {
+                    let targetUrl = "@Url.Action("UpdateTemplateRfiSignFlow", "RequestForInformation")";
+
+                    let result = DataAccess.Update(targetUrl,
+                        {
+                            TempRfiSfId: tempRfiSfId,
+                            UserList: $("#cboUsers@(itemName)").val()
+                        }, false, true);
+
+                    if (result) {
+                        CloseAdd@(itemName)();
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function CopySave@(itemName)() {
+            swal.fire({
+                title: "確認要複製此流程嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "info",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("CopyTemplateRfiSignFlow", "RequestForInformation")";
+
+                    let result = DataAccess.Update(targetUrl,
+                        {
+                            ProTypeGroupId: $("#ProTypeGroupId").val(),
+                            BaseDepartmentId: $("#cboBaseDept@(itemName)").val(),
+                            DepartmentId: $("#DepartmentId").val()
+                        }, false, true);
+
+                    if (result) {
+                        $("#modalCopy@(itemName)").modal("hide");
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Delete@(itemName)(TempRfiSfId) {
+            swal.fire({
+                title: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteTemplateRfiSignFlow", "ScmBasicInformation")";
+
+                    let result = DataAccess.Delete(targetUrl, { TempRfiSfId }, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function GetUserInfo@(itemName)() {
+            let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+
+            let data = DataAccess.Get(targetUrl,
+                {
+                    UserNo: $.cookie("Login"),
+                    KeyText: $.cookie("LoginKey")
+                }, false);
+
+            if (data.status == "success") {
+                userId@(itemName) = data.returnData.UserId;
+                companyId@(itemName) = data.returnData.CompanyId;
+                userNo@(itemName) = data.returnData.UserNo;
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function CloseAdd@(itemName)() {
+            ResetForm("#addForm@(itemName)");
+            $("#modalAdd@(itemName)").modal("hide");
+            Query@(itemName)();
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+        }
+</script>
+        )

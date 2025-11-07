@@ -1,0 +1,812 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMesOQCResult";
+    string itemNameText = "出貨檢/試產檢結果";
+}
+
+@Html.Resource("css",
+    @<style>
+         .modal-body {
+             max-height: 50vh;
+             overflow-y: auto;
+         }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">製令: <span class="sub-text" id="desWoErpFullNo@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)('ModalRemark@(itemName)')"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12" style="margin-bottom: 5px;">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)"
+                                               placeholder="請輸入產品條碼" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtQcItemNameQ@(itemName)" name="txtQcItemNameQ@(itemName)"
+                                               placeholder="請輸入量測項目" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <select id="cboQcResultQ@(itemName)" class="form-control">
+                                            <option value="">選擇類型</option>
+                                            <option value="P">通過</option>
+                                            <option value="F" selected>不通過</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" id="btnEdit@(itemName)" class="btn btn-secondary" onclick="Edit@(itemName)()" style="float: right;">
+                                            <i class="fas fa-edit"></i> 後續異常處理
+                                        </button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" class="text-center checkbox-mode">
+                                            <label class="col-12 col-form-label">
+                                                # 全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th scope="col" style="min-width: 100px;">產品條碼</th>
+                                        <th scope="col" style="min-width: 100px;">量測項目</th>
+                                        <th scope="col" style="min-width: 75px;">數據</th>
+                                        <th scope="col" style="min-width: 75px;">結果</th>
+                                        <th scope="col" style="max-width: 100px;">量測人員</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">異常原因</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">異常描述</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container" autocomplete="off" id="editForm@(itemName)">
+                            <span class="barcode-info">
+                                <i class="fad fa-barcode-alt"></i> 條碼編號
+                                <select id="cboBarcodeNo@(itemName)" style="padding: 5px; max-width: 150px; min-width: 75px;">
+                                    <!--量測條碼-->
+                                </select>
+                            </span>
+                            <hr />
+
+                            <div class="form-group row">
+                                <label class="col-12 col-form-label" for="cboEdition@(itemName)">副責任單位</label>
+                                <div class="col-12">
+                                    <select class="form-control" id="cboSubResponsibleDeptId@(itemName)" name="cboSubResponsibleDeptId@(itemName)"></select>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label class="col-12 col-form-label" for="txtSubResponsibleUserId@(itemName)">副責任人員</label>
+                                <div class="col-12">
+                                    <input type="hidden" id="txtSubResponsibleUserId@(itemName)" />
+                                    <div class="btn-group">
+                                        <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                        <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                    </div>
+                                    <dl class="help-block">
+                                        <dt>副責任人員</dt>
+                                        <dd id="desSubResponsibleUserId@(itemName)"></dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <div class="form-group row">
+                                <label class="col-12 col-form-label" for="txtConformUserId@(itemName)">合致對象</label>
+                                <div class="col-12">
+                                    <input type="hidden" id="txtConformUserId@(itemName)" />
+                                    <div class="btn-group">
+                                        <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                        <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                    </div>
+                                    <dl class="help-block">
+                                        <dt>合致對象</dt>
+                                        <dd id="desConformUserId@(itemName)"></dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <div class="form-group row">
+                                <label class="col-12 col-form-label" for="cboQcStatus@(itemName)">人員後續判定<span class="text-danger">*</span></label>
+                                <div class="col-12">
+                                    <select class="form-control" id="cboQcStatus@(itemName)" name="cboQcStatus@(itemName)" required>
+                                        <option value="M">重新量測(不重工)</option>
+                                        <option value="R">需補正(當站返修)</option>
+                                        <option value="F" selected>不良品(品異流程)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <fieldset style="margin-top: 5px;">
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                          placeholder="請輸入備註"
+                                                          data-msg-required="請輸入備註"
+                                                          data-msg-maxlength="必須少於 200 個字元" maxlength="200"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-success submit-style list-mode" onclick="Upload@(itemName)()" style="float: right;">
+                    <i class="fas fa-arrow-to-top"></i>上傳數據
+                </button>
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewUser")
+
+@Html.Resource("js",
+@<script>
+    let objForm@(itemName) = "#editForm@(itemName)";
+
+    let barcodeQcRecordJson =
+    {
+        barcodeQcRecordInfo: []
+    };
+
+    let moId@(itemName);
+    let qcNoticeId@(itemName);
+    let qcType@(itemName);
+
+    let barcodeNoList@(itemName) = [];
+
+    let barcodeCheck@(itemName) = "";
+
+    let barcodeNoLeg@(itemName) = -1;
+
+    function Pop@(itemName)(moId, qcNoticeId, qcType) {
+        moId@(itemName) = moId;
+        qcNoticeId@(itemName) = qcNoticeId;
+        qcType@(itemName) = qcType;
+        $("#desWoErpFullNo@(itemName)").html($("#txtWoErpNoMesOQC").text());
+        $("#modal@(itemName)").modal({
+            backdrop: "static",
+            keyboard: false,
+            show: true
+        });
+        $("#btnEdit@(itemName)").show();
+        $("#cboQcResultQ@(itemName)").val("F");
+
+        CheckPassInfo@(itemName)();
+
+        Query@(itemName)();
+
+        barcodeCheck@(itemName) = $(".page-style").val() == null ? "" : $(".page-style").val();
+        barcodeNoLeg@(itemName)= barcodeCheck@(itemName) != "" ? barcodeNoListMesOQC.length : 1;
+
+        $("#cboQcResultQ@(itemName)").change(function () {
+            Query@(itemName)();
+        });
+
+        $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+            if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                $("input[type='checkbox'][data-qc-item-id]").not(":disabled").prop("checked", true);
+            } else {
+                $("input[type='checkbox'][data-qc-item-id]").not(":disabled").prop("checked", false);
+            }
+        });
+
+        $("#txtBarcodeNoQ@(itemName), #txtQcItemNameQ@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                Query@(itemName)();
+                return false;
+            }
+        });
+
+        $(window).keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                return false;
+            }
+        });
+    }
+
+    function Query@(itemName)() {
+        InitData@(itemName)();
+        $("#cbxSelectAll@(itemName)").prop("checked", false);
+    }
+
+    function InitData@(itemName)() {
+        $("#tblData@(itemName) tbody").empty();
+        let innerHtml = '';
+        let iPQCResult = "";
+        let iPQCstring = "";
+        let userNo = "";
+        let userName = "";
+        let count = 1;
+        $.each(tempQcItemJson.tempQcItemInfo, function (i, item) {
+            let targetUrl = "";
+            if (qcType@(itemName) != "TQC") targetUrl = "@Url.Action("GetOqcQcNoticeItemSpec", "ProductionHistory")";
+            else targetUrl = "@Url.Action("GetTqcQcNoticeItemSpec", "ProductionHistory")";
+            let postData = {
+                "QcNoticeItemSpecId": parseInt(item.QcNoticeItemSpecId),
+                "MoId": moId@(itemName),
+                "QcNoticeType": qcType@(itemName),
+                "Status": "N"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (j, item2) {
+                        let UpperTolerance = parseFloat(item2.DesignValue) + parseFloat(item2.UpperTolerance);
+                        let LowerTolerance = parseFloat(item2.DesignValue) + parseFloat(item2.LowerTolerance);
+                        if (parseFloat(item.MeasureValue) <= UpperTolerance && parseFloat(item.MeasureValue) >= LowerTolerance) {
+                            iPQCResult = "通過";
+                            iPQCstring = "P";
+                        }
+                        else if (item.MeasureValue == "P") {
+                            iPQCResult = "通過";
+                            iPQCstring = "P";
+                        }
+                        else if (item.MeasureValue == "F") {
+                            iPQCResult = "不通過";
+                            iPQCstring = "F";
+                        }
+                        else {
+                            iPQCResult = "不通過";
+                            iPQCstring = "F";
+                        }
+                    });
+                }
+            }
+
+            tempQcItemJson.tempQcItemInfo[i]["QcResult"] = iPQCstring;
+
+            targetUrl = "@Url.Action("GetUser", "BasicInformation")";
+            postData = {
+                "UserId": item.CreateUserId
+            };
+            data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (k, item3) {
+                        userName = item3.UserName;
+                        userNo = item3.UserNo;
+                    });
+                }
+            }
+
+            let qcResultQ = $("#cboQcResultQ@(itemName)").val();
+            let barcodeNoQ = $("#txtBarcodeNoQ@(itemName)").val();
+            let qcItemNameQ = $("#txtQcItemNameQ@(itemName)").val();
+
+            let barcodeNoMatch = item.BarcodeNo != null ? item.BarcodeNo.toString().match(barcodeNoQ) : null;
+            let qcItemNameMatch = item.QcItemName.match(qcItemNameQ);
+
+            if ((qcResultQ == iPQCstring || qcResultQ == "") && (barcodeNoMatch != null || barcodeNoQ == "") && (qcItemNameMatch != null || qcItemNameQ == "")) {
+                innerHtml += `<tr>
+                                <td class="text-center" style="max-width: 150px; min-width: 135px;">
+                                    <label class="control control-solid control-solid-info control--checkbox">
+                                        ${count}. <input type="checkbox" data-qc-item-id="${item.QcItemId}" data-barcode-no="${item.BarcodeNo}" value="${item.QcNoticeItemSpecId}" ${iPQCstring == "P" ? `disabled` : ``} />
+                                        <span class="control__indicator"></span>
+                                    </label>
+                                </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo != null ? item.BarcodeNo : ``}">${item.BarcodeNo != null ? item.BarcodeNo : ``}</td>
+                                <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemName}-${item.MakeCount}">${item.QcItemName}-${item.MakeCount}</td>
+                                <td class="ellipsis" data-toggle="tooltip" title="${item.MeasureValue}">${item.MeasureValue}</td>
+                                ${JudgeIPQCResult(`${item.QcNoticeItemSpecId}`)}
+                                <td class="ellipsis" data-toggle="tooltip" title="${userNo}${userName}"><i class="fas fa-user"></i>&nbsp;<code>${userNo}</code>&nbsp;${userName}</td>
+                                <td class="ellipsis" data-toggle="tooltip" style="max-width: 200px; min-width: 150px;">
+                                    <input type="text" class="form-control" data-qc-notice-item-spec-id="${item.QcNoticeItemSpecId}" data-barcode-no="${item.BarcodeNo}" id="txtCauseNoQ@(itemName)" name="txtCauseNoQ@(itemName)"
+                                        placeholder="請刷取NG原因"
+                                        oninput="EditDefectCauseNo@(itemName)(this)"
+                                        value="${typeof (item.NgCode) != `undefined` ? item.NgCode : ``}"
+                                        ${iPQCstring == `P` ? `readonly` : ``} />
+                                </td>
+                                <td class="ellipsis" data-toggle="tooltip" style="max-width: 200px; min-width: 150px;">
+                                    <input type="text" id="txtCauseDesc@(itemName)" class="form-control" data-qc-notice-item-spec-id="${item.QcNoticeItemSpecId}" data-barcode-no="${item.BarcodeNo}" id="txtCauseDescQ@(itemName)" name="txtCauseDescQ@(itemName)"
+                                        placeholder="請刷取NG描述"
+                                        oninput="EditDefectCauseDesc@(itemName)(this)"
+                                        value="${typeof (item.NgCodeDesc) != `undefined` ? item.NgCodeDesc : ``}"
+                                        ${iPQCstring == `P` ? `readonly` : ``} />
+                                </td>
+                              </tr>`;
+                count++;
+            }
+
+            function JudgeIPQCResult(qcNoticeItemSpecId) {
+                let innerHtml = '';
+                if (iPQCResult == "通過") {
+                    innerHtml += `<td id="tdQcResult@(itemName)" data-qc-notice-item-spec-id="${qcNoticeItemSpecId}" data-qc-result="P" class="ellipsis" style="color: blue;" data-toggle="tooltip" title="${iPQCResult}">${iPQCResult}</td>`;
+                }
+                else {
+                    innerHtml += `<td id="tdQcResult@(itemName)" data-qc-notice-item-spec-id="${qcNoticeItemSpecId}" data-qc-result="F" class="ellipsis" style="color: red;" data-toggle="tooltip" title="${iPQCResult}">${iPQCResult}</td>`;
+                }
+                return innerHtml;
+            }
+        });
+
+        if (innerHtml == "") {
+            innerHtml += `<tr>
+                            <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                            </td>
+                          </tr>`;
+        }
+
+        $("#tblData@(itemName) tbody").append(innerHtml);
+    }
+
+    function Edit@(itemName)() {
+        let barcodeNo = $("#cboBarcodeNo@(itemName)").val();
+        Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+        $("#txtSubResponsibleUserId@(itemName)").siblings(".help-block").hide();
+        $("#txtSubResponsibleUserId@(itemName)").val("");
+
+        $("#txtConformUserId@(itemName)").siblings(".help-block").hide();
+        $("#txtConformUserId@(itemName)").val("");
+
+        ComboBoxs.Default("#cboSubResponsibleDeptId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "CompanyId": 2, "Status": "A" }, "", "NA", "", "DepartmentName", "DepartmentId");
+
+        $.each(barcodeQcRecordJson.barcodeQcRecordInfo, function (i, item) {
+            if (item.BarcodeNo == barcodeNo) {
+                $("#desResponsibleSupervisorId@(itemName)").html(item.ResponsibleSupervisorFullNo);
+                $("#cboSubResponsibleDeptId@(itemName)").val(item.SubResponsibleDeptId);
+                if (item.SubResponsibleUserId != "") {
+                    $("#txtSubResponsibleUserId@(itemName)").siblings(".help-block").show();
+                    $("#txtSubResponsibleUserId@(itemName)").val(item.SubResponsibleUserId);
+                    $("#desSubResponsibleUserId@(itemName)").val(item.SubResponsibleUserFullNo);
+                }
+                if (item.ConformUserId != "") {
+                    $("#txtConformUserId@(itemName)").siblings(".help-block").show();
+                    $("#txtConformUserId@(itemName)").val(item.SubResponsibleUserId);
+                    $("#destxtConformUserId@(itemName)").val(item.ConformUserFullNo);
+                }
+                $("#cboQcStatus@(itemName)").val(item.QcStatus);
+
+                $("#txtRemark@(itemName)").val(item.Remark);
+                return false;
+            }
+        });
+
+        let popConfig2 = {
+            targetSelector: "#txtSubResponsibleUserId@(itemName)",
+            popFunction: "PopViewUser",
+            objectUserId: "#txtSubResponsibleUserId@(itemName)",
+            objectUser: "#desSubResponsibleUserId@(itemName)",
+            objectDepartment: "#desDepartment@(itemName)",
+            objectCompany: "#desCompany@(itemName)",
+            type: "radio"
+        };
+        InitPopView(popConfig2);
+
+        let popConfig3 = {
+            targetSelector: "#txtConformUserId@(itemName)",
+            popFunction: "PopViewUser",
+            objectUserId: "#txtConformUserId@(itemName)",
+            objectUser: "#desConformUserId@(itemName)",
+            objectDepartment: "#desDepartment@(itemName)",
+            objectCompany: "#desCompany@(itemName)",
+            type: "radio"
+        };
+        InitPopView(popConfig3);
+
+        $("#cboQcStatus@(itemName)").change(function (i, item) {
+            if ($("#cboQcStatus@(itemName)").val() == "F") {
+                $("#ledDefect@(itemName)").show();
+                $("#ledRepair@(itemName)").show();
+            }
+            else {
+                $("#ledDefect@(itemName)").hide();
+                $("#ledRepair@(itemName)").hide();
+            }
+        });
+    }
+
+    $("#cboBarcodeNo@(itemName)").change(function (i, item) {
+        Edit@(itemName)();
+    });
+
+    function EditDefectCauseNo@(itemName)(e) {
+        clearTimeout(timer)
+        timer = setTimeout(function () {
+            let defectCauseNo = $(e).val();
+            let targetUrl = "@Url.Action("GetNgCause", "QmsBasicInformation")";
+            let postData = {
+                "CauseNo": defectCauseNo
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item2) {
+                        $.each($("input[type='checkbox'][data-qc-item-id][data-barcode-no]:checked"), function (i) {
+                            let qcNoticeItemSpecId = $(this).val();
+                            let barcodeNo = $(this).data("barcode-no");
+                            $.each(tempQcItemJson.tempQcItemInfo, function (j, item) {
+                                if (item.QcNoticeItemSpecId == qcNoticeItemSpecId && item.BarcodeNo == barcodeNo) {
+                                    tempQcItemJson.tempQcItemInfo[j]["NgCode"] = defectCauseNo;
+                                    tempQcItemJson.tempQcItemInfo[j]["NgCodeDesc"] = item2.CauseDesc;
+                                    return false;
+                                }
+                            });
+                        });
+
+                        let qcNoticeItemSpecId = $(e).data("qc-notice-item-spec-id");
+                        let barcodeNo = $(e).data("barcode-no");
+                        $.each(tempQcItemJson.tempQcItemInfo, function (j, item) {
+                            if (item.QcNoticeItemSpecId == qcNoticeItemSpecId && item.BarcodeNo == barcodeNo) {
+                                tempQcItemJson.tempQcItemInfo[j]["NgCode"] = defectCauseNo;
+                                tempQcItemJson.tempQcItemInfo[j]["NgCodeDesc"] = item2.CauseDesc;
+                                return false;
+                            }
+                        });
+                    });
+
+                    Query@(itemName)();
+                }
+                else {
+                    alert("找不到此NG代碼!");
+                    $(e).val("");
+                }
+            }
+        }, 500);
+    }
+
+    function EditDefectCauseDesc@(itemName)(e) {
+        clearTimeout(timer)
+        timer = setTimeout(function () {
+            let defectCauseDesc = $(e).val();
+            let qcNoticeItemSpecId = $(e).data("qc-notice-item-spec-id");
+            let barcodeNo = $(e).data("barcode-no");
+            $.each(tempQcItemJson.tempQcItemInfo, function (j, item) {
+                if (item.QcNoticeItemSpecId == qcNoticeItemSpecId && item.BarcodeNo == barcodeNo) {
+                    tempQcItemJson.tempQcItemInfo[j]["NgCodeDesc"] = defectCauseDesc;
+                    return false;
+                }
+            });
+
+            Query@(itemName)();
+        }, 1000);
+    }
+
+    function GetDefectClass@(itemName)(classId) {
+        let groupId = -1;
+        let targetUrl = "@Url.Action("GetNgClass", "QmsBasicInformation")";
+        let postData = {
+            "ClassId": classId
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            if (data.result.length > 0) {
+                $.each(data.result, function (i, item) {
+                    groupId = item.GroupId;
+                });
+            }
+            else {
+                alert("異常類別錯誤!");
+            }
+        }
+        else {
+            alert(data.msg);
+        }
+
+        return groupId;
+    }
+
+    function Save@(itemName)() {
+        if ($(objForm@(itemName)).valid()) {
+            $.each(barcodeQcRecordJson.barcodeQcRecordInfo, function (i, item) {
+                if (item.BarcodeNo == $("#cboBarcodeNo@(itemName)").val()) {
+                    barcodeQcRecordJson.barcodeQcRecordInfo.splice(i, 1);
+                    return false;
+                }
+            });
+
+            let inputBarcodeQcRecordInfo =
+            {
+                "QcNoticeId": qcNoticeId@(itemName),
+                "BarcodeNo": $("#cboBarcodeNo@(itemName)").val(),
+                "SubResponsibleDeptId": $("#cboSubResponsibleDeptId@(itemName)").val(),
+                "SubResponsibleUserId": $("#txtSubResponsibleUserId@(itemName)").val(),
+                "SubResponsibleUserFullNo": $("#desSubResponsibleUserId@(itemName)").text(),
+                "ConformUserId": $("#txtConformUserId@(itemName)").val(),
+                "ConformUserFullNo": $("#desConformUserId@(itemName)").text(),
+                "QcStatus": $("#cboQcStatus@(itemName)").val(),
+                "Remark": $("#txtRemark@(itemName)").val()
+            }
+
+            barcodeQcRecordJson.barcodeQcRecordInfo.push(inputBarcodeQcRecordInfo);
+            Swal.fire(
+                "儲存成功", //標題
+                "已儲存此條碼相關資訊!", //訊息內容(可省略)
+                "success" //圖示(可省略) success/info/warning/error/question
+                //圖示範例：https://sweetalert2.github.io/#icons
+            );
+
+            if (barcodeQcRecordJson.barcodeQcRecordInfo.length == barcodeNoLeg@(itemName)) {
+                Return@(itemName)();
+            }
+            else {
+                Edit@(itemName)();
+            }
+        }
+    }
+
+    function Upload@(itemName)() {
+        swal.fire({
+            titleText: "確定要上傳此次數據?",
+            text: "上傳後無法復原，請確認後再執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let result;
+                if (barcodeQcRecordJson.barcodeQcRecordInfo.length != barcodeNoLeg@(itemName)) {
+                    alert("尚有條碼尚未維護對策!", alert, 0);
+                    return false;
+                }
+
+                let targetUrl = "";
+                if (qcType@(itemName) == "TQC") targetUrl = "@Url.Action("AddBarcodeTQcRecord", "ProductionHistory")";
+                else targetUrl = "@Url.Action("AddBarcodeOQcRecord", "ProductionHistory")";
+
+                let postData = {
+                    "BarcodeQcRecordData": JSON.stringify(barcodeQcRecordJson),
+                    "MoId": moId@(itemName),
+                    "TempOQcItemData": JSON.stringify(tempQcItemJson),
+                    "QcType": qcType@(itemName)
+                };
+
+                result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    $("#modal@(itemName)").modal("hide");
+                    barcodeQcRecordJson.barcodeQcRecordInfo = [];
+                    tempQcItemJson.tempQcItemInfo = [];
+                    barcodeNoListMesIPQC = [];
+                    $(".qc-item-main-body").empty();
+                    $(".page-style").empty();
+                    $(".barcode-info-div").hide();
+
+                    if (barcodeNoListMesOQC.length <= 0) InitDataMesOQC();//LoadBarcodeMesOQC();
+                }
+            }
+        });
+    }
+
+    function CheckPassInfo@(itemName)() {
+        $("#cboBarcodeNo@(itemName)").empty();
+        let ngCheck = false;
+        if (barcodeNoListMesOQC.length > 0) {
+            $.each(barcodeNoListMesOQC, function (k, item3) {
+                ngCheck = false;
+                $.each(tempQcItemJson.tempQcItemInfo, function (i, item) {
+                    if (item.BarcodeNo == item3) {
+                        let targetUrl = "";
+                        if (qcType@(itemName) != "TQC") targetUrl = "@Url.Action("GetOqcQcNoticeItemSpec", "ProductionHistory")";
+                        else targetUrl = "@Url.Action("GetTqcQcNoticeItemSpec", "ProductionHistory")";
+                        let postData = {
+                            "QcNoticeItemSpecId": parseInt(item.QcNoticeItemSpecId),
+                            "MoId": moId@(itemName),
+                            "QcNoticeType": qcType@(itemName),
+                            "Status": "N"
+                        };
+                        let data = DataAccess.Get(targetUrl, postData, false);
+                        if (data.status == "success") {
+                            if (data.result.length > 0) {
+                                $.each(data.result, function (j, item2) {
+                                    let UpperTolerance = parseFloat(item2.DesignValue) + parseFloat(item2.UpperTolerance);
+                                    let LowerTolerance = parseFloat(item2.DesignValue) + parseFloat(item2.LowerTolerance);
+                                    if (parseFloat(item.MeasureValue) <= UpperTolerance && parseFloat(item.MeasureValue) >= LowerTolerance) {
+                                        iPQCResult = "通過";
+                                    }
+                                    else if (item.MeasureValue == "P") {
+                                        iPQCResult = "通過";
+                                    }
+                                    else if (item.MeasureValue == "F") {
+                                        iPQCResult = "不通過";
+                                        ngCheck = true;
+                                    }
+                                    else {
+                                        iPQCResult = "不通過";
+                                        ngCheck = true;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+
+                if (ngCheck == false) {
+                    let inputBarcodeQcRecordInfo =
+                    {
+                        "QcNoticeId": qcNoticeId@(itemName),
+                        "BarcodeNo": item3,
+                        "SubResponsibleDeptId": $("#cboSubResponsibleDeptId@(itemName)").val(),
+                        "SubResponsibleUserId": $("#txtSubResponsibleUserId@(itemName)").val(),
+                        "SubResponsibleUserFullNo": $("#desSubResponsibleUserId@(itemName)").text(),
+                        "ConformUserId": $("#txtConformUserId@(itemName)").val(),
+                        "ConformUserFullNo": $("#desConformUserId@(itemName)").text(),
+                        "QcStatus": "P",
+                        "Remark": $("#txtRemark@(itemName)").val()
+                    }
+
+                    barcodeQcRecordJson.barcodeQcRecordInfo.push(inputBarcodeQcRecordInfo);
+                }
+                else {
+                    if (qcType@(itemName) == "TQC") {
+                        let inputBarcodeQcRecordInfo =
+                        {
+                            "QcNoticeId": qcNoticeId@(itemName),
+                            "BarcodeNo": item3,
+                            "SubResponsibleDeptId": $("#cboSubResponsibleDeptId@(itemName)").val(),
+                            "SubResponsibleUserId": $("#txtSubResponsibleUserId@(itemName)").val(),
+                            "SubResponsibleUserFullNo": $("#desSubResponsibleUserId@(itemName)").text(),
+                            "ConformUserId": $("#txtConformUserId@(itemName)").val(),
+                            "ConformUserFullNo": $("#desConformUserId@(itemName)").text(),
+                            "QcStatus": "F",
+                            "Remark": $("#txtRemark@(itemName)").val()
+                        }
+
+                        barcodeQcRecordJson.barcodeQcRecordInfo.push(inputBarcodeQcRecordInfo);
+                    }
+                    $("#cboBarcodeNo@(itemName)").append(new Option(item3, item3))
+                }
+            });
+        }
+        else {
+            ngCheck = false;
+            $.each(tempQcItemJson.tempQcItemInfo, function (i, item) {
+                let targetUrl = "";
+                if (qcType@(itemName) != "TQC") targetUrl = "@Url.Action("GetOqcQcNoticeItemSpec", "ProductionHistory")";
+                else targetUrl = "@Url.Action("GetTqcQcNoticeItemSpec", "ProductionHistory")";
+                let postData = {
+                    "QcNoticeItemSpecId": parseInt(item.QcNoticeItemSpecId),
+                    "MoId": moId@(itemName),
+                    "QcNoticeType": qcType@(itemName),
+                    "Status": "N"
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (j, item2) {
+                            let UpperTolerance = parseFloat(item2.DesignValue) + parseFloat(item2.UpperTolerance);
+                            let LowerTolerance = parseFloat(item2.DesignValue) + parseFloat(item2.LowerTolerance);
+                            if (parseFloat(item.MeasureValue) <= UpperTolerance && parseFloat(item.MeasureValue) >= LowerTolerance) {
+                                iPQCResult = "通過";
+                            }
+                            else if (item.MeasureValue == "P") {
+                                iPQCResult = "通過";
+                            }
+                            else if (item.MeasureValue == "F") {
+                                iPQCResult = "不通過";
+                                ngCheck = true;
+                            }
+                            else {
+                                iPQCResult = "不通過";
+                                ngCheck = true;
+                            }
+                        });
+                    }
+                }
+            });
+
+            if (ngCheck == false) {
+                let inputBarcodeQcRecordInfo =
+                {
+                    "QcNoticeId": qcNoticeId@(itemName),
+                    "BarcodeNo": null,
+                    "SubResponsibleDeptId": $("#cboSubResponsibleDeptId@(itemName)").val(),
+                    "SubResponsibleUserId": $("#txtSubResponsibleUserId@(itemName)").val(),
+                    "SubResponsibleUserFullNo": $("#desSubResponsibleUserId@(itemName)").text(),
+                    "ConformUserId": $("#txtConformUserId@(itemName)").val(),
+                    "ConformUserFullNo": $("#desConformUserId@(itemName)").text(),
+                    "QcStatus": "P",
+                    "Remark": $("#txtRemark@(itemName)").val()
+                }
+
+                barcodeQcRecordJson.barcodeQcRecordInfo.push(inputBarcodeQcRecordInfo);
+            }
+            else {
+                if (qcType@(itemName) == "TQC") {
+                    let inputBarcodeQcRecordInfo =
+                    {
+                        "QcNoticeId": qcNoticeId@(itemName),
+                        "BarcodeNo": null,
+                        "SubResponsibleDeptId": $("#cboSubResponsibleDeptId@(itemName)").val(),
+                        "SubResponsibleUserId": $("#txtSubResponsibleUserId@(itemName)").val(),
+                        "SubResponsibleUserFullNo": $("#desSubResponsibleUserId@(itemName)").text(),
+                        "ConformUserId": $("#txtConformUserId@(itemName)").val(),
+                        "ConformUserFullNo": $("#desConformUserId@(itemName)").text(),
+                        "QcStatus": "F",
+                        "Remark": $("#txtRemark@(itemName)").val()
+                    }
+
+                    barcodeQcRecordJson.barcodeQcRecordInfo.push(inputBarcodeQcRecordInfo);
+                }
+            }
+        }
+
+        if (barcodeQcRecordJson.barcodeQcRecordInfo.length == barcodeNoLeg@(itemName)) {
+            $("#btnEdit@(itemName)").hide();
+            $("#cboQcResultQ@(itemName)").val("P");
+        }
+
+        if (qcType@(itemName) == "TQC") {
+            $("#btnEdit@(itemName)").hide();
+            $("#cboQcResultQ@(itemName)").val("");
+        }
+    }
+
+    function Close@(itemName)() {
+        swal.fire({
+            titleText: "確定要取消此次單據?",
+            text: "您尚未完成工程檢!若關閉資料將遺失並無法復原!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $("#modal@(itemName)").modal("hide");
+                barcodeQcRecordJson.barcodeQcRecordInfo = [];
+                $("#txtBarcodeNoQ@(itemName)").val("");
+                $("#txtQcItemNameQ@(itemName)").val("");
+            }
+        });
+    }
+
+    function Return@(itemName)() {
+        ResetForm(objForm@(itemName));
+        Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode, #ledDefect@(itemName), #ledRepair@(itemName)");
+    }
+</script>
+                )

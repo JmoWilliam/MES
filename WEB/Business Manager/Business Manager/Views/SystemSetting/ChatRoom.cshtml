@@ -1,0 +1,143 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ChatRoom";
+    string itemNameText = "聊天室";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtUserName@(itemName)">暱稱 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtUserName@(itemName)" name="txtUserName@(itemName)" placeholder="請輸入暱稱"
+                                       data-msg-required="請輸入暱稱" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtRoom@(itemName)">房號 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtRoom@(itemName)" name="txtRoom@(itemName)" placeholder="請輸入房號"
+                                       data-msg-required="請輸入房號" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSend@(itemName)">發送文字</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <textarea class="form-control" id="txtSend@(itemName)" name="txtSend@(itemName)"
+                                          rows="2" placeholder="請輸入發送文字"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtReceive@(itemName)">接收文字</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <textarea class="form-control" id="txtReceive@(itemName)" name="txtReceive@(itemName)"
+                                          rows="2" readonly></textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-info" id="startButton"><i class="fas fa-wifi"></i>開啟連線</button>
+                <button type="button" class="btn btn-warning" id="sendButton"><i class="fas fa-paper-plane"></i>發送</button>
+                <button type="button" class="btn btn-danger" id="closeButton"><i class="fas fa-wifi-slash"></i>結束連線</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+)
+
+@Html.Resource("js",
+    @<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        'use strict';
+
+        const userName = document.querySelector('input#txtUserName@(itemName)');
+        const inputRoom = document.querySelector('input#txtRoom@(itemName)');
+        const dataChannelSend = document.querySelector('textarea#txtSend@(itemName)');
+        const dataChannelReceive = document.querySelector('textarea#txtReceive@(itemName)');
+        const startButton = document.querySelector('button#startButton');
+        const sendButton = document.querySelector('button#sendButton');
+        const closeButton = document.querySelector('button#closeButton');
+
+        let socket;
+        let room;
+
+        startButton.onclick = () => {
+            socket = io('wss://bm.zy-tech.com.tw:4443')
+
+            socket.on('joined', (room, id) => {
+                startButton.disabled = true
+                closeButton.disabled = false
+                dataChannelSend.disabled = false
+                sendButton.disabled = false
+            })
+
+            socket.on('leave', (room, id) => {
+                startButton.disabled = false
+                closeButton.disabled = true
+                dataChannelSend.disabled = true
+                sendButton.disabled = true
+
+                socket.disconnect()
+            })
+
+            socket.on('message', (room, data) => {
+                dataChannelReceive.scrollTop = dataChannelReceive.scrollHeight
+                dataChannelReceive.value = dataChannelReceive.value + data + '\n'
+            })
+
+            socket.on('disconnect', (reason) => {
+                startButton.disabled = false
+                closeButton.disabled = true
+                dataChannelSend.disabled = true
+                sendButton.disabled = true
+            })
+
+            room = inputRoom.value
+            socket.emit('join', room)
+        }
+
+        sendButton.onclick = () => {
+            let data = dataChannelSend.value
+            data = userName.value + ':' + data
+            socket.emit('message', room, data)
+            dataChannelSend.value = ''
+        }
+
+        closeButton.onclick = () => {
+            room = inputRoom.value
+            socket.emit('leave', room)
+        }
+
+        dataChannelSend.onkeypress = (event) => {
+            if (event.keyCode === 13) {
+                let data = dataChannelSend.value
+                data = userName.value + ':' + data
+                socket.emit('message', room, data)
+                dataChannelSend.value = ''
+                event.preventDefault()
+            }
+        }
+    </script>
+)

@@ -1,0 +1,608 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewBarcodeControl";
+    string itemNameText = "查看條碼控管資料";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         #listDataViewBarcodeControl .table-custom {
+             max-height: 55vh;
+         }
+
+        tr.disabled {
+            background-color: #f5f5f5;
+            color: #999;
+        }
+
+        tr.available {
+            background-color: #f0f8ff;
+        }
+    </style>
+                                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">控管品號: <span class="sub-text" id="desMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">控管品名: <span class="sub-text" id="desMtlItemName@(itemName)"></span></span>
+                    <span class="sub-title">目前數量: <span class="sub-text" id="desTotalBarcodeQty@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:Close@(itemName)();"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtBarcodeNo@(itemName)" name="txtBarcodeNo@(itemName)"
+                                               placeholder="請輸入條碼"
+                                               onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <select id="cboOrderBy@(itemName)" class="form-control">
+                                            <option value="CreateDate" selected>日期排序</option>
+                                            <option value="BarcodeNo">條碼排序</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <select id="cboKeyenceId@(itemName)" class="form-control"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-secondary" href="javascript: LotScanner@(itemName)()"><i class="fad fa-print-search"></i>批量掃描</a>
+                                    </div>
+                                    @*<div class="col-auto">
+                                        <a class="btn btn-success" href="javascript: PopPackage@(itemName)()"><i class="fas fa-plus"></i>包裝領料</a>
+                                    </div>*@
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col" style="max-width: 200px;">產品條碼</th>
+                                        <th scope="col" style="min-width: 115px;">條碼數量</th>
+                                        <th scope="col" style="max-width: 200px;">建立人員</th>
+                                        <th scope="col" style="max-width: 250px;">建立時間</th>
+                                        <th class="text-center" scope="col" style="min-width: 115px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Keyence Modal -->
+<div class="modal fade" id="modalKeyenceScanner@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    Keyence批量領料
+                    <span class="sub-title">總共掃描數量: <span class="sub-text" id="desScanNumber@(itemName)"></span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id=" ">
+                    <div class="col-6" style="margin-bottom: 5px;">
+                        <select id="cboKeyenceIdQ@(itemName)" class="form-control"></select>
+                    </div>
+                    <div class="col-6" style="margin-bottom: 5px;">
+                        <button class="btn btn-success" onclick="LotScanner@(itemName)()" style="height: 100%;">
+                            <i class="fad fa-print-search"></i>重新掃描
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblJigBarcode@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">產品條碼</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id=" "></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                <button type="button" class="btn btn-success" onclick="KeyenceProcess@(itemName)()"><i class="fas fa-paper-plane"></i>批量送出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Package Modal -->
+<div class="modal fade" id="modalPackageBacode@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    包裝領料
+
+                    <span class="sub-title">領料數: <span class="sub-text" id="desPaclageNum@(itemName)"></span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id=" ">
+                    <div class="col-auto">
+                        <input type="text" class="form-control" id="txtPackageBarcodeNo@(itemName)" name="txtPackageBarcodeNo@(itemName)"
+                               placeholder="請輸入條碼"
+                               onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblPackageBarcode@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-cell"><input type="checkbox" id="cbxSelectAll@(itemName)" />選擇</th>
+                                        <th scope="col">產品條碼</th>
+                                        <th scope="col">產品品號</th>
+                                        <th scope="col">產品品名</th>
+                                        <th scope="col">條碼數量</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id=" "></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                <button type="button" class="btn btn-success" onclick="PackageMR@(itemName)()"><i class="fas fa-paper-plane"></i>批量領料</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let mrDetailId@(itemName);
+        let keyenceBarcodeList@(itemName);
+
+        let totalBarcodeQty@(itemName);
+        let nRQty@(itemName);
+
+
+        function Pop@(itemName)(MrDetailId, MtlItemNo, MtlItemName, TotalBarcodeQty, MRQty) {
+            $("#desTotalBarcodeQty@(itemName)").html(TotalBarcodeQty);
+            $("#txtBarcodeNo@(itemName)").val("");
+            mrDetailId@(itemName) = MrDetailId;
+            $("#desMtlItemNo@(itemName)").html(MtlItemNo);
+            $("#desMtlItemName@(itemName)").html(MtlItemName);
+
+            totalBarcodeQty@(itemName) = TotalBarcodeQty;
+            nRQty@(itemName) = MRQty;
+
+
+            $("#cboOrderBy@(itemName)").val("CreateDate");
+
+            Query@(itemName)();
+
+            GetExcessFlagMaterialDetail();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            if (!isMobile) {
+                $("#cboKeyenceId@(itemName), #cboKeyenceIdQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboKeyenceId@(itemName)", "@Url.Action("GetKeyence", "ProductionHistory")", { "Status": "A" }, "", "ALL", "", "KeyenceDesc", "KeyenceId");
+            ComboBoxs.Default("#cboKeyenceIdQ@(itemName)", "@Url.Action("GetKeyence", "ProductionHistory")", { "Status": "A" }, "", "ALL", "", "KeyenceDesc", "KeyenceId");
+
+            setTimeout(function (i, item) {
+                $("#txtBarcodeNo@(itemName)").focus();
+            },300);
+        }
+
+        $("#cboKeyenceIdQ@(itemName)").change(function () {
+            ComboBoxs.Default("#cboKeyenceId@(itemName)", "@Url.Action("GetKeyence", "ProductionHistory")", { "Status": "A" }, "", "ALL", "", "KeyenceDesc", "KeyenceId");
+            $("#cboKeyenceId@(itemName)").val($("#cboKeyenceIdQ@(itemName)").val());
+        });
+
+        $("#txtBarcodeNo@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                Save@(itemName)();
+                return false;
+            }
+        });
+
+        $("#txtPackageBarcodeNo@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                GetPackageBarcode@(itemName)()
+                return false;
+            }
+        });
+
+        $("#cboOrderBy@(itemName)").change(function () {
+            Query@(itemName)();
+        });
+
+        $("#queryForm@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetMrBarcodeRegister", "Inventory")";
+            let postData = {
+                "OrderBy": $("#cboOrderBy@(itemName)").val(),
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MrDetailId": mrDetailId@(itemName),
+                "BarcodeNo": $("#txtBarcodeNoQ@(itemName)").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        $("#desTotalBarcodeQty@(itemName)").html(item.TotalBarcodeQty);
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td scope="col">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}${item.TrayBarcode == `Y` ? `(${item.TrayNo})` : ``}" style="max-width: 200px;">
+                                            ${item.BarcodeNo}<code>${item.TrayBarcode == `Y` ? `(${item.TrayNo})` : ``}</code>
+                                            <br>
+                                            ${JudgeItemValue@(itemName)(`${item.ItemValue}`)}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeQty}" style="min-width: 115px;">${item.BarcodeQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserNo}${item.UserName}" style="max-width: 150px;"><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 200px;">${item.CreateDate}</td>
+                                        <td class="text-center active-content" scope="col" style="min-width: 115px;">
+                                            <!--刪除-->
+                                            <a class="active-link auth-barcode-control" href="javascript:Delete@(itemName)('${item.BarcodeRegisterId}');">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </td>
+                                      </tr>`;
+
+                        function JudgeItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null" && itemValue != null) {
+                                let itemValueJson = JSON.parse(itemValue);
+                                let dateCode = "";
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<code>${item2.ItemValue}</code><br>`;
+
+                                    if (k == 0) {
+                                        dateCode = item2.DateCode;
+                                    }
+
+                                    if (k == itemValueJson["data"].length - 1 && dateCode != undefined) {
+                                        innerHtml += `<code>${dateCode}</code><br>`;
+                                    }
+                                });
+                            }
+
+                            return innerHtml;
+                        }
+
+                        $("#tblPackageBarcode@(itemName) input[type='checkbox'][data-barcode-id]").each(function () {
+                            var checkbox = $(this);
+                            var row = checkbox.closest("tr");;
+                            var rowbarcodeNo = checkbox.data("barcode-no");
+
+                            if (rowbarcodeNo === item.BarcodeNo) {
+                                // 相同條碼的行
+                                row.addClass("disabled").removeClass("available");
+                                checkbox.prop("disabled", true);
+                                checkbox.prop("checked", false);
+                            } else {
+                                // 不同條碼的行
+                                //row.removeClass("disabled").addClass("available");
+                                //checkbox.prop("disabled", false);
+                                
+                            }
+                        });
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(BarcodeRegisterId) {
+            $("#BarcodeRegisterId").val(BarcodeRegisterId ? BarcodeRegisterId : 0);
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+            if (BarcodeRegisterId > 0) {
+                let targetUrl = "@Url.Action("GetMrBarcodeRegister", "Inventory")";
+                let postData = {
+                    "BarcodeRegisterId": BarcodeRegisterId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtBarcodeNo@(itemName)").val(item.BarcodeNo);
+                    });
+                }
+                else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+        }
+
+        function Save@(itemName)() {
+            let barcodeNo = $("#txtBarcodeNo@(itemName)").val();
+            if (barcodeNo != "") {
+                let targetUrl = "@Url.Action("AddMrBarcodeRegister", "Inventory")";
+                let postData = {
+                    "MrDetailId": mrDetailId@(itemName),
+                    "BarcodeNo": $("#txtBarcodeNo@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                if (result) {
+                    Return@(itemName)();
+                    ReturnMaterialDetail();
+                }
+            }
+            else {
+                alert("條碼不能為空!", alert, 500);
+            }
+        }
+
+        function Delete@(itemName)(BarcodeRegisterId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMrBarcodeRegister", "Inventory")";
+                    let postData = {
+                        "BarcodeRegisterId": BarcodeRegisterId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                        ReturnMaterialDetail();
+                    }
+                }
+            });
+        }
+
+        function LotScanner@(itemName)() {
+            $("#desScanNumber@(itemName)").html("0");
+
+            let targetUrl = "@Url.Action("KeyenceScan", "ProductionHistory")";
+            let postData = {
+                "KeyenceId": $("#cboKeyenceId@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                keyenceBarcodeList@(itemName) = data.result.m_StringValue.split(':')[1].split(',');
+
+                if (keyenceBarcodeList@(itemName).length <= 0) {
+                    alert("掃描不到任何一筆條碼資訊!!");
+                    return false;
+                }
+
+                let innerHtml = '';
+                $.each(keyenceBarcodeList@(itemName), function (i, item) {
+                    innerHtml += `<tr>
+                                    <td scope="col" style="width: 20%">${i + 1}.</td>
+                                    <td scope="col" style="width: 80%">${item}</td>
+                                  </tr>`;
+                });
+
+                $("#modalKeyenceScanner@(itemName) tbody").html(innerHtml);
+                TableComponentInit();
+
+                $("#desScanNumber@(itemName)").html(keyenceBarcodeList@(itemName).length);
+                ComboBoxs.Default("#cboKeyenceIdQ@(itemName)", "@Url.Action("GetKeyence", "ProductionHistory")", { "Status": "A" }, ""+$("#cboKeyenceId@(itemName)").val()+"", "ALL", "", "KeyenceDesc", "KeyenceId");
+                $("#modalKeyenceScanner@(itemName)").modal("show");
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+
+        function KeyenceProcess@(itemName)() {
+            if (keyenceBarcodeList@(itemName).length <= 0) {
+                alert("條碼不能為空!", alert, 500);
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("AddKeyenceMrBarcodeRegister", "Inventory")";
+            let postData = {
+                "MrDetailId": mrDetailId@(itemName),
+                "keyenceBarcodeList": keyenceBarcodeList@(itemName).toString()
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, false);
+
+            if (result) {
+                Return@(itemName)();
+                ReturnMaterialDetail();
+                $("#modalKeyenceScanner@(itemName)").modal("hide");
+            }
+        }
+
+        function PopPackage@(itemName)() {
+            $("#desPaclageNum@(itemName)").html(totalBarcodeQty@(itemName) + "/" + nRQty@(itemName));
+            $("#modalPackageBacode@(itemName)").modal("show");
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-barcode-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-barcode-id]").not(":disabled").prop("checked", false);
+                }
+            });
+         
+        }
+
+        function GetPackageBarcode@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetPackageInBarcodes", "Inventory")";
+            let postData = {
+                "BarcodeNo": $("#txtPackageBarcodeNo@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                
+
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td class="text-center" style="max-width: 150px; min-width: 135px;">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-barcode-no="${item.BarcodeNo}" data-barcode-id="${item.BarcodeId}" data-barcode-qty="${item.BarcodeQty}" data-mtl-no="${item.MtlItemNo}" value="${item.BarcodeId}"/>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                        <td class="product-code" data-toggle="tooltip" title="${item.BarcodeNo}" style="max-width: 150px;"><span class="stack-title"></span>${item.BarcodeNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 150px;"><span class="stack-title"></span>${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 150px;"><span class="stack-title"></span>${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeQty}" style="max-width: 150px;"><span class="stack-title"></span>${item.BarcodeQty}</td>
+
+                                      </tr>`;
+
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblPackageBarcode@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Query@(itemName)()
+            //Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function PackageMR@(itemName)() {
+            let barcodeList = []
+            if ($("input[type='checkbox'][data-barcode-id]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-barcode-id]:checked"), function (i) {
+                    let barcodeNo = $(this).data("barcode-no");
+
+                    barcodeList.push(barcodeNo);
+
+
+                });
+            }
+
+            let targetUrl = "@Url.Action("AddKeyenceMrBarcodeRegister", "Inventory")";
+            let postData = {
+                "MrDetailId": mrDetailId@(itemName),
+                "keyenceBarcodeList": barcodeList.toString()
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, false);
+
+            if (result) {
+                $("#txtPackageBarcodeNo@(itemName)").val("")
+                             GetPackageBarcode@(itemName)()
+
+                $("#modalPackageBacode@(itemName)").modal("hide");
+                 Query@(itemName)()
+            }
+        }
+
+        function Return@(itemName)() {
+            //ResetForm(objForm@(itemName));
+            //Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            $("#txtBarcodeNo@(itemName)").val("");
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ReturnMaterialDetail();
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+                                                )

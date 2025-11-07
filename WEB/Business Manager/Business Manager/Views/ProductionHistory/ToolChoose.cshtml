@@ -1,0 +1,272 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ToolChoose";
+    string itemNameText = "工具選擇";
+    string authority = ViewBag.authority;
+
+    //string UserId = "-1";
+    //UserId = Request["UserId"].ToString();
+    string UserId = Session["UserId"].ToString();
+}
+@Html.Resource("css",
+@<link href="@Url.Content("~/Content/mes_scan.min.css")?20220623v1" rel="stylesheet" />
+                                                )
+@Html.Resource("css",
+@<style>
+    .container_full {
+        margin-top: 0;
+    }
+
+     /* login_03 */
+     .select-content {
+         display: flex;
+         justify-content: space-around;
+         flex-direction: row;
+     }
+
+         .select-content .select-item {
+             display: flex;
+             width: 50%;
+         }
+
+             .select-content .select-item .select-self {
+                 flex-direction: column;
+             }
+
+                 .select-content .select-item .select-self a, .select-content .select-item .select-self .select-font {
+                     color: #fff;
+                 }
+
+                 .select-content .select-item .select-self span {
+                     font-size: 18px;
+                     color: #fff;
+                 }
+
+     /* login_03 彈窗 機台&站別選擇表格 */
+     .dataselect_table {
+         display: table;
+         border-collapse: collapse;
+         text-align: center;
+         width: 100%;
+         /* margin-top: 0.5rem; */
+     }
+
+     .dataselect_td .button_choose {
+         padding: 10px 20px;
+         background-color: #a768f3;
+         color: #fff;
+         border-radius: 10px;
+         box-shadow: none;
+     }
+
+         .dataselect_td .button_choose:hover {
+             background-color: #a768f3;
+         }
+
+
+     .dataselect_td, .dataselect_th {
+         padding: 0.3rem;
+         font-size: 16px;
+         line-height: 2.2;
+         border-bottom: 1px solid #dee2e6;
+     }
+
+     .dataselect_th {
+         display: table-cell;
+         background-color: #ccc;
+         font-weight: bold;
+     }
+
+     .dataselect_tr:nth-of-type(odd) {
+         background-color: rgba(0,0,0,.03);
+     }
+
+
+     .line-active {
+         background-color: #e3b9ff;
+     }
+
+
+
+     .form-control {
+         font-size: 1rem;
+     }
+</style>
+                                                )
+<div class="container" id="MesConsole">
+    <div class="login-content">
+
+        <div class="login-form">
+            <div class="logo">
+                <a>
+                    <img src="@Url.Content("~/Content/images/logo.png")" />
+                </a>
+            </div>
+            <input type="hidden" id="txtMfgOrderId" value="-1" />
+            <div class="input-group">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> 庫房
+                </span>
+                <select class="form-control" id="cboToolInventory@(itemName)" name="cboToolInventory@(itemName)">
+                    <option value="">-- 請選擇庫房 --</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> 儲位
+                </span>
+                <select class="form-control" id="cboToolLocator@(itemName)" name="cboToolLocator@(itemName)">
+                    <option value="">-- 請選擇儲位 --</option>
+                </select>
+            </div>
+
+            @*<div class="input-group">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> 類別
+                </span>
+                <select class="form-control" id="cboTransactionType@(itemName)" name="cboTransactionType@(itemName)">
+                    <option value="">-- 請選擇交易類別 --</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> 日期 
+                </span>
+                <input type="text" class="form-control" id="txtTransactionDate@(itemName)" name="txtTransactionDate@(itemName)"
+                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+            </div>*@
+
+            <div class="input-group">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> 儲位編號
+                </span>
+                <input type="text" class="form-control form-control-add" id="txtToolLocatorKey@(itemName)"
+                       aria-describedby="basic-addon13" placeholder="請輸入儲位編號">
+            </div>
+
+            <button type="button" class="btn-sure btn btn-success btn-flat mb-2 weight-600"
+                    onclick="javascript: EnterMesScanningInterface();">
+                確定
+            </button>
+
+            <div class="logout" style="width:unset;padding:unset;margin-top: 10px;">
+                <a class="btn" onclick="javascript:Logout@(itemName)();">
+                    登出<i class="fa fa-sign-out ml-1" style=""></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+@<script>
+    let deviceIp@(itemName) = "";
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 10
+    };
+
+    let ToolLocatorNo = "";
+
+
+
+    $(document).ready(function () {
+        $("#txtToolKey@(itemName)").focus();
+        ComboBoxs.Default("#cboToolInventory@(itemName)", "@Url.Action("GetToolInventory", "Tool")", "", "", "NA", "", "ToolInventoryName", "ToolInventoryId");
+        ComboBoxs.Default("#cboToolLocator@(itemName)", "@Url.Action("GetToolLocator", "Tool")", "", "", "NA", "", "ToolLocatorName", "ToolLocatorId");
+        //ComboBoxs.Default("#cboTransactionType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "ToolTransactions.TransactionType", "TypeNo":"In" }, "", "In", "", "TypeName", "TypeNo");
+
+        $("#cboToolInventory@(itemName)").change(function () {
+            ComboBoxs.Default("#cboToolLocator@(itemName)", "@Url.Action("GetToolLocator", "Tool")", { "ToolInventoryId": $("#cboToolInventory@(itemName)").val(), "Status": "A" }, "", "NA", "", "ToolLocatorName", "ToolLocatorId");
+        });
+         //日期欄位 Suites.DateDropper(功能開啟) Suites.SetDateDropper(日期設置)
+        Suites.DateDropper("#txtTransactionDate@(itemName)");
+        //開單日預設今日
+        let currentDate = new Date();
+        Suites.SetDateDropper("#txtTransactionDate@(itemName)", currentDate);
+    });
+
+    $("#txtToolLocatorKey@(itemName)").keydown(function (event) {
+        ToolLocatorNo = $("#txtToolLocatorKey@(itemName)").val();
+        var keycode = (event.keyCode ? event.keyCode : event.which);
+        if (keycode == 13) {
+            SelectToolKey@(itemName)();
+            
+           
+        }
+    });
+
+    function SelectToolKey@(itemName)() {
+
+        if ($("#txtToolLocatorKey@(itemName)").val() == "") {
+            alert("儲位編號不可為空", "alert", 0);
+        } else {
+            let targetUrl = "@Url.Action("GetToolLocator", "Tool")";
+            let postData = {
+                "ToolLocatorNo": ToolLocatorNo.toUpperCase()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    deviceIp@(itemName) = GetDeviceIp();
+                    $.each(data.result, function (i, item) {
+                        ToolInventoryId = item.ToolInventoryId
+                        ToolLocatorId = item.ToolLocatorId
+                        
+                    });
+                    ToolLocatorNo = ""
+                    $("#txtToolLocatorKey@(itemName)").val("");
+                    ComboBoxs.Default("#cboToolInventory@(itemName)", "@Url.Action("GetToolInventory", "Tool")", "", "", "NA", "", "ToolInventoryName", "ToolInventoryId");
+                    ComboBoxs.Default("#cboToolLocator@(itemName)", "@Url.Action("GetToolLocator", "Tool")", "", "", "NA", "", "ToolLocatorName", "ToolLocatorId");
+                } else {
+                    alert("查無儲位，請確認儲位是否有啟用", "alert", 0);
+                    $("#txtToolLocatorKey@(itemName)").val("");
+                    return
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+                return
+            }
+        }
+        window.location.href = "@Url.Action("ToolTrade", "ProductionHistory")?UserId=" + @UserId + "&ToolInventoryId=" + ToolInventoryId + "&ToolLocatorId=" + ToolLocatorId;
+    }
+
+    function GetDeviceIp() {
+        let deviceIp = "";
+        let targetUrl = "@Url.Action("GetDeviceIp", "ProductionHistory")";
+        let postData = {
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            deviceIp  = data.result;
+        }
+        return deviceIp
+    }
+
+    function EnterMesScanningInterface() {
+        if (ToolLocatorNo != "" )   {
+            SelectToolKey@(itemName)();
+        } else if ($("#cboToolInventory@(itemName)").val() != "" && $("#cboToolLocator@(itemName)").val() != "") {
+            window.location.href = "@Url.Action("ToolTrade", "ProductionHistory")?UserId=" + @UserId + "&ToolInventoryId=" + $("#cboToolInventory@(itemName)").val() + "&ToolLocatorId=" + $("#cboToolLocator@(itemName)").val();
+            ToolLocatorNo = ""
+            $("#txtToolLocatorKey@(itemName)").val("");
+            ComboBoxs.Default("#cboToolInventory@(itemName)", "@Url.Action("GetToolInventory", "Tool")", "", "", "NA", "", "ToolInventoryName", "ToolInventoryId");
+            ComboBoxs.Default("#cboToolLocator@(itemName)", "@Url.Action("GetToolLocator", "Tool")", "", "", "NA", "", "ToolLocatorName", "ToolLocatorId");
+        }
+    }
+
+    function Logout@(itemName)() {
+        let targetUrl = "@Url.Action("Logout", "User")";
+        let postData = {
+        };
+
+        var result = DataAccess.Update(targetUrl, postData, false, false);
+
+        if (result) window.location.reload();
+    }
+</script>
+)

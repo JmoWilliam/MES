@@ -1,0 +1,304 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "OrderHistory";
+    string itemNameText = "點餐系統";
+
+    ViewBag.Title = itemNameText;
+
+    @*判斷代訂選擇人員*@
+    int UserId = -1;
+    if (Request["UserId"] != null)
+    {
+        UserId = int.TryParse(Request["UserId"].ToString(), out int tempInt) ? Convert.ToInt32(Request["UserId"].ToString()) : -1;
+    }
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="body-mob">
+    <header>
+        <div class="header-content">
+            <div class="header-title">
+                <div class="page-title">
+                    <a class="link" href="@Url.Action("Account", "FoodOrdering")">
+                        <i class="fas fa-long-arrow-left"></i>
+                    </a>
+                    點餐紀錄
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="main-history">
+        <p class="page-user"><span id="desUser@(itemName)"></span></p>
+        <div class="page-title">過去點餐</div>
+        <div class="collapse-menu  history-order" id="historyOrder@(itemName)"></div>
+        <!--無資料提示-->
+        <main class="file-empty" style="height: calc(100vh - 105px); display:none;">
+            <div style="padding:50px 0;">
+                <div class="icon-check" style="overflow: hidden; margin: 0 auto;position: relative;">
+                    @*<i class="far fa-transporter-empty"></i>*@
+                    <img src="~/Areas/EBP/Content/images/food-ordering/file-empty-icon.png" alt="Alternate Text" />
+                </div>
+                <p class="modal-text" style="font-size:22px;">目前沒有資料！</p>
+            </div>
+        </main>
+    </main>
+</div>
+
+<footer class="nav">
+    <div class="nav-content">
+        <ul class="nav-menu" style="">
+            <li>
+                <a href="@Url.Action("Index", "FoodOrdering")" class="nav-link">
+                    <i class="far fa-home-lg"></i>
+                    <span>首頁</span>
+                </a>
+            </li>
+            <li>
+                <a href="@Url.Action("DiningCar", "FoodOrdering")" class="nav-link">
+                    <i class="fas fa-utensils-alt"></i>
+                    <span>我的餐車</span>
+                    <span class="number-display" style="display: none;"></span>
+                </a>
+            </li>
+            <li>
+                <a href="@Url.Action("Account", "FoodOrdering")" class="nav-link active">
+                    <i class="fas fa-user-circle"></i>
+                    <span>帳號</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</footer>
+
+@Html.Resource("js",
+    @<script>
+        let userId@(itemName) = -1;
+        let Datas@(itemName) = new DataControl@(itemName)();
+
+        $(document).ready(function () {
+            //判斷是否有接到傳入的人員ID
+            userId@(itemName) = @(UserId);
+
+            //未取到傳入之人員ID，則取登入者ID
+            if (userId@(itemName) <= 0) {
+                GetUserInfo@(itemName)();
+            }
+
+            //判斷餐車筆數
+            if (sessionStorage.getItem("mealCart")) {
+                cartJson = JSON.parse(sessionStorage.getItem("mealCart"));
+
+                if (cartJson.mealInfo.length > 0) {
+                    $(".number-display").show();
+                    $(".number-display").html(cartJson.mealInfo.length);
+                }
+            }
+
+            InitData@(itemName)();
+
+        });
+
+        function GetUserInfo@(itemName)() {
+            let targetUrl = "@Url.Action("GetLoginByKey", "User", new { Area = "" })";
+            let postData = {
+                "UserNo": $.cookie("Login"),
+                "KeyText": $.cookie("LoginKey")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                userId@(itemName) = data.returnData.UserId;
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function InitData@(itemName)() {
+            Datas@(itemName).GetUser@(itemName)();
+            Datas@(itemName).GetOrderHistory@(itemName)();
+        }
+
+        function DataControl@(itemName)() {
+            //取得過去餐點資訊
+            addMethod(this, "GetOrderHistory@(itemName)", function () {
+                $(".history-order").hide();
+
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetOrderHistory", "FoodOrdering")";
+                let postData = {
+                    "UserId": "@(UserId)"
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<div class="collapse-panel">
+                                             <div class="collapse-heading">
+                                                 <a jacascript:void(0) class="collapse-triger">
+                                                     <span class="title-date">${item.UmoDate}</span><br />
+                                                     餐點 ${item.ItemQty}份`;
+                            innerHtml += `</a>
+                                                 <span class="collapse-controls">
+                                                     <a class="fa fa-angle-down" href="#"></a>
+                                                 </span>
+                                             </div>
+                                             <div class="collapse-body">`;
+
+                            innerHtml += `<div class="order-menu">
+                                            <div class="order-panel">
+                                              <div class="order-heading">
+                                                <a class="order-triger" href="javascript:void(0);">
+                                                 <div class="food-content">
+                                                    <h5 class="order-sub-title">
+                                                        <i class="fas fa-cheeseburger"></i> 餐點內容
+                                                    </h5>
+                                                  `;
+                            innerHtml += MealData@(itemName)(item.UmoDetail);
+                            innerHtml += `</div>
+                                                </a>
+                                              </div>
+                                              <div class="order-body">
+                                                <div class="amount-content">
+                                                 <div class="total" >
+                                                    <h5 class="order-sub-title">
+                                                        <i class="fas fa-sack-dollar"></i>金額總計
+                                                        <span class="price">$ ${(item.UmoAmount - item.UmoDiscount)}</span>
+                                                    </h5>
+                                                 </div>
+                                                  <div class="detail">
+                                                    <p>
+                                                      <span>餐點合計</span>
+                                                      <span class="price">$ ${item.UmoAmount}</span>
+                                                    </p>
+                                                    <p>
+                                                      <span>優惠時段補助</span>
+                                                      <span class="price red">-$ ${item.UmoDiscount}</span>
+                                                    </p>
+                                                    <p class="date"> 實際訂餐時間：${item.CreateDate}</p>
+                                                  </div>
+
+                                                </div>`;
+                            
+                            innerHtml += `</div>
+                                            </div>
+                                        </div>`;
+                            innerHtml += `   </div>
+                                          </div>`;
+                        });
+                    } else {
+                        innerHtml += `<div class="order-panel" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                     </div>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#historyOrder@(itemName)").html(innerHtml);
+                $(".history-order").show();
+
+                //開合選單
+                $('.collapse-heading').click(function () {
+                    $('.collapse-body').slideUp();
+                    $('.collapse-controls').removeClass('open');
+                    $('.collapse-heading').removeClass('open');
+                    if ($(this).next('.collapse-body').css('display') == 'block') {
+                        $('.collapse-body').slideUp('');
+                    }
+                    else {
+                        $(this).next('.collapse-body').slideDown();
+                        $(this).children('.collapse-controls').addClass('open');
+                        $(this).addClass('open');
+                    }
+                });
+            });
+
+            addMethod(this, "GetUser@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetUser", "BasicInformation", new { Area = "" })";
+                let postData = {
+                    "UserId": userId@(itemName)
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#desUser@(itemName)").html(`${item.UserNo} ${item.UserName}`);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+        }
+
+        function MealData@(itemName)(source) {
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `
+                                <div class="food-block">
+                                    <div class="item-img" >
+                                        <img src="/Areas/EBP/Content/images/food-ordering/meal-01.png" >
+                                    </div>
+                                    <div class="item-list">
+                                        <p class="name-para">
+                                          <span>  ${json.data[x].MealName}</span>
+                                        </p>
+                                        <p>
+                                            <span class="detail">${McDetailData@(itemName)(json.data[x].UmoAdditional)}</span>
+                                        </p>
+                                        <p>
+                                            <span class="detail-place"> ${TypeName(`UmoDetail.Pickup`, json.data[x].Pickup)}</span>
+                                        </p>
+                                        <p style="clear:both">
+                                            <span class="price">$ ${MealPrice(json.data[x].UmoDetailPrice, json.data[x].UmoAdditional)}</span>
+                                            <span class="qty">${json.data[x].UmoDetailQty}份</span>
+                                        </p>
+                                    </div>
+                                </div>`;
+                }
+            }
+
+            return html;
+        }
+
+        function McDetailData@(itemName)(json) {
+            let html = '';
+
+            if (json) {
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `${json.data[x].McDetailName}`;
+
+                    if (x < json.data.length - 1) html += `、`;
+                }
+            }
+
+            return html;
+        }
+
+        //計算餐點金額及數量
+        function MealPrice(price, json) {
+            let totalPrice = 0;
+
+            totalPrice += price;
+
+            if (json) {
+                for (var i = 0; i < json.data.length; i++) {
+                    totalPrice += json.data[i].UmoAdditionalPrice;
+                }
+            }
+
+            return totalPrice;
+        }
+    </script>
+)

@@ -1,0 +1,327 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "McDetail";
+    string itemNameText = "點餐系統";
+
+    string MealId = Request["MealId"] ?? "";
+    string MealDate = Request["MealDate"] ?? "";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="body-mob">
+    <header>
+        <div class="header-content">
+            <div class="header-title">
+                <div class="page-title">
+                    <a class="link" href="@Url.Action("/", "FoodOrdering")">
+                        <i class="fas fa-long-arrow-left"></i>
+                    </a>
+                    餐點
+                </div>
+
+                <div class="display-date">
+                    <i class="far fa-calendar-star"></i>
+                    <span id="desDate@(itemName)"></span>
+                </div>
+                <a href="/EBP/FoodOrdering/NumerousMenu" style="color:#ed836b;opacity:0;">
+                    <i class="fas fa-users"></i>
+                    <span>批量點餐</span>
+                </a>
+            </div>
+        </div>
+    </header>
+    <main style="height: calc(100vh - 105px);">
+      
+        <div class="item-page">
+           
+            <div class="order-item-img" style="">
+                <img id="imgMeal@(itemName)" src="" />
+            </div>
+
+            <div class="order-item-content">
+                <div class="text-block">
+                    <input type="hidden" id="txtMealName@(itemName)" />
+                    <input type="hidden" id="txtMealImage@(itemName)" />
+                    <input type="hidden" id="txtMealPrice@(itemName)" />
+                    <p id="desMealName@(itemName)"></p>
+                    <p class="price-color" id="desMealPrice@(itemName)"></p>
+                </div>
+            </div>
+        </div>
+        <div class="menu-pick-block" id="McDetail@(itemName)"></div>
+    </main>
+</div>
+
+<footer class="nav">
+    <div class="nav-content">
+        <div class="count-block" style="flex: 1;text-align: center;">
+            <div class="qty btn-operate">
+                <span class="color-grey"><i class="fas fa-minus-circle"></i></span>
+                <input type="number" class="count" id="qty" name="qty" value="1">
+                <span class="color-orange"> <i class="fas fa-plus-circle"></i></span>
+            </div>
+        </div>
+        <div style="flex: 2; padding: 0 10px;">
+            <a class="btn-right" href="javascript:void(0);" onclick="AddCart()">加入餐車</a>
+        </div>
+    </div>
+</footer>
+
+@Html.Resource("js",
+    @<script>
+        let Datas@(itemName) = new DataControl@(itemName)();
+
+        $(document).ready(function () {
+            InitData@(itemName)();
+
+            WeekDay("@(MealDate)", "#desDate@(itemName)");
+
+            $('.count').prop('disabled', true);
+            $(document).on('click', '.fa-plus-circle', function () {
+                $('.count').val(parseInt($('.count').val()) + 1);
+            });
+            $(document).on('click', '.fa-minus-circle', function () {
+                $('.count').val(parseInt($('.count').val()) - 1);
+                if ($('.count').val() == 0) {
+                    $('.count').val(1);
+                }
+            });
+        });
+
+        function InitData@(itemName)() {
+            Datas@(itemName).GetMcDetail@(itemName)();
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetMcDetail@(itemName)", function () {
+
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetMcDetail", "FoodOrdering")";
+                let postData = {
+                    "MealId": "@(MealId)",
+                    "MealDate": "@(MealDate)"
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#imgMeal@(itemName)").attr("src", `${item.MealImage == -1 ? `@Url.Content("~/Areas/EBP/Content/images/food-ordering/meal-01.png")` : `/Web/GetFile?fileId=${item.MealImage}`}`);
+                        $("#desMealName@(itemName)").html(item.MealName);
+                        $("#desMealPrice@(itemName)").html(`$${item.MealPrice}`);
+                        $("#txtMealName@(itemName)").val(item.MealName);
+                        $("#txtMealImage@(itemName)").val(item.MealImage);
+                        $("#txtMealPrice@(itemName)").val(item.MealPrice);
+
+                        innerHtml += `<div class="pick-block">
+                                        <div class="pick-title">
+                                          <span>取餐區</span>
+                                        </div>
+                                        <div  style="padding-top:10px;padding-bottom: 15px;">
+                                        <select class="form-control" id="cboPickupType@(itemName)" name="cboPickupType@(itemName)"
+                                            data-msg-required="請選擇取餐區" data-rule-required="true"></select>
+                                        </div>
+                                      </div>`;
+
+                        innerHtml += CategoryData@(itemName)(item.MealCategory);
+
+                        innerHtml += `<input type="hidden" id="txtUmrRemark" name="txtUmrRemark" />`;
+                        //innerHtml += `<div class="pick-block" style="">
+                        //                <div class="pick-title">
+                        //                    <span>備註</span>
+                        //                </div>
+                        //                <textarea style="margin-top:10px" class="form-control" id="txtUmrRemark" name="txtUmrRemark" rows="3"></textarea>
+                        //              </div>`;
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#McDetail@(itemName)").html(innerHtml);
+
+                ComboBoxs.Default("#cboPickupType@(itemName)", "@Url.Action("GetType", "BasicInformation", new { Area = "" })", { "TypeSchema": "UmoDetail.Pickup" }, "", "NA", "", "TypeName", "TypeNo");    //取餐區
+
+                @*$("#cboPickupType@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });*@
+            });
+        }
+
+        function CategoryData@(itemName)(source) {
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<div class="pick-block">
+                                <div class="pick-title">
+                                    <span>${json.data[x].CategoryName}</span>
+                                    ${json.data[x].CategoryType == `Y` ? `<span class="pick-choose grey">加購區</span>` : `<span class="pick-choose right">必填</span>`}
+                                </div>
+                                <div class="pick-box">
+                                    ${DetailData@(itemName)(json.data[x].MealCgId, json.data[x].CategoryName, json.data[x].CategoryType, JSON.stringify(json.data[x].McDetail))}
+                                </div>
+                            </div>`;
+                }
+            }
+
+            return html;
+        }
+
+        function DetailData@(itemName)(id, name, type, source) {
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<div class="pick-list">`;
+
+                    if (type == 'Y') {
+                        html += `<label class="control control--checkbox">
+                                    ${json.data[x].McDetailName}
+                                    <input type="checkbox" id="mcDetail_${id}_${json.data[x].McDetailId}" name="mcDetail_${id}_${json.data[x].McDetailId}"
+                                           data-mc-name="${name}" data-mc-detail-name="${json.data[x].McDetailName}" data-mc-detail-price="${json.data[x].McDetailPrice}" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                                <span class="pick-list-price">${json.data[x].McDetailPrice > 0 ? `+$ ${json.data[x].McDetailPrice}` : `免費`}</span>`;
+                    } else {
+                        html += `<label class="control control01 control--radio">
+                                    ${json.data[x].McDetailName}
+                                    <input type="radio" id="mcDetail_${id}_${json.data[x].McDetailId}" name="mcDetail_${id}"
+                                           data-mc-name="${name}" data-mc-detail-name="${json.data[x].McDetailName}" data-mc-detail-price="${json.data[x].McDetailPrice}"
+                                           ${x == 0 ? `checked` : ``} />
+                                    <span class="control__indicator"></span>
+                                </label>
+                                <span class="pick-list-price">${json.data[x].McDetailPrice > 0 ? `+$ ${json.data[x].McDetailPrice}` : `免費`}</span>`;
+                    }
+                    html += `</div>`;
+                }
+            }
+            return html;
+        }
+
+        function AddCart() {
+
+            let isValid = true;
+            let errorMsg = "";
+            
+            if ($("#cboPickupType@(itemName)").val() == "") {
+                isValid = false;
+                errorMsg += "請選擇取餐區";
+            }
+
+            if (isValid) {
+                let mealIndex = -1;
+                let categoryIndex = -1;
+                let cartJson = {
+                    userNo: $.cookie("Login"),
+                    mealDate: "@(MealDate)",
+                    totalQty: 0,
+                    totalPrice: 0,
+                    mealInfo: []
+                }
+
+                if (sessionStorage.getItem("mealCart")) {
+                    cartJson = JSON.parse(sessionStorage.getItem("mealCart"));
+                }
+
+                //判斷購物車內日期是否為同一天，不是就阻擋
+                if (cartJson.mealDate == "@(MealDate)") {
+
+                    let meal = {
+                        mealId: "@(MealId)",
+                        mealName: $("#txtMealName@(itemName)").val(),
+                        mealImage: $("#txtMealImage@(itemName)").val(),
+                        price: $("#txtMealPrice@(itemName)").val(),
+                        remark: $("#txtUmrRemark").val(),
+                        qty: $("#qty").val(),
+                        pickup: $("#cboPickupType@(itemName)").val(),
+                        categoryInfo: []
+                    }
+
+                    cartJson.mealInfo.push(meal);
+
+                    mealIndex = cartJson.mealInfo.length - 1;
+                    if ($("input[id^='mcDetail_']").length > 0) {
+                        if ($("input[id^='mcDetail_']:checked").length > 0) {
+                            isValid = true;
+                            let currentCg = -1;
+                            $.each($("input[id^='mcDetail_']:checked"), function (i) {
+                                let currentId = $(this).attr("id");
+                                let mealCgId = currentId.split('_')[1];
+                                let mcDetailId = currentId.split('_')[2];
+
+                                let category = {
+                                    mealCgId: mealCgId,
+                                    mealCgName: $(this).data("mc-name"),
+                                    mcDetailInfo: []
+                                }
+
+                                if (currentCg != mealCgId) {
+                                    let mcDetail = {
+                                        mcDetailId: mcDetailId,
+                                        mcDetailName: $(this).data("mc-detail-name"),
+                                        mcDetailPrice: $(this).data("mc-detail-price")
+                                    }
+
+                                    category.mcDetailInfo.push(mcDetail);
+
+                                    currentCg = mealCgId;
+
+                                    meal.categoryInfo.push(category);
+                                    categoryIndex = meal.categoryInfo.length - 1;
+                                } else {
+                                    let mcDetail = {
+                                        mcDetailId: mcDetailId,
+                                        mcDetailName: $(this).data("mc-detail-name"),
+                                        mcDetailPrice: $(this).data("mc-detail-price")
+                                    }
+
+                                    cartJson.mealInfo[mealIndex].categoryInfo[categoryIndex].mcDetailInfo.push(mcDetail);
+                                }
+                            });
+                        } else {
+                            swal.fire({
+                                title: "未選取餐點客製化項目。",
+                                icon: "error",
+                                allowOutsideClick: false,
+                                allowEscapeKey: false
+                            })
+                        }
+                    } else {
+                        isValid = true;
+                    }
+
+                    if (isValid == true) {
+                        sessionStorage.setItem("mealCart", JSON.stringify(cartJson))
+
+                        location.href = "@Url.Action("DiningCar", "FoodOrdering")";
+                    }
+                } else {
+                    swal.fire({
+                        title: "請先送出購物車餐點。",
+                        icon: "error",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    })
+                }
+            } else {
+                swal.fire({
+                    title: errorMsg,
+                    icon: "error",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                })
+            }
+        }
+    </script>
+)

@@ -1,0 +1,1536 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "CustomerProductInquiry";
+    string itemNameText = "客戶機種產品查詢";
+    string authority = ViewBag.authority;
+
+    string BarcodeNo = Request["BarcodeNo"] ?? "";
+    string Iframe = Request["Iframe"] ?? "";
+
+    ViewBag.Title = itemNameText;
+}
+
+<link href="@Url.Content("~/Content/customer_product_Inquiry.min.css")" rel="stylesheet" />
+
+@Html.Resource("css",
+    @<style>
+         .container {
+             margin-left: 0 !important;
+         }
+
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             vertical-align: middle !important;
+         }
+
+         .baseline .baseline-list {
+             padding-bottom: 9.6px !important;
+         }
+
+             .baseline .baseline-list:after {
+                 border: none !important;
+                 top: 27px !important;
+             }
+
+         .txt-skyblue {
+             font-size: 87.5%;
+         }
+
+         iframe {
+             width: 100%;
+             height: 80vh;
+             aspect-ratio: 16 / 9;
+         }
+
+        /* 收摺按鈕樣式 */
+        .collapse-toggle {
+            transition: all 0.3s;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+        }
+
+            .collapse-toggle i {
+                transition: transform 0.3s;
+            }
+
+        /* 讓表單收摺動畫更平滑 */
+        .collapsible-form {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* 調整卡片標頭布局 */
+        .card-header {
+            padding: 0.75rem 1rem;
+        }
+
+        /* 當表單收摺時的樣式 */
+        .collapsible-form.collapsing {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        /* 標題樣式 */
+        .search-title {
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+
+        .main-item-card {
+            overflow: auto;
+            max-height: 65vh;
+        }
+
+        .query-navbar {
+            display: flex;
+            align-items: center;
+        }
+
+        .collapse {
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .query-info {
+            width: 100%;
+        }
+
+        .query-btn {
+            text-align: initial;
+            width: 100%;
+        }
+
+        .toggle-btn {
+            display: none;
+        }
+
+        @@media only screen and (max-width: 768px) {
+            .container-fluid {
+                padding-right: 0;
+                padding-left: 0;
+            }
+
+            .main-item-card {
+                max-height: inherit;
+                padding: 0;
+            }
+
+            .item-section {
+                border-radius: inherit !important; 
+            }
+
+            .min-main-card {
+                max-height: 85vh;
+                overflow: auto;
+            }
+
+            .collapse {
+                flex-direction: column;
+            }
+
+            .query-btn {
+                margin-top: 15px;
+                padding-right: 25px;
+                text-align: end;
+            }
+
+            .customer-info {
+                gap: 15px;
+            }
+
+            .toggle-btn {
+                display: block;
+            }
+        }
+
+        .empty-style {
+            width: 100%;
+            text-align: center;
+            font-weight: 600;
+            min-height: 45vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-body {
+            min-height: 65vh;
+            max-height: 100vh;
+            overflow: auto;
+        }
+
+        #loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            border-radius: 5px;
+            z-index: 9999;
+        }
+</style>
+                                                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="main-container">
+    <div class="row">
+        <div class="col-12 title-block">
+            <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        </div>
+    </div>
+
+    <input type="hidden" id="txtCustomerNo" />
+    <input type="hidden" id="txtMtlItemNo" />
+
+    <div class="row min-main-card" id="listData@(itemName)">
+        <div class="col-12">
+            <div class="card card-shadow mb-4">
+                <div class="card-header justify-content-between align-items-center">
+                    <div class="query-navbar">
+                        <div class="toggle-btn">
+                            <button type="button" class="btn btn-sm btn-outline-secondary collapse-toggle mr-2" data-toggle="collapse" data-target="#queryForm@(itemName)" aria-expanded="true">
+                                <i class="fas fa-chevron-up" id="collapseIcon@(itemName)"></i>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="queryForm@(itemName)">
+                            <div style="background: #fff;" class="query-info">
+                                <form class="container" autocomplete="off">
+                                    <fieldset>
+                                        <div class="form-row align-items-center customer-info">
+                                            <div class="col-lg-6 col-12">
+                                                <select class="form-control" id="cboCustomerId@(itemName)" multiple>
+                                                    <option value="66" selected>紘立光電</option>
+                                                    <option value="2057">太松(香港)有限公司</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-lg-6 col-12">
+                                                <input type="text" id="txtProductModel@(itemName)" class="form-control" placeholder="請輸入機種名稱(支援模糊查詢)" />
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </form>
+                            </div>
+                            <div class="query-btn">
+                                <a href="javascript: Query@(itemName)();" class="btn btn-primary">搜尋</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body main-item-card">
+                    <div class="row">
+                        <div class="col-12">
+                            <div id="tblData@(itemName)" class="item-container">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Production Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="productionModal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">生產歷程狀況查詢</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div id="tblProductionData@(itemName)" class="modal-body">
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 5101-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>預計生產數量: 150 <code>PCS</code></span>
+                                <span>已入庫數量: 135 <code>PCS</code></span>
+                            </div>
+                        </div>
+                        <div class="doc-status">
+                            <span><i class="fas fa-check-circle"></i> 生產中</span>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 115px;">加工製程</th>
+                                        <th scope="col" style="min-width: 115px;">當前數量</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>創成</td>
+                                        <td>150 <code>PCS</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>精車</td>
+                                        <td>135 <code>PCS</code></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 5101-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>預計生產數量: 150 <code>PCS</code></span>
+                                <span>已入庫數量: 135 <code>PCS</code></span>
+                            </div>
+                        </div>
+                        <div class="doc-status">
+                            <span><i class="fas fa-check-circle"></i> 生產中</span>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 115px;">加工製程</th>
+                                        <th scope="col" style="min-width: 115px;">當前數量</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>創成</td>
+                                        <td>150 <code>PCS</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>精車</td>
+                                        <td>135 <code>PCS</code></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 5101-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>預計生產數量: 150 <code>PCS</code></span>
+                                <span>已入庫數量: 135 <code>PCS</code></span>
+                            </div>
+                        </div>
+                        <div class="doc-status">
+                            <span><i class="fas fa-check-circle"></i> 生產中</span>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 115px;">加工製程</th>
+                                        <th scope="col" style="min-width: 115px;">當前數量</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>創成</td>
+                                        <td>150 <code>PCS</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>精車</td>
+                                        <td>135 <code>PCS</code></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 5101-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>預計生產數量: 150 <code>PCS</code></span>
+                                <span>已入庫數量: 135 <code>PCS</code></span>
+                            </div>
+                        </div>
+                        <div class="doc-status">
+                            <span><i class="fas fa-check-circle"></i> 生產中</span>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 115px;">加工製程</th>
+                                        <th scope="col" style="min-width: 115px;">當前數量</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>創成</td>
+                                        <td>150 <code>PCS</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>精車</td>
+                                        <td>135 <code>PCS</code></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--SaleOrder Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="saleOrderModal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">訂單資料查詢</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div id="tblSaleOderData@(itemName)" class="modal-body">
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 2201-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 訂單數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 預計出貨日期</label>
+                                <span>2025-04-30</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 2201-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 訂單數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 預計出貨日期</label>
+                                <span>2025-04-30</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 2201-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 訂單數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 預計出貨日期</label>
+                                <span>2025-04-30</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 2201-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 訂單數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 預計出貨日期</label>
+                                <span>2025-04-30</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--ProductionStockIn Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="productionStockInModal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">生產入庫資料查詢</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div id="tblProductionStockInData@(itemName)" class="modal-body">
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 5901-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>入庫日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 5901-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>入庫日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 5901-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>入庫日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 5901-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>入庫日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--TempShippingNote Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="tempShippingNoteModal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">暫出單資料查詢</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div id="tblTempShippingNote@(itemName)" class="modal-body">
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 1301-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>暫出日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 1301-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>暫出日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 1301-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>暫出日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 1301-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>暫出日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--ShippingOrder Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="shippingOrderModal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">銷貨單資料查詢</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div id="tblShippingOrder@(itemName)" class="modal-body">
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 2301-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>銷貨日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 2301-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>銷貨日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 2301-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>銷貨日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-section" data-type="search">
+                    <div class="item-title">
+                        <div class="doc-title">
+                            <h3># 2301-20250421001</h3>
+                            <div class="title-mamo">
+                                <span>單據日期: 2025-04-21</span>
+                                <span>銷貨日期: 2025-04-21</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-body">
+                        <div class="item-info">
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨數量</label>
+                                <span>150 <code>PCS</code></span>
+                            </div>
+                            <div class="info-section">
+                                <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨庫別</label>
+                                <span>A01 成品倉</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loadingdiv" id="loading" style="display: none">
+    <img src="~/assets/images/loading.gif" style="width: 75px;" />
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objPageSaleOrder@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objPageProduction@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 5
+        };
+
+        let objPageProductionStockIn@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objPageTempShippingNote@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objPageShippingOrder@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        $(document).ready(function () {
+            $("#cboCustomerId@(itemName)").select2({
+                width: "100%",
+                placeholder: "請選擇客戶",
+            });
+
+            ComboBoxs.Default("#cboCustomerId@(itemName)", "@Url.Action("GetCustomer", "ScmBasicInformation")", {}, "", "NA", "", "CustomerWithNo", "CustomerNo");
+
+            //Query@(itemName)();
+
+            $("#cboCustomerId@(itemName)").change(function () {
+                Query@(itemName)();
+            });
+
+            $('.collapse-toggle').on('click', function () {
+                var target = $(this).data('target');
+                var icon = $(this).find('i');
+
+                setTimeout(function () {
+                    if ($(target).hasClass('show')) {
+                        icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                    } else {
+                        icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                    }
+                }, 150);
+            });
+
+            let timer;
+            $(".main-item-card").scroll(function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if ($(".main-item-card").scrollTop() + $(".main-item-card").height() >= $(".main-item-card")[0].scrollHeight - 50) {
+                        objPage@(itemName).pageIndex = objPage@(itemName).pageIndex + 1;
+                        InitData@(itemName)(objPage@(itemName));
+                    }
+                }, 200);
+            });
+
+            $("#listData@(itemName)").scroll(function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if ($("#listData@(itemName)").scrollTop() + $("#listData@(itemName)").height() >= $("#listData@(itemName)")[0].scrollHeight - 50) {
+                        objPage@(itemName).pageIndex = objPage@(itemName).pageIndex + 1;
+                        InitData@(itemName)(objPage@(itemName));
+                    }
+                }, 200);
+            });
+        });
+
+        function Query@(itemName)() {
+            $("#tblData@(itemName)").empty();
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            $.ajax({
+                url: "@Url.Action("GetCustomerProduct", "MesReport")",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "CustomerNo": $("#cboCustomerId@(itemName)").val().toString(),
+                    "ProductModel": $("#txtProductModel@(itemName)").val()
+                },
+                async: true,  // 設置為非同步
+                beforeSend: function () {
+                    $('#loading').css("display", "block");
+                    $("body").css("overflow", "hidden");
+                },
+                success: function (data) {
+                    if (data.status == "success") {
+                        pageCount = data.result.length > 0 ? parseInt(data.TotalCount) : 0;
+                        if (pageCount > 0) {
+                            objPage = PageCaculate(pageCount, objPage);
+                            $.each(data.result, function (i, item) {
+                                innerHtml += `<div class="item-section" data-type="search">
+                                                <div class="item-title">
+                                                    <div class="doc-title">
+                                                        <h3># ${item.MtlItemName}</h3>
+                                                        <div class="title-mamo">
+                                                            <span>${item.CustomerName}</span>
+                                                            <span><a href="javascript: OpenSaleOrderModal@(itemName)('${item.MtlItemNo}', '${item.CustomerNo}');"><i class="fas fa-info-circle"></i></a> 訂單總數量: ${item.CustomerOrderQty} <code>${item.UomNo}</code></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="item-body">
+                                                    <div class="item-info">
+                                                        <div class="info-section">
+                                                            <label><a href="javascript: OpenProductionModal@(itemName)('${item.MtlItemNo}', '${item.CustomerNo}');"><i class="fas fa-info-circle"></i></a> 生產中總數</label>
+                                                            <span>${item.ProductionQty} <code>${item.UomNo}</code></span>
+                                                        </div>
+                                                        <div class="info-section">
+                                                            <label><a href="javascript: OpenProductionStockInModal@(itemName)('${item.MtlItemNo}', '${item.CustomerNo}');"><i class="fas fa-info-circle"></i></a> 已入庫總數</label>
+                                                            <span>${item.InPutQty} <code>${item.UomNo}</code></span>
+                                                        </div>
+                                                        <div class="info-section">
+                                                            <label><a href="javascript: OpenTempShippingNoteModal@(itemName)('${item.MtlItemNo}', '${item.CustomerNo}');"><i class="fas fa-info-circle"></i></a> 已暫出總數</label>
+                                                            <span>${item.ProvisionalQty} <code>${item.UomNo}</code></span>
+                                                        </div>
+                                                        <div class="info-section">
+                                                            <label><a href="javascript: OpenShippingOrderModal@(itemName)('${item.MtlItemNo}', '${item.CustomerNo}');"><i class="fas fa-info-circle"></i></a> 已銷貨總數</label>
+                                                            <span>${item.SalesOrderQty} <code>${item.UomNo}</code></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                              </div>`;
+                            });
+                        }
+                        else {
+                            let emptyInnerHtml = `<div class="empty-style">
+                                                    <span style="padding: 15px; font-size: 18px;">已無更多資料。</span>
+                                                  </div>`;
+                            let isExists = $(`div[class="empty-style"]`);
+                            if (isExists.length === 0) {
+                                $("#tblData@(itemName)").append(emptyInnerHtml);
+                            }
+                        }
+                    }
+                    else {
+                        alert(data.msg, "alert", 0);
+                    }
+
+                    $("#tblData@(itemName)").append(innerHtml);
+                },
+                error: function (error) {
+                    alert(result.msg);
+                    return false;
+                },
+                complete: function () {
+                    $('#loading').css("display", "none");
+                    $("body").css("overflow", "auto");
+                }
+            });
+        }
+
+        function OpenProductionModal@(itemName)(mtlItemNo, customerNo) {
+            $("#txtMtlItemNo").val(mtlItemNo);
+            $("#txtCustomerNo").val(customerNo);
+            objPageProduction@(itemName).pageIndex = 0;
+            $("#tblProductionData@(itemName)").empty();
+            InitProductionInfo@(itemName)(mtlItemNo, customerNo, objPageProduction@(itemName));
+            $("#productionModal@(itemName)").modal("show");
+
+            let timer;
+            $("#tblProductionData@(itemName)").scroll(function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if ($("#tblProductionData@(itemName)").scrollTop() + $("#tblProductionData@(itemName)").height() >= $("#tblProductionData@(itemName)")[0].scrollHeight - 50) {
+                        objPageProduction@(itemName).pageIndex = objPageProduction@(itemName).pageIndex + 1;
+                        let mtlItemNo = $("#txtMtlItemNo").val();
+                        InitProductionInfo@(itemName)(mtlItemNo, customerNo, objPageProduction@(itemName));
+                    }
+                }, 200);
+            });
+        }
+
+        function OpenSaleOrderModal@(itemName)(mtlItemNo, customerNo) {
+            $("#txtCustomerNo").val(customerNo);
+            $("#txtMtlItemNo").val(mtlItemNo);
+            objPageSaleOrder@(itemName).pageIndex = 0;
+            $("#tblSaleOderData@(itemName)").empty();
+            InitSaleOrderInfo@(itemName)(mtlItemNo, customerNo, objPageSaleOrder@(itemName));
+            $("#saleOrderModal@(itemName)").modal("show");
+
+            let timer;
+            $("#tblSaleOderData@(itemName)").scroll(function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if ($("#tblSaleOderData@(itemName)").scrollTop() + $("#tblSaleOderData@(itemName)").height() >= $("#tblSaleOderData@(itemName)")[0].scrollHeight - 50) {
+                        objPageSaleOrder@(itemName).pageIndex = objPageSaleOrder@(itemName).pageIndex + 1;
+                        let mtlItemNo = $("#txtMtlItemNo").val();
+                        InitSaleOrderInfo@(itemName)(mtlItemNo, customerNo, objPageSaleOrder@(itemName));
+                    }
+                }, 200);
+            });
+        }
+
+        function OpenProductionStockInModal@(itemName)(mtlItemNo, customerNo) {
+            $("#txtMtlItemNo").val(mtlItemNo);
+            $("#txtCustomerNo").val(customerNo);
+            objPageProductionStockIn@(itemName).pageIndex = 0;
+            $("#tblProductionStockInData@(itemName)").empty();
+            InitProductionStockInInfo@(itemName)(mtlItemNo, customerNo, objPageProductionStockIn@(itemName))
+            $("#productionStockInModal@(itemName)").modal("show");
+
+            let timer;
+            $("#tblProductionStockInData@(itemName)").scroll(function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if ($("#tblProductionStockInData@(itemName)").scrollTop() + $("#tblProductionStockInData@(itemName)").height() >= $("#tblProductionStockInData@(itemName)")[0].scrollHeight - 50) {
+                        objPageProductionStockIn@(itemName).pageIndex = objPageProductionStockIn@(itemName).pageIndex + 1;
+                        let mtlItemNo = $("#txtMtlItemNo").val();
+                        InitProductionStockInInfo@(itemName)(mtlItemNo, customerNo, objPageProductionStockIn@(itemName));
+                    }
+                }, 200);
+            });
+        }
+
+        function OpenTempShippingNoteModal@(itemName)(mtlItemNo, customerNo) {
+            $("#txtMtlItemNo").val(mtlItemNo);
+            $("#txtCustomerNo").val(customerNo);
+            objPageTempShippingNote@(itemName).pageIndex = 0;
+            $("#tblTempShippingNote@(itemName)").empty();
+            InitTempShippingNoteInfo@(itemName)(mtlItemNo, customerNo, objPageTempShippingNote@(itemName))
+            $("#tempShippingNoteModal@(itemName)").modal("show");
+
+            let timer;
+            $("#tblTempShippingNote@(itemName)").scroll(function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if ($("#tblTempShippingNote@(itemName)").scrollTop() + $("#tblTempShippingNote@(itemName)").height() >= $("#tblTempShippingNote@(itemName)")[0].scrollHeight - 50) {
+                        objPageTempShippingNote@(itemName).pageIndex = objPageTempShippingNote@(itemName).pageIndex + 1;
+                        let mtlItemNo = $("#txtMtlItemNo").val();
+                        InitTempShippingNoteInfo@(itemName)(mtlItemNo, customerNo, objPageTempShippingNote@(itemName));
+                    }
+                }, 200);
+            });
+        }
+
+        function OpenShippingOrderModal@(itemName)(mtlItemNo, customerNo) {
+            $("#txtMtlItemNo").val(mtlItemNo);
+            $("#txtCustomerNo").val(customerNo);
+            objPageShippingOrder@(itemName).pageIndex = 0;
+            $("#tblShippingOrder@(itemName)").empty();
+            InitShippingOrderInfo@(itemName)(mtlItemNo, customerNo, objPageShippingOrder@(itemName))
+            $("#shippingOrderModal@(itemName)").modal("show");
+
+            let timer;
+            $("#tblShippingOrder@(itemName)").scroll(function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if ($("#tblShippingOrder@(itemName)").scrollTop() + $("#tblShippingOrder@(itemName)").height() >= $("#tblShippingOrder@(itemName)")[0].scrollHeight - 50) {
+                        objPageShippingOrder@(itemName).pageIndex = objPageShippingOrder@(itemName).pageIndex + 1;
+                        let mtlItemNo = $("#txtMtlItemNo").val();
+                        InitShippingOrderInfo@(itemName)(mtlItemNo, customerNo, objPageShippingOrder@(itemName));
+                    }
+                }, 200);
+            });
+        }
+
+        function InitSaleOrderInfo@(itemName)(mtlItemNo, customerNo, objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetSoDetailByMtlItem", "MesReport")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "CustomerNo": customerNo,
+                "ProductModel": mtlItemNo
+            };
+
+            let result = DataAccess.Get(targetUrl, postData, false);
+            if (result.status == "success") {
+                pageCount = result.data.length > 0 ? parseInt(result.TotalCount) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(result.data, function (i, item) {
+                        innerHtml += `<div class="item-section" data-type="search">
+                                        <div class="item-title">
+                                            <div class="doc-title">
+                                                <h3># ${item.CustomerOrderNoPix}</h3>
+                                                <div class="title-mamo">
+                                                    <span>單據日期: ${item.DocDate}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="item-body">
+                                            <div class="item-info">
+                                                <div class="info-section">
+                                                    <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 訂單數量</label>
+                                                    <span>${item.CustomerOrderQty} <code>${item.UomNo}</code></span>
+                                                </div>
+                                                <div class="info-section">
+                                                    <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 預計出貨日期</label>
+                                                    <span>${item.EstimatedShipmentDate}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                      </div>`;
+                    });
+                }
+                else {
+                    @*let emptyInnerHtml = `<div class="empty-style">
+                                            <span style="padding: 15px; font-size: 18px;">已無更多資料。</span>
+                                          </div>`;
+                    let isExists = $(`div[class="empty-style"]`);
+                    if (isExists.length === 0) {
+                        $("#tblData@(itemName)").append(emptyInnerHtml);
+                    }*@
+                }
+            }
+            else {
+                alert(result.msg, "alert", 0);
+            }
+
+            $("#tblSaleOderData@(itemName)").append(innerHtml);
+        }
+
+        function InitProductionInfo@(itemName)(mtlItemNo, customerNo, objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let isExists = $(`#tblProductionData@(itemName) div[class="empty-style"]`);
+            if (isExists.length > 0) {
+                return false;
+            }
+
+            $.ajax({
+                url: "@Url.Action("GetProductionByMtlItem", "MesReport")",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "ProductModel": mtlItemNo,
+                    "CustomerNo": customerNo,
+                },
+                async: true,  // 設置為非同步
+                beforeSend: function () {
+                    $('#loading').css("display", "block");
+                    $("body").css("overflow", "hidden");
+                },
+                success: function (result) {
+                    if (result.status == "success") {
+                        pageCount = result.data.length > 0 ? parseInt(result.TotalCount) : 0;
+                        if (pageCount > 0) {
+                            objPage = PageCaculate(pageCount, objPage);
+                            $.each(result.data, function (i, item) {
+                                innerHtml += `<div class="item-section" data-type="search">
+                                                <div class="item-title">
+                                                    <div class="doc-title">
+                                                        <h3># ${item.CustomerOrderNoPix}</h3>
+                                                        <div class="title-mamo">
+                                                            <span>預計生產數量: ${item.Quantity} <code>${item.UomNo}</code></span>
+                                                            <span>已入庫數量: ${item.ReceiptQtySum} <code>${item.UomNo}</code></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="doc-status">
+                                                        <span><i class="fas fa-check-circle"></i> ${item.ManOrderStatus}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="item-body">
+                                                    <div class="table-custom">
+                                                        <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th scope="col" style="min-width: 115px;">加工製程</th>
+                                                                    <th scope="col" style="min-width: 115px;">當前數量</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                ${item.ProcessDetail != null ? renderDetailData(`${item.ProcessDetail}`) : `<tr><td class="text-center" colspan="2" style="background-color: #f1f1f1;"><i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。</td></tr>`}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>`;
+
+                                function renderDetailData(processDetail) {
+                                    let innerHtml = '';
+                                    if (processDetail) {
+                                        let processDetailJson = JSON.parse(processDetail);
+                                        $.each(processDetailJson.data, function (i, item) {
+                                            innerHtml += `<tr>
+                                                            <td>${item.ProcessAlias}</td>
+                                                            <td>${item.BarcodeQty} <code>PCS</code></td>
+                                                          </tr>`;
+                                        });
+                                    }
+
+                                    return innerHtml;
+                                }
+                            });
+                        }
+                        else {
+                            let emptyInnerHtml = `<div class="empty-style">
+                                                    <span style="padding: 15px; font-size: 18px;">已無更多資料。</span>
+                                                  </div>`;
+                            let isExists = $(`#tblProductionData@(itemName) div[class="empty-style"]`);
+                            if (isExists.length === 0) {
+                                $("#tblProductionData@(itemName)").append(emptyInnerHtml);
+                            }
+                        }
+                    }
+                    else {
+                        alert(result.msg, "alert", 0);
+                    }
+
+                    $("#tblProductionData@(itemName)").append(innerHtml);
+                },
+                error: function (error) {
+                    alert(result.msg);
+                    return false;
+                },
+                complete: function () {
+                    $('#loading').css("display", "none");
+                    $("body").css("overflow", "auto");
+                }
+            });
+        }
+
+        function InitProductionStockInInfo@(itemName)(mtlItemNo, customerNo, objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            $.ajax({
+                url: "@Url.Action("GetProductionStockInByMtlItem", "MesReport")",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "ProductModel": mtlItemNo,
+                    "CustomerNo": customerNo,
+                },
+                async: true,  // 設置為非同步
+                beforeSend: function () {
+                    $('#loading').css("display", "block");
+                    $("body").css("overflow", "hidden");
+                },
+                success: function (result) {
+                    if (result.status == "success") {
+                        pageCount = result.data.length > 0 ? parseInt(result.TotalCount) : 0;
+                        if (pageCount > 0) {
+                            objPage = PageCaculate(pageCount, objPage);
+                            $.each(result.data, function (i, item) {
+                                innerHtml += `<div class="item-section" data-type="search">
+                                                <div class="item-title">
+                                                    <div class="doc-title">
+                                                        <h3># ${item.MweErpNoPix}</h3>
+                                                        <div class="title-mamo">
+                                                            <span>單據日期: ${item.MweErpDocDate}</span>
+                                                            <span>入庫日期: ${item.MweErpReceiptDate}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="item-body">
+                                                    <div class="item-info">
+                                                        <div class="info-section">
+                                                            <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫數量</label>
+                                                            <span>${item.ReceiptQty} <code>PCS</code></span>
+                                                        </div>
+                                                        <div class="info-section">
+                                                            <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 入庫庫別</label>
+                                                            <span>${item.InventoryNo} ${item.InventoryName}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                              </div>`;
+                            });
+                        }
+                        else {
+                            let emptyInnerHtml = `<div class="empty-style">
+                                                    <span style="padding: 15px; font-size: 18px;">已無更多資料。</span>
+                                                  </div>`;
+                            let isExists = $(`#tblProductionStockInData@(itemName) div[class="empty-style"]`);
+                            if (isExists.length === 0) {
+                                $("#tblProductionStockInData@(itemName)").append(emptyInnerHtml);
+                            }
+                        }
+                    }
+                    else {
+                        alert(result.msg, "alert", 0);
+                    }
+
+                    $("#tblProductionStockInData@(itemName)").append(innerHtml);
+                },
+                error: function (error) {
+                    alert(result.msg);
+                    return false;
+                },
+                complete: function () {
+                    $('#loading').css("display", "none");
+                    $("body").css("overflow", "auto");
+                }
+            });
+        }
+
+        function InitTempShippingNoteInfo@(itemName)(mtlItemNo, customerNo, objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            $.ajax({
+                url: "@Url.Action("GetTempShippingNoteByMtlItem", "MesReport")",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "ProductModel": mtlItemNo,
+                    "CustomerNo": customerNo
+                },
+                async: true,  // 設置為非同步
+                beforeSend: function () {
+                    $('#loading').css("display", "block");
+                    $("body").css("overflow", "hidden");
+                },
+                success: function (result) {
+                    if (result.status == "success") {
+                        pageCount = result.data.length > 0 ? parseInt(result.TotalCount) : 0;
+                        if (pageCount > 0) {
+                            objPage = PageCaculate(pageCount, objPage);
+                            $.each(result.data, function (i, item) {
+                                innerHtml += `<div class="item-section" data-type="search">
+                                                <div class="item-title">
+                                                    <div class="doc-title">
+                                                        <h3># ${item.ProvisionalOrderNoPix}</h3>
+                                                        <div class="title-mamo">
+                                                            <span>單據日期: ${item.ProvisionalDocDate}</span>
+                                                            <span>暫出日期: ${item.ProvisionalOrderDate}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="item-body">
+                                                    <div class="item-info">
+                                                        <div class="info-section">
+                                                            <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出數量</label>
+                                                            <span>${item.ProvisionalOrderQty} <code>PCS</code></span>
+                                                        </div>
+                                                        <div class="info-section">
+                                                            <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 暫出庫別</label>
+                                                            <span>${item.InventoryNo} ${item.InventoryName}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                              </div>`;
+                            });
+                        }
+                        else {
+                            let emptyInnerHtml = `<div class="empty-style">
+                                                    <span style="padding: 15px; font-size: 18px;">已無更多資料。</span>
+                                                  </div>`;
+                            let isExists = $(`#tblTempShippingNote@(itemName) div[class="empty-style"]`);
+                            if (isExists.length === 0) {
+                                $("#tblTempShippingNote@(itemName)").append(emptyInnerHtml);
+                            }
+                        }
+                    }
+                    else {
+                        alert(result.msg, "alert", 0);
+                    }
+
+                    $("#tblTempShippingNote@(itemName)").append(innerHtml);
+                },
+                error: function (error) {
+                    alert(result.msg);
+                    return false;
+                },
+                complete: function () {
+                    $('#loading').css("display", "none");
+                    $("body").css("overflow", "auto");
+                }
+            });
+        }
+
+        function InitShippingOrderInfo@(itemName)(mtlItemNo, customerNo, objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            $.ajax({
+                url: "@Url.Action("GetShippingOrderByMtlItem", "MesReport")",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "ProductModel": mtlItemNo,
+                    "CustomerNo": customerNo,
+                },
+                async: true,  // 設置為非同步
+                beforeSend: function () {
+                    $('#loading').css("display", "block");
+                    $("body").css("overflow", "hidden");
+                },
+                success: function (result) {
+                    if (result.status == "success") {
+                        pageCount = result.data.length > 0 ? parseInt(result.TotalCount) : 0;
+                        if (pageCount > 0) {
+                            objPage = PageCaculate(pageCount, objPage);
+                            $.each(result.data, function (i, item) {
+                                innerHtml += `<div class="item-section" data-type="search">
+                                                <div class="item-title">
+                                                    <div class="doc-title">
+                                                        <h3># ${item.ProvisionalOrderNoPix}</h3>
+                                                        <div class="title-mamo">
+                                                            <span>單據日期: ${item.ProvisionalDocDate}</span>
+                                                            <span>銷貨日期: ${item.ProvisionalOrderDate}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="item-body">
+                                                    <div class="item-info">
+                                                        <div class="info-section">
+                                                            <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨數量</label>
+                                                            <span>${item.ProvisionalOrderQty} <code>PCS</code></span>
+                                                        </div>
+                                                        <div class="info-section">
+                                                            <label><a href="#"><i class="fas fa-exclamation-circle"></i></a> 銷貨庫別</label>
+                                                            <span>${item.InventoryNo} ${item.InventoryName}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                              </div>`;
+                            });
+                        }
+                        else {
+                            let emptyInnerHtml = `<div class="empty-style">
+                                                    <span style="padding: 15px; font-size: 18px;">已無更多資料。</span>
+                                                  </div>`;
+                            let isExists = $(`#tblShippingOrder@(itemName) div[class="empty-style"]`);
+                            if (isExists.length === 0) {
+                                $("#tblShippingOrder@(itemName)").append(emptyInnerHtml);
+                            }
+                        }
+                    }
+                    else {
+                        alert(result.msg, "alert", 0);
+                    }
+
+                    $("#tblShippingOrder@(itemName)").append(innerHtml);
+                },
+                error: function (error) {
+                    alert(result.msg);
+                    return false;
+                },
+                complete: function () {
+                    $('#loading').css("display", "none");
+                    $("body").css("overflow", "auto");
+                }
+            });
+        }
+    </script>
+                                )

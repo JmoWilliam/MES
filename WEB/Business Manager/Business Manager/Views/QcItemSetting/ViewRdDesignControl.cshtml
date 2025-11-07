@@ -1,0 +1,258 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRdDesignControl";
+    string itemNameText = "研發設計圖版本控制";
+}
+
+@Html.Resource("css",
+    @<style>
+        .modal-body {
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3" id="query@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtCustomerMtlItemNoQ@(itemName)" name="txtCustomerMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入部番" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">請選擇</th>
+                                        <th scope="col" style="min-width: 200px;">研發版次<code>(系統版次)</code></th>
+                                        <th scope="col" style="min-width: 200px;">變更原因</th>
+                                        <th scope="col" style="min-width: 175px;">出圖日期</th>
+                                        <th scope="col" style="min-width: 175px;">變更日期</th>
+                                        <th scope="col" style="min-width: 175px;">變更人員</th>
+                                        <th scope="col" style="min-width: 250px;">3D研發設計圖</th>
+                                        <th scope="col" style="min-width: 250px;">2D研發設計圖</th>
+                                        <th scope="col" style="min-width: 250px;">2D-PDF研發設計圖</th>
+                                        <th scope="col" style="min-width: 250px;">JMO檔</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        function Query@(itemName)(MtlItemId) {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName), MtlItemId);
+        }
+
+        function InitData@(itemName)(objPage, MtlItemId) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetRdDesignControl", "QcItemSetting")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemId": MtlItemId,
+                "Edition": $("#txtEditionQ@(itemName)").val(),
+                "ReleasedStatus": "Y"              
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>                                       
+                                        <td class="text-center col-sticky" style="max-width: 100px;">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-id="${item.ControlId}" value="${item.ControlId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtCause@(itemName)" data-id="${item.ControlId}" value="${item.Cause}" />
+                                          <input type="hidden" name="txtCreateDate@(itemName)" data-id="${item.ControlId}" value="${item.CreateDate}" />
+                                          <input type="hidden" name="txtEdition@(itemName)" data-id="${item.ControlId}" value="${item.Edition}" />
+                                          <input type="hidden" name="txtVersion@(itemName)" data-id="${item.ControlId}" value="${item.Version}" />
+                                        </td>
+                                        <td>${item.Edition}<code>(${item.Version})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Cause}" style="max-width: 175px;">${item.Cause}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DesignDate}" style="max-width: 175px;">${item.DesignDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 175px;">${item.CreateDate}</td>
+                                        <td><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                        ${JudgeCad3DFile(`${item.Cad3DFile}`)}
+                                        ${JudgeCad2DFile(`${item.Cad2DFile}`)}
+                                        ${JudgePdf2DFile(`${item.Pdf2DFile}`)}
+                                        ${JudgeJmoFile(`${item.JmoFile}`)}
+                                      </tr>`;
+                    });
+
+                    function JudgeCad3DFile(cad3DFile) {
+                        let innerHtml = '';
+                        let Cad3DFile = JSON.parse(cad3DFile);
+                        if (Cad3DFile != null) {
+                            $.each(Cad3DFile.data, function (i, item) {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileInfo}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i></a>
+                                                ${item.FileInfo}
+                                              </td>`;
+                            });
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeCad2DFile(cad2DFile) {
+                        let innerHtml = '';
+                        let Cad2DFile = JSON.parse(cad2DFile);
+                        if (Cad2DFile != null) {
+                            $.each(Cad2DFile.data, function (i, item) {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileInfo}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i></a>
+                                                ${item.FileInfo}
+                                              </td>`;
+                            });
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgePdf2DFile(pdf2DFile) {
+                        let innerHtml = '';
+                        let Pdf2DFile = JSON.parse(pdf2DFile);
+                        if (Pdf2DFile != null) {
+                            $.each(Pdf2DFile.data, function (i, item) {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileInfo}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i></a>
+                                                ${item.FileInfo}
+                                              </td>`;
+                            });
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeJmoFile(jmoFile) {
+                        let innerHtml = '';
+                        let JmoFile = JSON.parse(jmoFile);
+                        if (JmoFile != null) {
+                            $.each(JmoFile.data, function (i, item) {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileInfo}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i></a>
+                                                ${item.FileInfo}
+                                              </td>`;
+                            });
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+                } else {
+                    innerHtml += '<tr>\
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">\
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。\
+                                    </td>\
+                                  </tr>';
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-id]:checked") {
+                    let ControlId = $(this).data("id");
+                    let Cause = $(`input[name='txtCause@(itemName)'][data-id='${ControlId}']`).val();
+                    let CreateDate = $(`input[name='txtCreateDate@(itemName)'][data-id='${ControlId}']`).val();
+                    let Edition = $(`input[name='txtEdition@(itemName)'][data-id='${ControlId}']`).val();
+                    let Version = $(`input[name='txtVersion@(itemName)'][data-id='${ControlId}']`).val();
+                    //#region //出貨檢 - 研發設計圖版本控制資訊
+                    $("#txtControlIdQcNotice").val(ControlId);
+                    if (Edition == "" && Version == "") {
+                        $("#desRdControlInfoEditionQcNotice").html("N/A");
+                    } else {
+                        $("#desRdControlInfoEditionQcNotice").html(Edition + "(" + Version+")");
+                        console.log(Edition);
+                    }
+
+                    if (Cause=="") {
+                        $("#desCauseQcNotice").html("N/A");
+                    } else{
+                        $("#desCauseQcNotice").html(Cause);
+                    }
+
+                    if (CreateDate == "") {
+                        $("#desCreateDateQcNotice").html("N/A");
+                    } else {
+                        $("#desCreateDateQcNotice").html(CreateDate);
+                    }                   
+                                      
+                    $(".help-block").show();
+                    $("#RdDesignControlInfo").show();
+                    cboRoutingProcessQcNotice(ControlId);
+                    //#endregion
+                }
+                $("#modal@(itemName)").modal('hide');
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+        )

@@ -1,0 +1,271 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewGrDetail";
+    string itemNameText = "查看進貨單單身資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtGrErpFullNoQ@(itemName)" name="txtGrErpFullNoQ@(itemName)"
+                                               placeholder="請輸入進貨單號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                               placeholder="請輸入品號/品名/規格" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboSupplierIdQ@(itemName)" name="cboSupplierIdQ@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 145px;">進貨單號</th>
+                                        <th scope="col" style="min-width: 135px;">品號</th>
+                                        <th scope="col" style="min-width: 145px;">品名</th>
+                                        <th scope="col" style="min-width: 135px;">規格</th>
+                                        <th scope="col" style="min-width: 110px;">進貨數量</th>
+                                        <th scope="col" style="min-width: 110px;">進貨庫別</th>
+                                        <th scope="col" style="min-width: 110px;">進貨單位</th>
+                                        <th scope="col" style="min-width: 110px;">供應商</th>
+                                        <th scope="col" style="min-width: 110px;">批號</th>
+                                        <th scope="col" style="min-width: 110px;">採購單號</th>
+                                        <th scope="col" style="min-width: 110px;">檢驗狀態</th>
+                                        <th scope="col" style="min-width: 135px;">備註</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let targetSelector@(itemName);
+        let grDetailId@(itemName);
+        let grErpFullNo@(itemName);
+        let mtlItemNo@(itemName);
+        let grMtlItemName@(itemName);
+        let grMtlItemSpec@(itemName);
+        let supplierFullNo@(itemName);
+        let receiptQty@(itemName);
+        let transferStatus@(itemName);
+        let lotNumberNo@(itemName);
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            grDetailId@(itemName) = config.objectGrDetailId;
+            grErpFullNo@(itemName) = config.objectGrErpFullNo;
+            mtlItemNo@(itemName) = config.objectMtlItemNo;
+            grMtlItemName@(itemName) = config.objectGrMtlItemName;
+            grMtlItemSpec@(itemName) = config.objectGrMtlItemSpec;
+            supplierFullNo@(itemName) = config.objectSupplierFullNo;
+            receiptQty@(itemName) = config.objectReceiptQty;
+            transferStatus@(itemName) = config.objectTransferStatus;
+            lotNumberNo@(itemName) = config.objectLotNumberNo;
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#cboSupplierIdQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            ComboBoxs.Default("#cboSupplierIdQ@(itemName)", "@Url.Action("GetSupplier", "ScmBasicInformation")", { "PermitStatus": "1" }, "", "NA", "", "SupplierWithNo", "SupplierId");
+
+            $("#txtGrErpFullNoQ@(itemName), #txtSearchKeyQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            Query@(itemName)();
+
+            $("#cboSupplierIdQ@(itemName)").change(function () {
+                Query@(itemName)();
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetGrDetail", "GoodsReceipt")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "GrErpFullNo": $("#txtGrErpFullNoQ@(itemName)").val(),
+                "SupplierId": $("#cboSupplierIdQ@(itemName)").val(),
+                "CloseStatus": "N",
+                "ConfirmStatus": "N",
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val(),
+                "TransferStatus": transferStatus@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.GrErpPrefix}-${item.GrErpNo}(${item.GrSeq})" style="min-width: 150px;">${item.GrErpPrefix}-${item.GrErpNo}<code>(${item.GrSeq})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="min-width: 150px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.GrMtlItemName}" style="min-width: 150px;">${item.GrMtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.GrMtlItemSpec}" style="min-width: 135px;">${item.GrMtlItemSpec}</td>
+                                        <td>${item.ReceiptQty.toLocaleString(`en`)}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryNo}" style="min-width: 135px;">${item.InventoryNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UomNo}" style="min-width: 135px;">${item.UomNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SupplierNo} ${item.SupplierName}" style="min-width: 135px;">${item.SupplierNo} ${item.SupplierName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LotNumber}" style="min-width: 135px;">${item.LotNumber}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoErpPrefix}-${item.PoErpNo}(${item.PoSeq})" style="min-width: 135px;">${item.PoErpPrefix}-${item.PoErpNo}<code>(${item.PoSeq})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcStatusName}" style="min-width: 110px;">${item.QcStatusName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="min-width: 135px;">${item.Remark}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-gr-detail-id="${item.GrDetailId}" data-gr-id="${item.GrId}" value="${item.GrDetailId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" id="txtGrErpFullNo@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-gr-id="${item.GrId}" value="${item.GrErpPrefix}-${item.GrErpNo}(${item.GrSeq})"/>
+                                          <input type="hidden" id="txtMtlItemNo@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-gr-id="${item.GrId}" value="${item.MtlItemNo}"/>
+                                          <input type="hidden" id="txtGrMtlItemName@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-gr-id="${item.GrId}" value="${item.GrMtlItemName}"/>
+                                          <input type="hidden" id="txtGrMtlItemSpec@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-gr-id="${item.GrId}" value="${item.GrMtlItemSpec}"/>
+                                          <input type="hidden" id="txtSupplierFullNo@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-gr-id="${item.GrId}" value="${item.SupplierNo} ${item.SupplierName}"/>
+                                          <input type="hidden" id="txtReceiptQty@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-gr-id="${item.GrId}" value="${item.ReceiptQty}"/>
+                                          <input type="hidden" id="txtLotNumberNo@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-gr-id="${item.GrId}" value="${item.LotNumber}"/>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-gr-detail-id][data-gr-id]:checked") {
+                    let grDetailId = $(this).data("gr-detail-id");
+                    let grId = $(this).data("gr-id");
+                    if (grDetailId) {
+                        let grErpFullNo = $(`input[id="txtGrErpFullNo@(itemName)"][data-gr-detail-id="${grDetailId}"][data-gr-id="${grId}"]`).val();
+                        let mtlItemNo = $(`input[id="txtMtlItemNo@(itemName)"][data-gr-detail-id="${grDetailId}"][data-gr-id="${grId}"]`).val();
+                        let grMtlItemName = $(`input[id="txtGrMtlItemName@(itemName)"][data-gr-detail-id="${grDetailId}"][data-gr-id="${grId}"]`).val();
+                        let grMtlItemSpec = $(`input[id="txtGrMtlItemSpec@(itemName)"][data-gr-detail-id="${grDetailId}"][data-gr-id="${grId}"]`).val();
+                        let supplierFullNo = $(`input[id="txtSupplierFullNo@(itemName)"][data-gr-detail-id="${grDetailId}"][data-gr-id="${grId}"]`).val();
+                        let receiptQty = $(`input[id="txtReceiptQty@(itemName)"][data-gr-detail-id="${grDetailId}"][data-gr-id="${grId}"]`).val();
+                        let lotNumberNo = $(`input[id="txtLotNumberNo@(itemName)"][data-gr-detail-id="${grDetailId}"][data-gr-id="${grId}"]`).val();
+
+                        if (grDetailId@(itemName)) ElementSetValue(grDetailId@(itemName), grDetailId, "change");
+                        if (grErpFullNo@(itemName)) ElementSetValue(grErpFullNo@(itemName), grErpFullNo, "change");
+                        if (mtlItemNo@(itemName)) ElementSetValue(mtlItemNo@(itemName), mtlItemNo, "change");
+                        if (grMtlItemName@(itemName)) ElementSetValue(grMtlItemName@(itemName), grMtlItemName, "change");
+                        if (grMtlItemSpec@(itemName)) ElementSetValue(grMtlItemSpec@(itemName), grMtlItemSpec, "change");
+                        if (supplierFullNo@(itemName)) ElementSetValue(supplierFullNo@(itemName), supplierFullNo, "change");
+                        if (receiptQty@(itemName)) ElementSetValue(receiptQty@(itemName), receiptQty, "change");
+                        if (lotNumberNo@(itemName)) ElementSetValue(lotNumberNo@(itemName), lotNumberNo, "change");
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+                        )

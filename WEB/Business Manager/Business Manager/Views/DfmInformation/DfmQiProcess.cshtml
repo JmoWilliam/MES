@@ -1,0 +1,325 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DfmQiProcess";
+    string itemNameText = "所需製程管理";
+}
+
+@Html.Resource("css",
+    @<style>
+
+         .inputStyle {
+             background-color: unset !important;
+             border: unset;
+         }
+
+         .noWriteDfmItem {
+             border: #ff518a 3px solid;
+             border-radius: 5px;
+         }
+
+         .color1 {
+             color: #ff518a;
+         }
+    </style>
+                                                        )
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset></fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <input type="hidden" id="txtProcessId@(itemName)" name="txtProcessId@(itemName)" value="-1" />
+                        <div class="input-group-append" style="display: inline-block; margin-top: -2px;">
+                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i>製成新增</a>
+                        </div>
+                        <a class="btn btn-warning " id="AllEdit@(itemName)" href="javascript:AllEdit@(itemName)();"><i class="far fa-sort-circle"></i>全部變更</a>
+                        <a class="btn btn-secondary " id="Cancel@(itemName)" href="javascript:Return@(itemName)();"><i class="far fa-sort-circle"></i>取消</a>
+                        <a class="btn btn-success " id="AllSave@(itemName)" href="javascript:AllSave@(itemName)();"><i class="fas fa-cloud-upload"></i>全部儲存</a>
+                        <a class="btn btn-danger " id="SelectDelete@(itemName)" href="javascript:SelectDelete@(itemName)();"><i class="fas fa-trash-alt"></i>項目刪除</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">製程</th>
+                                        <th scope="col" style="min-width: 150px;">工時分配類別</th>
+                                        <th scope="col" style="min-width: 150px;">分配基數數量</th>
+                                        <th scope="col" style="min-width: 150px;">工時</th>
+                                        <th scope="col" style="min-width: 150px;">機時</th>
+                                        <th scope="col" style="min-width: 150px;">人工費用</th>
+                                        <th scope="col" style="min-width: 150px;">製造費用</th>
+                                        <th scope="col" style="min-width: 150px;">良率</th>
+                                        <th class="text-center" scope="col" style="min-width: 265px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="baseData@(itemName)"></tbody>
+                                <tbody class="newItem@(itemName)"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset></fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewProcessDfm")
+
+@Html.Resource("js",
+    @<script>
+        var listNum = 1;
+        $("#AllSave@(itemName)").hide()
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Expand@(itemName)() {
+            if (parseInt($("#DfmQiId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+            } else {
+                alert("DFM成本表資料錯誤", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 999;
+
+            let targetUrl = "@Url.Action("GetDfmQiProcessCost", "DfmInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "DfmQiId": $("#DfmQiId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                listNum += data.result.length
+
+                if (data.result.length > 0) {
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td class="dfmqmItem" data-dfmqm-id="${item.DfmQiProcessCostId}">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="ParameterId" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtParameterNo@(itemName)${item.DfmQiProcessCostId}" name="inputStyle@(itemName)" value="${item.ParameterId}" data-dfmqm-id="${item.DfmQiProcessCostId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="AllocationType" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtAllocationType@(itemName)${item.DfmQiProcessCostId}" name="inputStyle@(itemName)" value="${item.AllocationType}" data-dfmqm-id="${item.DfmQiProcessCostId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="AllocationQty" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtAllocationQty@(itemName)${item.DfmQiProcessCostId}" name="inputStyle@(itemName)" value="${item.AllocationQty}" data-dfmqm-id="${item.DfmQiProcessCostId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="ManHours" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtManHours@(itemName)${item.DfmQiProcessCostId}" name="inputStyle@(itemName)" value="${item.ManHours}" data-dfmqm-id="${item.DfmQiProcessCostId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="MachineHours" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtMachineHours@(itemName)${item.DfmQiProcessCostId}" name="inputStyle@(itemName)" value="${item.MachineHours}" data-dfmqm-id="${item.DfmQiProcessCostId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="HumanResource" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtHumanResource@(itemName)${item.DfmQiProcessCostId}" name="inputStyle@(itemName)" value="${item.HumanResource}" data-dfmqm-id="${item.DfmQiProcessCostId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="Overhead" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtOverhead@(itemName)${item.DfmQiProcessCostId}" name="inputStyle@(itemName)" value="${item.Overhead}" data-dfmqm-id="${item.DfmQiProcessCostId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="YieldRate" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtYieldRate@(itemName)${item.DfmQiProcessCostId}" name="inputStyle@(itemName)" value="${item.YieldRate}" data-dfmqm-id="${item.DfmQiProcessCostId}" style="width: 100%;" readonly /> </td>
+                                        <td class="text-center active-content">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-type="DfmQiMaterialId" id="cbxDfmQiProcessCostId@(itemName)${item.DfmQiProcessCostId}" name="cbxDfmQiProcessCostId@(itemName)" value="${item.DfmQiProcessCostId}" checked>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                    
+                } else {
+                    innerHtml += `<tr class="noData@(itemName)">
+                                    <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            let popConfig = {
+                targetSelector: "#txtProcessId@(itemName)",
+                popFunction: "PopViewProcessDfm",
+                objectProcessId: "#txtProcessId@(itemName)",
+                objectProcess: "#txtProcess@(itemName)",
+                objectModeId: $("#cboModeIdDesignForManufacturingManagement").val()
+            };
+
+            InitPopView(popConfig);
+
+            $("#tblData@(itemName) .baseData@(itemName)").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function RemoveDetail@(itemName)(listNum) {
+            $(`#detail${listNum}`).remove()
+            if ($(".newItem@(itemName)").html() == "") {
+                $(".noData@(itemName)").show()
+            }
+        }
+
+        function AllEdit@(itemName)() {
+            $.each($("input[name='inputStyle@(itemName)']"), function () {
+                $(this).removeClass("inputStyle")
+                $(this).attr("readonly", false);
+            });
+            $("#AllEdit@(itemName)").hide()
+            $("#AllSave@(itemName)").show()
+            $("#Cancel@(itemName)").show()
+            $("#AddNewItem@(itemName)").show()
+        }
+
+        function AllSave@(itemName)() {
+            let innerHtml = ""
+            innerHtml += `<tr class="newItem@(itemName)"> </tr>`;
+
+            //let noWriteDfmItemId = []
+            //$.each($("select[name='inputStyle']"), function () {
+            //    $(this).next("span").removeClass("noWriteDfmItem")
+            //    if ($(this).val() == "") {
+            //        noWriteDfmItemId.push($(this).data("dfmqm-id"))
+            //        $(this).next("span").addClass("noWriteDfmItem")
+            //    }
+            //});
+            //if (noWriteDfmItemId.length > 0) {
+            //    alert("項目尚未維護完成不能儲存!!!")
+            //    return
+            //}
+
+            let dfmqpcItemList = [];
+            $.each($(".dfmqmItem"), function () {
+                var DfmQiProcessCostId = $(this).data("dfmqm-id")
+                dfmqpcItemList.push(DfmQiProcessCostId);
+            });
+
+            let dfmqpcContentList = [];
+            dfmqpcItemList.forEach(function (item) {
+                var DfmQiProcessCostId = item
+                var AllocationType = $(`#txtAllocationType@(itemName)${DfmQiProcessCostId}`).val()
+                var AllocationQty = $(`#txtAllocationQty@(itemName)${DfmQiProcessCostId}`).val()
+                var ManHours = $(`#txtManHours@(itemName)${DfmQiProcessCostId}`).val()
+                var MachineHours = $(`#txtMachineHours@(itemName)${DfmQiProcessCostId}`).val()
+                var HumanResource = $(`#txtHumanResource@(itemName)${DfmQiProcessCostId}`).val()
+                var Overhead = $(`#txtOverhead@(itemName)${DfmQiProcessCostId}`).val()
+                var YieldRate = $(`#txtYieldRate@(itemName)${DfmQiProcessCostId}`).val()
+                var str = DfmQiProcessCostId + "❤" + AllocationType + "❤" + AllocationQty + "❤" + ManHours + "❤" + MachineHours + "❤" + HumanResource + "❤" + Overhead + "❤" + YieldRate
+
+                dfmqpcContentList.push(str);
+            })
+
+            let targetUrl = "@Url.Action("AddDfmQiMaterial", "DfmInformation")";
+            let postData = {
+                "DfmQiId": $("#DfmQiId").val(),
+                "DfmqpcContentList": dfmqpcContentList.join(','),
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (result) {
+
+                Return@(itemName)();
+                $("#tblData@(itemName) .newItem@(itemName)").html("");
+                $("#AllEdit@(itemName)").show()
+                $("#AllSave@(itemName)").hide()
+                $("#AddNewItem@(itemName)").hide()
+            }
+        }
+
+        function SelectDelete@(itemName)() {
+            var DfmQiProcessCostIdList = []
+            $.each($("input[name='cbxDfmQiProcessCostId@(itemName)']:checked"), function () {
+                DfmQiProcessCostIdList.push($(this).val())
+            });
+
+            swal.fire({
+                title: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDfmQiProcessCost", "DfmInformation")";
+                    let postData = {
+                        "DfmQiProcessCostIdList": DfmQiProcessCostIdList.join(',')
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)()
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            listNum = 1;
+            $("#AllEdit@(itemName)").show()
+            $("#AllSave@(itemName)").hide()
+            $("#Cancel@(itemName)").hide()
+            $("#AddNewItem@(itemName)").hide()
+            $(".newItem@(itemName)").html("")
+            Query@(itemName)();
+        }
+    </script>
+                                                        )

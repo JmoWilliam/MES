@@ -1,0 +1,245 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "AuthorityRoleFunctionDetail";
+    string itemNameText = "角色權限設定";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="authority-content authority-set">
+    <div class="select-block col-3">
+        <div class="search-block mb-15">
+            <input type="text" class="search-term" id="txtSearchKey@(itemName)" name="txtSearchKey@(itemName)" 
+                   placeholder="搜尋"
+                   maxlength="100" />
+            <button type="button" class="search-button" onclick="Query@(itemName)()"><i class="fas fa-search"></i></button>
+        </div>
+        <div class="authority-num-title">
+            權限群組
+            <span>已授予數量/權限數量總計</span>
+        </div>
+        <ul class="select-menu"></ul>
+    </div>
+    <div class="select-content col-9">
+        <div class="close-content">
+            <i class="fas fa-times"></i>
+        </div>
+        <label class="control control-solid control-solid-info control--checkbox">
+            只顯示已授予的權限 
+            <input type="checkbox" id="cbxGrant@(itemName)" />
+            <span class="control__indicator"></span>
+        </label>
+        <input type="hidden" id="txtModuleId@(itemName)" />
+        <input type="hidden" id="txtModuleName@(itemName)" />
+        <div class="select-area"></div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(document).ready(function () {
+            $(".close-content").on("click", function () {
+                $(".select-content").removeClass("box-show");
+            });
+        });
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            $(".authority-set .select-content").removeClass("box-show");
+
+            let targetUrl = "@Url.Action("GetRoleAuthority", "SystemSetting")";
+            let postData = {
+                "RoleId": $("#RoleId").val(),
+                "SearchKey": $("#txtSearchKey@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    innerHtml += `<li class="has-sub" data-system-id="${item.SystemId}">
+                                    <a href="javascript:void(0);">
+                                      ${item.SystemName}
+                                      <span class="authority-num">${item.RoleTotalFunction}/${item.TotalFunction}</span>
+                                      <i class="fas fa-plus" aria-hidden="true"></i>
+                                    </a>
+                                    <ul>
+                                      ${Module@(itemName)(item.ModuleData)}
+                                    </ul>
+                                  </li>`;
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $(".authority-set .select-menu").html(innerHtml);
+
+            $(".authority-set .select-menu li.has-sub > a").on("click", function () {
+                var element = $(this).parent("li");
+
+                if (element.hasClass("open")) {
+                    element.removeClass("open");
+                    element.find("li").removeClass("open");
+                    element.find("ul").slideUp(200);
+                } else {
+                    element.addClass("open");
+                    element.children("ul").slideDown(200);
+                    element.siblings("li").children("ul").slideUp(200);
+                    element.siblings("li").removeClass("open");
+                    element.siblings("li").find("li").removeClass("open");
+                    element.siblings("li").find("ul").slideUp(200);
+                }
+            });
+
+            $(".authority-set .has-sub-sec > a.select-tab").on("click", function () {
+                $(".authority-set .select-tab").removeClass("active");
+                $(".authority-set .select-content").removeClass("box-show");                
+
+                InitDetailData@(itemName)($(this).data("module-id"), $(this).data("module-name"));
+
+                $(this).addClass("active");
+                $(".authority-set .select-content").addClass("box-show");
+            });
+
+            $("#cbxGrant@(itemName)").off("change").on("change", function () {
+                InitDetailData@(itemName)($("#txtModuleId@(itemName)").val(), $("#txtModuleName@(itemName)").val());
+            });
+
+            function Module@(itemName)(source) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    for (let x = 0; x < json.data.length; x++) {
+                        if (json.data[x].TotalModuleFunction > 0) {
+                            html += `<li class="has-sub-sec">
+                                       <a class="select-tab" href="javascript:void(0);" data-module-id="${json.data[x].ModuleId}" data-module-name="${json.data[x].ModuleName}">
+                                         ${json.data[x].ModuleName}
+                                         <span class="authority-num">${json.data[x].RoleTotalModuleFunction}/${json.data[x].TotalModuleFunction}</span>
+                                       </a>
+                                     </li>`;
+                        }
+                    }
+                }
+
+                return html;
+            }
+        }
+
+        function InitDetailData@(itemName)(ModuleId, ModuleName) {
+            $("#txtModuleId@(itemName)").val(ModuleId);
+            $("#txtModuleName@(itemName)").val(ModuleName);
+
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetRoleDetailAuthority", "SystemSetting")";
+            let postData = {
+                "ModuleId": ModuleId,
+                "RoleId": $("#RoleId").val(),
+                "SearchKey": $("#txtSearchKey@(itemName)").val(),
+                "Grant": $("#cbxGrant@(itemName)").is(":checked")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                innerHtml += `<h2 class="mt-2 mb-3">${ModuleName}</h2>`;
+
+                $.each(data.result, function (i, item) {
+                    if (item.FunctionDetailData) {
+                        innerHtml += `<label class="control control-solid control-solid-info control--checkbox">
+                                        ${item.FunctionName}<code>(${item.FunctionCode})</code>
+                                        <input type="checkbox" name="cbxFunctionId@(itemName)" data-function-id="${item.FunctionId}" ${(parseInt(item.TotalFunctionDetail) > 0 && parseInt(item.TotalFunctionDetail) == parseInt(item.RoleTotalFunctionDetail) ? `checked` : ``)} />
+                                        <span class="control__indicator"></span>
+                                      </label>
+                                      <div class="action-group">
+                                        ${FunctionDetail@(itemName)(item.FunctionId, item.FunctionDetailData)}
+                                      </div>`;
+                    }
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $(".authority-set .select-content .select-area").html(innerHtml);
+
+            $("input[name=cbxFunctionId@(itemName)]").change(function () {
+                let functionId = $(this).data("function-id");
+
+                if ($(this).is(":checked")) {
+                    $(`input[name=cbxDetailId@(itemName)][data-function-id=${functionId}]`).each(function (index) {
+                        if (!$(this).is(":checked")) $(this).prop("checked", true).trigger("change");
+                    });
+                } else {
+                    $(`input[name=cbxDetailId@(itemName)][data-function-id=${functionId}]`).prop("checked", false).trigger("change");
+                }
+            });
+
+            $("input[name=cbxDetailId@(itemName)]").change(function () {
+                let functionId = $(this).data("function-id");
+                let detailId = $(this).data("detail-id");
+
+                if ($(this).is(":checked")) {
+                    if ($(`input[name=cbxDetailId@(itemName)][data-function-id=${functionId}]:checked`).length == $(`input[name=cbxDetailId@(itemName)][data-function-id=${functionId}]`).length) {
+                        $(`input[name=cbxFunctionId@(itemName)][data-function-id=${functionId}]`).prop("checked", true);
+                    }
+                } else {
+                    $(`input[name=cbxFunctionId@(itemName)][data-function-id=${functionId}]`).prop("checked", false);
+                }
+
+                Save@(itemName)(detailId, $(this).is(":checked"));
+            });
+
+            function FunctionDetail@(itemName)(functionId, source) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    for (let x = 0; x < json.data.length; x++) {
+                        html += `<div class="action">
+                                   <label class="control control-solid control-solid-info control--checkbox">
+                                     ${json.data[x].DetailName} <code>(${json.data[x].DetailCode})</code>
+                                     <input type="checkbox" name="cbxDetailId@(itemName)" data-function-id="${functionId}" data-detail-id="${json.data[x].DetailId}" ${(parseInt(json.data[x].DetailAuthority) == 1 ? `checked` : ``)} />
+                                     <span class="control__indicator"></span>
+                                   </label>
+                                 </div>`;
+                    }
+                }
+
+                return html;
+            }
+        }
+
+        function Save@(itemName)(detailId, checked) {
+            let targetUrl = "@Url.Action("UpdateRoleFunctionDetail", "SystemSetting")";
+            let postData = {
+                "RoleId": $("#RoleId").val(),
+                "DetailId": detailId,
+                "Checked": checked,
+                "SearchKey": $("#txtSearchKey@(itemName)").val()
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                $.each(data.result, function (i, item) {
+                    $(`.authority-set .select-tab[data-module-id=${item.ModuleId}] > .authority-num`).html(`${item.RoleTotalModuleFunction}/${item.TotalModuleFunction}`);
+                    $(`.authority-set .has-sub[data-system-id=${item.SystemId}] > a > .authority-num`).html(`${item.RoleTotalFunction}/${item.TotalFunction}`);
+                });
+            } else {
+                InitDetailData@(itemName)($("#txtModuleId@(itemName)").val(), $("#txtModuleName@(itemName)").val());
+            }
+        }
+    </script>
+)

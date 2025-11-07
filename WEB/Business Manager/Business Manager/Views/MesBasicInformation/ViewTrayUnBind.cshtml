@@ -1,0 +1,368 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewTrayUnBind";
+    string itemNameText = "托盤解除綁定";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <form autocomplete="off" id="editForm@(itemName)">
+                            <div class="card card-body">
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12">
+                                        <div class="form-group row">
+                                            <div class="col-12" style="display:flex;align-items: center;">
+                                                <label for="txtTrayNo@(itemName)">Tray盤</label>
+                                                <input type="text" id="txtTrayNo@(itemName)" class="form-control" style="width:30%;margin-left:20px;" name="txtTrayNo@(itemName)" placeholder="請輸入托盤編號" />
+                                                <button type="button" class="btn btn-success" style="margin-left:20px;" onclick="TrayUnBind@(itemName)('Once')"><i class="fas fa-undo-alt"></i>解綁</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12">
+                                        <div class="form-group row">
+                                            <div class="col-12" style="display:flex;align-items: center;">
+                                                <label for="txtTrayNo@(itemName)">Keyence設備</label>
+                                                <div class="col-auto">
+                                                    <select class="form-control" id="cboKeyenceIdQ@(itemName)" name="cboKeyenceIdQ@(itemName)"
+                                                            data-msg-required="請選擇Keyence設備"></select>
+                                                </div>
+                                                <button type="button" class="btn btn-secondary" style="margin-left:20px;" onclick="LotScanner@(itemName)()"><i class="far fa-print-search"></i>批量掃描</button>
+                                                <button type="button" class="btn btn-info" style="margin-left:20px;" onclick="TrayUnBind@(itemName)('Batch')"><i class="far fa-handshake-slash"></i>批量解綁</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-custom" id="TrayList">
+                                <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center" scope="col" style="min-width: 125px;">全選 <input type="checkbox" name="all" onclick="check_all(this,'cbxBarcode@(itemName)')" style="margin:3px" /></th>
+                                            <th scope="col" style="min-width: 75px;">#</th>
+                                            <th scope="col" style="min-width: 200px;">托盤編號</th>
+                                            @*<th scope="col" style="min-width: 200px;">綁定條碼</th>*@
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="pagination" id="page@(itemName)"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Keyence Modal -->
+<div class="modal fade" id="modalKeyenceScanner@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    Keyence
+                    <span class="sub-title">總共掃描數量: <span class="sub-text" id="desScanNumber@(itemName)"></span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id=" ">
+                    <div class="col-12" style="margin-bottom: 5px;">
+                        <select id="cboOrderBy@(itemName)" class="form-control">
+                            <option value="CreateDate" selected>日期排序</option>
+                            <option value="BarcodeNo">條碼排序</option>
+                        </select>
+                    </div>
+                    <div class="col-12" style="margin-bottom: 5px;">
+                        <select id="cboKeyenceIdQ@(itemName)" class="form-control"></select>
+                    </div>
+                    <div class="col-12" style="margin-bottom: 5px;">
+                        <button class="btn btn-success" onclick="LotScanner@(itemName)()">
+                            <i class="fad fa-print-search"></i>重新掃描
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblJigBarcode@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">產品條碼</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id=" "></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                <button type="button" class="btn btn-success" onclick="TrayUnBind@(itemName)('Batch')"><i class="fas fa-paper-plane"></i>解除綁定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 50
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let keyenceBarcodeList@(itemName);
+
+        function Pop@(itemName)() {
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            ComboBoxs.Default("#cboKeyenceIdQ@(itemName)", "@Url.Action("GetKeyence", "ProductionHistory")", { "Status": "A" }, "", "CHOOSE", "請選擇Keyence設備", "KeyenceDesc", "KeyenceId");
+            if (!isMobile) {
+                $("#cboKeyenceIdQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+        $(document).ready(function () {
+            $("#txtTrayNo@(itemName)").on("keydown", function (e) {
+                if (e.which == 13) {
+                    event.preventDefault(); 
+                    TrayUnBind@(itemName)('Once')
+                }
+            });
+        })
+
+        function Query@(itemName)() {
+            $("#TrayList").hide()
+            $("#page@(itemName)").hide()
+            $("#txtTrayNo@(itemName)").val("")
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            var TrayNoList = '';
+            if (objPage = "undefined") {
+                objPage = {
+                    "pageIndex": 0,
+                    "pageSize": 50
+                };
+            }
+            let targetUrl = "@Url.Action("GetTray", "MesBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "TrayNo": $("#txtTrayNo@(itemName)").val(),
+                "BindStatus": "Y"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    console.log("5AA")
+                    $("#TrayList").show()
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                            <td class="text-center active-content">
+                                                <input type="checkbox" id="cbxBarcode@(itemName)${item.TrayId}" name="cbxBarcode@(itemName)" value="${item.TrayNo},${item.TrayId}" checked/>
+                                            </td>
+                                            <td>${_row}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.TrayNo}" style="max-width: 200px;">${item.TrayNo}</td>
+                                            @*<td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}" style="max-width: 200px;">${item.BarcodeNo}</td>*@
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                        <td class="text-center" colspan="3" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料
+                                        </td>
+                                      </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+
+        //let TrayListY = ['KKTEST-0001', 'KKTEST-0002', 'KKTEST-0003', 'KKTEST-0004'];
+        let TrayListY =[]
+        function TrayUnBind@(itemName)(Model) {
+            let TrayListN = [];
+
+            switch (Model) {
+                case "Once":
+                    let TrayNo = $("#txtTrayNo@(itemName)").val()
+                    if (TrayNo.length <= 0) {
+                        alert("條碼框不能為空，請選擇條碼");
+                        return;
+                    }
+                    TrayListY = []
+                    TrayListY.push(TrayNo)
+                    break
+                case "Batch":
+
+                    $.each($("input[name='cbxBarcode@(itemName)']"), function () {
+                        if ($(this).is(":checked")) {
+                            TrayListY.push($(this).val());
+                        }
+                        else {
+                            if (!$(this).is(":disabled")) {
+                                TrayListN.push($(this).val());
+                            }
+                        }
+                    });
+                    if (TrayListY.length <= 0) {
+                        alert("條碼清單不能為空，請選擇條碼");
+                        return;
+                    }
+                    break
+            }
+
+            swal.fire({
+                titleText: "確認要解除綁定嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateTrayUnBind", "MesBasicInformation")";
+                    let postData = {
+                        "TrayNo": TrayListY.join(","),
+                        "Place": "PC"
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                       Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function check_all(obj, cName) {
+            var checkboxs = document.getElementsByName(cName);
+            for (var i = 0; i < checkboxs.length; i++) { checkboxs[i].checked = obj.checked; }
+        }
+
+        function LotScanner@(itemName)() {
+            $("#desScanNumber@(itemName)").html("0");
+
+            let targetUrl = "@Url.Action("KeyenceScan", "ProductionHistory")";
+            let postData = {
+                "KeyenceId": $("#cboKeyenceIdQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                keyenceBarcodeList@(itemName) = data.result.m_StringValue.split(':')[1].split(',');
+
+                if (keyenceBarcodeList@(itemName).length <= 0) {
+                    alert("掃描不到任何一筆條碼資訊!!");
+                    return false;
+                }
+
+                let innerHtml = '';
+                $.each(keyenceBarcodeList@(itemName), function (i, item) {
+
+                    innerHtml += `<tr>
+                                    <td class="text-center active-content">
+                                        <input type="checkbox" id="cbxBarcode@(itemName)${item}" name="cbxBarcode@(itemName)" value="${item}" checked/>
+                                    </td>
+                                    <td>${i + 1}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item}" style="max-width: 200px;">${item}</td>
+                                    @*<td class="ellipsis" data-toggle="tooltip" title="" style="max-width: 200px;"></td>*@
+                                </tr>`;
+
+                    //innerHtml += `<tr>
+                    //                <td scope="col" style="width: 20%">${i + 1}.</td>
+                    //                <td scope="col" style="width: 80%">${item}</td>
+                    //              </tr>`;
+                    if (TrayListY.indexOf(item) == -1) {
+                        TrayListY.push(item)
+                    }
+                });
+
+                console.log(innerHtml)
+
+                $("#tblData@(itemName) tbody").html(innerHtml);
+
+
+                TableComponentInit();
+            Pager("#page@(itemName)", 9, 1, InitData@(itemName));
+                $("#TrayList").show()
+
+                alert("掃描成功!!","success",5);
+                //$("#desScanNumber@(itemName)").html(keyenceBarcodeList@(itemName).length);
+                //$("#modalKeyenceScanner@(itemName)").modal("show");
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+            QueryTrayManagment();
+            Close@(itemName)()
+        }
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+                        )

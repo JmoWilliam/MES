@@ -1,0 +1,683 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewBatchPurchaseRequisition";
+    string itemNameText = "批量開立請購單據作業";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                                        )
+
+<div style="height: 750px; width: 100vw;" id="spreadsheet@(itemName)"></div>
+
+<script src="@Url.Content("~/Scripts/spreadsheet-default/batch-pr.js")"></script>
+
+<!--日期選擇-->
+<div class="modal fade" id="modalDatePicker@(itemName)" data-keyboard="false" data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">日期選擇</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="datePickerForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="txtCell@(itemName)" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDatePicker@(itemName)">選擇日期</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="date" class="form-control" id="txtDatePicker@(itemName)" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer text-center">
+                <button type="button" class="btn btn-success" onclick="SaveDate@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                @*<button type="button" class="btn btn-success" onclick="Copy@(itemName)()"><i class="fas fa-copy"></i>取消</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfo: []
+        };
+
+        let spreadsheet@(itemName);
+
+        let defaultCell@(itemName) = [];
+
+        let companyId@(itemName);
+
+        $(document).ready(function () {
+            for (let i = 0; i < 26; i++) {
+                defaultCell@(itemName).push(String.fromCharCode(65 + i) + "1");
+            }
+
+            setTimeout(function () {
+                ResetSpreadsheet@(itemName)();
+            }, 500);
+        });
+
+        function Pop@(itemName)() {
+            $("#spreadsheet@(itemName)").show();
+            $("#spreadsheetViewBatchManufactureOrder").hide();
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#spreadsheet@(itemName)").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("spreadsheet@(itemName)", {
+                menu: false,
+                //rowsCount: 10,
+                colsCount: 26,
+                exportModulePath: "https://bm.zy-tech.com.tw/Scripts/json2excel-master/worker.js",
+                importModulePath: "https://bm.zy-tech.com.tw/Scripts/excel2json-master/worker.js",
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-arrow-alt-square-up",
+                tooltip: "拋轉製令並確認",
+                id: "Upload"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-sync-alt",
+                tooltip: "重新載入",
+                id: "Reload"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-excel",
+                tooltip: "匯入EXCEL",
+                id: "Import"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-download",
+                tooltip: "匯出EXCEL",
+                id: "Export"
+            });
+
+            spreadsheet@(itemName).parse(defaultPr);
+
+            spreadsheet@(itemName).setFormat("A1:Z99", "text");
+
+            GetPrErpPrefix@(itemName)();
+            GetInventoryNo@(itemName)();
+            GetPrCurrency@(itemName)();
+            GetUomNo@(itemName)();
+            GetSupplier@(itemName)();
+            GetDepartment@(itemName)();
+            GetLocalCurrency@(itemName)();
+
+            spreadsheet@(itemName).events.on("afterEditEnd", function (cell, value) {
+                if ((cell.indexOf("D") != -1 && cell != "D1")
+                    && (cell.indexOf("E") != -1 && cell != "E1")
+                    && typeof (value) != `undefined`) {
+                    if (ValidDate@(itemName)(value)) {
+                        spreadsheet@(itemName).setValue(cell, value);
+                    }
+                    else {
+                        alert("日期格式錯誤，請雙擊輸入框使用日期選擇器!!", alert);
+                        spreadsheet@(itemName).setValue(cell, "");
+                    }
+                }
+                else if (cell.indexOf("I") != -1 && cell != "I1") {
+                    let row = cell.substring(1);
+                    let inventoryNo = value;
+                    let mtlItemNo = spreadsheet@(itemName).getValue("F" + row);
+                    GetInventoryQty@(itemName)(mtlItemNo, inventoryNo, row);
+                }
+                return true;
+            });
+
+            spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                let editMode = $("#cboEditMode").val();
+                if (cell.indexOf("F") != -1 && cell != "F1" && editMode == "Y") {
+                    let cellNo = cell.substring(1);
+                    let mtlItemNoCell = cell;
+                    let mtlItemNameCell = "G" + cellNo;
+                    let mtlItemSpecCell = "H" + cellNo;
+                    let inventoryNoCell = "I" + cellNo;
+                    let uomNoCell = "P" + cellNo;
+                    PopViewMtlItem@(itemName)(mtlItemNoCell, mtlItemNameCell, mtlItemSpecCell, inventoryNoCell, uomNoCell);
+                }
+                else if (cell.indexOf("Q") != -1 && cell != "Q1" && editMode == "Y") {
+                    PopViewSoDetail@(itemName)(cell);
+                }
+                else if (editMode == "Y" &&
+                    ((cell.indexOf("D") != -1 && cell != "D1") || (cell.indexOf("E") != -1 && cell != "E1"))) {
+                    PopModalDatePicker@(itemName)(cell);
+                }
+            });
+
+            spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                if (id == "Upload") {
+                    swal.fire({
+                        titleText: "確定要執行上傳嗎?",
+                        text: "此動作會批次建立請購單，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Upload@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Reload") {
+                    swal.fire({
+                        titleText: "確定要重整EXCEL嗎?\n這會導致目前資料遺失!!",
+                        text: "此動作無法復原，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            ResetSpreadsheet@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Import") {
+                    spreadsheet@(itemName).load("", "xlsx");
+                }
+                else if (id == "Export") {
+                    spreadsheet@(itemName).export.xlsx("batch-" + '@DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")');
+                }
+            });
+
+            spreadsheet@(itemName).events.on("afterEditEnd", function (cell, value) {
+                if ((cell.indexOf("J") && cell != "J1") ||
+                    (cell.indexOf("M") && cell != "M1")) {
+                    let row = parseInt(cell.replace(/^\D+/, ''));
+                    let prQty = spreadsheet@(itemName).getValue("J" + row) != null ? spreadsheet@(itemName).getValue("J" + row) : 0;
+                    let prUnitPrice = spreadsheet@(itemName).getValue("M" + row) != null ? spreadsheet@(itemName).getValue("M" + row) : 0;
+                    let prPrice = prQty * prUnitPrice;
+                    spreadsheet@(itemName).setValue("N" + row, prPrice);
+                }
+                else if (cell.indexOf("R") && cell != "R1") {
+                    let row = parseInt(cell.replace(/^\D+/, ''));
+                    let supplerNo = spreadsheet@(itemName).getValue("R" + row).split(' ')[0];
+
+                    let targetUrl = "@Url.Action("GetSupplier", "ScmBasicInformation")";
+
+                    let postData = {
+                        "SupplierNo": supplerNo
+                    };
+
+                    let data = DataAccess.Get(targetUrl, postData, false);
+
+                    if (data.status == "success") {
+                        if (data.result.length > 0) {
+                            $.each(data.result, function (i, item) {
+                                spreadsheet@(itemName).setValue("O" + row, item.Currency);
+                            });
+                        }
+                    }
+                    else {
+                        alert(data.msg, "alert");
+                    }
+                }
+            });
+
+            spreadsheet@(itemName).events.on("afterAction", (actionName, config) => {
+                if (actionName === "groupAction") {
+                    spreadsheet@(itemName).sortCells("A2:Z99", -1);
+                    return false;
+                }
+            });
+        }
+
+        function ValidDate@(itemName)(dateString) {
+            const regex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!regex.test(dateString)) {
+                return false;
+            }
+
+            const date = new Date(dateString);
+            const timestamp = date.getTime();
+
+            if (typeof timestamp !== 'number' || isNaN(timestamp)) {
+                return false;
+            }
+
+            return dateString === date.toISOString().split('T')[0];
+        }
+
+        function GetPrErpPrefix@(itemName)() {
+            let targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+
+            let postData = {
+                "ColumnName": "PrErpPrefix",
+                "Condition": "31"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let prErpPrefixArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        prErpPrefixArray.push(item.MQ001);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation("A2:A99", prErpPrefixArray);
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function GetPrCurrency@(itemName)() {
+            let targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+
+            let postData = {
+                "ColumnName": "Currency",
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let currencyArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        currencyArray.push(item.Currency);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation("O2:O99", currencyArray);
+            }
+        }
+
+        function GetLocalCurrency@(itemName)() {
+            let targetUrl = "@Url.Action("GetErpLocalCurrency", "PurchaseRequisition")";
+
+            let postData = {
+                
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        spreadsheet@(itemName).setValue("O2:O99", item.MA003);
+                    });
+                }
+            }
+        }
+
+        function GetUomNo@(itemName)() {
+            let targetUrl = "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")";
+
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let uomNoArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        uomNoArray.push(item.UomNo);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation("P2:P99", uomNoArray);
+            }
+        }
+
+        function GetInventoryNo@(itemName)() {
+            let targetUrl = "@Url.Action("GetInventory", "ScmBasicInformation")";
+
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let inventoryNoArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        inventoryNoArray.push(item.InventoryNo);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation("I2:I99", inventoryNoArray);
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function GetSupplier@(itemName)() {
+            let targetUrl = "@Url.Action("GetSupplier", "ScmBasicInformation")";
+
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let supplierArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        supplierArray.push(item.SupplierNo + " " + item.SupplierShortName);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation("R2:R99", supplierArray);
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function GetDepartment@(itemName)() {
+            let targetUrl = "@Url.Action("GetDepartment", "BasicInformation")";
+
+            let postData = {
+                "CompanyId": companyId,
+                "Status": "A"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let departmentArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        departmentArray.push(item.DepartmentNo + " " + item.DepartmentName);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation("C2:C99", departmentArray);
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function GetInventoryQty@(itemName)(MtlItemNo, InventoryNo, Row) {
+            let InventoryQty = 0;
+
+            let targetUrl = "@Url.Action("GetSingleErpInventoryQty", "Production")";
+
+            let postData = {
+                "MtlItemNo": MtlItemNo,
+                "InventoryNo": InventoryNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        InventoryQty = item.InventoryQty;
+                    });
+                }
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+            spreadsheet@(itemName).setValue("K" + Row, InventoryQty);
+        }
+
+        function PopViewMtlItem@(itemName)(mtlItemNoCell, mtlItemNameCell, mtlItemSpecCell, inventoryNoCell, uomNoCell) {
+            let popConfig = {
+                popFunction: "PopViewMtlItemForSpreadsheet",
+                objectSpreadsheet: spreadsheet@(itemName),
+                objectMtlItemNoCell: mtlItemNoCell,
+                objectMtlItemNameCell: mtlItemNameCell,
+                objectMtlItemSpecCell: mtlItemSpecCell,
+                objectInventoryNoCell: inventoryNoCell,
+                objectUomNoCell: uomNoCell,
+                objectCheckMtlDate: "@DateTime.Now.ToString("yyyy-MM-dd")",
+            };
+            PopViewMtlItemForSpreadsheet(popConfig);
+        }
+
+        function PopViewSoDetail@(itemName)(cell) {
+            let popConfig = {
+                popFunction: "PopViewSoDetailForSpreadsheet",
+                objectSpreadsheet: spreadsheet@(itemName),
+                objectCell: cell,
+                objectCompanyId: companyId,
+                type: "radio"
+            };
+            PopViewSoDetailForSpreadsheet(popConfig);
+        }
+
+        function LoadPrSpreadsheet(prListJson) {
+            ResetSpreadsheet@(itemName)();
+            let initIndex = 2;
+            $.each(prListJson.PrListInfo, function (i, item) {
+                spreadsheet@(itemName).setValue("A" + initIndex.toString(), item.PrErpPrefix);
+                spreadsheet@(itemName).setValue("B" + initIndex.toString(), item.PrErpNo);
+                spreadsheet@(itemName).setValue("C" + initIndex.toString(), "");
+                spreadsheet@(itemName).setValue("D" + initIndex.toString(), item.DocDate);
+                spreadsheet@(itemName).setValue("E" + initIndex.toString(), item.DemandDate);
+                spreadsheet@(itemName).setValue("F" + initIndex.toString(), item.MtlItemNo);
+                spreadsheet@(itemName).setValue("G" + initIndex.toString(), item.MtlItemName);
+                spreadsheet@(itemName).setValue("H" + initIndex.toString(), item.MtlItemSpec);
+                spreadsheet@(itemName).setValue("I" + initIndex.toString(), item.InventoryNo);
+                spreadsheet@(itemName).setValue("J" + initIndex.toString(), item.PrQty);
+                spreadsheet@(itemName).setValue("K" + initIndex.toString(), item.InventoryQty);
+                spreadsheet@(itemName).setValue("L" + initIndex.toString(), item.PoQty);
+                spreadsheet@(itemName).setValue("M" + initIndex.toString(), 0);
+                spreadsheet@(itemName).setValue("N" + initIndex.toString(), 0);
+                spreadsheet@(itemName).setValue("P" + initIndex.toString(), item.UomNo);
+                spreadsheet@(itemName).setValue("Q" + initIndex.toString(), item.SoErpFullNo);
+                spreadsheet@(itemName).setValue("R" + initIndex.toString(), "");
+                initIndex++;
+            });
+        }
+
+        function Upload@(itemName)() {
+            let data = spreadsheet@(itemName).serialize().sheets[0].data;
+            let initIndex;
+            let tempIndex = 2;
+
+            let prErpPrefix = "";
+            let prErpNo = "";
+            let departmentNo = "";
+            let docDate = "";
+            let demandDate = "";
+            let mtlItemNo = "";
+            let mtlItemName = "";
+            let mtlItemSpec = "";
+            let inventoryNo = "";
+            let prQty = 0;
+            let prUnitPrice = 0;
+            let prPrice = 0;
+            let prCurrency = "";
+            let prUomNo = "";
+            let soErpFullNo = "";
+            let supplierNo = "";
+
+            let uploadJson =
+            {
+                uploadInfo: []
+            };
+
+            let errorMessages = "";
+            let dataIndex = [];
+            $.each(data, function (i, item) {
+                if (defaultCell@(itemName).indexOf(item.cell) == -1) {
+                    initIndex = item.cell.substring(1);
+                    prErpPrefix = spreadsheet@(itemName).getValue("A" + initIndex.toString());
+                    if (prErpPrefix != null) {
+                        if (dataIndex.indexOf(initIndex) == -1) {
+                            dataIndex.push(initIndex);
+                        }
+                    }
+                    else {
+                        return false;
+                    }
+                }
+            });
+
+            $.each(dataIndex, function (i, item) {
+                prErpPrefix = spreadsheet@(itemName).getValue("A" + item);
+                prErpNo = spreadsheet@(itemName).getValue("B" + item);
+
+                departmentNo = spreadsheet@(itemName).getValue("C" + item);
+                if (departmentNo == null) {
+                    errorMessages += `請購單號【${prErpPrefix}-${prErpNo}】<br>請購部門不能為空!!<br>`;
+                    return;
+                }
+                else {
+                    if (departmentNo.indexOf(" ") == -1) {
+                        errorMessages += `請購單號【${prErpPrefix}-${prErpNo}】<br>請購部門格式錯誤，請嘗試用系統下拉選項帶出!!<br>`;
+                        return;
+                    }
+                    else {
+                        departmentNo = departmentNo.split(' ')[0];
+                    }
+                }
+
+                docDate = spreadsheet@(itemName).getValue("D" + item);
+                demandDate = spreadsheet@(itemName).getValue("E" + item);
+                mtlItemNo = spreadsheet@(itemName).getValue("F" + item);
+                mtlItemName = spreadsheet@(itemName).getValue("G" + item);
+                mtlItemSpec = spreadsheet@(itemName).getValue("H" + item);
+                inventoryNo = spreadsheet@(itemName).getValue("I" + item);
+                prQty = spreadsheet@(itemName).getValue("J" + item);
+                prUnitPrice = spreadsheet@(itemName).getValue("M" + item);
+                prPrice = spreadsheet@(itemName).getValue("N" + item);
+                prCurrency = spreadsheet@(itemName).getValue("O" + item);
+                prUomNo = spreadsheet@(itemName).getValue("P" + item);
+                soErpFullNo = spreadsheet@(itemName).getValue("Q" + item);
+
+                supplierNo = spreadsheet@(itemName).getValue("R" + item);
+                if (supplierNo != null) {
+                    if (supplierNo.indexOf(" ") == -1) {
+                        errorMessages += `請購單號【${prErpPrefix}-${prErpNo}】<br>供應商格式錯誤，請嘗試用系統下拉選項帶出!!<br>`;
+                    }
+                    else {
+                        supplierNo = supplierNo.split(' ')[0];
+                    }
+                }
+
+                let inputUploadInfo =
+                {
+                    PrErpPrefix: prErpPrefix,
+                    PrErpNo: prErpNo,
+                    DepartmentNo: departmentNo,
+                    DocDate: docDate,
+                    DemandDate: demandDate,
+                    MtlItemNo: mtlItemNo,
+                    MtlItemName: mtlItemName,
+                    MtlItemSpec: mtlItemSpec,
+                    InventoryNo: inventoryNo,
+                    PrQty: prQty,
+                    PrUnitPrice: prUnitPrice,
+                    PrPrice: prPrice,
+                    PrCurrency: prCurrency,
+                    PrUomNo: prUomNo,
+                    SoErpFullNo: soErpFullNo,
+                    SupplierNo: supplierNo,
+                };
+                uploadJson.uploadInfo.push(inputUploadInfo);
+            });
+
+            if (errorMessages.length > 0) {
+                alert(errorMessages, "alert");
+                return false;
+            }
+
+            if (uploadJson.uploadInfo.length > 0) {
+                let targetUrl = "@Url.Action("BatchAddPurchaseRequisition", "PurchaseRequisition")";
+                let postData = {
+                    "UploadJson": JSON.stringify(uploadJson)
+                };
+
+                let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                if (data) {
+                    Swal.fire(
+                        "批量新增成功", //標題
+                        "請確認拋轉後的單據單號是否正確!!", //訊息內容(可省略)
+                        "success",
+                    );
+
+                    if (data.result.length > 0) {
+                        ResetSpreadsheet@(itemName)();
+                        let initIndex = 2;
+                        $.each(data.result, function (i, item) {
+                            spreadsheet@(itemName).setValue("A" + initIndex.toString(), item.PrErpPrefix);
+                            spreadsheet@(itemName).setValue("B" + initIndex.toString(), item.PrErpNo);
+                            spreadsheet@(itemName).setValue("C" + initIndex.toString(), item.DepartmentFullNo);
+                            spreadsheet@(itemName).setValue("D" + initIndex.toString(), item.DocDate);
+                            spreadsheet@(itemName).setValue("E" + initIndex.toString(), item.DemandDate);
+                            spreadsheet@(itemName).setValue("F" + initIndex.toString(), item.MtlItemNo);
+                            spreadsheet@(itemName).setValue("G" + initIndex.toString(), item.MtlItemName);
+                            spreadsheet@(itemName).setValue("H" + initIndex.toString(), item.MtlItemSpec);
+                            spreadsheet@(itemName).setValue("I" + initIndex.toString(), item.InventoryNo);
+                            spreadsheet@(itemName).setValue("J" + initIndex.toString(), item.PrQty);
+                            spreadsheet@(itemName).setValue("K" + initIndex.toString(), item.InventoryQty);
+                            spreadsheet@(itemName).setValue("L" + initIndex.toString(), item.PoQty);
+                            spreadsheet@(itemName).setValue("M" + initIndex.toString(), item.PrUnitPrice);
+                            spreadsheet@(itemName).setValue("N" + initIndex.toString(), item.PrPrice);
+                            spreadsheet@(itemName).setValue("O" + initIndex.toString(), item.PrCurrency);
+                            spreadsheet@(itemName).setValue("P" + initIndex.toString(), item.UomNo);
+                            spreadsheet@(itemName).setValue("Q" + initIndex.toString(), item.SoErpFullNo);
+                            spreadsheet@(itemName).setValue("R" + initIndex.toString(), item.SupplierFullNo);
+                            initIndex++;
+                        });
+                    }
+                }
+            }
+        }
+
+        function PopModalDatePicker@(itemName)(cell) {
+            $("#txtCell@(itemName)").val(cell);
+            $("#txtDatePicker@(itemName)").val("@DateTime.Now.ToString("yyyy-MM-dd")");
+            $("#modalDatePicker@(itemName)").modal("show");
+
+            $("#txtDatePicker@(itemName)").on("change input", function () {
+                let cell = $("#txtCell@(itemName)").val();
+                let $this = $(this);
+                $this.blur().focus();
+                spreadsheet@(itemName).setValue(cell, $(this).val());
+                $("#modalDatePicker@(itemName)").modal("hide");
+            });
+        }
+
+        function SaveDate@(itemName)() {
+            let cell = $("#txtCell@(itemName)").val();
+            let date = $("#txtDatePicker@(itemName)").val();
+            spreadsheet@(itemName).setValue(cell, date);
+            $("#modalDatePicker@(itemName)").modal("hide");
+        }
+    </script>
+                    )

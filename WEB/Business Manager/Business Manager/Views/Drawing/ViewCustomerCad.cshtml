@@ -1,0 +1,269 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewCustomerCad";
+    string itemNameText = "查看客戶設計圖資料";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3" id="query@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtCustomerMtlItemNoQ@(itemName)" name="txtCustomerMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入客戶品號(部番)" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtEditionQ@(itemName)" name="txtEditionQ@(itemName)"
+                                               placeholder="請輸入客戶版次" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button id="queryButton@(itemName)" type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i> 搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 175px;">客戶品號(部番)</th>
+                                        <th scope="col" style="min-width: 175px;">客戶圖號</th>
+                                        <th scope="col" style="min-width: 200px;">客戶版次<code>(系統版次)</code></th>
+                                        <th scope="col" style="min-width: 200px;">變更原因</th>
+                                        <th scope="col" style="min-width: 175px;">變更日期</th>
+                                        <th scope="col" style="min-width: 175px;">變更人員</th>
+                                        <th scope="col" style="min-width: 250px;">客戶設計圖</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i> 關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let targetSelector@(itemName);
+        let controlId@(itemName);
+        let customerDwgNo@(itemName);
+        let edition@(itemName);
+        let cadFile@(itemName);
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            controlId@(itemName) = config.objectControlId;
+            customerDwgNo@(itemName) = config.objectCustomerDwgNo;
+            edition@(itemName) = config.objectEdition;
+            cadFile@(itemName) = config.objectCadFile;
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+
+            let currentDate = new Date();
+            
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 90);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate); 
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetCustomerCadControl", "Drawing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "CustomerMtlItemNo": $("#txtCustomerMtlItemNoQ@(itemName)").val(),
+                "Edition": $("#txtEditionQ@(itemName)").val(),                
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val(),
+                "ReleasedStatus": "Y"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += '<tr>\
+                                        <td>' + _row + '</td>\
+                                        <td class="ellipsis" data-toggle="tooltip" title="' + item.CustomerMtlItemNo + '" style="max-width: 200px;">' + item.CustomerMtlItemNo + '</td>\
+                                        <td class="ellipsis" data-toggle="tooltip" title="' + item.CustomerDwgNo + '" style="max-width: 200px;">' + item.CustomerDwgNo + '</td>\
+                                        <td>' + item.Edition + '<code>(' + item.Version + ')</code>' + '</td>\
+                                        <td class="ellipsis" data-toggle="tooltip" title="' + item.Cause + '" style="max-width: 200px;">' + item.Cause + '</td>\
+                                        <td>' + item.ChangeDate + '</td>\
+                                        <td><i class="fas fa-user"></i>&nbsp;<code>' + item.UserNo + '</code>&nbsp;' + item.UserName + '</td>';
+                        innerHtml += JudgeCadFileAbsolutePath@(itemName)(`${item.CadFileAbsolutePath}`, `${item.CadFile}`, `${item.FileName}`, `${item.FileExtension}`);
+                        innerHtml += '  <td class="text-center col-sticky">\
+                                          <label class="control control-solid control-solid-info control--radio">\
+                                            <input type="radio" data-control-id="' + item.ControlId + '" value="' + item.ControlId + '" />\
+                                            <span class="control__indicator"></span>\
+                                          </label>\
+                                          <input type="hidden" name="txtCustomerDwgNo@(itemName)" data-control-id="' + item.ControlId + '" value="' + item.CustomerDwgNo + '" />\
+                                          <input type="hidden" name="txtEdition@(itemName)" data-control-id="' + item.ControlId + '" value="' + item.Edition + '" />\
+                                          <input type="hidden" name="txtVersion@(itemName)" data-control-id="' + item.ControlId + '" value="' + item.Version + '" />\
+                                          <input type="hidden" name="txtCadFile@(itemName)" data-control-id="' + item.ControlId + '" value="' + item.CadFile + '" />\
+                                          <input type="hidden" name="txtFileName@(itemName)" data-control-id="' + item.ControlId + '" value="' + item.FileName + '" />\
+                                          <input type="hidden" name="txtFileExtension@(itemName)" data-control-id="' + item.ControlId + '" value="' + item.FileExtension + '" />\
+                                        </td>\
+                                      </tr>';
+
+                        function JudgeCadFileAbsolutePath@(itemName)(cadFileAbsolutePath, cadFile, fileName, fileExtension) {
+                            let innerHtml = '';
+                            if (cadFileAbsolutePath != "null") {
+                                let fileFullNameList = cadFileAbsolutePath.split('\\');
+                                let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                                innerHtml += '\
+                                            <td class="active-content ellipsis" data-toggle="tooltip" title="' + fileFullName + '" style="max-width: 250px;">\
+                                              <a class="active-link mr-1" href="/Drawing/GetCadFile?FilePath=' + cadFileAbsolutePath + '"><i class="fas fa-download"></i></a>\
+                                              ' + fileFullName + '\
+                                            </td>';
+                            }
+                            else if (cadFile != "null") {
+                                innerHtml += '\
+                                            <td class="active-content ellipsis" data-toggle="tooltip" title="' + item.FileName + item.FileExtension + '" style="max-width: 250px;">\
+                                              <a class="active-link mr-1" href="/Drawing/GetPdmFile?fileId=' + item.CadFile + '"><i class="fas fa-download"></i></a>\
+                                              ' + item.FileName + item.FileExtension + '\
+                                            </td>';
+                            }
+                            else {
+                                innerHtml += '\
+                                        <td></td>';
+                            }
+                            return innerHtml;
+                        }
+                    });
+                } else {
+                    innerHtml += '<tr>\
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">\
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。\
+                                    </td>\
+                                  </tr>';
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-control-id]:checked") {
+                    let controlId = $(this).data("control-id");
+
+                    if (controlId) {
+                        let customerDwgNo = $("input[name='txtCustomerDwgNo@(itemName)'][data-control-id='" + controlId + "']").val();
+                        let edition = $("input[name='txtEdition@(itemName)'][data-control-id='" + controlId + "']").val();
+                        let version = $("input[name='txtVersion@(itemName)'][data-control-id='" + controlId + "']").val();
+                        let cadFile = $("input[name='txtCadFile@(itemName)'][data-control-id='" + controlId + "']").val();
+                        let fileName = $("input[name='txtFileName@(itemName)'][data-control-id='" + controlId + "']").val();
+                        let fileExtension = $("input[name='txtFileExtension@(itemName)'][data-control-id='" + controlId + "']").val();
+                        
+                        if (controlId@(itemName)) {
+                            $(controlId@(itemName)).val(controlId).trigger("change");
+                        }
+
+                        if (customerDwgNo@(itemName)) {
+                            $(customerDwgNo@(itemName)).val(customerDwgNo).trigger("change");
+                            $(customerDwgNo@(itemName)).html(customerDwgNo);
+                        }
+
+                        if (edition@(itemName)) {
+                            let tempContent = edition + '<code>(' + version + ')</code>';
+                            $(edition@(itemName)).val(edition).trigger("change");
+                            $(edition@(itemName)).html(tempContent);
+                        }
+
+                        if (cadFile@(itemName)) {
+                            if (cadFile > 0) {
+                                let tempContent = '<a class="badge badge-info" href="/Drawing/GetPdmFile?fileId=' + cadFile + '"><i class="fas fa-download"></i> ' + fileName + fileExtension + '</a>';
+                                $(cadFile@(itemName)).val(cadFile).trigger("change");
+                                $(cadFile@(itemName)).html(tempContent);
+                            } else {
+                                $(cadFile@(itemName)).html("&nbsp;");
+                            }
+                        }
+
+                        $(targetSelector@(itemName)).siblings(".help-block").show();
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

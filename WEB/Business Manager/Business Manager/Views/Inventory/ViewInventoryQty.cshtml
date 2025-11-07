@@ -1,0 +1,195 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewInventoryQty";
+    string itemNameText = "查看庫存資料";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入品號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboInventoryIdQ@(itemName)" name="cboInventoryIdQ@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">品號</th>
+                                        <th scope="col" style="min-width: 200px;">品名</th>
+                                        <th scope="col" style="min-width: 200px;">庫別</th>
+                                        <th scope="col" style="min-width: 200px;">庫存數量</th>
+                                        <th scope="col" style="min-width: 200px;">存放位置</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 250px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let targetSelector@(itemName);
+
+        function Pop@(itemName)(mtlItemNo, inventoryId, targetSelector) {
+            ComboBoxs.Default("#cboInventoryIdQ@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId");
+            $("#txtMtlItemNoQ@(itemName)").val(mtlItemNo);
+            $("#cboInventoryIdQ@(itemName)").val(inventoryId);
+            targetSelector@(itemName) = targetSelector;
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            if (!isMobile) {
+                $("#cboInventoryIdQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+        }
+
+        $("#txtMtlItemNoQ@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                Query@(itemName)();
+                return false;
+            }
+        });
+
+        $("#queryForm@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        $("#cboInventoryIdQ@(itemName)").change(function () {
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetErpInventoryQty", "Inventory")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "InventoryId": $("#cboInventoryIdQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td scope="col" style="min-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="min-width: 200px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="min-width: 200px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryNo}-${item.InventoryName}" style="min-width: 200px;">${item.InventoryNo}-${item.InventoryName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryQty}" style="min-width: 200px;">${item.InventoryQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventorySite}" style="min-width: 200px;">${item.InventorySite}</td>
+                                        <td class="text-center col-sticky">
+                                            <label class="control control-solid control-solid-info control--radio">
+                                                <input type="radio" data-mtl-item-no="${item.MtlItemNo}" value="${item.InventoryId}" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;此品號及庫別尚無任何庫存資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-mtl-item-no]:checked") {
+                    let inventoryId = $(this).val();
+                    ComboBoxs.Default("" + targetSelector@(itemName) + "", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId");
+                    $("" + targetSelector@(itemName) + "").val(inventoryId);
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+                                        )

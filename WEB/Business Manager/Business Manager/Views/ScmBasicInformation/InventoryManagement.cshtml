@@ -1,0 +1,442 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "InventoryManagement";
+    string itemNameText = "庫別管理";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtInventoryNoQ@(itemName)">庫別代號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtInventoryNoQ@(itemName)" name="txtInventoryNoQ@(itemName)" placeholder="請輸入庫別代號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtInventoryNameQ@(itemName)">庫別名稱</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtInventoryNameQ@(itemName)" name="txtInventoryNameQ@(itemName)" placeholder="請輸入庫別名稱" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    啟用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)A" name="cbxStatusQ@(itemName)" value="A" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    停用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)S" name="cbxStatusQ@(itemName)" value="S" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        @*<a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>*@
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">庫別代號</th>
+                                        <th scope="col" style="min-width: 200px;">庫別名稱</th>
+                                        <th scope="col" style="min-width: 150px;">庫別性質</th>
+                                        <th class="text-center" scope="col" style="min-width: 100px;">拋轉ERP</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">狀態</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="InventoryId" name="InventoryId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtInventoryNo@(itemName)">庫別代號 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtInventoryNo@(itemName)" name="txtInventoryNo@(itemName)"
+                                       data-msg-required="請輸入庫別代號" data-rule-required="true" placeholder="請輸入庫別代號"
+                                       data-msg-maxlength="必須少於 50 個字元" maxlength="50" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtInventoryName@(itemName)">庫別名稱 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtInventoryName@(itemName)" name="txtInventoryName@(itemName)"
+                                       data-msg-required="請輸入庫別名稱" data-rule-required="true" placeholder="請輸入庫別名稱"
+                                       data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboInventoryType@(itemName)">庫別性質 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboInventoryType@(itemName)" name="cboInventoryType@(itemName)"
+                                        data-msg-required="請選擇庫別性質" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtInventoryDesc@(itemName)">庫別描述 </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtInventoryDesc@(itemName)" name="txtInventoryDesc@(itemName)"
+                                       data-msg-maxlength="必須少於 100 個字元" maxlength="100" placeholder="請輸入庫別描述" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="chkMrpCalculation@(itemName)">納入MRP計算 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            是
+                                            <input type="radio" id="chkMrpCalculation@(itemName)Y" name="chkMrpCalculation@(itemName)" value="Y" 
+                                                   data-msg-required="請選擇是否納入MRP計算" data-rule-required="true" checked/>
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            否
+                                            <input type="radio" id="chkMrpCalculation@(itemName)N" name="chkMrpCalculation@(itemName)" value="N" 
+                                                   data-msg-required="請選擇是否納入MRP計算" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="chkConfirmStatus@(itemName)">確認時庫存量不足准許出庫 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            是
+                                            <input type="radio" id="chkConfirmStatus@(itemName)Y" name="chkConfirmStatus@(itemName)" value="Y" 
+                                                   data-msg-required="請選擇是否確認時庫存量不足准許出庫" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            否
+                                            <input type="radio" id="chkConfirmStatus@(itemName)N" name="chkConfirmStatus@(itemName)" value="N" 
+                                                   data-msg-required="請選擇是否確認時庫存量不足准許出庫" data-rule-required="true" checked />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="chkSaveStatus@(itemName)">存檔時庫存量不足准許出庫 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            是
+                                            <input type="radio" id="chkSaveStatus@(itemName)Y" name="chkSaveStatus@(itemName)" value="Y" 
+                                                   data-msg-required="請選擇是否存檔時庫存量不足准許出庫" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio col-12">
+                                            否
+                                            <input type="radio" id="chkSaveStatus@(itemName)N" name="chkSaveStatus@(itemName)" value="N" 
+                                                   data-msg-required="請選擇是否存檔時庫存量不足准許出庫" data-rule-required="true" checked />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right read-hide">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+             Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+            let targetUrl = "@Url.Action("GetInventory", "ScmBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "InventoryNo": $("#txtInventoryNoQ@(itemName)").val(),
+                "InventoryName": $("#txtInventoryNameQ@(itemName)").val(),
+                "Status": statusList.join(",")
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.InventoryNo}</td>
+                                        <td>${item.InventoryName}</td>
+                                        <td>${TypeName("InventoryType", item.InventoryType)}</td>
+                                        <td class="text-center">${StatusName("Boolean", item.TransferStatus)}</td>
+                                        <td class="text-center auth-status-switch">
+                                          <input type="checkbox" name="chkStatus@(itemName)" data-inventory-id="${item.InventoryId}" ${(item.Status == 'A' ? 'checked' : '')} />
+                                        </td>
+                                        <td class="text-center un-auth auth-status-switch">${StatusName("Status", item.Status)}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link auth-read" href="javascript:Read@(itemName)(${item.InventoryId});"><i class="fas fa-eye"></i></a>
+                                          @*<a class="active-link auth-update" href="javascript:Edit@(itemName)(${item.InventoryId});"><i class="fas fa-edit"></i></a>*@
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "啟用",
+                off: "停用",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStatus@(itemName)'][data-inventory-id]").change(StatusSwitch@(itemName));
+        }
+        
+        function Edit@(itemName)(InventoryId) {
+            $("#InventoryId").val(InventoryId ? InventoryId : 0);
+
+            $(objForm@(itemName) + " fieldset").attr("disabled", false);
+            $(objForm@(itemName) + " select").attr("disabled", false);
+            $(".read-hide").show();
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            ComboBoxs.Default("#cboInventoryType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "InventoryType" }, "", "NA", "", "TypeName", "TypeNo");
+
+            if (InventoryId > 0) {
+                let targetUrl = "@Url.Action("GetInventory", "ScmBasicInformation")";
+                let postData = {
+                    "InventoryId": InventoryId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtInventoryNo@(itemName)").val(item.InventoryNo);
+                        $("#txtInventoryName@(itemName)").val(item.InventoryName);
+                        $("#cboInventoryType@(itemName)").val(item.InventoryType);
+                        $("#txtInventoryDesc@(itemName)").val(item.InventoryDesc);
+                        if (item.MrpCalculation == "Y") $("#chkMrpCalculation@(itemName)Y").prop("checked", true);
+                        if (item.MrpCalculation == "N") $("#chkMrpCalculation@(itemName)N").prop("checked", true);
+                        if (item.ConfirmStatus == "Y") $("#chkConfirmStatus@(itemName)Y").prop("checked", true);
+                        if (item.ConfirmStatus == "N") $("#chkConfirmStatus@(itemName)N").prop("checked", true);
+                        if (item.SaveStatus == "Y") $("#chkSaveStatus@(itemName)Y").prop("checked", true);
+                        if (item.SaveStatus == "N") $("#chkSaveStatus@(itemName)N").prop("checked", true);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            if (!isMobile) {
+                $("#cboInventoryType@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+        }
+
+        function Read@(itemName)(InventoryId) {
+            Edit@(itemName)(InventoryId);
+            $(objForm@(itemName) + " fieldset").attr("disabled", true);
+            $(objForm@(itemName) + " select").attr("disabled", true);
+            $(".read-hide").hide();
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let InventoryId = parseInt($("#InventoryId").val());
+
+                if (InventoryId <= 0) {
+                    let targetUrl = "@Url.Action("AddInventory", "ScmBasicInformation")";
+                    let postData = {
+                        "InventoryNo": $("#txtInventoryNo@(itemName)").val(),
+                        "InventoryName": $("#txtInventoryName@(itemName)").val(),
+                        "InventoryType": $("#cboInventoryType@(itemName)").val(),
+                        "InventoryDesc": $("#txtInventoryDesc@(itemName)").val(),
+                        "MrpCalculation": $("input[name='chkMrpCalculation@(itemName)']:checked").val(),
+                        "ConfirmStatus": $("input[name='chkConfirmStatus@(itemName)']:checked").val(),
+                        "SaveStatus": $("input[name='chkSaveStatus@(itemName)']:checked").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateInventory", "ScmBasicInformation")";
+                    let postData = {
+                        "InventoryId": InventoryId,
+                        "InventoryNo": $("#txtInventoryNo@(itemName)").val(),
+                        "InventoryName": $("#txtInventoryName@(itemName)").val(),
+                        "InventoryType": $("#cboInventoryType@(itemName)").val(),
+                        "InventoryDesc": $("#txtInventoryDesc@(itemName)").val(),
+                        "MrpCalculation": $("input[name='chkMrpCalculation@(itemName)']:checked").val(),
+                        "ConfirmStatus": $("input[name='chkConfirmStatus@(itemName)']:checked").val(),
+                        "SaveStatus": $("input[name='chkSaveStatus@(itemName)']:checked").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block");
+            Query@(itemName)();
+        }
+
+        function StatusSwitch@(itemName)() {
+            var InventoryId = $(this).data("inventory-id");
+
+            let targetUrl = "@Url.Action("UpdateInventoryStatus", "ScmBasicInformation")";
+            let postData = {
+                "InventoryId": InventoryId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+                Query@(itemName)();
+            }
+        }
+    </script>
+)

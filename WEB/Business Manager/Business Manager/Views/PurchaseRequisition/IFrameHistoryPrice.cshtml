@@ -1,0 +1,139 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "IFrameHistoryPrice";
+    string itemNameText = "條碼追蹤查詢";
+    string authority = ViewBag.authority;
+
+    string MtlItemNo = Request["MtlItemNo"] ?? "";
+    string Iframe = Request["Iframe"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+         .container {
+             margin-left: 0 !important;
+         }
+
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             vertical-align: middle !important;
+         }
+
+         .baseline .baseline-list {
+             padding-bottom: 9.6px !important;
+         }
+
+             .baseline .baseline-list:after {
+                 border: none !important;
+                 top: 27px !important;
+             }
+
+         .txt-skyblue {
+             font-size: 87.5%;
+         }
+
+         iframe {
+             width: 100%;
+             height: 80vh;
+             aspect-ratio: 16 / 9;
+         }
+    </style>
+        )
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 200px;">最低單價單據</th>
+                                        <th scope="col" style="max-width: 200px;">最低單價</th>
+                                        <th scope="col" style="max-width: 200px;">單據時間</th>
+                                        <th scope="col" style="max-width: 200px;">最高單價單據</th>
+                                        <th scope="col" style="max-width: 200px;">最高單價</th>
+                                        <th scope="col" style="max-width: 200px;">單據時間</th>
+                                        <th scope="col" style="max-width: 200px;">總交易筆數</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(document).ready(function () {
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            $("#tblData@(itemName)").hide();
+
+            if ("@Iframe" == "T") {
+                $(objForm@(itemName) + " input").attr("disabled", true);
+                $(objForm@(itemName) + " select").attr("disabled", true);
+            }
+
+            InitData@(itemName)();
+        });
+
+        function InitData@(itemName)() {
+            $("#tblData@(itemName)").show();
+
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetHistoryPrice", "PurchaseRequisition")";
+            let postData = {
+                "MtlItemNo": '@MtlItemNo'
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+                if (pageCount > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MinPrErpFullNo}(${item.MinPrSeq})" style="min-width: 200px;">${item.MinPrErpFullNo}<code>(${item.MinPrSeq})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MinPrUnitPrice} ${item.MinPrCurrency}" style="min-width: 135px;">${item.MinPrUnitPrice} <code>${item.MinPrCurrency}</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MinCreateDate}" style="min-width: 135px;">${item.MinCreateDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MaxPrErpFullNo}(${item.MaxPrSeq})" style="min-width: 200px;">${item.MaxPrErpFullNo}<code>(${item.MaxPrSeq})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MaxPrUnitPrice} ${item.MaxPrCurrency}" style="min-width: 135px;">${item.MaxPrUnitPrice} <code>${item.MaxPrCurrency}</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MaxCreateDate}" style="min-width: 135px;">${item.MaxCreateDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TotalCount}" style="min-width: 135px;">${item.TotalCount}</td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;此品號尚無交易紀錄。
+                                  </td>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+        }
+    </script>
+        )

@@ -1,0 +1,694 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DeliverySchedule";
+    string itemNameText = "出貨排程管理";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             border: none !important;
+         }
+
+         .popover-label {
+             font-size: 14px;
+             color: #53505F;
+             padding: 7px 15px;
+             text-align: left;
+         }
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboDeliveryStatusQ@(itemName)">出貨狀態</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDeliveryStatusQ@(itemName)" name="cboDeliveryStatusQ@(itemName)">
+                                    <option value="">全部</option>
+                                    <option value="tracked" selected>待追蹤</option>
+                                    <option value="triTrade">三角貿易</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboSoIds@(itemName)">訂單單號</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSoIds@(itemName)" name="cboSoIds@(itemName)" multiple></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboCustomerIdQ@(itemName)">客戶名稱</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCustomerIdQ@(itemName)" name="cboCustomerIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboSalesmenIdQ@(itemName)">業務人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSalesmenIdQ@(itemName)" name="cboSalesmenIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">品號/品名/客戶品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入品號/品名/客戶品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">排定交貨日 <input type="checkbox" id="cbxUseDate@(itemName)" /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 text-right">
+                        <a class="btn btn-info" href="javascript:PopViewDeliveryFinalize();"><i class="far fa-clipboard-check"></i>出貨定版</a>
+                        <a class="btn file-excel" href="javascript:Excel@(itemName)();"><i class="fas fa-file-excel"></i>匯出</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 100px;">
+                                            <label class="control control-solid control-solid-info control--checkbox" style="margin-bottom: 0px;">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </th>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">訂單單號</th>
+                                        <th scope="col" style="min-width: 200px;">客戶名稱</th>
+                                        <th scope="col" style="min-width: 200px;">品號</th>
+                                        <th scope="col" style="min-width: 300px;">品名</th>
+                                        <th scope="col" style="min-width: 140px;">正常品數量</th>
+                                        <th scope="col" style="min-width: 130px;">贈品數量</th>
+                                        <th scope="col" style="min-width: 130px;">備品數量</th>
+                                        <th scope="col" style="min-width: 300px;">備註</th>
+                                        <th scope="col" style="min-width: 190px;">排定交貨日</th>
+                                        <th class="text-center" scope="col" style="min-width: 230px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalErpAccounting">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">訂單帳務</h5>
+                <button class="close" type="button" onclick="CloseErpAccounting()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblErpAccountingData">
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewSoDetail")
+
+@Html.Partial("ViewDeliveryFinalize")
+
+@Html.Partial("ViewDeliveryDateLog")
+
+@Html.Partial("ViewWipLink")
+
+@Html.Partial("ViewLetteringInfo")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let timePSDeliverySchedule = new dhx.Timepicker();
+        let popupPSDeliverySchedule = new dhx.Popup();
+        let dateInputPSDeliverySchedule;
+
+        $(document).ready(function () {
+            let currentDate = new Date();
+            Suites.DatePicker("txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.DatePicker("txtStartDateQ@(itemName)", currentDate);
+
+            ComboBoxs.Default("#cboSoIds@(itemName)", "@Url.Action("GetSoErpFullNo", "SaleOrder")", { "DeliveryStatus": $("#cboDeliveryStatusQ@(itemName)").val() }, "", "ALL", "", "SoErpFullNo", "SoId");
+            ComboBoxs.Default("#cboCustomerIdQ@(itemName)", "@Url.Action("GetCustomer", "ScmBasicInformation")", { "Status": "A", "TransferStatus": "A" }, "", "ALL", "", "CustomerWithNo", "CustomerId");
+            ComboBoxs.Default("#cboSalesmenIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Departments": "106,107,110" }, "", "ALL", "", "UserWithNo", "UserId");
+
+            $("#cboSoIds@(itemName), #cboCustomerIdQ@(itemName), #cboSalesmenIdQ@(itemName), #cboDeliveryStatusQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#cboDeliveryStatusQ@(itemName)").change(function () {
+                ComboBoxs.Default("#cboSoIds@(itemName)", "@Url.Action("GetSoErpFullNo", "SaleOrder")", { "DeliveryStatus": $("#cboDeliveryStatusQ@(itemName)").val()}, "", "ALL", "", "SoErpFullNo", "SoId");
+            });
+
+            Query@(itemName)();
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-so-detail-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-so-detail-id]").not(":disabled").prop("checked", false);
+                }
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetDeliverySchedule", "Delivery")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "DeliveryStatus": $("#cboDeliveryStatusQ@(itemName)").val(),
+                "SoIds": $("#cboSoIds@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "CustomerId": $("#cboCustomerIdQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "SalesmenId": $("#cboSalesmenIdQ@(itemName)").val(),
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : "")
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        let regularQty = 0, freebieQty = 0, spareQty = 0;
+
+                        //正常品
+                        regularQty = item.erp_tsnQty + item.erp_un_tsnQty - (item.erp_tsrnQty + item.erp_un_tsrnQty) - (item.erp_srnQty + item.erp_un_srnQty);
+
+                        if ((item.erp_tsnQty + item.erp_un_tsnQty) <= 0 && (item.erp_snQty + item.erp_un_snQty) > 0) {
+                            regularQty = item.erp_snQty + item.erp_un_snQty - (item.erp_srnQty + item.erp_un_srnQty);
+                        }
+
+                        //let tsn = item.erp_tsnQty + item.erp_un_tsnQty - item.erp_tsrnQty - item.erp_un_tsrnQty;
+                        //let sn = item.erp_snQty + item.erp_un_snQty - item.erp_un_srnQty;
+
+                        //if (tsn == 0 && sn > 0) {
+                        //    regularQty = sn;
+                        //} else {
+                        //    regularQty = tsn;
+                        //}
+
+                        //贈品
+                        freebieQty = item.erp_tsnFreebieQty + item.erp_un_tsnFreebieQty - (item.erp_tsrnFreebieQty + item.erp_un_tsrnFreebieQty) - (item.erp_srnFreebieQty + item.erp_un_srnFreebieQty);
+
+                        if ((item.erp_tsnFreebieQty + item.erp_un_tsnFreebieQty) <= 0 && (item.erp_snFreebieQty + item.erp_un_snFreebieQty) > 0) {
+                            freebieQty = item.erp_snFreebieQty + item.erp_un_snFreebieQty - (item.erp_srnFreebieQty + item.erp_un_srnFreebieQty);
+                        }
+
+                        ////let tsnFreebie = item.erp_tsnFreebieQty + item.erp_un_tsnFreebieQty - item.erp_tsrnFreebieQty - item.erp_un_tsrnFreebieQty;
+                        ////let snFreebie = item.erp_snFreebieQty + item.erp_un_snFreebieQty - item.erp_un_srnFreebieQty;
+
+                        ////if (tsnFreebie == 0 && snFreebie > 0) {
+                        ////    freebieQty = snFreebie;
+                        ////}
+                        ////else {
+                        ////    freebieQty = tsnFreebie;
+                        ////}
+
+                        //備品
+                        spareQty = item.erp_tsnSpareQty + item.erp_un_tsnSpareQty - (item.erp_tsrnSpareQty + item.erp_un_tsrnSpareQty) - (item.erp_srnSpareQty + item.erp_un_srnSpareQty);
+
+                        if ((item.erp_tsnSpareQty + item.erp_un_tsnSpareQty) <= 0 && (item.erp_snSpareQty + item.erp_un_snSpareQty) > 0) {
+                            spareQty = item.erp_snSpareQty + item.erp_un_snSpareQty - (item.erp_srnSpareQty + item.erp_un_srnSpareQty);
+                        }
+
+                        //let tsnSpare = item.erp_tsnSpareQty + item.erp_un_tsnSpareQty - item.erp_tsrnSpareQty - item.erp_un_tsrnSpareQty;
+                        //let snSpare = item.erp_snSpareQty + item.erp_un_snSpareQty - item.erp_un_srnSpareQty;
+
+                        //if (tsnSpare == 0 && snSpare > 0) {
+                        //    spareQty = snSpare;
+                        //}
+                        //else {
+                        //    spareQty = tsnSpare;
+                        //}
+
+                        innerHtml += `<tr>
+                                        <td class="text-center">
+                                          <label class="control control-solid control-solid-info control--checkbox">
+                                            <input type="checkbox" data-so-detail-id="${item.SoDetailId}" value="${item.SoDetailId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtPcPromiseDate@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.PcPromiseDate}" />
+                                          <input type="hidden" name="txtPcPromiseTime@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.PcPromiseTime}" />
+                                          <input type="hidden" name="txtCustomerId@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.CustomerId}" />
+                                          <input type="hidden" name="txtCustomerNo@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.CustomerNo}" />
+                                          <input type="hidden" name="txtCustomerName@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.CustomerShortName}" />
+                                          <input type="hidden" name="txtMtlItemName@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.MtlItemName}" />
+                                          <input type="hidden" name="txtSoQty@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.SoQty - regularQty}" />
+                                          <input type="hidden" name="txtFreebieQty@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.FreebieQty - freebieQty}" />
+                                          <input type="hidden" name="txtSpareQty@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.SpareQty - spareQty}" />
+                                          <input type="hidden" name="txtSoNo@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.SoErpFullNo}" />
+                                          <input type="hidden" name="txtSoSeq@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.SoSequence}" />
+                                          <input type="hidden" name="txtSoDetailRemark@(itemName)" data-so-detail-id="${item.SoDetailId}" value="${item.SoDetailRemark}" />
+                                          <input type="hidden" name="txtItem" data-so-detail-id="${item.SoDetailId}" value='${JSON.stringify(item)}' />
+                                        </td>
+                                        <td>${_row}</td>
+                                        <td>${item.SoErpFullNo}<code>(${item.SoSequence})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CustomerName}" style="max-width: 200px;">${item.CustomerWithNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 300px;">${item.MtlItemName}</td>
+                                        <td class="text-right">
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">ERP帳務</p>
+                                            ${regularQty != item.SoQty ? `<span class="text-danger">${regularQty}</span>` : `<span class="text-success">${regularQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.SoQty}</span>
+                                            <a href="javascript:PopErpAccountingDetail(${item.SoDetailId}, 'Regular');"><i class="fas fa-info-circle"></i></a>
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">撿貨數</p>
+                                            ${item.PickRegularQty != item.SoQty ? `<span class="text-danger">${item.PickRegularQty}</span>` : `<span class="text-success">${item.PickRegularQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.SoQty}</span>
+                                            <input type="hidden" data-so-detail="${item.SoDetailId}" name="desPickRegularQty" value="${item.PickRegularQty}" />
+                                        </td>
+                                        <td class="text-right">
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">ERP帳務</p>
+                                            ${freebieQty != item.FreebieQty ? `<span class="text-danger">${freebieQty}</span>` : `<span class="text-success">${freebieQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.FreebieQty}</span>
+                                            <a href="javascript:PopErpAccountingDetail(${item.SoDetailId}, 'Freebie');"><i class="fas fa-info-circle"></i></a>
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">撿貨數</p>
+                                            ${item.PickFreebieQty != item.FreebieQty ? `<span class="text-danger">${item.PickFreebieQty}</span>` : `<span class="text-success">${item.PickFreebieQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.FreebieQty}</span>
+                                            <input type="hidden" data-so-detail="${item.SoDetailId}" name="desPickFreebieQty" value="${item.PickFreebieQty}" />
+                                        </td>
+                                        <td class="text-right">
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">ERP帳務</p>
+                                            ${spareQty != item.SpareQty ? `<span class="text-danger">${spareQty}</span>` : `<span class="text-success">${spareQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.SpareQty}</span>
+                                            <a href="javascript:PopErpAccountingDetail(${item.SoDetailId}, 'Spare');"><i class="fas fa-info-circle"></i></a>
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">撿貨數</p>
+                                            ${item.PickSpareQty != item.SpareQty ? `<span class="text-danger">${item.PickSpareQty}</span>` : `<span class="text-success">${item.PickSpareQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.SpareQty}</span>
+                                            <input type="hidden" data-so-detail="${item.SoDetailId}" name="desPickSpareQty" value="${item.PickSpareQty}" />
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoDetailRemark}" style="max-width: 300px;">${item.SoDetailRemark}</td>
+                                        <td>
+                                            ${item.PcPromiseDate} ${item.PcPromiseTime} &nbsp
+                                            <a class="auth-date-log"href="javascript:EditDate@(itemName)(${item.SoDetailId});"><i class="fas fa-clock"></i>
+                                        </td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link auth-date-log" href="javascript:PopViewDeliveryDateLog(${item.SoDetailId});"><i class="fas fa-history"></i><span>交期紀錄</span></a>
+                                          <a class="active-link auth-wip-link ${item.LastBindStatus == `B` ? `text-danger` : ``}" href="javascript:PopViewWipLink(${item.SoDetailId});"><i class="fas fa-link"></i><span>製令綁定</span></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function EditDate@(itemName)(SoDetailId) {
+            Swal.fire({
+                html: `
+                    <div class="card card-shadow">
+                        <div class="card-header">
+                            <h2 class="card-title" style="text-align: left;">修改排定交貨日</h2>
+                        </div>
+                        <div class="card-body">
+                            <form autocomplete="off" id="editForm@(itemName)">
+                                <fieldset>
+                                    <input type="hidden" id="SoDetailId" name="SoDetailId" value="-1" />
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="txtPcPromiseDate@(itemName)">交貨時間 <span class="text-danger">*</span></label>
+                                                <div class="col-12">
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" id="txtPcPromiseDate@(itemName)" name="txtPcPromiseDate@(itemName)"
+                                                                readonly />
+                                                        <input type="text" class="form-control timedropper" id="txtPcPromiseTime@(itemName)" name="txtPcPromiseTime@(itemName)"
+                                                               data-msg-required="請輸入交貨時間" data-rule-required="true"
+                                                               data-msg-maxlength="必須少於 8 個字元" maxlength="8" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboCauseType@(itemName)">原因類別</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboCauseType@(itemName)" name="cboCauseType@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboDepartmentId@(itemName)">責任部門</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboDepartmentId@(itemName)" name="cboDepartmentId@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboSupervisorId@(itemName)">責任主管</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboSupervisorId@(itemName)" name="cboSupervisorId@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-12 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 form-label popover-label" for="txtCauseDescription@(itemName)">延遲原因</label>
+                                                <div class="col-12">
+                                                    <textarea class="form-control" id="txtCauseDescription@(itemName)" name="txtCauseDescription@(itemName)" placeholder="請輸入延遲原因"
+                                                              data-msg-maxlength="必須少於 255 個字元" maxlength="255" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-success text-right" onclick="SaveDate@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                                </fieldset>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: 900,
+            });
+            $("#SoDetailId").val(SoDetailId ? SoDetailId : 0);
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtPcPromiseDate@(itemName)", currentDate);
+            Suites.TimePicker("txtPcPromiseTime@(itemName)", "00:00");
+
+            ComboBoxs.Default("#cboCauseType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "Delivery.CauseType" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.Default("#cboDepartmentId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A" }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+            ComboBoxs.Default("#cboSupervisorId@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "NA", "", "UserWithNo", "UserId");
+
+            $("#cboCauseType@(itemName),#cboDepartmentId@(itemName),#cboSupervisorId@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function SaveDate@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let SoDetailId = parseInt($("#SoDetailId").val());
+
+                let targetUrl = "@Url.Action("AddDeliveryDateLog", "Delivery")";
+                let postData = {
+                    "SoDetailId": SoDetailId,
+                    "PcPromiseDate": $("#txtPcPromiseDate@(itemName)").val(),
+                    "PcPromiseTime": $("#txtPcPromiseTime@(itemName)").val(),
+                    "CauseType": $("#cboCauseType@(itemName)").val(),
+                    "DepartmentId": $("#cboDepartmentId@(itemName)").val(),
+                    "SupervisorId": $("#cboSupervisorId@(itemName)").val(),
+                    "CauseDescription": $("#txtCauseDescription@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Swal.close();
+                    Query@(itemName)();
+                }
+            }
+        }
+
+        function PopErpAccountingDetail(SoDetailId, Type) {
+            let innerHtml = ``;
+            let json = JSON.parse($(`input[name="txtItem"][data-so-detail-id="${SoDetailId}"]`).val());
+
+            $("#modalErpAccounting").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            switch (Type) {
+                case "Regular":
+                    innerHtml = `<tr>
+                                   <th>訂單</th>
+                                   <td>${$(`input[name="txtSoNo@(itemName)"][data-so-detail-id="${SoDetailId}"]`).val()}-${$(`input[name="txtSoSeq@(itemName)"][data-so-detail-id="${SoDetailId}"]`).val()}</td>
+                                 </tr>
+                                 <tr>
+                                   <th>訂單數</th>
+                                   <td>
+                                     <span style="font-weight: bold;">${json.SoQty}</span>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>暫出數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_tsnQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_tsnQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>暫出歸還數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_tsrnQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_tsrnQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>銷貨數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_snQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_snQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>銷退數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_srnQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_srnQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>`;
+                    break;
+                case "Freebie":
+                    innerHtml = `<tr>
+                                   <th>訂單</th>
+                                   <td>${$(`input[name="txtSoNo@(itemName)"][data-so-detail-id="${SoDetailId}"]`).val()}-${$(`input[name="txtSoSeq@(itemName)"][data-so-detail-id="${SoDetailId}"]`).val()}</td>
+                                 </tr>
+                                 <tr>
+                                   <th>贈品數</th>
+                                   <td>
+                                     <span style="font-weight: bold;">${json.FreebieQty}</span>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>暫出數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_tsnFreebieQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_tsnFreebieQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>暫出歸還數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_tsrnFreebieQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_tsrnFreebieQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>銷貨數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_snFreebieQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_snFreebieQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>銷退數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_srnFreebieQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_srnFreebieQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>`;
+                    break;
+                case "Spare":
+                    innerHtml = `<tr>
+                                   <th>訂單</th>
+                                   <td>${$(`input[name="txtSoNo@(itemName)"][data-so-detail-id="${SoDetailId}"]`).val()}-${$(`input[name="txtSoSeq@(itemName)"][data-so-detail-id="${SoDetailId}"]`).val()}</td>
+                                 </tr>
+                                 <tr>
+                                   <th>備品數</th>
+                                   <td>
+                                     <span style="font-weight: bold;">${json.SpareQty}</span>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>暫出數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_tsnSpareQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_tsnSpareQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>暫出歸還數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_tsrnSpareQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_tsrnSpareQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>銷貨數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_snSpareQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_snSpareQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>
+                                 <tr>
+                                   <th>銷退數</th>
+                                   <td>
+                                     <span class="text-success">${json.erp_srnSpareQty}</span>
+                                     +
+                                     <span class="text-danger">${json.erp_un_srnSpareQty}</span>
+                                     <small>(未確認)</small>
+                                   </td>
+                                 </tr>`;
+                    break;
+            }
+
+            $("#tblErpAccountingData tbody").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function CloseErpAccounting() {
+            $("#modalErpAccounting").modal("hide");
+        }
+    </script>
+)

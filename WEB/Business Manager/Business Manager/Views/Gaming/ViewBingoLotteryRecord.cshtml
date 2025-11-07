@@ -1,0 +1,155 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewBingoLotteryRecord";
+    string itemNameText = "賓果開獎記錄";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">開局名稱 <span class="sub-text" id="desRoundName@(itemName)"></span></span>
+                    <span class="sub-title">開局時間 <span class="sub-text" id="desRoundDate@(itemName)"></span></span>
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="table-custom">
+                    <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th class="text-center" scope="col" style="min-width: 125px;">開獎順序</th>
+                                <th scope="col" style="min-width: 200px;">開獎內容</th>
+                                <th scope="col" style="min-width: 200px;">新增日期</th>
+                                <th scope="col" style="min-width: 200px;">新增人員</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let roundId@(itemName);
+        let Datas@(itemName) = new DataControl@(itemName)();
+
+        function Pop@(itemName)(roundId) {
+            roundId@(itemName) = roundId;
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            Datas@(itemName).GetBingoRound@(itemName)();
+            Datas@(itemName).GetBingoLotteryRecord@(itemName)();
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetBingoRound@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetBingoRound", "Gaming")";
+                let postData = {
+                    "RoundId": roundId@(itemName)
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#desRoundName@(itemName)").html(item.RoundName);
+                        $("#desRoundDate@(itemName)").html(item.RoundDate);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "GetBingoLotteryRecord@(itemName)", function () {
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetBingoLotteryRecord", "Gaming")";
+                let postData = {
+                    "RoundId": roundId@(itemName)
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            let content = item.RecordContent.split(',');
+
+                            innerHtml += `<tr>
+                                            <td class="text-center"><span class="stack-title">開獎順序</span>${item.RecordSeq}</td>
+                                            <td>
+                                                <span class="stack-title">開獎內容</span>
+                                                <span style="color: ${Color(content[0])};">
+                                                  <i class="${Suits(content[0])} ${content[0]}"></i>
+                                                  <i class="${Suits(content[0])} ${content[1]}"></i><span style="margin-left: 5px;">${content[2]}</span>
+                                                </span>
+                                            </td>
+                                            <td><span class="stack-title">新增日期</span>${item.CreateDate}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.DepartmentNo} ${item.DepartmentName}" style="max-width: 200px;"><span class="stack-title">新增人員</span>${item.LogoIcon == -1 ? `` : `<img class="company-logo" src="/Web/GetFile?fileId=${item.LogoIcon}" />`}${item.UserNo} ${item.UserName}</td>
+                                          </tr>`;
+                        });
+                    } else {
+                        innerHtml += `<tr>
+                                        <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                      </tr>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#tblData@(itemName) tbody").html(innerHtml);
+
+                function Color(type) {
+                    switch (type) {
+                        case "fa-spade":
+                            return "#13a2f9";
+                        case "fa-club":
+                            return "#fb8c00";
+                        case "fa-heart":
+                            return "#e21919";
+                        case "fa-diamond":
+                            return "#43a047";
+                    }
+                }
+
+                function Suits(type) {
+                    switch (type) {
+                        case "fa-spade":
+                            return "fas";
+                        case "fa-club":
+                            return "fas";
+                        case "fa-heart":
+                            return "fas";
+                        case "fa-diamond":
+                            return "fas";
+                    }
+                }
+            });
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

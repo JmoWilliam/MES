@@ -1,0 +1,343 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QcPlanningHistory";
+    string itemNameText = "量測機台排程過站系統";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                  )
+
+<div class="main-container">
+    <div class="main-div">
+        <div class="pl-header">
+            <div class="header-title">
+                <div class="title">
+                    <span>@itemNameText</span>
+                </div>
+                <div class="navbar">
+                    <span class="login-user">目前人員: <span id="desUserNo@(itemName)"></span></span>
+                    <a href="javascript: PopModalLogin@(itemName)();">
+                        <i class="fas fa-sign-in-alt"></i> 重新登入
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="pl-body">
+            <div class="nav-bar">
+                <div class="bar-item">
+                    <label>機型</label>
+                    <select id="cboQcMachineModeIdQ@(itemName)" class="form-control"></select>
+                </div>
+                <div class="bar-item">
+                    <label>機台</label>
+                    <select id="cboQmmDetailIdQ@(itemName)" class="form-control"></select>
+                </div>
+                <div class="bar-item">
+                    <label>品名</label>
+                    <input id="txtMtlItemNameQ@(itemName)" class="form-control" type="text" placeholder="請輸入品名" />
+                </div>
+                <div class="bar-item">
+                    <label>量測單號</label>
+                    <input id="txtQcRecordIdQ@(itemName)" class="form-control" type="text" placeholder="請輸入品名" />
+                </div>
+                <div class="bar-item">
+                    <label>預計開始時間</label>
+                    <input id="txtStartDateQ@(itemName)" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="bar-item">
+                    <label>狀態</label>
+                    <select id="cboStatusQ@(itemName)" class="form-control" multiple></select>
+                </div>
+                <div class="bar-item">
+                    <a href="javascript: Query@(itemName)();"><i class="fas fa-search"></i> 搜尋</a>
+                </div>
+            </div>
+            <div class="pl-table">
+                <table id="tblData@(itemName)" class="table table-bordered table-striped table-sticky">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 200px; text-align: center;">操作</th>
+                            <th style="min-width: 65px;">編號</th>
+                            <th style="min-width: 95px;">機台</th>
+                            <th style="min-width: 65px;">單號</th>
+                            <th style="min-width: 150px;">品名</th>
+                            <th style="min-width: 135px;">預計開始時間</th>
+                            <th style="min-width: 135px;">預計結束時間</th>
+                            <th style="min-width: 135px;">實際開始時間</th>
+                            <th style="min-width: 135px;">實際結束時間</th>
+                            <th style="min-width: 110px;">延宕(時)</th>
+                            <th style="min-width: 85px;">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="page@(itemName)"></div>
+        </div>
+    </div>
+</div>
+
+<!--重新登入-->
+<div class="modal fade pl-modal" id="modalLogin@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">重新登入</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="txtAccount@(itemName)" class="form-control" placeholder="請輸入工號" /> 
+            </div>
+            <div class="modal-footer">
+                <a href="javascript: Login@(itemName)();"><i class="fas fa-user"></i> 登入</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objQueryForm@(itemName) = "#queryForm@(itemName)";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let userId@(itemName);
+
+        $(document).ready(function () {
+            GetLoginByKey@(itemName)();
+
+            ComboBoxs.Default("#cboQcMachineModeIdQ@(itemName)", "@Url.Action("GetQcMachineModeInfo", "QcDataManagement")", {}, "", "ALL", "", "QcMachineModeName", "QcMachineModeId");
+            ComboBoxs.Default("#cboQmmDetailIdQ@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", {}, "", "ALL", "", "MachineName", "QmmDetailId");
+            ComboBoxs.Default("#cboStatusQ@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "QcMachineModePlanning.Status" }, "", "CHOOSE", "", "StatusName", "StatusNo");
+
+            $("#cboQcMachineModeIdQ@(itemName)").select2({
+                width: "100%"
+            });
+            $("#cboQmmDetailIdQ@(itemName)").select2({
+                width: "100%"
+            });
+            $("#cboStatusQ@(itemName)").select2({
+                width: "100%"
+            });
+
+            $("#txtAccount@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Login@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#cboQcMachineModeIdQ@(itemName)").change(function () {
+                let qcMachineModeId = $(this).val();
+                ComboBoxs.Default("#cboQmmDetailIdQ@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "QcMachineModeId": qcMachineModeId }, "", "ALL", "", "MachineName", "QmmDetailId");
+            });
+
+            $("#txtMtlItemNameQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#txtQcRecordIdQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetQcMachineModePlanning", "QcPlanningProcess")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "QmmDetailId": $("#cboQmmDetailIdQ@(itemName)").val(),
+                "QcMachineModeId": $("#cboQcMachineModeIdQ@(itemName)").val(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "Status": $("#cboStatusQ@(itemName)").val().toString(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "QcRecordId": $("#txtQcRecordIdQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        defaultFileId@(itemName) = item.DefaultFileId;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr data-qmmp-id="${item.QmmpId}">
+                                        <td class="text-center active-content" style="display:flex; gap:8px; justify-content: center;">
+                                            ${JudgeQcPlanningStatus(`${item.QmmpId}`, `${item.Status}`)}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${_row}">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineDesc}">${item.MachineDesc}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcRecordId}">${item.QcRecordId}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.EstimatedStartDate}">${item.EstimatedStartDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.EstimatedEndDate}">${item.EstimatedEndDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" ${item.StartDate != null ? `style="color: #30a33f; font-weight: 600;"` : `style="color: #df4054; font-weight: 600;"`} title="${item.StartDate != null ? item.StartDate : `尚未開工`}">${item.StartDate != null ? item.StartDate : `<i class="fas fa-exclamation-triangle"></i> 尚未開工`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" ${item.EndDate != null ? `style="color: #30a33f; font-weight: 600;"` : `style="color: #df4054; font-weight: 600;"`} title="${item.EndDate != null ? item.EndDate : `尚未完工`}">${item.EndDate != null ? item.EndDate : `<i class="fas fa-exclamation-triangle"></i> 尚未完工`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" ${item.DateDifferenceInDays < 0 ? `style="color: red;"` : ``} title="${item.DateDifferenceInDays < 0 ? item.DateDifferenceInDays : `尚未延宕`}">${item.DateDifferenceInDays < 0 ? Math.abs(item.DateDifferenceInDays) : `尚未延宕`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StatusName}">${item.StatusName}</td>
+                                      </tr>`;
+                    });
+
+                    function JudgeQcPlanningStatus(qmmpId, status) {
+                        let innerHtml = '';
+                        switch (status) {
+                            case "N":
+                                innerHtml += `<a class="start-btn" href="javascript:UpdateQcPlanningProcess@(itemName)('${qmmpId}', 'A');">開工</a>
+                                              <a class="disabled-btn" href="javascript:void(0);">暫停</a>
+                                              <a class="disabled-btn" href="javascript:void(0);">取消</a>`;
+                                break;
+                            case "A":
+                                innerHtml += `<a class="finish-btn" href="javascript:UpdateQcPlanningProcess@(itemName)('${qmmpId}', 'F');">完工</a>
+                                              <a class="pause-btn" href="javascript:UpdateQcPlanningProcess@(itemName)('${qmmpId}', 'P');">暫停</a>
+                                              <a class="cancel-btn" href="javascript:UpdateQcPlanningProcess@(itemName)('${qmmpId}', 'C');">取消</a>`;
+                                break;
+                            case "F":
+                                innerHtml += `<a class="start-btn" href="javascript:UpdateQcPlanningProcess@(itemName)('${qmmpId}', 'A');">重新量測</a>`;
+                                break;
+                            case "P":
+                                innerHtml += `<a class="start-btn" href="javascript:UpdateQcPlanningProcess@(itemName)('${qmmpId}', 'A');">繼續量測</a>`;
+                                break;
+                            default:
+                                innerHtml += `<a style="background: #92bfe5;" href="javascript:void(0);">狀態錯誤</a>`;
+                                break;
+                        }
+
+                        return innerHtml;
+                    }
+                }
+                else {
+                    if (objPage@(itemName).pageIndex != 0) {
+                        return false;
+                    }
+
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #dbd8cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("tr[data-qmmp-id]").click(function () {
+                let qmmpId = $(this).data("qmmp-id");
+                $(`tr[data-qmmp-id]`).removeClass("active-tr");
+                $(`tr[data-qmmp-id="${qmmpId}"]`).addClass("active-tr");
+            });
+        }
+
+        function PopModalLogin@(itemName)() {
+            $("#txtAccount@(itemName)").val("");
+
+            $("#modalLogin@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function GetLoginByKey@(itemName)(){
+            let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+            let postData = {
+                "UserNo": $.cookie("Login"),
+                "KeyText": $.cookie("LoginKey")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                userId@(itemName) = data.returnData.UserId;
+                $("#desUserNo@(itemName)").html($.cookie("Login"));
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function UpdateQcPlanningProcess@(itemName)(QmmpId, PlanningStatus) {
+            swal.fire({
+                titleText: "確認要更改排程狀態嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateQcPlanningProcess", "QcPlanningProcess")";
+                    let postData = {
+                        "QmmpId": QmmpId,
+                        "PlanningStatus": PlanningStatus,
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        InitData@(itemName)(objPage@(itemName));
+                        $(`tr[data-qmmp-id="${QmmpId}"]`).addClass("active-tr");
+                    }
+                }
+            });
+        }
+
+        function Login@(itemName)() {
+            let account = $("#txtAccount@(itemName)").val().toUpperCase();
+            if (account.length <= 0) {
+                alert("工號不能為空!!", alert);
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("QcPlanningProcessLogin", "QcPlanningProcess")";
+            let postData = {
+                "SystemKey": "9A0DE6CA89679694B110A28B95B523929AC12D05FE50A9EAEC226BED2D02D459",
+                "Account": $("#txtAccount@(itemName)").val().toUpperCase()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status != "success") {
+                alert(data.msg);
+            } else {
+                location.reload();
+            }
+        }
+    </script>
+  )

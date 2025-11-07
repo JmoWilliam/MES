@@ -1,0 +1,520 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QcNoticeTemplate";
+    string itemNameText = "製程量測需求單樣板";
+    string authority = ViewBag.authority;
+}
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+    </style>
+)
+<input type="hidden" id="pageAuthority" value="@authority" />
+<!--返回-->
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <fieldset>
+                    <div class="form-group row">
+                        <label class="form-label col-12" for="txtQcNoticeNoQ@(itemName)">送檢單編號<span class="text-danger">*</span></label>
+                        <div class="col-12">
+                            <input type="text" class="form-control" id="txtQcNoticeNoQ@(itemName)" name="txtQcNoticeNoQ@(itemName)"
+                                   placeholder="請輸入送檢單編號" data-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="form-label col-12" for="txtQcNoticeTypeQ@(itemName)">送檢單類型<span class="text-danger">*</span></label>
+                        <div class="col-12">
+                            <select class="form-control" id="cboQcNoticeTypeQ@(itemName)" name="cboQcNoticeTypeQ@(itemName)"></select>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="form-label col-12" for="txtProdModeQ@(itemName)">生產模式<span class="text-danger">*</span></label>
+                        <div class="col-12">
+                            <select class="form-control" id="cboProdModeQ@(itemName)" name="cboProdModeQ@(itemName)"></select>
+                        </div>
+
+                        <label class="form-label col-12" for="txtProcessQ@(itemName)">製程<span class="text-danger">*</span></label>
+                        <div class="col-12">
+                            <select class="form-control" id="cboProcessQ@(itemName)" name="cboProcessQ@(itemName)"></select>
+                        </div>
+                    </div>
+
+                </fieldset>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)(-1);"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 200px;">類型</th>
+                                        <th scope="col" style="max-width: 200px;">編號</th>
+                                        <th scope="col" style="max-width: 200px;">名稱</th>
+                                        <th scope="col" style="max-width: 200px;">描述</th>
+                                        <th scope="col" style="max-width: 200px;">製程</th>
+                                        <th scope="col" style="max-width: 200px;">建立者</th>
+                                        <th scope="col" style="max-width: 200px;">建立日期</th>
+                                        <th class="text-center" scope="col" style="max-width: 250px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--新增/編輯-->
+<div class="row" id="editData@(itemName)" style="display:none">
+    <input type="hidden" id="QcNoticeTemplateId" name="QcNoticeTemplateId"/>
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container  custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <div class="form-group row">
+                        <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtQcNoticeType@(itemName)">單據類型<span class="text-danger">*</span></label>
+                        <div class="col-12 col-md-9 col-lg-9">
+                            <div class="input-group">
+                                <select class="form-control" id="cboQcNoticeType@(itemName)" name="cboQcNoticeType@(itemName)"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtQcNoticeTemplateNo@(itemName)">量測需求單編號<span class="text-danger">*</span></label>
+                        <div class="col-12 col-md-9 col-lg-9">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="txtQcNoticeTemplateNo@(itemName)"
+                                       daat-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" readonly />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtQcNoticeTemplateName@(itemName)">名稱<span class="text-danger">*</span></label>
+                        <div class="col-12 col-md-9 col-lg-9">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="txtQcNoticeTemplateName@(itemName)"
+                                       data-msg-required="請輸入樣板名稱"
+                                       required placeholder="請輸入樣板名稱"
+                                       daat-rule-required="true" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtQcNoticeTemplateDesc@(itemName)">敘述<span class="text-danger">*</span></label>
+                        <div class="col-12 col-md-9 col-lg-9">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="txtQcNoticeTemplateDesc@(itemName)"
+                                       data-msg-required="請輸入樣板敘述"
+                                       required placeholder="請輸入樣板敘述"
+                                       daat-rule-required="true" />
+                            </div>
+                        </div>
+                    </div>
+                    <div id="ProcessInput" style="display:none;">
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtProdMode@(itemName)">生產模式<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9" id="Process@(itemName)">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboProdMode@(itemName)" name="cboProdMode@(itemName)"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtProcess@(itemName)">製程<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9" id="Process@(itemName)">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboProcess@(itemName)" name="cboProcess@(itemName)"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtRemark@(itemName)">備註</label>
+                        <div class="col-12 col-md-9 col-lg-9">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="txtRemark@(itemName)"
+                                       placeholder="請輸入備註" daat-rule-required="true" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--其他分頁-->
+<div class="advanced-block">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav flag-tabs nav-fill" role="tablist">
+                <li class="flag-item" id="ViewQcNoticeItemSpec">
+                    <a class="flag-link active" data-toggle="tab" href="#tabViewQcNoticeItemSpecTemplate">
+                        <i class="fas fa-sliders-h"></i> 量測參數樣板設置
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane active" id="tabViewQcNoticeItemSpec">
+            @Html.Partial("QcNoticeItemSpecTemplate")
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+    let QcNoticeTemplateNo = "", MoId@(itemName)= "";
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 8
+    };
+    let objForm@(itemName) = "#editForm@(itemName)";
+
+    $(document).ready(function () {
+        if (!isMobile) {
+            $("#cboQcNoticeTypeQ@(itemName)").select2({
+                width: "100%"
+            });
+            $("#cboProdModeQ@(itemName)").select2({
+                width: "100%"
+            });
+            $("#cboQcNoticeType@(itemName)").select2({
+                width: "100%"
+            });
+        }
+        ComboBoxs.Default("#cboQcNoticeTypeQ@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "QcItem.QcType" }, "", "ALL", "", "TypeName", "TypeNo");
+        ComboBoxs.Default("#cboProdModeQ@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "ALL", "", "ModeName", "ModeId");
+        ComboBoxs.Default("#cboQcNoticeType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "QcItem.QcType" }, "", "ALL", "", "TypeName", "TypeNo");
+        Query@(itemName)();
+    });
+
+    $("#cboProdModeQ@(itemName)").change(function () {
+        if (!isMobile) {
+            $("#cboProcessQ@(itemName)").select2({
+                width: "100%"
+            });
+        }
+        ComboBoxs.Default("#cboProcessQ@(itemName)", "@Url.Action("GetProcessParameter", "MesBasicInformation")", { "ModeId": $("#cboProdModeQ@(itemName)").val() }, "", "ALL", "", "ProcessName", "ParameterId");
+    });
+
+    function Query@(itemName)() {
+        objPage@(itemName).pageIndex = 0;
+        InitData@(itemName)(objPage@(itemName));
+    }
+
+    function InitData@(itemName)(objPage) {
+        let innerHtml = '';
+        let pageCount = 0;
+        let targetUrl = "@Url.Action("GetQcNoticeTemplate", "QcItemSetting")";
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage.pageIndex + 1),
+            "PageSize": objPage.pageSize,
+            "QcNoticeTemplateNo": $("#txtQcNoticeTemplateNoQ@(itemName)").val(),
+            "QcNoticeType": $("#cboQcNoticeTypeQ@(itemName)").val(),
+            "ParameterId": $("#cboProcessQ@(itemName)").val(),
+            "StartDate":($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+            "EndDate":($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : "")
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+            if (pageCount > 0) {
+                objPage = PageCaculate(pageCount, objPage);
+                $.each(data.result, function (i, item) {
+                    let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                    innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TypeName}" style="max-width: 200px;">${item.TypeName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcNoticeTemplateNo}" style="max-width: 200px;">${item.QcNoticeTemplateNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcNoticeTemplateName}" style="max-width: 200px;">${item.QcNoticeTemplateName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcNoticeTemplateDesc}" style="max-width: 200px;">${item.QcNoticeTemplateDesc}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessName}" style="max-width: 200px;">${item.ProcessName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserName}" style="max-width: 200px;">${item.UserName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 200px;">${item.CreateDate}</td>
+                                        <td class="text-center col-sticky">
+                                          <a class="active-link auth-update" title="修改" href="javascript:Edit@(itemName)('${item.QcNoticeTemplateId}');"><i class="fas fa-edit"></i></a>
+                                          <a class="active-link auth-delete" title="刪除" href="javascript:Delete@(itemName)('${item.QcNoticeTemplateId}');"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                    </tr>`;
+                });
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                                </tr>`;
+            }
+        }else {
+            alert(data.msg, "alert", 0);
+        }
+        $("#tblData@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+        Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+    }
+
+    $("#cboQcNoticeType@(itemName)").change(function () {
+        if ($("#cboQcNoticeType@(itemName)").val() == "IPQC") {
+            $("#ProcessInput").show();
+            QcNoticeNo = editQcNoticeNo($("#cboQcNoticeType@(itemName)").val());
+            $("#txtQcNoticeTemplateNo@(itemName)").val(QcNoticeNo);
+
+        } else {
+            $("#ProcessInput").hide();
+            QcNoticeNo = editQcNoticeNo($("#cboQcNoticeType@(itemName)").val());
+            $("#txtQcNoticeTemplateNo@(itemName)").val(QcNoticeNo);
+        }
+    });
+
+    function Edit@(itemName)(QcNoticeTemplateId) {
+        $("#QcNoticeTemplateId").val(QcNoticeTemplateId ? QcNoticeTemplateId : -1);
+        Switch("#listData@(itemName)", "#editData@(itemName), .unit-block");
+        if (parseInt($("#QcNoticeTemplateId").val()) > 0) {
+            QueryQcNoticeItemSpecTemplate(QcNoticeTemplateId);
+            $("#ViewQcNoticeItemSpec").show();
+            $("#tabViewQcNoticeItemSpec").show();
+            $(".advanced-block").slideDown("long");
+            let targetUrl = "@Url.Action("GetQcNoticeTemplate", "QcItemSetting")";
+            let postData = {
+                "QcNoticeTemplateId": parseInt($("#QcNoticeTemplateId").val())
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    if (item.QcNoticeType == 'IPQC') {
+                        $("#ProcessInput").show();
+                        ComboBoxs.Default("#cboProdMode@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "ALL", "", "ModeName", "ModeId");
+                        ComboBoxs.Default("#cboProcess@(itemName)", "@Url.Action("GetProcessParameter", "MesBasicInformation")", { "ModeId": $("#cboProdMode@(itemName)").val() }, "", "ALL", "", "ProcessName", "ParameterId");
+                    } else {
+                        $("#ProcessInput").hide();
+                    }
+                    ComboBoxs.Default("#cboQcNoticeType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "QcItem.QcType" }, "", "ALL", "", "TypeName", "TypeNo");
+                    $("#txtQcNoticeTemplateNo@(itemName)").val(item.QcNoticeTemplateNo);
+                    $("#txtQcNoticeTemplateName@(itemName)").val(item.QcNoticeTemplateName);
+                    $("#txtQcNoticeTemplateDesc@(itemName)").val(item.QcNoticeTemplateDesc);
+                    $("#cboQcNoticeType@(itemName)").val(item.QcNoticeType);
+                    $("#cboProdMode@(itemName)").val(item.ModeId);
+                    $("#cboProcess@(itemName)").val(item.ParameterId);
+                    $("#txtRemark@(itemName)").val(item.Remark);
+                });
+                Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        } else {
+            if ($("#cboQcNoticeType@(itemName)").val() == 'IPQC') {
+                $("#ProcessInput").show();
+            } else {
+                $("#ProcessInput").hide();
+            }
+            $("#editForm@(itemName)").get(0).reset();
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+            ComboBoxs.Default("#cboProdMode@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "ALL", "", "ModeName", "ModeId");
+        }
+    }
+
+    $("#cboProdMode@(itemName)").change(function () {
+        if (!isMobile) {
+            $("#cboProcess@(itemName)").select2({
+                width: "100%"
+            });
+        }
+        ComboBoxs.Default("#cboProcess@(itemName)", "@Url.Action("GetProcessParameter", "MesBasicInformation")", { "ModeId": $("#cboProdMode@(itemName)").val() }, "", "ALL", "", "ProcessName", "ParameterId");
+    });
+
+    function Save@(itemName)() {
+        let QcNoticeTemplateId = parseInt($("#QcNoticeTemplateId").val());
+        if (QcNoticeTemplateId== -1) {
+            //新增QcNoticeTemplateId
+            let targetUrl = "@Url.Action("AddQcNoticeTemplate", "QcItemSetting")";
+            let postData = {
+                "QcNoticeTemplateNo": $("#txtQcNoticeTemplateNo@(itemName)").val(),
+                "QcNoticeTemplateName": $("#txtQcNoticeTemplateName@(itemName)").val(),
+                "QcNoticeTemplateDesc": $("#txtQcNoticeTemplateDesc@(itemName)").val(),
+                "QcNoticeType": $("#cboQcNoticeType@(itemName)").val(),
+                "ParameterId": $("#cboProcess@(itemName)").val(),
+                "Remark": $("#txtRemark@(itemName)").val()
+            };
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    QcNoticeTemplateId = item.QcNoticeTemplateId
+                });
+                $("#QcNoticeTemplateId").val(QcNoticeTemplateId);              
+                ExpandQcNoticeItemSpecTemplate();
+            } else {
+                alert(data.msg, "alert",60);
+            }
+        } else {
+            //修改QcNoticeId
+            let targetUrl = "@Url.Action("UpdateQcNoticeTemplate", "QcItemSetting")";
+            let postData = {
+                "QcNoticeTemplateId": QcNoticeTemplateId,
+                "QcNoticeTemplateNo": $("#txtQcNoticeTemplateNo@(itemName)").val(),
+                "QcNoticeTemplateName": $("#txtQcNoticeTemplateName@(itemName)").val(),
+                "QcNoticeTemplateDesc": $("#txtQcNoticeTemplateDesc@(itemName)").val(),
+                "QcNoticeType": $("#cboQcNoticeType@(itemName)").val(),
+                "ParameterId": $("#cboProcess@(itemName)").val(),
+                "Remark": $("#txtRemark@(itemName)").val()
+            };
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    QcNoticeTemplateId = item.QcNoticeTemplateId
+                });
+                $("#QcNoticeTemplateId").val(QcNoticeTemplateId);
+                ExpandQcNoticeItemSpecTemplate();
+            } else {
+                alert(data.msg, "alert",60);
+            }
+        }        
+    }
+
+    function CboMoProcess@(itemName)(MoId, MoProcessId) {
+        if (!isMobile) {
+            $("#cboMoProcess@(itemName)").select2({
+                width: "100%"
+            });
+        }
+        ComboBoxs.Default("#cboMoProcess@(itemName)", "@Url.Action("GetMoProcess", "MasterCam")", { "MoId": MoId, "MoProcessId": MoProcessId }, "", "ALL", "", "ProcessName", "MoProcessId");
+    }
+
+    function Delete@(itemName)(QcNoticeTemplateId) {
+        swal.fire({
+            titleText: "確認要刪除嗎?",
+            text: "此動作無法復原，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let targetUrl = "@Url.Action("DeleteQcNoticeTemplate", "QcItemSetting")";
+                let postData = {
+                    "QcNoticeTemplateId": QcNoticeTemplateId
+                };
+                let result = DataAccess.Delete(targetUrl, postData, false, true);
+                if (result) {
+                    Query@(itemName)();
+                }
+            }
+         });
+    }
+
+    function Return@(itemName)() {
+        ResetForm(objForm@(itemName));
+        Query@(itemName)();
+        Switch("#listData@(itemName)", "#editData@(itemName), .unit-block");
+        $(".advanced-block").hide();
+        $(".help-block").hide();
+
+        let currentDate = new Date();
+
+        Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+        Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+        currentDate.setDate(currentDate.getDate() - 1);
+        Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+        if (!isMobile) {
+            $("#cboQcNoticeTypeQ@(itemName)").select2({
+                width: "100%"
+            });
+            $("#cboQcNoticeType@(itemName)").select2({
+                width: "100%"
+            });
+            $("#cboMoProcess@(itemName)").select2({
+                width: "100%"
+            });
+        }
+        ComboBoxs.Default("#cboQcNoticeTypeQ@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "QcItem.QcType" }, "", "ALL", "", "TypeName", "TypeNo");
+        ComboBoxs.Default("#cboMoProcess@(itemName)", "@Url.Action("GetMoProcess", "MasterCam")", {}, "", "ALL", "", "ProcessName", "MoProcessId");
+        ComboBoxs.Default("#cboQcNoticeType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "QcItem.QcType" }, "", "ALL", "", "TypeName", "TypeNo");
+        $("#txtQcNoticeNo@(itemName)").val("");
+    }
+
+    function editQcNoticeNo(QcNoticeType) {
+        let No = "", year = "", month = "", day = "", hours = "", minutes = "", seconds = "";
+        const d = new Date();
+        year = d.getFullYear().toString();
+        month = (d.getMonth() + 1).toString().padStart(2, '0');
+        day = d.getDate().toString().padStart(2, '0');
+        hours = d.getHours().toString().padStart(2, '0');
+        minutes = d.getMinutes().toString().padStart(2, '0');
+        seconds = d.getSeconds().toString().padStart(2, '0');
+        No = QcNoticeType + year + month + day + hours + minutes + seconds+"-Template";
+        return No
+    }
+</script>
+)
+

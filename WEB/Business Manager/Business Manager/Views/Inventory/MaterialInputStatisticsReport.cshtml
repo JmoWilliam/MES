@@ -1,0 +1,225 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "MaterialInputStatisticsReport";
+    string itemNameText = "投料統計報表";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .btn-secondary {
+             color: #6c757d;
+             background-color: #fff;
+             border-color: #6c757d;
+         }
+
+         .form-control-narrow {
+             max-width: 150px; /* 控制最大宽度 */
+         }
+    </style>　
+                                                                 )
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="form-group d-flex align-items-center">
+                        <span class="ml-3"></span>
+                        <label class="form-label mr-2" for="txtWoErpPrefixQ@(itemName)" style="white-space: nowrap">制令单号</label>
+                        <span class="ml-1"></span>
+                        <input type="text" class="form-control" id="txtWoErpPrefixQ@(itemName)"
+                               name="txtWoErpPrefixQ@(itemName)" placeholder="5104-20250712007(1)" style="width: 180px;" />
+                        <span class="ml-3"></span>
+                        <label class="form-label mr-2" for="txtWoErpMtlItemNameQ@(itemName)" style="white-space: nowrap">主件品名</label>
+                        <span class="ml-1"></span>
+                        <input type="text" class="form-control" id="txtWoErpMtlItemNameQ@(itemName)"
+                               name="txtWoErpMtlItemNameQ@(itemName)" placeholder="請輸入主件品名" style="width: 180px;" />
+                        <span class="ml-3"></span>
+                        <label class="form-label mr-2" for="txtMtlItemNoQ@(itemName)" style="white-space: nowrap">材料品号</label>
+                        <span class="ml-1"></span>
+                        <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)"
+                               name="txtMtlItemNoQ@(itemName)" placeholder="請輸入材料品号" style="width: 180px;" />
+                        <span class="ml-3"></span>
+                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="form-group d-flex align-items-center">
+                        <span class="ml-3"></span>
+                        <label class="form-label mr-2" for="txtStartDateQ@(itemName)" style="white-space: nowrap">开始时间</label>
+                        <span class="ml-1"></span>
+                        <input type="text" class="form-control" style="width: 115px" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                        <span class="ml-3"></span>
+                        <label class="form-label mr-2" for="txtEndDateQ@(itemName)" style="white-space: nowrap">结束时间</label>
+                        <input type="text" class="form-control" style="width: 115px" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                        <span class="ml-2"></span>
+                        <input type="checkbox" id="cbxWipOrderDateQ@(itemName)" checked />
+                        <span class="ml-2"></span>
+                        <input type="hidden" id="filterType@(itemName)" value="" />
+                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)('over')">已超領</button>
+                        <span class="ml-2"></span>
+                        <button type="button" class="btn btn-success" onclick="Query@(itemName)('unfinished')">尚未領完</button>
+                        <span class="ml-2"></span>
+                        <button type="button" class="btn btn-warning" onclick="Query@(itemName)('overNoOrder')">已超領(尚未補超領單)</button>
+                        <span class="ml-2"></span>
+                        <button type="button" class="btn btn-danger" onclick="Query@(itemName)('noReturn')">尚未做退料單</button>
+                        <span class="ml-2"></span>
+                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)('notFullyInput')">尚未完全投料</button>
+
+                    </div>
+                    <div class="ml-auto">
+                        <button type="button" class="btn btn-success text-right" onclick="Excel@(itemName)()"><i class="fas fa-file-excel"></i>匯出 </button>
+                        <span class="ml-3"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack " style="text-align: center" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 60px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">制令單號</th>
+                                        <th scope="col" style="min-width: 150px;">主件品號</th>
+                                        <th scope="col" style="min-width: 150px;">材料品号</th>
+                                        <th scope="col" style="min-width: 150px;">材料品名</th>
+                                        <th scope="col" style="min-width: 150px;">ERP應領材料數量</th>
+                                        <th scope="col" style="min-width: 150px;">ERP已領材料數量</th>
+                                        <th scope="col" style="min-width: 125px;">投料數量</th>
+                                        <th scope="col" style="min-width: 125px;">超領數量</th>
+                                        <th scope="col" style="min-width: 125px;">未使用</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            let currentDate = new Date();
+            Suites.DatePicker("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+            Suites.DatePicker("txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 30);
+            Suites.DatePicker("txtStartDateQ@(itemName)", currentDate);
+            //搜尋動作
+            Query@(itemName)();
+
+        });
+
+        function Query@(itemName)(filterType = '') {
+
+        $("#filterType@(itemName)").val(filterType);
+        objPage@(itemName).pageIndex = 0;
+        InitData@(itemName)(objPage@(itemName));
+        $("#modalQuery@(itemName)").modal("hide");
+
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            
+            let targetUrl = "@Url.Action("GetMaterialInputStatisticsReport", "Inventory")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "WoErpPrefix": $("#txtWoErpPrefixQ@(itemName)").val(),
+                "WoErpMtlItemName": $("#txtWoErpMtlItemNameQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "FilterType": $("#filterType@(itemName)").val(),
+                "StartDate": ($("#cbxWipOrderDateQ@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxWipOrderDateQ@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : "")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                console.log(1,  data);
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">制令單號</span>${item.WoErpPrefix}</td>
+                                        <td style="text-align: left;"><span class="stack-title">產品品号</span>品号:${item.WoErpMtlItemNo}<br>品名:${item.WoErpMtlItemName}<br>规格:${item.WoErpMtlItemSpec}</td>
+                                        <td><span class="stack-title">材料品号</span>${item.MtlItemNo}</td>
+                                        <td><span class="stack-title">材料品名</span>${item.MtlItemName}</td>
+                                        <td><span class="stack-title">ERP應領材料數量</span>${parseFloat(item.DemandRequisitionQty).toFixed(3)}</td>
+                                        <td><span class="stack-title">ERP已領材料數量</span>${parseFloat(item.RequisitionQty).toFixed(3)}</td>
+                                        <td><span class="stack-title">投料數量</span>${parseFloat(item.SUMMatInRegQty).toFixed(3)}</td>
+                                        <td><span class="stack-title">超領數量</span>${parseFloat(item.CLQty).toFixed(3)}</td>
+                                        <td><span class="stack-title">未使用</span>${parseFloat(item.WSYQty).toFixed(3)}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+
+        function Excel@(itemName)() {
+            let targetUrl = "@Url.Action("ExcelMaterialInputStatisticsReport", "Inventory")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": -1,
+                "PageSize": -1,
+                "WoErpPrefix": $("#txtWoErpPrefixQ@(itemName)").val(),
+                "WoErpMtlItemName": $("#txtWoErpMtlItemNameQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "FilterType": $("#filterType@(itemName)").val(),
+                "StartDate": ($("#cbxWipOrderDateQ@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxWipOrderDateQ@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : "")
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                alert("匯出成功!!!!", "success")
+                FileAccess.AjaxDownload(targetUrl, postData, false);
+            }
+        }
+
+
+    </script>
+                                                )

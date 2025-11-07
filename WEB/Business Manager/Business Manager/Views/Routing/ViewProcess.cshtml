@@ -1,0 +1,211 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewProcess";
+    string itemNameText = "查看製程資訊";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtProcessNoQ@(itemName)" name="txtContactQ@(itemName)"
+                                               placeholder="請輸入製程代碼" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtProcessNameQ@(itemName)" name="txtContactQ@(itemName)"
+                                               placeholder="請輸入製程名稱" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">代碼</th>
+                                        <th scope="col" style="min-width: 250px;">名稱</th>
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                        <th scope="col" style="min-width: 100px;">建立次數</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+        let processId@(itemName);
+        let process@(itemName);
+        let tempNumber@(itemName) = 1;
+        let modeId@(itemName) = -1;
+
+        function Pop@(itemName)(config) {
+            processId@(itemName) = config.objectProcessId;
+            process@(itemName) = config.objectProcess;
+            modeId@(itemName) = config.objectModeId;
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetModeProcess", "Routing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ProcessNo": $("#txtProcessNoQ@(itemName)").val(),
+                "ProcessName": $("#txtProcessNameQ@(itemName)").val(),
+                "ProdMode": modeId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        if (item.ParameterNo != null) return;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessNo}" style="max-width: 150px;">${item.ProcessNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessName}" style="max-width: 150px;">${item.ProcessName}</td>
+                                        <td class="text-center">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-process-no="${item.ProcessNo}" data-process-name="${item.ProcessName}" value="${item.ProcessId}" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessName}" style="max-width: 100px;">
+                                            <input type="number" class="form-control" id="txtCreateCount@(itemName)" data-process-id="${item.ProcessId}" value="1" />
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $(".radio-mode").hide();
+            $(".checkbox-mode").show();
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-process-no][data-process-name]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-process-no][data-process-name]").not(":disabled").prop("checked", false);
+                }
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($("input[type='checkbox'][data-process-no][data-process-name]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-process-no][data-process-name]:checked"), function (i) {
+                    let processId = $(this).val();
+                    let processNo = $(this).data("process-no");
+                    let processName = $(this).data("process-name");
+                    let createCount = $("input[id='txtCreateCount@(itemName)'][data-process-id='" + processId + "']").val();
+
+                    let inputData =
+                    {
+                        "TempNumber": tempNumber@(itemName),
+                        "ProcessId": processId,
+                        "ProcessNo": processNo,
+                        "ProcessName": processName,
+                        "CreateCount": createCount
+                    }
+                    processJson.processInfo.push(inputData);
+                    tempNumber@(itemName)++;
+                });
+            }
+
+            Resetprocess@(itemName)()
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+
+        function Resetprocess@(itemName)() {
+            let innerHtml = '';
+            $.each(processJson.processInfo, function (i, item) {
+                innerHtml += `<div class="tag-group">
+                                <span>${item.ProcessName}</span>
+                                <a href="javascript:DeleteTagRoutingProcess('${item.TempNumber}');">
+                                    <i style="color:slategrey" class="fas fa-times"></i>
+                                </a>
+                              </div>`;
+            });
+            $(".process-info").html(innerHtml);
+        }
+    </script>
+        )

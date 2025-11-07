@@ -1,0 +1,276 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ApiKeyFunction";
+    string itemNameText = "Api適用功能";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtFunctionCodeQ@(itemName)">功能代碼</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtFunctionCodeQ@(itemName)" name="txtFunctionCodeQ@(itemName)" placeholder="請輸入功能代碼" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                        <i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-function" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">功能代碼</th>
+                                        <th scope="col" style="min-width: 250px;">用途</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="FunctionId" name="FunctionId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtFunctionCode@(itemName)">功能代碼 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtFunctionCode@(itemName)" name="txtFunctionCode@(itemName)" placeholder="請輸入功能代碼"
+                                       data-msg-required="請輸入功能代碼" data-rule-required="true"
+                                       data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtPurpose@(itemName)">用途 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtPurpose@(itemName)" name="txtPurpose@(itemName)" placeholder="請輸入用途"
+                                       data-msg-required="請輸入用途" data-rule-required="true"
+                                       data-msg-maxlength="必須少於 50 個字元" maxlength="50" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Expand@(itemName)() {
+            if (parseInt($("#KeyId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+
+                Return@(itemName)();
+            } else {
+                alert("請先儲存金鑰", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetApiKeyFunction", "SystemSetting")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "KeyId": $("#KeyId").val(),
+                "FunctionCode": $("#txtFunctionCodeQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.FunctionCode}" style="max-width: 200px;"><span class="stack-title">功能代碼</span>${item.FunctionCode}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Purpose}" style="max-width: 250px;"><span class="stack-title">用途</span>${item.Purpose}</td>
+                                        <td class="text-center active-content">
+                                          <span class="stack-title">操作</span>
+                                          <a class="active-link auth-function" href="javascript:Edit@(itemName)(${item.FunctionId});"><i class="fas fa-edit"></i></a>
+                                          <a class="active-link auth-function" href="javascript:Delete@(itemName)(${item.FunctionId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(FunctionId) {
+            $("#FunctionId").val(FunctionId ? FunctionId : 0);
+
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            if (FunctionId > 0) {
+                let targetUrl = "@Url.Action("GetApiKeyFunction", "SystemSetting")";
+                let postData = {
+                    "FunctionId": FunctionId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtFunctionCode@(itemName)").val(item.FunctionCode);
+                        $("#txtPurpose@(itemName)").val(item.Purpose);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let FunctionId = parseInt($("#FunctionId").val());
+
+                if (FunctionId <= 0) {
+                    let targetUrl = "@Url.Action("AddApiKeyFunction", "SystemSetting")";
+                    let postData = {
+                        "KeyId": $("#KeyId").val(),
+                        "FunctionCode": $("#txtFunctionCode@(itemName)").val(),
+                        "Purpose": $("#txtPurpose@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateApiKeyFunction", "SystemSetting")";
+                    let postData = {
+                        "FunctionId": FunctionId,
+                        "FunctionCode": $("#txtFunctionCode@(itemName)").val(),
+                        "Purpose": $("#txtPurpose@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(FunctionId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteApiKeyFunction", "SystemSetting")";
+                    let postData = {
+                        "FunctionId": FunctionId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+    </script>
+)

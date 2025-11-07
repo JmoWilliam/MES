@@ -1,0 +1,147 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewAuthorityUser";
+    string itemNameText = "權限會員新增";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增會員</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body add-member-body">
+                <div class="search-block mb-15">
+                    <input type="text" class="search-term" id="txtSearchKey@(itemName)" name="txtSearchKey@(itemName)"
+                           placeholder="搜尋會員"
+                           maxlength="30" />
+                    <button type="button" class="search-button" onclick="Query@(itemName)()"><i class="fas fa-search"></i></button>
+                </div>
+                <div id="userList@(itemName)"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+
+        $("#txtSearchKey@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) Query@(itemName)();
+        });
+
+        function Pop@(itemName)() {
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetUserRole", "EipSystemSetting")";
+            let postData = {
+                "SearchKey": $("#txtSearchKey@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    if (item.UserData) {
+                        innerHtml += `<div class="member-nav">
+                                        <a href="javascript:void(0);">${item.RoleNames}</a>
+                                          <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <ul class="member-list">
+                                          ${Member@(itemName)(item.UserData)}
+                                        </ul>`;
+                    }
+                    
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#userList@(itemName)").html(innerHtml);
+
+            $(".member-nav").click(function () {
+                $(".member-list").slideUp();
+                $(".member-nav i").removeClass("open-auth-i");
+                if ($(this).next(".member-list").css("display") == "block") {
+                    $(".member-list").slideUp();
+                }
+                else {
+                    $(this).next(".member-list").slideDown();
+                    $(this).children(".member-nav i").addClass("open-auth-i");
+                }
+            });
+
+            function Member@(itemName)(source) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    for (let x = 0; x < json.data.length; x++) {
+                        html += `<li>
+                                   <div class="member-each">
+                                     <label class="control control-solid control-solid-info control--checkbox">
+                                       <span><strong>${json.data[x].MemberEmail}</strong></span>
+                                       <span class="name">${json.data[x].MemberName}</span>
+                                       <input type="checkbox" name="cbxMemberId@(itemName)" data-member-id="${json.data[x].MemberId}" />
+                                       <span class="control__indicator"></span>
+                                     </label>
+                                   </div>
+                                 </li>`;
+                    }
+                }
+
+                return html;
+            }
+        }
+
+        function Save@(itemName)() {
+
+            console.log($("input[name=cbxMemberId@(itemName)]:checked").toArray());
+            let userList = $("input[name=cbxMemberId@(itemName)]:checked").toArray().map(item => item.dataset.memberId).join();
+
+            if (userList) {
+                let targetUrl = "@Url.Action("UpdateRoleUser", "EipSystemSetting")";
+                let postData = {
+                    "RoleId": $("#RoleId").val(),
+                    "UserList": userList
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    $("#txtSearchKey@(itemName)").val("");
+                    $("#modal@(itemName)").modal("hide");
+                    QueryRoleUser();
+                }
+            } else {
+                alert("請選擇至少一名會員!");
+            }
+        }
+    </script>
+)

@@ -1,0 +1,718 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ModelDesignManagement";
+    string itemNameText = "機種設計資料管理";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+<script src="@Url.Content("~/Scripts/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.js")"></script>
+<link href="@Url.Content("~/Content/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.css")" rel="stylesheet" />
+
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtModelQ@(itemName)">機種名稱</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtModelQ@(itemName)" name="txtModelQ@(itemName)" placeholder="請輸入設備名稱" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                        <a class="btn btn-info auth-excel-add" href="javascript:Excel@(itemName)();"><i class="fas fa-plus"></i>批量新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                        <th scope="col" style="min-width: 150px;">Model</th>
+                                        <th scope="col" style="min-width: 200px;">Construction</th>
+                                        <th scope="col" style="min-width: 200px;">EFL(mm)</th>
+                                        <th scope="col" style="min-width: 200px;">F/No</th>
+                                        <th scope="col" style="min-width: 200px;">TTL</th>
+                                        <th scope="col" style="min-width: 200px;">CRA</th>
+                                        <th scope="col" style="min-width: 200px;">OpticalDistortion</th>
+                                        <th scope="col" style="min-width: 200px;">OpticalDistortion</th>
+                                        <th scope="col" style="min-width: 200px;">MaxImageCircle</th>
+                                        <th scope="col" style="min-width: 200px;">Sensor</th>
+                                        <th scope="col" style="min-width: 200px;">VFOV</th>
+                                        <th scope="col" style="min-width: 200px;">HFOV</th>
+                                        <th scope="col" style="min-width: 200px;">DFOV</th>
+                                        <th scope="col" style="min-width: 200px;">PartName</th>
+                                        <th scope="col" style="min-width: 200px;">IR</th>
+                                        <th scope="col" style="min-width: 200px;">Mechanical-Retainer</th>
+                                        <th scope="col" style="min-width: 200px;">Mechanical-F.B.L.</th>
+                                        <th scope="col" style="min-width: 200px;">Mechanical-Thread</th>
+                                        <th scope="col" style="min-width: 200px;">IPRating</th>
+                                        <th scope="col" style="min-width: 200px;">Stage</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="MdId" name="MdId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtModel@(itemName)">Model <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtModel@(itemName)" name="txtModel@(itemName)" placeholder="請輸入Model"
+                                       data-msg-required="請輸入Model" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtConstruction@(itemName)">Construction <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtConstruction@(itemName)" name="txtConstruction@(itemName)" placeholder="請輸入Construction"
+                                       data-msg-required="請輸入Construction" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtEFL@(itemName)">EFL(mm) <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtEFL@(itemName)" name="txtEFL@(itemName)" placeholder="請輸入EFL"
+                                       data-msg-required="請輸入EFL" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtFNo@(itemName)">F/No <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtFNo@(itemName)" name="txtFNo@(itemName)" placeholder="請輸入F/No"
+                                       data-msg-required="請輸入F/No" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtTTL@(itemName)">TTL <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtTTL@(itemName)" name="txtTTL@(itemName)" placeholder="請輸入TTL"
+                                       data-msg-required="請輸入TTL" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtCRA@(itemName)">CRA <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtCRA@(itemName)" name="txtCRA@(itemName)" placeholder="請輸入CRA"
+                                       data-msg-required="請輸入CRA" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtOpticalDistortionFTan@(itemName)">Optical Distortion F-Tanθ </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtOpticalDistortionFTan@(itemName)" name="txtOpticalDistortionFTan@(itemName)" placeholder="請輸入OpticalDistortionF-Tanθ"
+                                       data-msg-required="請輸入OpticalDistortionF-Tanθ" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtOpticalDistortionF@(itemName)">Optical Distortion F-θ  </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtOpticalDistortionF@(itemName)" name="txtOpticalDistortionF@(itemName)" placeholder="請輸入OpticalDistortionF-θ"
+                                       data-msg-required="請輸入OpticalDistortionF-θ" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMaxImageCircle@(itemName)">MaxImageCircle(mm) <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtMaxImageCircle@(itemName)" name="txtMaxImageCircle@(itemName)" placeholder="請輸入MaxImageCircle(mm)"
+                                       data-msg-required="請輸入MaxImageCircle(mm)" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSensor@(itemName)">Sensor </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtSensor@(itemName)" name="txtSensor@(itemName)" placeholder="請輸入Sensor"
+                                       data-msg-required="請輸入Sensor" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtVFOV@(itemName)">VFOV (Deg.) </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtVFOV@(itemName)" name="txtVFOV@(itemName)" placeholder="請輸入VFOV (Deg.)"
+                                       data-msg-required="請輸入VFOV (Deg.)" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtHFOV@(itemName)">HFOV (Deg.) </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtHFOV@(itemName)" name="txtHFOV@(itemName)" placeholder="請輸入HFOV (Deg.)"
+                                       data-msg-required="請輸入HFOV (Deg.)" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDFOV@(itemName)">DFOV (Deg.) </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtDFOV@(itemName)" name="txtDFOV@(itemName)" placeholder="請輸入DFOV (Deg.)"
+                                       data-msg-required="請輸入DFOV (Deg.)" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtPartName@(itemName)">PartName</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtPartName@(itemName)" name="txtPartName@(itemName)" placeholder="請輸入PartName"
+                                       data-msg-required="請輸入PartName" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtIR@(itemName)">IR</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtIR@(itemName)" name="txtIR@(itemName)" placeholder="請輸入IR"
+                                       data-msg-required="請輸入IR" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMechanicalRetainer@(itemName)">Mechanical-Retainer</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMechanicalRetainer@(itemName)" name="txtMechanicalRetainer@(itemName)" placeholder="請輸入Mechanical-Retainer"
+                                       data-msg-required="請輸入Mechanical-Retainer" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMechanicalFBL@(itemName)">Mechanical-F.B.L.</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtMechanicalFBL@(itemName)" name="txtMechanicalFBL@(itemName)" placeholder="請輸入Mechanical-F.B.L."
+                                       data-msg-required="請輸入Mechanical-F.B.L." />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMechanicalThread@(itemName)">Mechanical-Thread</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMechanicalThread@(itemName)" name="txtMechanicalThread@(itemName)" placeholder="請輸入Mechanical-Thread"
+                                       data-msg-required="請輸入Mechanical-Thread" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtIPRating@(itemName)">IPRating </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtIPRating@(itemName)" name="txtIPRating@(itemName)" placeholder="請輸入IPRating"
+                                       data-msg-required="請輸入IPRating" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtStage@(itemName)">Stage</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtStage@(itemName)" name="txtStage@(itemName)" placeholder="請輸入Stage"
+                                       data-msg-required="請輸入Stage" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="excelData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div style="height: 75%; width: 100%;margin-top: 20px;" id="ModelDesignTemporary"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+
+        let spreadsheet@(itemName);
+        let spreadsheetData@(itemName);
+
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfo: []
+        }
+
+        let lettersArray = [
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+            "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"
+        ];
+
+        let FieldList = [
+            "Model", "Construction", "EFL", "FNo", "TTL", "CRA",
+            "OpticalDistortionFTan", "OpticalDistortionF", "MaxImageCircle",
+            "Sensor", "VFOV", "HFOV", "DFOV", "PartName", "IR",
+            "MechanicalRetainer", "MechanicalFBL", "MechanicalThread",
+            "IPRating","Stage",
+        ];
+
+        var ModelDesignData = `
+                    {"sheets":[{"name":"sheet1","data":[
+                     {"cell":"A1","css":"dhx_generated_class_u1690959030041","format":"text","value":"Model"}
+                    ,{"cell":"B1","css":"dhx_generated_class_u1690959030041","format":"text","value":"Construction"}
+                    ,{"cell":"C1","css":"dhx_generated_class_u1690959030041","format":"text","value":"EFL"}
+                    ,{"cell":"D1","css":"dhx_generated_class_u1690959030041","format":"text","value":"FNo"}
+                    ,{"cell":"E1","css":"dhx_generated_class_u1690959030042","format":"text","value":"TTL"}
+                    ,{"cell":"F1","css":"dhx_generated_class_u1690959030042","format":"text","value":"CRA"}
+                    ,{"cell":"G1","css":"dhx_generated_class_u1690959030043","format":"text","value":"OpticalDistortionFTan"}
+                    ,{"cell":"H1","css":"dhx_generated_class_u1690959030043","format":"text","value":"OpticalDistortionF"}
+                    ,{"cell":"I1","css":"dhx_generated_class_u1690959030044","format":"text","value":"MaxImageCircle"}
+                    ,{"cell":"J1","css":"dhx_generated_class_u1690959030044","format":"text","value":"Sensor"}
+                    ,{"cell":"K1","css":"dhx_generated_class_u1690959030044","format":"text","value":"VFOV"}
+                    ,{"cell":"L1","css":"dhx_generated_class_u1690959030044","format":"text","value":"HFOV"}
+                    ,{"cell":"M1","css":"dhx_generated_class_u1690959030044","format":"text","value":"DFOV"}
+                    ,{"cell":"N1","css":"dhx_generated_class_u1690959030045","format":"text","value":"PartName"}
+                    ,{"cell":"O1","css":"dhx_generated_class_u1690959030045","format":"text","value":"IR"}
+                    ,{"cell":"P1","css":"dhx_generated_class_u1690959030045","format":"text","value":"MechanicalRetainer"}
+                    ,{"cell":"Q1","css":"dhx_generated_class_u1690959030046","format":"text","value":"MechanicalFBL"}
+                    ,{"cell":"R1","css":"dhx_generated_class_u1690959030046","format":"text","value":"MechanicalThread"}
+                    ,{"cell":"S1","css":"dhx_generated_class_u1690959030046","format":"text","value":"IPRating"}
+                    ,{"cell":"T1","css":"dhx_generated_class_u1690959030047","format":"text","value":"Stage"}
+                    ]
+                    ,"cols":[{"width":100},{"width":150},{"width":120},{"width":100},{"width":150},{"width":120},{"width":150},{"width":120},{"width":100},{"width":110},{"width":110},{"width":160},{"width":120}]
+                    ,"rows":[{"height":32}]}]
+                    ,"styles":{
+                     "dhx_generated_class_u1690959030041":{"background":"#FFACAF","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030042":{"background":"#FFD6A6","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030043":{"background":"#FDFFB4","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030044":{"background":"#CCFFBE","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030045":{"background":"#9BF7FF","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030046":{"background":"#9FC5FF","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030047":{"background":"#BFB2FF","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030048":{"background":"#FFC8FF","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030049":{"background":"#D8E3DF","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030050":{"background":"#F48083","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030051":{"background":"#FCE186","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030052":{"background":"#E8FFCE","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030053":{"background":"#9CDDDA","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030054":{"background":"#0696CA","text-align":"center","justify-content":"center"}}
+                    ,"formats":[{"name":"Common","id":"common","mask":"","example":"1500.31"},{"name":"Number","id":"number","mask":"#,##0.00","example":"1500.31"}
+                    ,{"name":"Percent","id":"percent","mask":"#,##0.00%","example":"15.0031"},{"name":"Currency","id":"currency","mask":"$#,##0.00","example":"1500.31"}
+                    ,{"name":"Date","id":"date","mask":"yy-mm-dd","example":"2023-11-20","dateFormat":"%y/%m/%d"}
+                    ,{"name":"Time","id":"time","mask":"h:mm:ss am/pm","example":"0.5625","timeFormat":12}
+                    ,{"name":"Text","id":"text","mask":"@@","example":"some text"}]}
+            `
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+
+            ResetSpreadsheet@(itemName)();
+
+            $("#ModelDesignTemporary").css("height", "750px");
+
+            spreadsheet@(itemName).clear();
+
+            //點擊觸發
+            spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                if (id == "Save") {
+                    SaveExcelData@(itemName)();
+                }
+                else if (id == "Import") {
+                    ImportExcel@(itemName)();
+                }
+            });
+
+            //阻擋複製時觸發更換儲存格格式
+            $(document).on('keydown', function (e) {
+                // 检查是否按下 Ctrl (或 Command) 键，并且按下了 'C' 键
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+                    spreadsheet@(itemName).events.on("beforeFormatChange", function (cell, format) {
+                        return false
+                    });
+                }
+            });
+
+            
+
+            $(document).on('keydown', '#txtModelQ@(itemName)', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            });
+
+            Query@(itemName)();
+
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetModelDesign", "ResearchAndDevelopment")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "Model": $("#txtModelQ@(itemName)").val().trim()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link auth-update" href="javascript:Edit@(itemName)(${item.MdId});"><i class="fas fa-edit"></i></a>
+                                          <a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.MdId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Model}" style="max-width: 200px;">${item.Model}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Construction}" style="max-width: 200px;">${item.Construction}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.EFL}" style="max-width: 200px;">${item.EFL}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.FNo}" style="max-width: 200px;">${item.FNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TTL}" style="max-width: 200px;">${item.TTL}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CRA}" style="max-width: 200px;">${item.CRA}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OpticalDistortionFTan}" style="max-width: 200px;">${item.OpticalDistortionFTan != null ? item.OpticalDistortionFTan : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OpticalDistortionF}" style="max-width: 200px;">${item.OpticalDistortionF != null ? item.OpticalDistortionF : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MaxImageCircle}" style="max-width: 200px;">${item.MaxImageCircle}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Sensor}" style="max-width: 200px;">${item.Sensor != null ? item.Sensor : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.VFOV}" style="max-width: 200px;">${item.VFOV != null ? item.VFOV : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.HFOV}" style="max-width: 200px;">${item.HFOV != null ? item.HFOV : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DFOV}" style="max-width: 200px;">${item.DFOV != null ? item.DFOV : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PartName}" style="max-width: 200px;">${item.PartName != null ? item.PartName : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.IR}" style="max-width: 200px;">${item.IR != null ? item.IR : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MechanicalRetainer}" style="max-width: 200px;">${item.MechanicalRetainer != null ? item.MechanicalRetainer : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MechanicalFBL}" style="max-width: 200px;">${item.MechanicalFBL != null ? item.MechanicalFBL : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MechanicalThread}" style="max-width: 200px;">${item.MechanicalThread != null ? item.MechanicalThread : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.IPRating}" style="max-width: 200px;">${item.IPRating != null ? item.IPRating : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Stage}" style="max-width: 200px;">${item.Stage != null ? item.Stage : ``}</td>
+
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="22" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+        }
+
+        
+
+        function Edit@(itemName)(MdId) {
+            $("#MdId").val(MdId ? MdId : 0);
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+
+            if (MdId > 0) {
+                let targetUrl = "@Url.Action("GetModelDesign", "ResearchAndDevelopment")";
+                let postData = {
+                    "MdId": MdId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtModel@(itemName)").val(item.Model);
+                        $("#txtConstruction@(itemName)").val(item.Construction);
+                        $("#txtEFL@(itemName)").val(item.EFL);
+                        $("#txtFNo@(itemName)").val(item.FNo);
+                        $("#txtTTL@(itemName)").val(item.TTL);
+                        $("#txtCRA@(itemName)").val(item.CRA);
+                        $("#txtOpticalDistortionFTan@(itemName)").val(item.OpticalDistortionFTan);
+                        $("#txtOpticalDistortionF@(itemName)").val(item.OpticalDistortionF);
+                        $("#txtMaxImageCircle@(itemName)").val(item.MaxImageCircle);
+                        $("#txtSensor@(itemName)").val(item.Sensor);
+                        $("#txtVFOV@(itemName)").val(item.VFOV);
+                        $("#txtHFOV@(itemName)").val(item.HFOV);
+                        $("#txtDFOV@(itemName)").val(item.DFOV);
+                        $("#txtPartName@(itemName)").val(item.PartName);
+                        $("#txtIR@(itemName)").val(item.IR);
+                        $("#txtMechanicalRetainer@(itemName)").val(item.MechanicalRetainer);
+                        $("#txtMechanicalFBL@(itemName)").val(item.MechanicalFBL);
+                        $("#txtMechanicalThread@(itemName)").val(item.MechanicalThread);
+                        $("#txtIPRating@(itemName)").val(item.IPRating);
+                        $("#txtStage@(itemName)").val(item.Stage);
+                    });
+
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let MdId = parseInt($("#MdId").val());
+
+                if (MdId <= 0) {
+                    let targetUrl = "@Url.Action("AddModelDesign", "ResearchAndDevelopment")";
+                    let postData = {
+                        "Model": $("#txtModel@(itemName)").val(),
+                        "Construction": $("#txtConstruction@(itemName)").val(),
+                        "EFL": $("#txtEFL@(itemName)").val(),
+                        "FNo": $("#txtFNo@(itemName)").val(),
+                        "TTL": $("#txtTTL@(itemName)").val(),
+                        "CRA": $("#txtCRA@(itemName)").val(),
+                        "OpticalDistortionFTan": $("#txtOpticalDistortionFTan@(itemName)").val(),
+                        "OpticalDistortionF": $("#txtOpticalDistortionF@(itemName)").val(),
+                        "MaxImageCircle": $("#txtMaxImageCircle@(itemName)").val(),
+                        "Sensor": $("#txtSensor@(itemName)").val(),
+                        "VFOV": $("#txtVFOV@(itemName)").val(),
+                        "HFOV": $("#txtHFOV@(itemName)").val(),
+                        "DFOV": $("#txtDFOV@(itemName)").val(),
+                        "PartName": $("#txtPartName@(itemName)").val(),
+                        "IR": $("#txtIR@(itemName)").val(),
+                        "MechanicalRetainer": $("#txtMechanicalRetainer@(itemName)").val(),
+                        "MechanicalFBL": $("#txtMechanicalFBL@(itemName)").val(),
+                        "MechanicalThread": $("#txtMechanicalThread@(itemName)").val(),
+                        "IPRating": $("#txtIPRating@(itemName)").val(),
+                        "Stage": $("#txtStage@(itemName)").val()
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateModelDesign", "ResearchAndDevelopment")";
+                    let postData = {
+                        "MdId": MdId,
+                        "Model": $("#txtModel@(itemName)").val(),
+                        "Construction": $("#txtConstruction@(itemName)").val(),
+                        "EFL": $("#txtEFL@(itemName)").val(),
+                        "FNo": $("#txtFNo@(itemName)").val(),
+                        "TTL": $("#txtTTL@(itemName)").val(),
+                        "CRA": $("#txtCRA@(itemName)").val(),
+                        "OpticalDistortionFTan": $("#txtOpticalDistortionFTan@(itemName)").val(),
+                        "OpticalDistortionF": $("#txtOpticalDistortionF@(itemName)").val(),
+                        "MaxImageCircle": $("#txtMaxImageCircle@(itemName)").val(),
+                        "Sensor": $("#txtSensor@(itemName)").val(),
+                        "VFOV": $("#txtVFOV@(itemName)").val(),
+                        "HFOV": $("#txtHFOV@(itemName)").val(),
+                        "DFOV": $("#txtDFOV@(itemName)").val(),
+                        "PartName": $("#txtPartName@(itemName)").val(),
+                        "IR": $("#txtIR@(itemName)").val(),
+                        "MechanicalRetainer": $("#txtMechanicalRetainer@(itemName)").val(),
+                        "MechanicalFBL": $("#txtMechanicalFBL@(itemName)").val(),
+                        "MechanicalThread": $("#txtMechanicalThread@(itemName)").val(),
+                        "IPRating": $("#txtIPRating@(itemName)").val(),
+                        "Stage": $("#txtStage@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(MdId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteModelDesign", "ResearchAndDevelopment")";
+                    let postData = {
+                        "MdId": MdId,
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+
+        function Excel@(itemName)() {
+            Switch("#excelData@(itemName), .unit-block", "#listData@(itemName)");
+
+            let dataset = JSON.parse(ModelDesignData);
+            spreadsheet@(itemName).parse(dataset);
+            spreadsheetData@(itemName) = dataset;
+
+            spreadsheet@(itemName).setFormat("A2:A1000", "text")
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#ModelDesignTemporary").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("ModelDesignTemporary", {
+                colsCount: 43,
+                topSplit: 3,
+                menu: false,
+                dateFormat: "%Y-%m-%d",
+                toolbarBlocks: [
+                    "format"
+                ]
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-upload",
+                tooltip: "上傳數據",
+                id: "Save"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-excel",
+                tooltip: "匯入Excel",
+                id: "Import"
+            });
+        }
+
+        function SaveExcelData@(itemName)() {
+
+            spreadsheetJson@(itemName).spreadsheetInfo = [];
+            spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+
+            var ModelDesignList = [];
+            $.each(spreadsheetData@(itemName).sheets[0].data, function (i, item) {
+                let cell = item.cell;
+
+                if (cell.charAt(0) == "A" && parseInt(cell.substring(1))) {
+                    row = parseInt(cell.substring(1))
+                    if (row > 1 && item.value != undefined) {
+                        var ModelDesignObj = {};
+                        FieldList.forEach(function (item, index) {
+                            const value = spreadsheet@(itemName).getValue(lettersArray[index] + row);
+                            ModelDesignObj[item] = value;
+                        })
+
+                        ModelDesignList.push(ModelDesignObj)
+                    }
+                }
+            });
+
+            if (ModelDesignList.length > 0) {
+                swal.fire({
+                    titleText: "確認要上傳數據嗎?",
+                    text: "請確認是否要執行!",
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let targetUrl = "@Url.Action("AddModelDesignExcel", "ResearchAndDevelopment")";
+                        let postData = {
+                            "ModelDesignList": JSON.stringify(ModelDesignList)
+                        };
+
+                        let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                        if (data) {
+                            alert(data.result, "success", 5000);
+                            Return@(itemName)();
+                        }
+                    }
+                });
+            }
+            else {
+                alert("請編寫要上傳的數據!!!")
+            }
+        }
+
+        function Return@(itemName)() {
+            $("#excelData@(itemName)").hide();
+
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            Query@(itemName)();
+        }
+
+    </script>
+        )

@@ -1,0 +1,343 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DepProfitLossStatement";
+    string itemNameText = "成本趋势分析报表";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+
+}
+
+@Html.Resource("css",
+    @<style>
+         .btn-secondary {
+             color: #6c757d;
+             background-color: #fff;
+             border-color: #6c757d;
+         }
+
+         .myChart {
+             max-width: 800px;
+             margin: 20px auto;
+         }
+    </style>
+
+       )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<!--搜尋內容-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 450px;overflow-y: auto;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="form-label col-12" for="cboDepartmentQ@(itemName)">
+                                <span class="text-danger">*</span> 部门名称
+                            </label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDepartmentQ@(itemName)" name="cboDepartmentQ@(itemName)" multiple>
+                                    <option value="">-- 請選擇 --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtFiscalYearQ@(itemName)">
+                                <span class="text-danger">*</span> 年份
+                            </label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtFiscalYearQ@(itemName)" name="txtFiscalYearQ@(itemName)" placeholder="請輸入年份 EX:2024" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+                <button type="button" class="btn btn-success" onclick="Excel@(itemName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>匯出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                </div>
+                @*<h1 style="text-align: center;">部门成本损益表</h1>*@
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <h1 style="text-align: left;">部门成本损益表</h1>
+                            <table class="table table-bordered table-striped table-sticky table-stack " style="text-align: center" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 150px;">类别</th>
+                                        <th scope="col" style="min-width: 100px;">01月</th>
+                                        <th scope="col" style="min-width: 100px;">02月</th>
+                                        <th scope="col" style="min-width: 100px;">03月</th>
+                                        <th scope="col" style="min-width: 100px;">04月</th>
+                                        <th scope="col" style="min-width: 100px;">05月</th>
+                                        <th scope="col" style="min-width: 100px;">06月</th>
+                                        <th scope="col" style="min-width: 100px;">07月</th>
+                                        <th scope="col" style="min-width: 100px;">08月</th>
+                                        <th scope="col" style="min-width: 100px;">09月</th>
+                                        <th scope="col" style="min-width: 100px;">10月</th>
+                                        <th scope="col" style="min-width: 100px;">11月</th>
+                                        <th scope="col" style="min-width: 100px;">12月</th>
+                                        <th scope="col" style="min-width: 100px;">总计</th>
+                                        <th scope="col" style="min-width: 100px;">占比(%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Chart 分頁-->
+
+<div class="card card-shadow mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12">
+                <div class="table-custom">
+                    <h1 style="text-align: left;">成本趋势分析图表</h1>
+                    <div class="chart-container" style="position: relative">
+                        <canvas id="LineChart" style="min-width:300px; height:100px"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- 引入 Chart.js 库 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+
+@Html.Resource("js",
+        @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+
+        if (!isMobile) {
+            $("#cboDepartmentQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+            let LineChart;
+
+
+        $(document).ready(function () {
+
+
+            ComboBoxs.Default("#cboDepartmentQ@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Department", "Status": "A" }, "", "NA", "", "DepartmentName", "DepartmentNo");
+            //搜尋動作
+            Query@(itemName)();
+
+
+
+
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            // 销毁之前的 Chart 实例
+            if (LineChart instanceof Chart) {
+                LineChart.destroy();
+            }
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let ChartValues = [];
+
+
+
+            let Department = $("#cboDepartmentQ@(itemName)").val();
+            let FiscalYear = $("#txtFiscalYearQ@(itemName)").val();
+
+            if (Department == "" || FiscalYear == "" ) {
+                alert("請選擇條件進行搜尋!!");
+                return false;
+
+            }
+
+            // 将部门多选框的值转换为 'J620','J721','J722' 格式
+            let departmentString = Department.map(item => `'${item}'`).join(',');
+
+            let targetUrl = "@Url.Action("GetDepProfitLossStatement", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "Department": departmentString,
+                "FiscalYear": FiscalYear
+            }
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                lengthCount = data.result.length;
+                //console.log(5278, data.result.length);
+                if (lengthCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">类别</span>${item.classification}</td>
+                                        <td><span class="stack-title">01月</span>${addThousandsSeparator(item.Jan)}</td>
+                                        <td><span class="stack-title">02月</span>${addThousandsSeparator(item.Feb)}</td>
+                                        <td><span class="stack-title">03月</span>${addThousandsSeparator(item.Mar)}</td>
+                                        <td><span class="stack-title">04月</span>${addThousandsSeparator(item.Apr)}</td>
+                                        <td><span class="stack-title">05月</span>${addThousandsSeparator(item.May)}</td>
+                                        <td><span class="stack-title">06月</span>${addThousandsSeparator(item.Jun)}</td>
+                                        <td><span class="stack-title">07月</span>${addThousandsSeparator(item.Jul)}</td>
+                                        <td><span class="stack-title">08月</span>${addThousandsSeparator(item.Aug)}</td>
+                                        <td><span class="stack-title">09月</span>${addThousandsSeparator(item.Sept)}</td>
+                                        <td><span class="stack-title">10月</span>${addThousandsSeparator(item.Oct)}</td>
+                                        <td><span class="stack-title">11月</span>${addThousandsSeparator(item.Nov)}</td>
+                                        <td><span class="stack-title">12月</span>${addThousandsSeparator(item.Dec)}</td>
+                                        <td><span class="stack-title">总计</span>${addThousandsSeparator(item.Total)}</td>
+                                        <td><span class="stack-title">占比</span>${item.proportion}</td>
+                                     </tr>`;
+
+                        if (item.classification == '总计') {
+                            ChartValues.push(item.Jan);
+                            ChartValues.push(item.Feb);
+                            ChartValues.push(item.Mar);
+                            ChartValues.push(item.Apr);
+                            ChartValues.push(item.May);
+                            ChartValues.push(item.Jun);
+                            ChartValues.push(item.Jul);
+                            ChartValues.push(item.Aug);
+                            ChartValues.push(item.Sept);
+                            ChartValues.push(item.Oct);
+                            ChartValues.push(item.Nov);
+                            ChartValues.push(item.Dec);
+
+                        }
+                    });
+
+
+
+                    ctx = document.getElementById("LineChart")
+                    LineChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['01月', '02月', '03月', '04月', '05月', '06月', '07月', '08月', '09月', '10月', '11月', '12月'],
+                            datasets: [{
+                                label: '总计',
+                                fill: false,
+                                lineTension: 0,//设置为0展示为折线
+                                data: ChartValues,
+                                backgroundColor: "rgba(1, 255, 132, 1)" ,
+                                borderColor: "#4682b4",
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        },
+                    });
+
+
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="14" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+
+
+        }
+
+        // 定义一个函数，用于将数字转换为带有千位分隔符的字符串
+        function addThousandsSeparator(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function Excel@(itemName)() {
+
+            let Department = $("#cboDepartmentQ@(itemName)").val();
+            let FiscalYear = $("#txtFiscalYearQ@(itemName)").val();
+            // 将部门多选框的值转换为 'J620','J721','J722' 格式
+            let departmentString = Department.map(item => `'${item}'`).join(',');
+
+            let targetUrl = "@Url.Action("ExcelDepProfitLossStatement", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                //"PageIndex": (objPage.pageIndex + 1),
+                //"PageSize": objPage.pageSize,
+                "Department": departmentString,
+                "FiscalYear": FiscalYear
+            }
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                alert("匯出成功!!!!", "success")
+                FileAccess.AjaxDownload(targetUrl, postData, false);
+            }
+        }
+
+
+        </script>
+                                                                                                                    )

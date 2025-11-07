@@ -1,0 +1,320 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MtlItemNoLabel";
+    string itemNameText = "品號標籤";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .trLock {
+             color: #f00;
+             display: none;
+         }
+    </style>
+)
+
+<div class="row" id="editData@(itemName)">
+    <input type="hidden" id="QcNoticeId" name="QcNoticeId" value="-1" />
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container  custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12">
+                            <div class="form-group row">
+                                <label class="form-label col-12" for="cboLabelPrintMachine@(itemName)">標籤機</label>
+                                <div class="col-12" style="display:flex;">
+                                    <select class="form-control" id="cboLabelPrintMachine@(itemName)" name="cboLabelPrintMachine@(itemName)" style="width: calc(100% - 135px);"></select>
+                                    <button type="button" class="btn btn-info " onclick="SelectMtlItem();" style="width:135px;height: 35px;"><i class="fas fa-list-ul"></i>&nbsp;加入品號</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="newMtlItem">
+
+                    </div>
+                    @*<div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtMtlItemNo@(itemName)">品號<span class="text-danger">*</span></label>
+                                    <div class="col-12" style="display:flex;">
+                                        <input type="text" class="form-control" id="txtMtlItemNo@(itemName)" style="width:50%"
+                                               placeholder="請輸入品號" readonly />
+                                        <input type="number" class="form-control" id="txtPrintQty@(itemName)" style="width:50%"
+                                               placeholder="請輸入數量" daat-rule-required="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>*@
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button id="Print@(itemName)" type="button" class="btn btn-success" onclick="Print@(itemName)()"><i class="fas fa-save"></i>列印</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="selectMtlItem@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    請選擇品號
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <form autocomplete="off" id="selectForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <label>品號</label>
+                                        <input type="text" class="form-control" id="txtMtlItemNo@(itemName)" name="txtMtlItemNo@(itemName)" placeholder="請輸入品號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <label>品名</label>
+                                        <input type="text" class="form-control" id="txtMtlItemName@(itemName)" name="txtMtlItemName@(itemName)" placeholder="請輸入品名" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblSelectMtlItem@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">品號</th>
+                                        <th scope="col" style="min-width: 100px;">品名</th>
+                                        <th scope="col" style="min-width: 200px;">規格</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 75px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="pageSelectMtlItem@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success list-mode" onclick="SentMtlItemList()">送出</button>
+                <button type="button" class="btn btn-secondary list-mode" onclick="CloseSelectMtlItem()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+@<script>
+
+    let companyId@(itemName);
+    let objPage = {
+        "pageIndex": 0,
+        "pageSize": 10
+    };
+
+    $(document).ready(function () {
+
+        ComboBoxs.Default("#cboLabelPrintMachine@(itemName)", "@Url.Action("GetLabelPrintMachine02", "PrintLabel")", {"CompanyId":companyId@(itemName)}, "", "CHOOSE", "請選擇標籤機", "LabelPrintName", "LabelPrintNo");
+        if (!isMobile) {
+            $("#cboLabelPrintMachine@(itemName)").select2({
+                width: "100%"
+            });
+        }
+    });
+
+
+    $("#txtMtlItemNo@(itemName), #txtMtlItemName@(itemName)").change(function () {
+        GetMtlItem()
+    })
+
+    function SelectMtlItem() {
+        $("#selectMtlItem@(itemName)").modal("show");
+        GetMtlItem()
+    }
+
+    //品號視窗開啟
+    function GetMtlItem() {
+        let innerHtml = "";
+
+        let targetUrl = "@Url.Action("GetMtlItem", "Product")";
+
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage.pageIndex + 1),
+            "PageSize": objPage.pageSize,
+            "MtlItemNo":$("#txtMtlItemNo@(itemName)").val(),
+            "MtlItemName":$("#txtMtlItemName@(itemName)").val()
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+            if (pageCount > 0) {
+                objPage = PageCaculate(pageCount, objPage);
+
+                $.each(data.result, function (i, item) {
+                    var MtlItemId = item.MtlItemId
+                    var MtlItemNo = item.MtlItemNo
+                    var MtlItemName = item.MtlItemName
+                    var MtlItemSpec = item.MtlItemSpec
+                    var TransferStatus = item.TransferStatus
+                    var ConfirmStatus = item.ConfirmStatus
+
+                    let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                    innerHtml += `<tr>
+                                    <td>${_row}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${MtlItemNo}" style="max-width: 165px;">
+                                      ${MtlItemNo}
+                                      ${TransferStatus == `Y` ? `${ErpDocStatus(ConfirmStatus)}` : ``}
+                                    </td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${MtlItemName}" style="max-width: 165px;">
+                                      ${MtlItemName}
+                                    </td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${MtlItemSpec}" style="max-width: 165px;">
+                                      ${MtlItemSpec}
+                                    </td>
+                                    <td class="text-center active-content">
+                                        <label class="control control-solid control-solid-info control--checkbox">
+                                            <input type="checkbox" name="chkMtlItemId@(itemName)" class="mtlItemChx" data-mtlItem-id="${MtlItemId}" value="${MtlItemId}"/>
+                                            <span class="control__indicator ${ TransferStatus != `Y` ? `trLock` : `` }"></span>
+                                        </label>
+                                        <input type="hidden" name="txtMtlItemNo@(itemName)" data-mtlItem-no="${MtlItemId}" value="${MtlItemNo}" />
+                                        <input type="hidden" name="txtMtlItemName@(itemName)" data-mtlItem-name="${MtlItemId}" value="${MtlItemName}" />
+                                        <input type="hidden" name="txtMtlItemSpec@(itemName)" data-mtlItem-spec="${MtlItemId}" value="${MtlItemSpec}" />
+                                    </td>
+                                  </tr>`;
+                });
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                  <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                              </tr>`;
+            }
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+
+        $("#tblSelectMtlItem@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+        Pager("#pageSelectMtlItem@(itemName)", pageCount, objPage, SelectMtlItem);
+
+    }
+    var MtlItemList = []
+    function SentMtlItemList() {
+        var mtlItemHtml = ""
+        $(".mtlItemChx:checked").each(function () {
+            var mtlItemId = $(this).val()
+            if (MtlItemList.indexOf(mtlItemId) !== -1) {
+                return
+            }
+            MtlItemList.push(mtlItemId)
+            let MtlItemNo = $(`input[name="txtMtlItemNo@(itemName)"][data-mtlItem-no="${mtlItemId}"]`).val();
+            let MtlItemName = $(`input[name="txtMtlItemName@(itemName)"][data-mtlItem-name="${mtlItemId}"]`).val();
+            let MtlItemSpec = $(`input[name="txtMtlItemSpec@(itemName)"][data-mtlItem-spec="${mtlItemId}"]`).val();
+
+            mtlItemHtml += `
+                        <div class="row RowMtlItemId${mtlItemId}">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtMtlItemNo@(itemName)">品號<span class="text-danger">*</span></label>
+                                    <div class="col-12" style="display:flex;">
+                                        <input type="hidden" class="mtlItemGroup" value="${mtlItemId}" />
+                                        <input type="text" class="form-control" id="txtMtlItemNo@(itemName)${mtlItemId}" style="width:50%"
+                                               placeholder="請輸入品號" value="${MtlItemNo}" readonly />
+                                        <input type="number" class="form-control" id="txtPrintQty@(itemName)${mtlItemId}" style="width: calc(50% - 50px);
+                                               placeholder="請輸入數量" daat-rule-required="true" value="1"/>
+                                        <input type="hidden" id="txtMtlItemName@(itemName)${mtlItemId}" value="${MtlItemName}" />
+                                        <input type="hidden" id="txtMtlItemSpec@(itemName)${mtlItemId}" value="${MtlItemSpec}" />
+                                        <button type="button" class="btn btn-danger " onclick="RemoveMtlItem(${mtlItemId});" style="width:50px;height: 39px;"><i class="fas fa-trash-alt"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                            `
+        });
+        $(".newMtlItem").append(mtlItemHtml)
+        alert("送出成功!!!", "success")
+    }
+    //品號視窗關閉
+    function CloseSelectMtlItem() {
+        $("#selectMtlItem@(itemName)").modal("hide");
+    }
+
+    //移除項目
+    function RemoveMtlItem(MtlItemId) {
+        $(`.RowMtlItemId${MtlItemId}`).remove()
+        var index = MtlItemList.indexOf(MtlItemId.toString());
+
+        if (index !== -1) {
+            MtlItemList.splice(index, 1);
+        }
+    }
+
+
+    //列印
+    function Print@(itemName)() {
+        let PrintMtlItemList = [];
+
+        PrintMachine =$("#cboLabelPrintMachine@(itemName)").val()
+
+        if (PrintMachine == "") {
+            alert("標籤機尚未選擇!!!")
+            return
+        }
+
+        $.each($(".mtlItemGroup"), function () {
+            var MtlItemId = $(this).val()
+            var PrintQty = $(`#txtPrintQty@(itemName)${MtlItemId}`).val()
+            var MtlItemNo = $(`#txtMtlItemNo@(itemName)${MtlItemId}`).val()
+            var MtlItemName = $(`#txtMtlItemName@(itemName)${MtlItemId}`).val()
+            var MtlItemSpec = $(`#txtMtlItemSpec@(itemName)${MtlItemId}`).val()
+            PrintMtlItemList.push(PrintQty + "❤" + MtlItemNo + "❤" + MtlItemName + "❤" + MtlItemSpec )
+        });
+
+        if (PrintMtlItemList.length <= 0) {
+            alert("列表目前沒有要列印的刀具品號!!!")
+            return
+        }
+
+        let targetUrl = "@Url.Action("PrintMtlItem", "PrintLabel")";
+        let postData = {
+            "PrintMachine": $("#cboLabelPrintMachine@(itemName)").val(),
+            "MtlItemList": PrintMtlItemList.join(",")
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            alert("列印成功!!!!", "success", 5)
+        }
+        else {
+            alert(data.msg, "alert", 0);
+        }
+    }
+
+    function GetUserInfo@(itemName)() {
+        let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+        let postData = {
+            "UserNo": $.cookie("Login"),
+            "KeyText": $.cookie("LoginKey")
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            userId@(itemName) = data.returnData.UserId;
+            companyId@(itemName) = data.returnData.CompanyId;
+
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+    }
+</script>
+                )

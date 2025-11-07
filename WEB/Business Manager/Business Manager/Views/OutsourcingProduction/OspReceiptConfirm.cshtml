@@ -1,0 +1,887 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "OspReceiptConfirm";
+    string itemNameText = "託外入庫資料拋轉管理";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+    </style>
+                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">託外入庫單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtOsrErpFullNoQ@(itemName)" name="txtOsrErpFullNoQ@(itemName)"
+                                       placeholder="請輸入託外入庫單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">ERP製令單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)"
+                                       placeholder="請輸入ERP製令單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">供應商</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSupplierIdQ@(itemName)" name="cboSupplierIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">託外入庫日期</label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtOsrStartDateQ@(itemName)" name="txtOsrStartDateQ@(itemName)"
+                                       placeholder="請輸入託外入庫日期"
+                                       data-msg-required="請輸入託外入庫日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtOsrEndDateQ@(itemName)" name="txtOsrEndDateQ@(itemName)"
+                                       placeholder="請輸入託外入庫日期"
+                                       data-msg-required="請輸入託外入庫日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 200px;">ERP託外入庫單號</th>
+                                        <th scope="col" style="max-width: 200px;">供應商</th>
+                                        <th scope="col" style="max-width: 150px;">單據日期</th>
+                                        <th scope="col" style="max-width: 150px;">託外入庫日期</th>
+                                        <th scope="col" style="max-width: 175px;">開立人員</th>
+                                        <th scope="col" style="max-width: 175px;">拋單狀態</th>
+                                        <th scope="col" style="max-width: 150px;">核准狀態</th>
+                                        <th scope="col" style="max-width: 150px;">確認者</th>
+                                        <th class="text-center" scope="col" style="max-width: 250px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增/編輯-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="OsrId" name="OsrId" value="-1" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboSupplierId@(itemName)">供應商<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboSupplierId@(itemName)" name="cboSupplierId@(itemName)" required disabled></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboOsrErpPrefix@(itemName)">ERP託外入庫單別<span class="text-danger">*</span></label>
+                                    <div class="col-12 osp-date">
+                                        <select class="form-control" id="cboOsrErpPrefix@(itemName)" name="cboOsrErpPrefix@(itemName)" required disabled></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtOsrErpNo@(itemName)">ERP託外入庫單號</label>
+                                    <div class="col-12 osp-date">
+                                        <input type="text" class="form-control" id="txtOsrErpNo@(itemName)" name="txtOsrErpNo@(itemName)"
+                                               value=""
+                                               placeholder="由系統自動產生"
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtDocumentDate@(itemName)">單據日期<span class="text-danger">*</span></label>
+                                    <div class="col-12 osp-date">
+                                        <input type="text" class="form-control" id="txtDocumentDate@(itemName)" name="txtDocumentDate@(itemName)" readonly/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtReceiptDate@(itemName)">進貨日期<span class="text-danger">*</span></label>
+                                    <div class="col-12 osp-date">
+                                        <input type="text" class="form-control" id="txtReceiptDate@(itemName)" name="txtReceiptDate@(itemName)" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboReserveTaxCode@(itemName)">保稅碼<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboReserveTaxCode@(itemName)" name="cboReserveTaxCode@(itemName)" required disabled>
+                                            <option value="0">依品號預設</option>
+                                            <option value="Y">預設為保稅品</option>
+                                            <option value="N">預設為非保稅品</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab" style="white-space:unset;">
+                            <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="tabActive" data-toggle="tab" href="#tabInvoice">
+                                        <i class="far fa-file-invoice-dollar"></i> 發票資料
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-toggle="tab" href="#tabOther">
+                                        <i class="fas fa-folder"></i> 其他資料
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="tab-content">
+                            <div class="tab-pane active" id="tabInvoice">
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboTaxCode@(itemName)">稅別碼<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboTaxCode@(itemName)" name="cboTaxCode@(itemName)" required></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboTaxType@(itemName)">課稅別<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboTaxType@(itemName)" name="cboTaxType@(itemName)" required disabled></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboInvoiceType@(itemName)">發票聯數<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboInvoiceType@(itemName)" name="cboInvoiceType@(itemName)" required disabled></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtTaxRate@(itemName)">營業稅率<span class="text-danger">*</span></label>
+                                            <div class="col-12 osp-date">
+                                                <input type="number" step="any" min="0" max="99999" class="form-control" id="txtTaxRate@(itemName)" name="txtTaxRate@(itemName)"
+                                                       value="0.00"
+                                                       placeholder="請輸入營業稅率"
+                                                       data-msg-required="請輸入營業稅率" data-rule-required="true" readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtUiNo@(itemName)">統一編號</label>
+                                            <div class="col-12 osp-date">
+                                                <input type="text" class="form-control" id="txtUiNo@(itemName)" name="txtUiNo@(itemName)"
+                                                       value=""
+                                                       placeholder="請輸入統一編號"
+                                                       data-msg-maxlength="必須少於 20 個字元" maxlength="20" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtInvoiceDate@(itemName)">發票日期</label>
+                                            <div class="col-12 osp-date">
+                                                <input type="text" class="form-control" id="txtInvoiceDate@(itemName)" name="txtInvoiceDate@(itemName)"
+                                                       placeholder="請輸入發票日期"
+                                                       data-msg-required="請輸入發票日期"
+                                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtInvoiceNo@(itemName)">發票號碼</label>
+                                            <div class="col-12 osp-date">
+                                                <input type="text" class="form-control" id="txtInvoiceNo@(itemName)" name="txtInvoiceNo@(itemName)"
+                                                       value=""
+                                                       placeholder="請輸入發票號碼"
+                                                       data-msg-maxlength="必須少於 50 個字元" maxlength="50" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtApplyYYMM@(itemName)">申報年月<span class="text-danger">*</span></label>
+                                            <div class="col-12 osp-date">
+                                                <input type="text" class="form-control" id="txtApplyYYMM@(itemName)" name="txtApplyYYMM@(itemName)"
+                                                       placeholder="請輸入申報年月"
+                                                       data-msg-required="請輸入申報年月" data-rule-required="true"
+                                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboDeductType@(itemName)">扣抵區分<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboDeductType@(itemName)" name="cboDeductType@(itemName)" required></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane" id="tabOther">
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboCurrencyCode@(itemName)">幣別<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboCurrencyCode@(itemName)" name="cboCurrencyCode@(itemName)" required></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtExchange@(itemName)">匯率<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" step="any" min="0" max="99999" class="form-control" id="txtExchange@(itemName)" name="txtExchange@(itemName)"
+                                                       value="1"
+                                                       placeholder="請輸入匯率"
+                                                       data-msg-required="請輸入匯率" data-rule-required="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtSupplierSo@(itemName)">廠商單號</label>
+                                            <div class="col-12 osp-date">
+                                                <input type="text" class="form-control" id="txtSupplierSo@(itemName)" name="txtSupplierSo@(itemName)"
+                                                       value="" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtRowCnt@(itemName)">件數<span class="text-danger">*</span></label>
+                                            <div class="col-12 osp-date">
+                                                <input type="number" class="form-control" id="txtRowCnt@(itemName)" name="txtRowCnt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入件數"
+                                                       data-msg-required="請輸入件數" data-rule-required="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboPaymentTerm@(itemName)">付款條件<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboPaymentTerm@(itemName)" name="cboPaymentTerm@(itemName)" required></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                          placeholder="請輸入備註"
+                                                          data-msg-required="請輸入備註"
+                                                          data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--其他分頁-->
+<div class="advanced-block">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav flag-tabs nav-fill" role="tablist">
+                <li class="flag-item">
+                    <a class="flag-link  active" data-toggle="tab" href="#tabOspReceiptDetail">
+                        <i class="fas fa-sliders-h"></i> 設定託外入庫資料拋轉詳細資料
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane active" id="tabOspReceiptDetail">
+            @Html.Partial("OspReceiptConfirmDetail")
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            if (!isMobile) {
+                $("#cboSupplierIdQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            //供應商資料
+            ComboBoxs.Default("#cboSupplierIdQ@(itemName)", "@Url.Action("GetSupplier", "ScmBasicInformation")", { "PermitStatus": "1" }, "", "NA", "", "SupplierWithNo", "SupplierId");
+
+            Suites.DateDropper("#txtOsrStartDateQ@(itemName), #txtOsrEndDateQ@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtOsrEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 90);
+            Suites.SetDateDropper("#txtOsrStartDateQ@(itemName)", currentDate);
+
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetOspReceipt", "OutsourcingProduction")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "OsrErpFullNo": $("#txtOsrErpFullNoQ@(itemName)").val(),
+                "SupplierId": $("#cboSupplierIdQ@(itemName)").val(),
+                "OsrStartDate": $("#txtOsrStartDateQ@(itemName)").val(),
+                "OsrEndDate": $("#txtOsrEndDateQ@(itemName)").val(),
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OsrErpPrefix}-${item.OsrErpNo}" style="max-width: 200px;">${item.OsrErpPrefix}-${item.OsrErpNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SupplierNo} ${item.SupplierName}" style="max-width: 200px;">${item.SupplierNo} ${item.SupplierName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DocumentDate}" style="max-width: 200px; min-width: 100px;">${item.DocumentDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ReceiptDate}" style="max-width: 200px; min-width: 100px;">${item.ReceiptDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserNo}${item.UserName}" style="min-width: 175px;"><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TransferStatus == `Y` ? `已拋轉` : `未拋轉`}" style="max-width: 200px; min-width: 100px;">${item.TransferStatus == `Y` ? `已拋轉` : `未拋轉`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StatusName}" style="max-width: 200px; min-width: 100px;">${item.StatusName}</td>
+                                        ${JudgeConfirmUserNo(`${item.ConfirmUserNo}`, `${item.ConfirmUserName}`)}
+                                        <td class="text-center active-content" style="min-width: 350px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.OsrId}');"><i class="fas fa-edit"></i></a>
+                                            ${JudgeConfirm(`${item.ConfirmStatus}`, `${item.OsrId}`, `${item.ConfirmUserNo}`)}
+                                        </td>
+                                      </tr>`;
+                    });
+
+                    function JudgeConfirm(confirmStatus, osrId, confirmUserNo) {
+                        let innerHtml = '';
+                        switch (confirmStatus)
+                        {
+                            case "V": {
+                                innerHtml += `<a class="active-link auth-confirm active-disable" href="javascript:void();"><i class="far fa-arrow-alt-square-up"> 拋轉</i></a>
+                                              <a class="active-link auth-confirm active-disable" href="javascript:void();"><i class="fas fa-check"> 拋單及核單</i></a>
+                                              <a class="active-link auth-reconfirm active-disable" href="javascript:void();"><i class="fas fa-undo-alt"> 反確認</i></a>
+                                              <a class="active-link auth-void active-disable" href="javascript:void();"><i class="fas fa-ban"> 作廢</i></a>`;
+                                break;
+                            }
+                            case "N": {
+                                innerHtml += `<a class="active-link auth-update" href="javascript:TransferErp@(itemName)('${osrId}');"><i class="far fa-arrow-alt-square-up"></i> 拋轉</a>
+                                              <a class="active-link auth-confirm" href="javascript:Confirm@(itemName)('${osrId}');"><i class="fas fa-check"> 拋單及核單</i></a>
+                                              <a class="active-link auth-reconfirm active-disable" href="javascript:void();"><i class="fas fa-undo-alt"> 反確認</i></a>`;
+                                if (confirmUserNo != "null") {
+                                    innerHtml += ` <a class="active-link auth-void" href="javascript:Void@(itemName)('${osrId}');"><i class="fas fa-ban"> 作廢</i></a>`;
+                                }
+                                else {
+                                    innerHtml += ` <a class="active-link auth-void active-disable" href="javascript:void();"><i class="fas fa-ban"> 作廢</i></a>`;
+                                }
+                                break;
+                            }
+                            case "Y": {
+                                innerHtml += `<a class="active-link auth-confirm active-disable" href="javascript:void();"><i class="far fa-arrow-alt-square-up"> 拋轉</i></a>
+                                              <a class="active-link auth-confirm active-disable" href="javascript:void();"><i class="fas fa-check"> 拋單及核單</i></a>
+                                              <a class="active-link auth-reconfirm" href="javascript:ReConfirm@(itemName)('${osrId}');"><i class="fas fa-undo-alt"> 反確認</i></a>
+                                              <a class="active-link auth-void active-disable" href="javascript:void();"><i class="fas fa-ban"> 作廢</i></a>`;
+                                break;
+                            }
+
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeConfirmUserNo(confirmUserNo, confirmUserName) {
+                        let innerHtml = '';
+                        if (confirmUserNo != "null") {
+                            innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${confirmUserNo}${confirmUserName}" style="min-width: 100px;"><i class="fas fa-user"></i>&nbsp;<code>${confirmUserNo}</code>&nbsp;${confirmUserName}</td>`;
+                        }
+                        else {
+                            innerHtml += `<td style="min-width: 150px;"></td>`;
+                        }
+                        return innerHtml;
+                    }
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="9" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(OsrId) {
+            $("#OsrId").val(OsrId ? OsrId : 0);
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            $(".btn-group@(itemName)").show();
+
+            $("#cboCurrencyCode@(itemName)").prop("disabled", true);
+            $("#txtExchange@(itemName)").prop("readonly", true);
+
+            $("#txtOspDetailId@(itemName)").siblings(".help-block").hide();
+            $("#txtOspDetailId@(itemName)").val("");
+
+            if (!isMobile) {
+                $("#cboSupplierId@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboOsrErpPrefix@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboTaxCode@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboTaxType@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboDeductType@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboInvoiceType@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboCurrencyCode@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboPaymentTerm@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            //供應商資料
+            ComboBoxs.Default("#cboSupplierId@(itemName)", "@Url.Action("GetSupplier", "ScmBasicInformation")", { "PermitStatus": "1" }, "", "NA", "", "SupplierWithNo", "SupplierId");
+
+            //入庫單別
+            ComboBoxs.WithText("#cboOsrErpPrefix@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MoErpPrefix" }, "5902", "NA", "", "MweErpPrefixName", "MweErpPrefix");
+
+            //抵扣區分
+            ComboBoxs.WithText("#cboDeductType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "OspReceipt.DeductType" }, "1", "NA", "", "TypeName", "TypeNo");
+
+            $("#cboTaxCode@(itemName)").on("change", function () {
+                ComboBoxs.Default("#cboInvoiceType@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "InvoiceCount", "Condition": $("#cboTaxCode@(itemName)").val() }, "", "CHOOSE", "", "InvoiceCountName", "InvoiceCountNo");
+
+                let taxation;
+                let targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                let postData = {
+                    "ColumnName": "TaxNo",
+                    "Condition": $("#cboTaxCode@(itemName)").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        taxation = item.Taxation;
+                        $("#txtTaxRate@(itemName)").val(parseFloat(item.BusinessTaxRate));
+                    });
+                }
+
+                ComboBoxs.Default("#cboTaxType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "Customer.Taxation" }, taxation, "NA", "", "TypeName", "TypeNo");
+            });
+
+            $("#cboCurrencyCode@(itemName)").change(function () {
+                //匯率
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "ExchangeRate",
+                    "Condition": $("#cboCurrencyCode@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtExchange@(itemName)").val(item.ExchangeRateName)
+                    });
+
+                    EditOrigUnitPriceOspReceiptConfirmDetail();
+                }
+            });
+
+            if (OsrId > 0) {
+                $("#cboSupplierId@(itemName)").attr("disabled", true);
+                ExpandOspReceiptConfirmDetail(OsrId);
+
+                //稅別碼
+                ComboBoxs.WithText("#cboTaxCode@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "TaxNo" }, "", "NA", "", "TaxName", "TaxNo");
+
+                //課稅別
+                ComboBoxs.Default("#cboTaxType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "Customer.Taxation" }, "", "NA", "", "TypeName", "TypeNo");
+
+                //發票聯數
+                ComboBoxs.Default("#cboInvoiceType@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "InvoiceCount" }, "", "CHOOSE", "", "InvoiceCountName", "InvoiceCountNo");
+
+                //交易幣別
+                ComboBoxs.WithText("#cboCurrencyCode@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Currency" }, "", "NA", "", "CurrencyName", "Currency");
+
+                //付款條件
+                ComboBoxs.Default("#cboPaymentTerm@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "PaymentTerm" }, "", "NA", "", "PaymentTermName", "PaymentTermNo");
+
+                let targetUrl = "@Url.Action("GetOspReceipt", "OutsourcingProduction")";
+                let postData = {
+                    "OsrId": OsrId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $("#txtOspDetailId@(itemName)").siblings(".help-block").show();
+                    $(".btn-group@(itemName)").hide();
+                    $.each(data.result, function (i, item) {
+                        //基本資料
+                        $("#cboSupplierId@(itemName)").val(item.SupplierId);
+                        $("#txtDocumentDate@(itemName)").val(item.DocumentDate);
+                        $("#txtReceiptDate@(itemName)").val(item.ReceiptDate);
+                        $("#cboReserveTaxCode@(itemName)").val(item.ReserveTaxCode);
+                        $("#cboOsrErpPrefix@(itemName)").val(item.OsrErpPrefix);
+                        $("#txtOsrErpNo@(itemName)").val(item.OsrErpNo);
+
+                        //發票資料
+                        $("#cboTaxCode@(itemName)").val(item.TaxCode);
+                        $("#cboTaxType@(itemName)").val(item.TaxType);
+                        $("#cboInvoiceType@(itemName)").val(item.InvoiceType);
+                        $("#txtUiNo@(itemName)").val(item.UiNo);
+                        $("#txtInvoiceDate@(itemName)").val(item.InvoiceDate);
+                        $("#txtInvoiceNo@(itemName)").val(item.InvoiceNo);
+                        $("#cboDeductType@(itemName)").val(item.DeductType);
+                        $("#txtApplyYYMM@(itemName)").val(item.ApplyYYMM);
+
+                        //其他資料
+                        $("#cboCurrencyCode@(itemName)").val(item.CurrencyCode);
+                        $("#txtExchange@(itemName)").val(item.Exchange);
+                        $("#txtRowCnt@(itemName)").val(item.RowCnt);
+                        $("#txtTaxRate@(itemName)").val(item.TaxRate);
+                        $("#cboPaymentTerm@(itemName)").val(item.PaymentTerm);
+                        $("#txtRemark@(itemName)").val(item.Remark);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let OsrId = parseInt($("#OsrId").val());
+                let targetUrl = "@Url.Action("UpdateOspReceipt", "OutsourcingProduction")";
+                let postData = {
+                    "OsrId": OsrId,
+                    "SupplierId": $("#cboSupplierId@(itemName)").val(),
+                    "SupplierSo": $("#txtSupplierSo@(itemName)").val(),
+                    "OsrErpPrefix": $("#cboOsrErpPrefix@(itemName)").val(),
+                    "OsrErpNo": $("#txtOsrErpNo@(itemName)").val(),
+                    "DocumentDate": $("#txtDocumentDate@(itemName)").val(),
+                    "ReceiptDate": $("#txtReceiptDate@(itemName)").val(),
+                    "ReserveTaxCode": $("#cboReserveTaxCode@(itemName)").val(),
+                    "TaxCode": $("#cboTaxCode@(itemName)").val(),
+                    "TaxType": $("#cboTaxType@(itemName)").val(),
+                    "InvoiceType": $("#cboInvoiceType@(itemName)").val(),
+                    "TaxRate": $("#txtTaxRate@(itemName)").val(),
+                    "UiNo": $("#txtUiNo@(itemName)").val(),
+                    "InvoiceDate": $("#txtInvoiceDate@(itemName)").val(),
+                    "InvoiceNo": $("#txtInvoiceNo@(itemName)").val(),
+                    "ApplyYYMM": $("#txtApplyYYMM@(itemName)").val(),
+                    "CurrencyCode": $("#cboCurrencyCode@(itemName)").val(),
+                    "Exchange": $("#txtExchange@(itemName)").val(),
+                    "RowCnt": $("#txtRowCnt@(itemName)").val(),
+                    "Remark": $("#txtRemark@(itemName)").val(),
+                    "DeductType": $("#cboDeductType@(itemName)").val(),
+                    "PaymentTerm": $("#cboPaymentTerm@(itemName)").val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    ReturnOspReceiptConfirmDetail();
+                    let OsrDetailId = parseInt($("#OsrDetailId").val());
+
+                    if (OsrDetailId > 0) {
+                        EditOspReceiptConfirmDetail(OsrDetailId);
+                        SaveOspReceiptConfirmDetail();
+                        EditOspReceiptConfirmDetail(OsrDetailId);
+                    }
+                }
+            }
+        }
+
+        function Confirm@(itemName)(OsrId) {
+            swal.fire({
+                titleText: "拋轉並核准託外入庫單",
+                text: "拋轉並核准託外入庫單",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateTACOspReceipt", "OutsourcingProduction")";
+                    let postData = {
+                        "OsrId": OsrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function ReConfirm@(itemName)(OsrId) {
+            swal.fire({
+                titleText: "反確認託外入庫單?",
+                text: "確定要反確認託外入庫單嗎?",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateReConfirmOspReceipt", "OutsourcingProduction")";
+                    let postData = {
+                        "OsrId": OsrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Void@(itemName)(OsrId) {
+            swal.fire({
+                titleText: "確認要作廢託外入庫單嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateVoidOspReceipt", "OutsourcingProduction")";
+                    let postData = {
+                        "OsrId": OsrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+
+            $("#cboCurrencyCode@(itemName)").prop("disabled", true);
+            $("#txtExchange@(itemName)").prop("readonly", true);
+        }
+
+        function TransferErp@(itemName)(osrId) {
+            swal.fire({
+                titleText: "拋轉託外入庫單據到ERP",
+                text: "請注意，此動作只會在ERP建單，不會核單!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateTransferOspReceipt", "OutsourcingProduction")";
+                    let postData = {
+                        "OsrId": osrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                        ReturnOspReceiptDetail();
+                    }
+                }
+            });
+        }
+
+    </script>
+    )

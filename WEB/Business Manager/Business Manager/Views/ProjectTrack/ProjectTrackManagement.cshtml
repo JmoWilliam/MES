@@ -1,0 +1,226 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProjectTrackManagement";
+    string itemNameText = "專案任務追蹤管理";
+    string authority = ViewBag.authority;
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css", @<link href="@Url.Content("~/Content/project.min.css")?@dateCache" rel="stylesheet" />)
+@Html.Resource("css", @<link href="@Url.Content("~/Content/dhtmlx/gantt.commercial/7.1.12/dhtmlxgantt.css")" rel="stylesheet" />)
+@Html.Resource("css", @<link href="@Url.Content("~/Content/dhtmlx/diagram.commercial/5.0.0/diagram.css")" rel="stylesheet" />)
+@Html.Resource("css",
+    @<style>
+         .view-content {
+             display: none;
+         }
+
+         .type-content {
+             display: none;
+         }
+
+         .table-custom .table.table-striped tbody tr:nth-of-type(odd) td:not(.col-sticky) {
+             background-color: transparent;
+         }
+
+         code {
+             font-size: 110%;
+             color: #e83e8c;
+             word-wrap: break-word;
+         }
+    </style>)
+
+<input type="hidden" id="pageAuthority" value="@(authority)" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+@*<div class="row" id="listData@(itemName)">
+        <div class="col-12">
+            <div class="card card-shadow mb-4">
+                <div class="card-body">
+                    <div class="row type-project">
+                        <div class="col-12 col-sm-12 col-md-12">
+                            <div class="btn-group" data-toggle="buttons">
+                                <label class="btn btn-outline-info">
+                                    <input type="radio" name="viewMode@(itemName)" value="structure" />
+                                    <i class="fas fa-project-diagram"></i>任務結構
+                                </label>
+                                <label class="btn btn-outline-info">
+                                    <input type="radio" name="viewMode@(itemName)" value="gantt" />
+                                    <i class="fas fa-user-alt"></i>甘特圖
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-12 col-md-12">
+                            <div class="row view-structure active">
+                                <div class="col-12">
+                                    @Html.Partial("TaskStructure")
+                                </div>
+                            </div>
+                            <div class="row view-gantt">
+                                <div class="col-12">
+                                    @Html.Partial("TaskGantt")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>*@
+
+<div class="advanced-block">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav flag-tabs nav-fill" role="tablist">
+                <li class="flag-item">
+                    <a class="flag-link active" data-toggle="tab" href="#tabTaskStructure">
+                        <i class="fas fa-project-diagram"></i>任務結構
+                    </a>
+                </li>
+                <li class="flag-item">
+                    <a class="flag-link" data-toggle="tab" href="#tabProjectTaskGantt">
+                        <i class="fas fa-stream"></i>甘特圖
+                    </a>
+                </li>
+                <li class="flag-item">
+                    <a class="flag-link" data-toggle="tab" href="#tabTimelineDiagram">
+                        <i class="fas fa-user-clock"></i>時間軸圖
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="tab-content">
+    <div class="tab-pane active" id="tabTaskStructure">
+        @Html.Partial("TaskStructure")
+    </div>
+    <div class="tab-pane" id="tabProjectTaskGantt">
+        @Html.Partial("ProjectTaskGantt")
+    </div>
+    <div class="tab-pane" id="tabTimelineDiagram">
+        @Html.Partial("TimelineDiagram")
+    </div>
+</div>
+
+@Html.Partial("ViewTask")
+@Html.Partial("ViewProject")
+@Html.Partial("~/Views/Task/TaskGantt.cshtml")
+@Html.Resource("js", @<script src="@Url.Content("~/Scripts/dhtmlx/gantt.commercial/7.1.12/dhtmlxgantt.js")"></script>)
+@Html.Resource("js", @<script src="@Url.Content("~/Scripts/dhtmlx/diagram.commercial/5.0.0/diagram.js")"></script>)
+@*@Html.Resource("js", @<link href="@Url.Content("~/Content/dhtmlx/event.calendar.commercial/1.0.0/event-calendar.css")" rel="stylesheet" />)*@
+@Html.Resource("js",
+    @<script>
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let pageAuthoritys@(itemName);
+        let userId@(itemName);
+        let companyId@(itemName);
+        let companyName@(itemName);
+        let departmentId@(itemName);
+        let animation_t = 300;
+
+        let Elements@(itemName) = new ElementControl@(itemName)();
+        let Datas@(itemName) = new DataControl@(itemName)();
+
+        $(document).ready(function () {
+            Elements@(itemName).Initialize@(itemName)();
+        });
+
+        function ElementControl@(itemName)() {
+            addMethod(this, "Initialize@(itemName)", function () {
+
+                if ($(".advanced-block .flag-tabs > .flag-item > .flag-link").first().hasClass("active")) {
+                    InitParameter@(itemName)($(".advanced-block .flag-tabs > .flag-item").first().find("a"));
+                } else {
+                    $(".advanced-block .flag-tabs > .flag-item").first().find("a").trigger("click");
+                }
+
+                @*$(".advanced-block a[data-toggle='tab']").on("shown.bs.tab", function (e) {
+                    InitParameter@(itemName)($(this));
+                });*@
+
+                @*$("input[name=viewMode@(itemName)]").off('change').on('change', function () {
+                    let target = this.value;
+                    switch (target) {
+                        case "structure":
+                            ExpandTaskStructure();
+                            break;
+                        case "gantt":
+                            ExpandProjectTaskGantt();
+                            break;
+                    }
+
+                    $(`.type-${viewType} .view-${viewMode}`).fadeOut(300, function () { $(`.type-${viewType} .view-${target}`).fadeIn(300); });
+                    viewMode = target;
+                });*@
+            });
+        }
+
+        function DataControl@(itemName)() {
+
+        }
+
+        function InitParameter@(itemName)(selector) {
+            let initFnString = "Expand";
+            let content = selector.attr("href").split('#tab')[1];
+
+            switch (content) {
+                case "TaskStructure":
+                    initFnString += "TaskStructure";
+                    break;
+                case "ProjectTaskGantt":
+                    initFnString += "ProjectTaskGantt";
+                    break;
+                case "TimelineDiagram":
+                    initFnString += "TimelineDiagram";
+                    viewMode = "TimelineDiagram";
+                    break;
+            }
+
+            let initFn = window[initFnString];
+            if (initFn && typeof (initFn) == "function") {
+                initFn();
+            }
+        }
+
+        function StatusIcon@(itemName)(taskStatus) {
+                let output = ``;
+                switch (taskStatus) {
+                    case "B":
+                        output = `<span style="text-align: center; font-size: 18px; color: #d0d0d0; line-height: 0;">
+                                    <i class="far fa-stop-circle"></i>
+                                  </span>`;
+                        break;
+                    case "I":
+                        output = `<span style="text-align: center; font-size: 18px; color: #ffa700; line-height: 0;">
+                                    <i class="far fa-play-circle"></i>
+                                  </span>`;
+                        break;
+                    case "C":
+                        output = `<span style="text-align: center; font-size: 18px; color: #228b22; line-height: 0;">
+                                    <i class="far fa-flag-checkered"></i>
+                                  </span>`;
+                        break;
+                    case "T":
+                        break;
+                }
+
+                return output;
+            }
+    </script>
+                                                    )

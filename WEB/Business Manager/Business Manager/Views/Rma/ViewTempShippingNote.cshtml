@@ -1,0 +1,268 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewTempShippingNote";
+    string itemNameText = "暫出單";
+}
+
+@Html.Resource("css",
+    @<style>
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky thead .col-sticky:nth-last-child(2) {
+            right: 100px;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(2) {
+            right: 100px;
+        }
+
+        .table-sticky thead .col-sticky:nth-last-child(3) {
+            right: 250px;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(3) {
+            right: 250px;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <button class="close" type="button" onclick="Close@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-12 col-md-auto col-lg-auto mb-2 mb-md-0 mb-lg-0">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)" placeholder="請輸入暫出單號/訂單單號/品號/品名" />
+                                    </div>
+                                    <div class="col-12 col-md-auto col-lg-auto text-right text-md-left text-lg-left">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 175px;">品號</th>
+                                        <th scope="col" style="min-width: 225px;">品名</th>
+                                        <th class="text-right" scope="col" style="min-width: 150px;">已暫出<br>【正常品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 100px;">類型</th>
+                                        <th class="text-right" scope="col" style="min-width: 150px;">已暫出<br>【贈/備品】數量</th>
+                                        <th scope="col" style="min-width: 200px;">暫出單</th>
+                                        <th scope="col" style="min-width: 200px;">訂單</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 150px;">欲退貨<br>【正常品】數量</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 150px;">欲退貨<br>【贈/備品】數量</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 100px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let tsnJson = JSON.parse('{ "data" : []}');
+
+        function Pop@(itemName)() {
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetTempShippingNote", "Rma")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "RmaId": $("#RmaId").val(),
+                "CustomerId": $("#cboCustomerIdReturnMerchandiseAuthorization").val(),
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 175px;"><span class="stack-title">品號</span>${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 225px;"><span class="stack-title">品名</span>${item.MtlItemName}</td>
+                                        <td class="text-right"><span class="stack-title">已暫出【正常品】數量</span>${item.LastTsnQty.toLocaleString('en')} <code>${item.UomNo}</code></td>
+                                        <td class="text-right"><span class="stack-title">類型</span>
+                                            ${item.ProductType == 1 ? `<span class="text-primary">${item.ProductTypeName}</span>` : `<span class="text-success">${item.ProductTypeName}</span>`}
+                                            <input type="hidden" data-tsn-detail="${item.TsnDetailId}" name="desProductType" value="${item.ProductType}" />
+                                        </td>
+                                        <td class="text-right"><span class="stack-title">已暫出【贈/備品】數量</span>${item.FreebieOrSpareQty.toLocaleString('en')} <code>${item.UomNo}</code></td>
+                                        <td><span class="stack-title">暫出單</span>${item.TsnErpFullNo}</td>
+                                        <td><span class="stack-title">訂單</span>${item.SoErpFullNo}</td>
+                                        <td class="text-center active-content col-sticky">
+                                          <span class="stack-title">欲退貨【正常品】數量</span>
+                                            <div class="input-group input-group-sm">
+                                              <input type="text" class="form-control text-right" name="txtTsnQty@(itemName)" data-tsn-detail-id="${item.TsnDetailId}" value="${item.LastTsnQty}" />
+                                                <span class="input-group-addon">
+                                                  <small>PCS</small>
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center active-content col-sticky">
+                                          <span class="stack-title">欲退貨【贈/備品】數量</span>
+                                            <div class="input-group input-group-sm">
+                                              <input type="text" class="form-control text-right" name="txtFreebieOrSpareQty@(itemName)" data-tsn-detail-id="${item.TsnDetailId}" value="${item.FreebieOrSpareQty}" />
+                                                <span class="input-group-addon">
+                                                  <small>PCS</small>
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center active-content col-sticky">
+                                          <span class="stack-title">操作</span>
+                                          <label class="control control-solid control-solid-info control--checkbox">
+                                            <input type="checkbox" data-tsn-detail-id="${item.TsnDetailId}" value="${item.TsnDetailId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtTsnErpFullNo@(itemName)" data-tsn-detail-id="${item.TsnDetailId}" value="${item.TsnErpFullNo}" />
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                    </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            @*if ($("#txtSearchKeyQ@(itemName)").val()) {
+                
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                              </tr>`;
+            }*@
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Save@(itemName)() {
+            tsnJson = JSON.parse('{ "data" : []}');
+
+            if ($("input[type='checkbox'][data-tsn-detail-id]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-tsn-detail-id]:checked"), function (i) {
+                    let tsnDetailId = $(this).data("tsn-detail-id");
+
+                    let json = {
+                        tsnDetailId: tsnDetailId,
+                        rmaQty: $(`input[name='txtTsnQty@(itemName)'][data-tsn-detail-id='${tsnDetailId}']`).val(),
+                        freebieOrSpareQty: $(`input[name='txtFreebieOrSpareQty@(itemName)'][data-tsn-detail-id='${tsnDetailId}']`).val(),
+                        tsnErpFullNo: $(`input[name='txtTsnErpFullNo@(itemName)'][data-tsn-detail-id='${tsnDetailId}']`).val()
+                    }
+
+                    tsnJson.data.push(json);
+                });
+
+                let isValid = true;
+                let errorMsg = "";
+
+                for (var i = 0; i < tsnJson.data.length; i++) {
+                    if (!isNaN(tsnJson.data[i].rmaQty)) {
+                        if (parseInt(tsnJson.data[i].rmaQty) <= 0) {
+                            isValid = false;
+                            errorMsg += `【${tsnJson.data[i].tsnErpFullNo}】輸入數量不能小於零!<br />`;
+                        }
+                    } else {
+                        isValid = false;
+                        errorMsg += `【${tsnJson.data[i].tsnErpFullNo}】輸入數量不正確!<br />`;
+                    }
+                }
+
+                if (isValid) {
+                    let targetUrl = "@Url.Action("AddRmaDetailByTsn", "Rma")";
+                    let postData = {
+                        "RmaId": $("#RmaId").val(),
+                        "TsnDetail": JSON.stringify(tsnJson)
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Close@(itemName)();
+                        ReturnRmaDetail();
+                    }
+                } else {
+                    alert(errorMsg);
+                }
+            } else {
+                alert("請選擇一筆單身!");
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

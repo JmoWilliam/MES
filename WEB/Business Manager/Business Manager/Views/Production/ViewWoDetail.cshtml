@@ -1,0 +1,269 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewWoDetail";
+    string itemNameText = "查看ERP用料結構清單";
+}
+
+@Html.Resource("css",
+    @<style>
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3" id="query@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)"
+                                               placeholder="請輸入製令" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入品號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                               placeholder="請輸入品名" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 175px;">製令</th>
+                                        <th scope="col" style="min-width: 175px;">品號</th>
+                                        <th scope="col" style="min-width: 175px;">品名</th>
+                                        <th scope="col" style="min-width: 150px;">規格</th>
+                                        <th scope="col" style="min-width: 150px;">單位用量</th>
+                                        <th scope="col" style="min-width: 150px;">底數</th>
+                                        <th scope="col" style="min-width: 150px;">損耗率</th>
+                                        <th scope="col" style="min-width: 150px;">需領用量</th>
+                                        <th scope="col" style="min-width: 150px;">已領用量</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let targetSelector@(itemName);
+        let woDetailId@(itemName);
+        let mtlItemNo@(itemName);
+        let mtlItemName@(itemName);
+        let mtlItemSpec@(itemName);
+        let compositionQuantity@(itemName);
+        let base@(itemName);
+        let lossRate@(itemName);
+        let bomSequence@(itemName);
+        let uomId@(itemName);
+        let woId@(itemName);
+        let mtlItemId@(itemName);
+        let quantity@(itemName); //MaterialDetail 用於計算材料剩餘最大領用數
+        let inventoryId@(itemName);
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            woDetailId@(itemName) = config.objectWoDetailId;
+            mtlItemNo@(itemName) = config.objectMtlItemNo;
+            mtlItemName@(itemName) = config.objectMtlItemName;
+            mtlItemSpec@(itemName) = config.objectMtlItemSpec;
+            compositionQuantity@(itemName) = config.objectCompositionQuantity;
+            base@(itemName) = config.objectBase;
+            lossRate@(itemName) = config.objectLossRate;
+            bomSequence@(itemName) = config.objectBomSequence;
+            uomId@(itemName) = config.objectUomId;
+            woId@(itemName) = config.objectWoId;
+            mtlItemId@(itemName) = config.objectMtlItemId;
+            quantity@(itemName) = config.objectQuantity;
+            inventoryId@(itemName) = config.objectInventoryId;
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetWoDetail", "Production")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr">
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpPrefix}-${item.WoErpNo}" style="max-width: 175px;">${item.WoErpPrefix}-${item.WoErpNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 175px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 175px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 175px;">${item.MtlItemSpec}</td>
+                                        ${JudgeCompositionQuantity(`${item.CompositionQuantity}`, `${item.UomNo}`, `${item.Base}`, `${item.LossRate}`)}
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DemandRequisitionQty}" style="max-width: 150px;">${item.DemandRequisitionQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.RequisitionQty}" style="max-width: 150px;">${item.RequisitionQty}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-wo-detail-id="${item.WoDetailId}" value="${item.WoDetailId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtMtlItemNo@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.MtlItemNo}" />
+                                          <input type="hidden" name="txtMtlItemName@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.MtlItemName}" />
+                                          <input type="hidden" name="txtMtlItemSpec@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.MtlItemSpec}" />
+                                          <input type="hidden" name="txtUomNo@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.UomNo}" />
+                                          <input type="hidden" name="txtCompositionQuantity@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.CompositionQuantity}" />
+                                          <input type="hidden" name="txtBase@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.Base}" />
+                                          <input type="hidden" name="txtLossRate@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.LossRate}" />
+                                          <input type="hidden" name="txtBomSequence@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.BomSequence}" />
+                                          <input type="hidden" name="txtUomId@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.UomId}" />
+                                          <input type="hidden" name="txtWoId@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.WoId}" />
+                                          <input type="hidden" name="txtMtlItemId@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.MtlItemId}" />
+                                          <input type="hidden" name="txtDemandRequisitionQty@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.DemandRequisitionQty}" />
+                                          <input type="hidden" name="txtRequisitionQty@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.RequisitionQty}" />
+                                          <input type="hidden" name="txtInventoryId@(itemName)" data-wo-detail-id="${item.WoDetailId}" value="${item.InventoryId}" />
+                                        </td>
+                                    </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="9" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+                function JudgeCompositionQuantity(compositionQuantity, uomNo, base, lossRate) {
+                    let innerHtml = '';
+                    if (compositionQuantity != "null") {
+                        innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${compositionQuantity} ${uomNo}" style="max-width: 150px;">${compositionQuantity} ${uomNo}</td>
+                                      <td class="ellipsis" data-toggle="tooltip" title="${base}" style="max-width: 150px;">${base}</td>
+                                      <td class="ellipsis" data-toggle="tooltip" title="${lossRate}" style="max-width: 150px;">${lossRate}</td>`;
+                    }
+                    else {
+                        innerHtml += `<td></td>
+                                      <td></td>
+                                      <td></td>`;
+                    }
+                    return innerHtml;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-wo-detail-id]:checked") {
+                    let woDetailId = $(this).data("wo-detail-id");
+
+                    if (woDetailId) {
+                        let mtlItemNo = $(`input[name="txtMtlItemNo@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let mtlItemName = $(`input[name="txtMtlItemName@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let mtlItemSpec = $(`input[name="txtMtlItemSpec@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let uomNo = $(`input[name="txtUomNo@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let compositionQuantity = $(`input[name="txtCompositionQuantity@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let base = $(`input[name="txtBase@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let lossRate = $(`input[name="txtLossRate@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let bomSequence = $(`input[name="txtBomSequence@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let uomId = $(`input[name="txtUomId@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let woId = $(`input[name="txtWoId@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let mtlItemId = $(`input[name="txtMtlItemId@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let demandRequisitionQty = $(`input[name="txtDemandRequisitionQty@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let requisitionQty = $(`input[name="txtRequisitionQty@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+                        let inventoryId = $(`input[name="txtInventoryId@(itemName)"][data-wo-detail-id="${woDetailId}"]`).val();
+
+                        if (woDetailId@(itemName)) ElementSetValue(woDetailId@(itemName), woDetailId, "change");
+                        if (mtlItemNo@(itemName)) ElementSetValue(mtlItemNo@(itemName), mtlItemNo, "change");
+                        if (mtlItemName@(itemName)) ElementSetValue(mtlItemName@(itemName), mtlItemName, "change");
+                        if (mtlItemSpec@(itemName)) ElementSetValue(mtlItemSpec@(itemName), mtlItemSpec, "change");
+                        if (uomId@(itemName)) ElementSetValue(uomId@(itemName), uomId, "change");
+                        if (woId@(itemName)) ElementSetValue(woId@(itemName), woId, "change");
+                        if (mtlItemId@(itemName)) ElementSetValue(mtlItemId@(itemName), mtlItemId, "change");
+                        if (quantity@(itemName)) ElementSetValue(quantity@(itemName), demandRequisitionQty - requisitionQty, "change");
+                        if (inventoryId@(itemName)) ElementSetValue(inventoryId@(itemName), inventoryId, "change");
+                        if (compositionQuantity != "null") {
+                            if (compositionQuantity@(itemName)) ElementSetValue(compositionQuantity@(itemName), compositionQuantity, "change");
+                            if (base@(itemName)) ElementSetValue(base@(itemName), base, "change");
+                            if (lossRate@(itemName)) ElementSetValue(lossRate@(itemName), lossRate, "change");
+                            if (bomSequence@(itemName)) ElementSetValue(bomSequence@(itemName), bomSequence, "change");
+                        }
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+        )

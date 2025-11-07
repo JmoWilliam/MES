@@ -1,0 +1,406 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "BarcodeBatchProcessing";
+    string itemNameText = "條碼入庫後拆盤包裝作業";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+@<link href="@Url.Content("~/Content/barcode-process.min.css")" rel="stylesheet" />
+        )
+
+<style>
+    .package-box {
+        overflow: scroll;
+        max-height: 65vh;
+    }
+
+    .package-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .print-btn {
+        padding: 10px;
+        /*background: #e9e9e9;*/
+        border-radius: 10px;
+        font-weight: 600;
+    }
+        .print-btn:hover {
+            background: #e9e9e9;
+        }
+</style>
+
+<div>
+    <div class="process_header" style="">
+        <a href="/ProductionHistory/BarcodeBatchIndex" class="back">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <a href="#" class="header_title">
+            <h2>包裝掃碼作業</h2>
+        </a>
+        <div class="header_function" style="">
+            <div class="old_package">
+                <input type="text" id="txtPrevBarcodeNo@(itemName)" value="" placeholder="請掃包裝條碼" />
+            </div>
+
+            <a href="javascript: AddEmptyPackage@(itemName)();" class="action_btn" style="">
+                <i class="fas fa-plus-circle"></i>
+                新增包裝
+            </a>
+
+        </div>
+    </div>
+
+    <!--初始畫面-->
+    <div class="container main-container">
+        <p class="empty" style="margin:auto">
+            <i class="fas fa-exclamation-circle"></i>新增包裝或刷取條碼來進行下個步驟
+        </p>
+    </div>
+</div>
+
+<!--選擇列印機台-->
+<div class="modal fade" id="modalPrint@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    列印包裝條碼
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <select class="form-control" id="cboLabelPrintMachine@(itemName)"></select>
+            </div>
+            <div class="modal-footer">
+                <a id="aPrint@(itemName)" class="btn btn-success" href="javascript: Print@(itemName)();"><i class="fas fa-paper-plane"></i>列印</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(function () {
+            $("#txtPrevBarcodeNo@(itemName)").off('keydown');
+            $("#txtPrevBarcodeNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    InitPackageBarcode@(itemName)();
+                    $("#txtPrevBarcodeNo@(itemName)").val("");
+                    return false;
+                }
+            });
+
+            $(document).on('keydown', '#txtBarcodeNo@(itemName)', function (event) {
+                if (event.keyCode == 13) {
+                    RegisterBarcodeToPackage@(itemName)();
+                    return false;
+                }
+            });
+
+            $(document).on('click', '.product-toggle .product-item .toggle-details', function (event) {
+                if (!$(this).parent().parent('.product-item').hasClass('selected'))
+                    $('.product-toggle .product-item').removeClass('selected');
+                $(this).parent().parent('.product-item').toggleClass('selected');
+                $(this).parent().parent('.product-item').next(".product-details").slideToggle().siblings(".product-details:visible").slideToggle();
+            });
+        });
+
+        function InitPackageBarcode@(itemName)() {
+            let prevBarcodeNo = $("#txtPrevBarcodeNo@(itemName)").val();
+            let targetUrl = "@Url.Action("GetPackageBarcode", "ProductionHistory")";
+            let postData = {
+                "PrevBarcodeNo": prevBarcodeNo.trim()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = `<div class="package-title">
+                                <h2 id="desPrevBarcodeNo@(itemName)">${prevBarcodeNo}</h2>
+                                <a class="print-btn" href="javascript: PopModalPrint@(itemName)();"><i class="fas fa-print"></i> 列印包裝條碼</a>
+                             </div>
+                             <div class="content">
+                                <!-- Left Side: Product List -->
+                                <div class="package-box">
+                                    <div class="product-list product-toggle">`;
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.PackageBarcode != null) {
+                            let packageBarcodeJson = JSON.parse(item.PackageBarcode);
+                            $.each(packageBarcodeJson.data, function (j, item2) {
+                                innerHtml += InitPackageBarcodeTemplate@(itemName)(item2.BarcodeNo, item2.MtlItemName, item2.MtlItemSpec, item2.BarcodeQty);
+                            });
+                        }
+                        else {
+                            innerHtml += `<p class="empty">
+                                            <i class="fad fa-folder-open"></i>目前無內容物
+                                          </p>`;
+                        }
+                    });
+                    innerHtml += `</div></div>
+                                    <!-- Right Side: Scanner Box -->
+                                    <div class="scanner-box">
+                                        <div class="new-product">
+                                            <h3>新增製品</h3>
+                                            <input id="txtBarcodeNo@(itemName)" type="text" placeholder="請掃條碼">
+                                        </div>
+                                        <div class="current-product">
+                                            <p class="empty">
+                                                <i class="fad fa-folder-open"></i>
+                                                目前無內容物
+                                            </p>
+
+                                        </div>
+                                    </div>
+                                  </div>`;
+                }
+                else {
+                    alert("查無此包裝條碼資料!");
+                    innerHtml = `<p class="empty" style="margin:auto">
+                                    <i class="fas fa-exclamation-circle"></i>新增包裝或刷取條碼來進行下個步驟
+                                 </p>`;
+                }
+            }
+            else {
+                alert(data.msg);
+                innerHtml = `<p class="empty" style="margin:auto">
+                                <i class="fas fa-exclamation-circle"></i>新增包裝或刷取條碼來進行下個步驟
+                             </p>`;
+            }
+
+            $(".main-container").html(innerHtml);
+        }
+
+        function AddEmptyPackage@(itemName)() {
+            let targetUrl = "@Url.Action("AddEmptyPackage", "ProductionHistory")";
+            let postData = {
+                "PrevBarcodeNo": $("#txtPrevBarcodeNo@(itemName)").val().trim()
+            };
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                let innerHtml = '';
+                innerHtml += `<div class="package-title">
+                                    <h2 id="desPrevBarcodeNo@(itemName)">${data.barcodeNo}</h2>
+                                    <a class="print-btn" href="javascript: PopModalPrint@(itemName)();"><i class="fas fa-print"></i> 列印包裝條碼</a>
+                              </div>
+                              <div class="content">
+                                <!-- Left Side: Product List -->
+                                <div class="package-box">
+                                    <div class="product-list product-toggle">
+                                        <p class="empty">
+                                            <i class="fad fa-folder-open"></i>目前無內容物
+                                        </p>
+                                    </div>
+                                </div>
+                                <!-- Right Side: Scanner Box -->
+                                <div class="scanner-box">
+                                    <div class="new-product">
+                                        <h3>新增製品</h3>
+                                        <input id="txtBarcodeNo@(itemName)" type="text" placeholder="請掃條碼">
+                                    </div>
+                                    <div class="current-product">
+                                        <p class="empty">
+                                            <i class="fad fa-folder-open"></i>
+                                            目前無內容物
+                                        </p>
+                                    </div>
+                                </div>
+                              </div>`;
+
+                $(".main-container").html(innerHtml);
+            }
+
+            setTimeout(function () {
+                $("#txtBarcodeNo@(itemName)").focus();
+            }, 150);
+        }
+
+        function RegisterBarcodeToPackage@(itemName)() {
+            let targetUrl = "@Url.Action("RegisterBarcodeToPackage", "ProductionHistory")";
+            let postData = {
+                "PrevBarcodeNo": $("#desPrevBarcodeNo@(itemName)").html().trim(),
+                "BarcodeNo": $("#txtBarcodeNo@(itemName)").val().trim()
+            };
+            let data = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (data) {
+                GetCurrentBarcodeInfo@(itemName)();
+                GetPackageBarcode@(itemName)();
+            }
+
+            $("#txtBarcodeNo@(itemName)").val("");
+        }
+
+        function GetCurrentBarcodeInfo@(itemName)() {
+            let targetUrl = "@Url.Action("GetCurrentPackageBarcode", "ProductionHistory")";
+            let postData = {
+                "BarcodeNo": $("#txtBarcodeNo@(itemName)").val().trim()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '<h3>目前製品</h3> ';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<div class="product-item">
+                                        <div class="product-code">
+                                            <span class="icon">P</span>
+                                            <p>${item.BarcodeNo}</p>
+                                        </div>
+                                        <div class="product-info">
+                                            <a href="javascript: UnRegisterBarcodeToPackage@(itemName)('${item.BarcodeNo}');" class="remove-btn">
+                                                <i class="fas fa-minus-circle"></i>
+                                            </a>
+                                        </div>
+                                      </div>
+                                      <div class="product-details">
+                                        <p>
+                                            <span>品名:</span> ${item.MtlItemName}
+                                        </p>
+                                        <p>
+                                            <span>規格:</span> ${item.MtlItemSpec}
+                                        </p>
+                                        <p>
+                                            <span>數量:</span> ${item.BarcodeQty}
+                                        </p>
+                                      </div>`;
+                    });
+                }
+                else {
+                    innerHtml = `<p class="empty">
+                                    <i class="fad fa-folder-open"></i>
+                                    目前無內容物
+                                  </p>`;
+                }
+            }
+            else {
+                innerHtml = `<p class="empty">
+                                <i class="fad fa-folder-open"></i>
+                                目前無內容物
+                              </p>`;
+            }
+
+            $(".current-product").html(innerHtml);
+        }
+
+        function GetPackageBarcode@(itemName)() {
+            let targetUrl = "@Url.Action("GetPackageBarcode", "ProductionHistory")";
+            let postData = {
+                "PrevBarcodeNo": $("#desPrevBarcodeNo@(itemName)").html().trim()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.PackageBarcode != null) {
+                            let packageBarcodeJson = JSON.parse(item.PackageBarcode);
+                            $.each(packageBarcodeJson.data, function (j, item2) {
+                                innerHtml += InitPackageBarcodeTemplate@(itemName)(item2.BarcodeNo, item2.MtlItemName, item2.MtlItemSpec, item2.BarcodeQty);
+                            });
+                        }
+                    });
+                    innerHtml += `</div>`;
+                }
+            }
+            else {
+                alert(data.msg);
+                return false;
+            }
+
+            $(".product-list").html(innerHtml);
+        }
+
+        function InitPackageBarcodeTemplate@(itemName)(barcodeNo, mtlItemName, mtlItemSpec, barcodeQty) {
+            let innerHtml = "";
+            innerHtml += `<div class="product-item">
+                                <div class="product-code">
+                                    <span class="icon">P</span>
+                                    <p>${barcodeNo}</p>
+                                </div>
+                                <div class="product-info">
+                                    <a class="toggle-details">
+                                        詳細資訊
+                                        <i class="fas fa-chevron-down"></i>
+                                    </a>
+                                    <a href="javascript: UnRegisterBarcodeToPackage@(itemName)('${barcodeNo}');" class="remove-btn">
+                                        <i class="fas fa-minus-circle"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="product-details">
+                                <p>
+                                    <span>品名:</span> ${mtlItemName}
+                                </p>
+                                <p>
+                                    <span>規格:</span> ${mtlItemSpec}
+                                </p>
+                                <p>
+                                    <span>數量:</span> ${barcodeQty}
+                                </p>
+                          </div>`;
+
+            return innerHtml;
+        }
+
+        function UnRegisterBarcodeToPackage@(itemName)(barcodeNo) {
+            swal.fire({
+                titleText: "確定要將此條碼移除包裝中嗎?",
+                text: "此動作將覆蓋原本資料，請確認後再執行!!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UnRegisterBarcodeToPackage", "ProductionHistory")";
+                    let postData = {
+                        "PrevBarcodeNo": $("#desPrevBarcodeNo@(itemName)").html().trim(),
+                        "BarcodeNo": barcodeNo
+                    };
+                    let data = DataAccess.Update(targetUrl, postData, false, false);
+
+                    if (data) {
+                        GetCurrentBarcodeInfo@(itemName)();
+                        GetPackageBarcode@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function PopModalPrint@(itemName)() {
+            if (!isMobile) {
+                $("#cboLabelPrintMachine@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+            ComboBoxs.Default("#cboLabelPrintMachine@(itemName)", "@Url.Action("GetLabelPrintMachine", "ProductionHistory")", {}, "", "NA", "", "LabelPrintName", "LabelPrintNo");
+            $("#modalPrint@(itemName)").modal("show");
+        }
+
+        function Print@(itemName)() {
+            let targetUrl = "@Url.Action("PrintPackageBarcode", "PrintLabel")";
+            let postData = {
+                "PackageBarcodeNo": $("#desPrevBarcodeNo@(itemName)").html().trim(),
+                "PrintMachine": $("#cboLabelPrintMachine@(itemName)").val()
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                $("#modalPrint@(itemName)").modal("hide");
+            }
+        }
+    </script>
+    )

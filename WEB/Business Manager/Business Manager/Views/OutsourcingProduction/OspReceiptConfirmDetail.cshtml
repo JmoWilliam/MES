@@ -1,0 +1,914 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "OspReceiptConfirmDetail";
+    string itemNameText = "託外入庫拋轉詳細資料管理";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+                        )
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">託外生產單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtOspNoQ@(itemName)" name="txtOspNoQ@(itemName)" placeholder="請輸入託外生產單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">製令</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)" placeholder="請輸入製令">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">材料品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入材料品號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNameQ@(itemName)">材料品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)" placeholder="請輸入材料品名">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboInventoryIdQ@(itemName)">進貨庫別</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboInventoryIdQ@(itemName)" name="cboInventoryIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--清單-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right" style="display: flex; justify-content: flex-end;">
+                        <a id="aTransferErp@(itemName)" style="margin-right: 5px;" class="btn btn-secondary auth-update" href="javascript:TransferErpOspReceiptConfirm();"><i class="far fa-arrow-alt-square-up"></i>拋轉單據</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">序號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 150px;">託外生產單號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">製令</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">品號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">品名</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">規格</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">單位</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">進貨數量</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">進貨庫別</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">託外製程</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">加工代碼</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">驗收數量</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">計價數量</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">報廢數量</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">加工單價</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">加工金額</th>
+                                        <th scope="col" style="max-width: 250px; min-width: 150px;">原幣扣款金額</th>
+                                        <th scope="col" style="max-width: 250px; min-width: 150px;">原幣未稅金額</th>
+                                        <th scope="col" style="max-width: 250px; min-width: 150px;">原幣稅金額</th>
+                                        <th scope="col" style="max-width: 250px; min-width: 150px;">本幣未稅金額</th>
+                                        <th scope="col" style="max-width: 250px; min-width: 150px;">本幣稅金額</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">確認碼</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">確認者</th>
+                                        <th class="text-center col-sticky" scope="col" style="max-width: 150px; min-width: 100px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增修改-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="OsrDetailId" name="OsrDetailId" value="-1" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtOspDetailId@(itemName)">託外生產單詳細資訊<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtOspDetailId@(itemName)" value="" />
+                                        <div class="btn-group btn-group@(itemName)">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>託外生產單號</dt>
+                                            <dd id="desOspNo@(itemName)"></dd>
+                                            <dt>製令</dt>
+                                            <dd id="desWoErpFullNo@(itemName)"></dd>
+                                            <dt>品號</dt>
+                                            <dd id="desMtlItemNo@(itemName)"></dd>
+                                            <dt>品名</dt>
+                                            <dd id="desMtlItemName@(itemName)"></dd>
+                                            <dt>委託部門</dt>
+                                            <dd id="desDepartmentName@(itemName)"></dd>
+                                            <dt>供應商</dt>
+                                            <dd id="desSupplierName@(itemName)"></dd>
+                                            <dt>加工製程</dt>
+                                            <dd id="desProcessAlias@(itemName)"></dd>
+                                            <dt>加工代碼</dt>
+                                            <dd id="desProcessCodeName@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtOsrSeq@(itemName)">序號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtOsrSeq@(itemName)" name="txtOsrSeq@(itemName)"
+                                               value=""
+                                               placeholder="系統自動產生"
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtLotNumber@(itemName)">批號</label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtLotNumber@(itemName)" name="txtLotNumber@(itemName)"
+                                               value="" 
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboInventoryId@(itemName)">進貨庫別<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboInventoryId@(itemName)" name="cboInventoryId@(itemName)" required disabled></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtAcceptanceDate@(itemName)">驗收日期<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtAcceptanceDate@(itemName)" name="txtAcceptanceDate@(itemName)"
+                                               placeholder="請輸入驗收日期"
+                                               value=""
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab" style="white-space:unset;">
+                            <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="tabActive" data-toggle="tab" href="#tabQuote">
+                                        <i class="fad fa-money-check-edit-alt"></i> 單價設定
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-toggle="tab" href="#tabOtherSetting">
+                                        <i class="fas fa-folder"></i> 其他設定
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="tab-content">
+                            <div class="tab-pane active" id="tabQuote">
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtReceiptQty@(itemName)">進貨數量</label>
+                                            <div class="col-12">
+                                                <input type="text" class="form-control" id="txtReceiptQty@(itemName)" name="txtReceiptQty@(itemName)"
+                                                       value="0"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboAvailableUom@(itemName)">計價單位<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboAvailableUom@(itemName)" name="cboAvailableUom@(itemName)" required disabled></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtAcceptQty@(itemName)">驗收數量<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtAcceptQty@(itemName)" name="txtAcceptQty@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入驗收數量"
+                                                       data-msg-required="請輸入驗收數量" data-rule-required="true" readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtScriptQty@(itemName)">報廢數量<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtScriptQty@(itemName)" name="txtScriptQty@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入報廢數量"
+                                                       data-msg-required="請輸入報廢數量" data-rule-required="true" readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtReturnQty@(itemName)">驗退數量<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtReturnQty@(itemName)" name="txtReturnQty@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入驗退數量"
+                                                       data-msg-required="請輸入驗退數量" data-rule-required="true" readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtAvailableQty@(itemName)">計價數量<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtAvailableQty@(itemName)" name="txtAvailableQty@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入計價數量"
+                                                       data-msg-required="請輸入計價數量" data-rule-required="true"
+                                                       oninput="EditOrigUnitPrice@(itemName)()" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigUnitPrice@(itemName)">原幣加工單價<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigUnitPrice@(itemName)" name="txtOrigUnitPrice@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣加工單價"
+                                                       data-msg-required="請輸入原幣加工單價" data-rule-required="true"
+                                                       oninput="EditOrigUnitPrice@(itemName)()" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigAmount@(itemName)">原幣加工金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigAmount@(itemName)" name="txtOrigAmount@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣加工金額"
+                                                       data-msg-required="請輸入原幣加工金額" data-rule-required="true" readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigDiscountAmt@(itemName)">原幣扣款金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigDiscountAmt@(itemName)" name="txtOrigDiscountAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣扣款金額"
+                                                       data-msg-required="請輸入原幣扣款金額" data-rule-required="true" 
+                                                       oninput="EditOrigDiscountAmt@(itemName)()" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigPreTaxAmt@(itemName)">原幣未稅金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigPreTaxAmt@(itemName)" name="txtOrigPreTaxAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣未稅金額"
+                                                       data-msg-required="請輸入原幣未稅金額" data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigTaxAmt@(itemName)">原幣稅金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigTaxAmt@(itemName)" name="txtOrigTaxAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣稅金額"
+                                                       data-msg-required="請輸入原幣稅金額" data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtPreTaxAmt@(itemName)">本幣未稅金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtPreTaxAmt@(itemName)" name="txtPreTaxAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入本幣未稅金額"
+                                                       data-msg-required="請輸入本幣未稅金額" data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtTaxAmt@(itemName)">本幣稅金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtTaxAmt@(itemName)" name="txtTaxAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入本幣稅金額"
+                                                       data-msg-required="請輸入本幣稅金額" data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtDiscountDescription@(itemName)">扣款說明</label>
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="txtDiscountDescription@(itemName)" name="txtDiscountDescription@(itemName)" rows="2"
+                                                          placeholder="請輸入扣款說明"
+                                                          data-msg-required="請輸入扣款說明"
+                                                          data-msg-maxlength="必須少於 40 個字元" maxlength="40"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane" id="tabOtherSetting">
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboOverdue@(itemName)">逾期碼<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboOverdue@(itemName)" name="cboOverdue@(itemName)" required>
+                                                    <option value="Y">是</option>
+                                                    <option value="N">否</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                          placeholder="請輸入備註"
+                                                          data-msg-required="請輸入備註"
+                                                          data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let osrId@(itemName);
+        let supplierNo@(itemName);
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let UnitDecimal@(itemName);
+        let TotalDecimal@(itemName);
+
+        $(function () {
+            if (!isMobile) {
+                $("#cboInventoryIdQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboInventoryIdQ@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId");
+
+            $("#txtOspDetailId@(itemName)").change(function () {
+                //庫別
+                ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId");
+
+                //計價單位
+                ComboBoxs.Default("#cboAvailableUom@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", {}, "", "NA", "", "UomWithNo", "UomId");
+            });
+        });
+
+        function Expand@(itemName)(osrId) {
+            if (osrId > 0) {
+                osrId@(itemName) = osrId;
+                $("#aTransferErp@(itemName)").prop("href", `javascript:TransferErpOspReceiptConfirm('${osrId}');`)
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+            } else {
+                alert("詳細資料展開失敗，請聯繫資訊人員!", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetOspReceiptDetail", "OutsourcingProduction")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "OsrId": osrId@(itemName),
+                "OspNo": $("#txtOspNoQ@(itemName)").val(),
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "InventoryId": $("#cboInventoryIdQ@(itemName)").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OsrSeq}" style="max-width: 150px; min-width: 100px;">${item.OsrSeq}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OspNo}" style="max-width: 200px; min-width: 100px;">${item.OspNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpPrefix}-${item.WoErpNo}" style="max-width: 200px; min-width: 100px;">${item.WoErpPrefix}-${item.WoErpNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px; min-width: 100px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="min-width: 200px; min-width: 100px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="min-width: 200px; min-width: 100px;">${item.MtlItemSpec}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UomNo} ${item.UomName}" style="max-width: 200px; min-width: 100px;">${item.UomNo} ${item.UomName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ReceiptQty}" style="max-width: 150px; min-width: 100px;">${item.ReceiptQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryNo} ${item.InventoryName}" style="max-width: 150px; min-width: 100px;">${item.InventoryNo} ${item.InventoryName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="max-width: 150px; min-width: 100px;">${item.ProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessCodeName}" style="max-width: 200px; min-width: 100px;">${item.ProcessCodeName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.AcceptQty}" style="max-width: 150px; min-width: 100px;">${item.AcceptQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.AvailableQty}" style="max-width: 150px; min-width: 100px;">${item.AvailableQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ScriptQty}" style="max-width: 150px; min-width: 100px;">${item.ScriptQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OrigUnitPrice}" style="max-width: 150px; min-width: 100px;">${item.OrigUnitPrice}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OrigAmount}" style="max-width: 150px; min-width: 100px;">${item.OrigAmount}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OrigDiscountAmt}" style="max-width: 200px; min-width: 150px;">${item.OrigDiscountAmt}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OrigPreTaxAmt}" style="max-width: 200px; min-width: 150px;">${item.OrigPreTaxAmt}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OrigTaxAmt}" style="max-width: 200px; min-width: 150px;">${item.OrigTaxAmt}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PreTaxAmt}" style="max-width: 200px; min-width: 150px;">${item.PreTaxAmt}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TaxAmt}" style="max-width: 200px; min-width: 150px;">${item.TaxAmt}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StatusName}" style="max-width: 200px; min-width: 100px;">${item.StatusName}</td>
+                                        ${JudgeConfirmUserNo(`${item.ConfirmUserNo}`, `${item.ConfirmUserName}`)}
+                                        <td class="text-center active-content col-sticky" style="min-width: 150px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.OsrDetailId}');"><i class="fas fa-edit"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+
+                    function JudgeConfirmUserNo(confirmUserNo, confirmUserName) {
+                        let innerHtml = '';
+                        if (confirmUserNo != "null") {
+                            innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${confirmUserNo}${confirmUserName}" style="max-width: 200px; min-width: 100px;"><i class="fas fa-user"></i>&nbsp;<code>${confirmUserNo}</code>&nbsp;${confirmUserName}</td>`;
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="25" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(OsrDetailId) {
+            $("#OsrDetailId").val(OsrDetailId ? OsrDetailId : 0);
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+            $(".btn-group@(itemName)").show();
+
+            $("#txtOspDetailId@(itemName)").siblings(".help-block").hide();
+            $("#txtOspDetailId@(itemName)").val("");
+
+            if (!isMobile) {
+                $("#cboInventoryId@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboAvailableUom@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            //庫別
+            ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId");
+
+            //計價單位
+            ComboBoxs.Default("#cboAvailableUom@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", {}, "", "NA", "", "UomWithNo", "UomId");
+
+            $("#txtAcceptanceDate@(itemName)").val($("#txtDocumentDateOspReceiptConfirm").val());
+
+            if (OsrDetailId > 0) {
+                $("#cboCurrencyCodeOspReceiptConfirm").prop("disabled", false);
+                $("#txtExchangeOspReceiptConfirm").prop("readonly", false);
+                let targetUrl = "@Url.Action("GetOspReceiptDetail", "OutsourcingProduction")";
+                let postData = {
+                    "OsrDetailId": OsrDetailId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $("#txtOspDetailId@(itemName)").siblings(".help-block").show();
+                    $(".btn-group@(itemName)").hide();
+                    $.each(data.result, function (i, item) {
+                        //託外生產單詳細資料
+                        $("#txtOspDetailId@(itemName)").val(item.OspDetailId);
+                        $("#desOspNo@(itemName)").html(item.OspNo);
+                        $("#desWoErpFullNo@(itemName)").html(item.WoErpPrefix + "-" + item.WoErpNo);
+                        $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                        $("#desMtlItemName@(itemName)").html(item.MtlItemName);
+                        $("#desDepartmentName@(itemName)").html(item.DepartmentName);
+                        $("#desSupplierName@(itemName)").html(item.SupplierName);
+                        $("#desProcessAlias@(itemName)").html(item.ProcessAlias);
+                        $("#desProcessCodeName@(itemName)").html(item.ProcessCodeName);
+
+                        //基本資料
+                        $("#txtOsrSeq@(itemName)").val(item.OsrSeq);
+                        $("#txtLotNumber@(itemName)").val(item.LotNumber);
+                        $("#cboInventoryId@(itemName)").val(item.InventoryId);
+                        $("#txtAcceptanceDate@(itemName)").val(item.AcceptanceDate);
+
+                        //單價設定
+                        $("#txtReceiptQty@(itemName)").val(item.ReceiptQty);
+                        $("#cboAvailableUom@(itemName)").val(item.AvailableUom);
+                        $("#txtAcceptQty@(itemName)").val(item.AcceptQty);
+                        $("#txtScriptQty@(itemName)").val(item.ScriptQty);
+                        $("#txtReturnQty@(itemName)").val(item.ReturnQty);
+                        $("#txtAvailableQty@(itemName)").val(item.AvailableQty);
+                        $("#txtOrigUnitPrice@(itemName)").val(item.OrigUnitPrice);
+                        $("#txtOrigAmount@(itemName)").val(item.OrigAmount);
+                        $("#txtDiscountDescription@(itemName)").val(item.DiscountDescription);
+                        $("#txtOrigDiscountAmt@(itemName)").val(item.OrigDiscountAmt);
+                        $("#txtOrigPreTaxAmt@(itemName)").val(item.OrigPreTaxAmt);
+                        $("#txtOrigTaxAmt@(itemName)").val(item.OrigTaxAmt);
+                        $("#txtPreTaxAmt@(itemName)").val(item.PreTaxAmt);
+                        $("#txtTaxAmt@(itemName)").val(item.TaxAmt);
+
+                        //其他設定
+                        $("#cboOverdue@(itemName)").val(item.Overdue);
+                        $("#txtRemark@(itemName)").val(item.Remark);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let OsrDetailId = parseInt($("#OsrDetailId").val());
+
+                let targetUrl = "@Url.Action("UpdateOspReceiptDetail", "OutsourcingProduction")";
+                let postData = {
+                    "OsrDetailId": OsrDetailId,
+                    "OsrId": osrId@(itemName),
+                    "OspDetailId": $("#txtOspDetailId@(itemName)").val(),
+                    "OsrSeq": $("#txtOsrSeq@(itemName)").val(),
+                    "LotNumber": $("#txtLotNumber@(itemName)").val(),
+                    "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                    "AcceptanceDate": $("#txtAcceptanceDate@(itemName)").val(),
+                    "ReceiptQty": $("#txtReceiptQty@(itemName)").val(),
+                    "AvailableUom": $("#cboAvailableUom@(itemName)").val(),
+                    "AcceptQty": $("#txtAcceptQty@(itemName)").val(),
+                    "ScriptQty": $("#txtScriptQty@(itemName)").val(),
+                    "ReturnQty": $("#txtReturnQty@(itemName)").val(),
+                    "AvailableQty": $("#txtAvailableQty@(itemName)").val(),
+                    "OrigUnitPrice": $("#txtOrigUnitPrice@(itemName)").val(),
+                    "OrigUnitPrice": $("#txtOrigUnitPrice@(itemName)").val(),
+                    "OrigAmount": $("#txtOrigAmount@(itemName)").val(),
+                    "DiscountDescription": $("#txtDiscountDescription@(itemName)").val(),
+                    "Overdue": $("#cboOverdue@(itemName)").val(),
+                    "Remark": $("#txtRemark@(itemName)").val(),
+                    "OrigDiscountAmt": $("#txtOrigDiscountAmt@(itemName)").val(),
+                    "OrigPreTaxAmt": $("#txtOrigPreTaxAmt@(itemName)").val(),
+                    "OrigTaxAmt": $("#txtOrigTaxAmt@(itemName)").val(),
+                    "PreTaxAmt": $("#txtPreTaxAmt@(itemName)").val(),
+                    "TaxAmt": $("#txtTaxAmt@(itemName)").val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        let roundDecimal = function (val, precision) {
+            return Math.round(Math.round(val * Math.pow(10, (precision || 0) + 1)) / 10) / Math.pow(10, (precision || 0));
+        }
+
+        //let roundDecimal = function (num, decimal) { return Math.round((num + Number.EPSILON) * Math.pow(10, decimal)) / Math.pow(10, decimal); }
+
+        let roundDown = function (num, decimal) { return Math.floor((num + Number.EPSILON) * Math.pow(10, decimal)) / Math.pow(10, decimal); }
+
+        let timer;
+        function EditOrigUnitPrice@(itemName)() {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                GetCurrencyDecimal@(itemName)();
+
+                let editNumber = "1";
+                for (let i = 1; i <= parseInt(TotalDecimal@(itemName)); i++) {
+                    editNumber += "0";
+                }
+
+                editNumber = parseInt(editNumber);
+
+                let editUnitNumber = "1";
+                for (let i = 1; i <= parseInt(UnitDecimal@(itemName)); i++) {
+                    editUnitNumber += "0";
+                }
+
+                editUnitNumber = parseInt(editUnitNumber);
+
+                $("#txtOrigUnitPrice@(itemName)").val(Math.round($("#txtOrigUnitPrice@(itemName)").val() * editUnitNumber) / editUnitNumber);
+                let receiptQty = $("#txtReceiptQty@(itemName)").val();
+                let availableQty = $("#txtAvailableQty@(itemName)").val();
+                let origUnitPrice = $("#txtOrigUnitPrice@(itemName)").val();
+                let origDiscountAmt = $("#txtOrigDiscountAmt@(itemName)").val();
+                let taxRate = $("#txtTaxRateOspReceiptConfirm").val();
+                let exchange = $("#txtExchangeOspReceiptConfirm").val();
+
+                if (parseInt(receiptQty) < parseInt(availableQty)) {
+                    alert("計價數量不可超過進貨數量!!")
+                    $("#txtAvailableQty@(itemName)").val(receiptQty)
+                    availableQty = receiptQty;
+                }
+
+                //原幣加工金額
+                let t1OrigAmount = Math.round(availableQty * origUnitPrice * editNumber) / editNumber;
+                $("#txtOrigAmount@(itemName)").val(t1OrigAmount);
+
+                let taxType = $("#cboTaxTypeOspReceiptConfirm").val();
+                if (taxType == "1") //內含
+                {
+                    //原幣未稅金額
+                    t1OrigTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) / (1 + parseFloat(taxRate)) * editNumber) / editNumber;
+                    $("#txtOrigPreTaxAmt@(itemName)").val(t1OrigTaxAmt);
+
+                    //原幣稅額
+                    $("#txtOrigTaxAmt@(itemName)").val(Math.round((t1OrigAmount - t1OrigTaxAmt) * editNumber) / editNumber);
+
+                    let origPreTaxAmt = $("#txtOrigPreTaxAmt@(itemName)").val();
+                    let origTaxAmt = $("#txtOrigTaxAmt@(itemName)").val();
+
+                    //本幣未稅金額
+                    $("#txtPreTaxAmt@(itemName)").val(Math.round(origPreTaxAmt * exchange * editNumber) / editNumber);
+
+                    //本幣稅額
+                    $("#txtTaxAmt@(itemName)").val(Math.round(origTaxAmt * exchange * editNumber) / editNumber);
+                }
+                else if (taxType == "2") //外加
+                {
+                    $("#txtOrigPreTaxAmt@(itemName)").val(Math.round((availableQty * origUnitPrice - origDiscountAmt) * editNumber) / editNumber);
+                    $("#txtOrigTaxAmt@(itemName)").val(Math.round((availableQty * origUnitPrice - origDiscountAmt) * taxRate * editNumber) / editNumber);
+
+                    let origPreTaxAmt = $("#txtOrigPreTaxAmt@(itemName)").val();
+                    let origTaxAmt = $("#txtOrigTaxAmt@(itemName)").val();
+                    $("#txtPreTaxAmt@(itemName)").val(Math.round(origPreTaxAmt * exchange * editNumber) / editNumber);
+                    $("#txtTaxAmt@(itemName)").val(Math.round(origTaxAmt * exchange * editNumber) / editNumber);
+                }
+                else if (taxType == "3" || taxType == "4" || taxType == "9") { //免稅
+                    $("#txtOrigPreTaxAmt@(itemName)").val(Math.round((availableQty * origUnitPrice - origDiscountAmt) * editNumber) / editNumber);
+                    $("#txtOrigTaxAmt@(itemName)").val("0");
+                    let origPreTaxAmt = $("#txtOrigPreTaxAmt@(itemName)").val();
+                    $("#txtPreTaxAmt@(itemName)").val(Math.round(origPreTaxAmt * exchange * editNumber) / editNumber);
+                    $("#txtTaxAmt@(itemName)").val("0");
+                }
+            }, 500);
+        }
+
+        function EditOrigDiscountAmt@(itemName)() {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                GetCurrencyDecimal@(itemName)();
+
+                let editNumber = "1";
+                for (let i = 1; i <= parseInt(TotalDecimal@(itemName)); i++) {
+                    editNumber += "0";
+                }
+
+                editNumber = parseInt(editNumber);
+
+                let editUnitNumber = "1";
+                for (let i = 1; i <= parseInt(UnitDecimal@(itemName)); i++) {
+                    editUnitNumber += "0";
+                }
+
+                editUnitNumber = parseInt(editUnitNumber);
+
+                $("#txtOrigUnitPrice@(itemName)").val(Math.round($("#txtOrigUnitPrice@(itemName)").val() * editUnitNumber) / editUnitNumber);
+                let availableQty = $("#txtAvailableQty@(itemName)").val();
+                let origUnitPrice = $("#txtOrigUnitPrice@(itemName)").val();
+                let origDiscountAmt = $("#txtOrigDiscountAmt@(itemName)").val();
+                let taxRate = $("#txtTaxRateOspReceiptConfirm").val();
+                let exchange = $("#txtExchangeOspReceiptConfirm").val();
+
+                //原幣加工金額
+                let t1OrigAmount = Math.round(availableQty * origUnitPrice * editNumber) / editNumber;
+                $("#txtOrigAmount@(itemName)").val(t1OrigAmount);
+
+                let taxType = $("#cboTaxTypeOspReceiptConfirm").val();
+                if (taxType == "1") //內含
+                {
+                    //原幣未稅金額
+                    t1OrigTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) / (1 + parseFloat(taxRate)) * editNumber) / editNumber;
+                    $("#txtOrigPreTaxAmt@(itemName)").val(t1OrigTaxAmt);
+
+                    //原幣稅額
+                    $("#txtOrigTaxAmt@(itemName)").val(Math.round((t1OrigAmount - t1OrigTaxAmt) * editNumber) / editNumber);
+
+                    let origPreTaxAmt = $("#txtOrigPreTaxAmt@(itemName)").val();
+                    let origTaxAmt = $("#txtOrigTaxAmt@(itemName)").val();
+
+                    //本幣未稅金額
+                    $("#txtPreTaxAmt@(itemName)").val(Math.round(origPreTaxAmt * exchange * editNumber) / editNumber);
+
+                    //本幣稅額
+                    $("#txtTaxAmt@(itemName)").val(Math.round(origTaxAmt * exchange * editNumber) / editNumber);
+                }
+                else if (taxType == "2") //外加
+                {
+                    $("#txtOrigPreTaxAmt@(itemName)").val(Math.round((availableQty * origUnitPrice - origDiscountAmt) * editNumber) / editNumber);
+                    $("#txtOrigTaxAmt@(itemName)").val(Math.round((availableQty * origUnitPrice - origDiscountAmt) * taxRate * editNumber) / editNumber);
+
+                    let origPreTaxAmt = $("#txtOrigPreTaxAmt@(itemName)").val();
+                    let origTaxAmt = $("#txtOrigTaxAmt@(itemName)").val();
+                    $("#txtPreTaxAmt@(itemName)").val(Math.round(origPreTaxAmt * exchange * editNumber) / editNumber);
+                    $("#txtTaxAmt@(itemName)").val(Math.round(origTaxAmt * exchange * editNumber) / editNumber);
+                }
+                else if (taxType == "3" || taxType == "4" || taxType == "9") { //免稅
+                    $("#txtOrigPreTaxAmt@(itemName)").val(Math.round((availableQty * origUnitPrice - origDiscountAmt) * editNumber) / editNumber);
+                    $("#txtOrigTaxAmt@(itemName)").val("0");
+                    let origPreTaxAmt = $("#txtOrigPreTaxAmt@(itemName)").val();
+                    $("#txtPreTaxAmt@(itemName)").val(Math.round(origPreTaxAmt * exchange * editNumber) / editNumber);
+                    $("#txtTaxAmt@(itemName)").val("0");
+                }
+            }, 500);
+        }
+
+        function GetCurrencyDecimal@(itemName)() {
+            let targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+            let postData = {
+                "ColumnName": "CurrencyDecimal",
+                "Condition": $("#cboCurrencyCodeOspReceiptConfirm").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    UnitDecimal@(itemName) = parseInt(item.UnitDecimal);
+                    TotalDecimal@(itemName) = parseInt(item.TotalDecimal);
+                });
+            }
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+
+            $("#cboCurrencyCodeOspReceiptConfirm").prop("disabled", true);
+            $("#txtExchangeOspReceiptConfirm").prop("readonly", true);
+        }
+    </script>
+                                        )

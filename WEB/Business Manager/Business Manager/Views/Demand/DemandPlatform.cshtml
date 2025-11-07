@@ -1,0 +1,1079 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DemandPlatform";
+    string itemNameText = "需求平台";
+    string itemList = "DemandList";
+    string itemTrack = "DemandTrack";
+    string itemCertificate = "DemandCertificate";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+    string DemandId = Request["DemandId"] ?? "-1";
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+}
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/demand.min.css")?@dateCache" rel="stylesheet" />
+)
+
+@Html.Resource("css",
+    @<style>
+        iframe {
+            width: 100%;
+            height: 90vh;
+        }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+<input type="hidden" id="currentDemand" value="-1" />
+
+<div class="modal fade" id="modalQuery@(itemList)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemList)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboSourceIdQ@(itemList)">需求來源</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSourceIdQ@(itemList)" name="cboSourceIdQ@(itemList)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtDemandNoQ@(itemList)">需求單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtDemandNoQ@(itemList)" name="txtDemandNoQ@(itemList)" placeholder="請輸入需求單號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboDemandDepartmentQ@(itemList)">需求部門</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDemandDepartmentQ@(itemList)" name="cboDemandDepartmentQ@(itemList)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboDemandCustomerQ@(itemList)">需求客戶</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDemandCustomerQ@(itemList)" name="cboDemandCustomerQ@(itemList)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">需求日期 <input type="checkbox" id="cbxUseDate@(itemList)" /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemList)" name="txtStartDateQ@(itemList)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemList)" name="txtEndDateQ@(itemList)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-4 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    需求規劃
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)P" name="cbxStatusQ@(itemName)" value="P" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    需求進行中
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)I" name="cbxStatusQ@(itemName)" value="I" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    需求完成
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)C" name="cbxStatusQ@(itemName)" value="C" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemList)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="platform-wrapper">
+    <div class="platform-sidebar" id="sidebar"></div>
+
+    <div class="platform-container">
+        <div class="platform-title">@(itemNameText)</div><div class="platform-body">
+            <div class="platform-content platform-list" id="@(itemList)">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemList)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemList)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky tiny-table" id="tblData@(itemList)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">需求來源</th>
+                                        <th scope="col" style="min-width: 125px;">需求單號</th>
+                                        <th class="text-center" scope="col" style="min-width: 75px;">操作</th>
+                                        <th class="text-center" scope="col" style="min-width: 100px;">需求狀態</th>
+                                        <th class="text-center" scope="col" style="min-width: 100px;">目前進度</th>
+                                        <th scope="col" style="min-width: 200px;">需求描述</th>
+                                        <th scope="col" style="min-width: 150px;">需求日期</th>
+                                        <th scope="col" style="min-width: 150px;">截止日期</th>
+                                        <th scope="col" style="min-width: 200px;">部門/客戶</th>
+                                        <th scope="col" style="min-width: 200px;">需求人員</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemList)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="platform-content" id="@(itemTrack)">
+                <iframe id="track@(itemTrack)" src="#" frameborder="0" scrolling="yes"></iframe>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="modalEdit@(itemList)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增需求資料</h5>
+                <button class="close" type="button" onclick="Close@(itemList)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemList)">
+                    <fieldset>
+                        <input type="hidden" id="DemandId" name="DemandId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboSourceId@(itemList)">需求來源 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboSourceId@(itemList)" name="cboSourceId@(itemList)"
+                                            data-msg-required="請選擇需求來源" data-rule-required="true"></select>
+                                    <div class="input-group-append">
+                                        <div class="btn-group">
+                                            <a class="btn btn-info" href="javascript:void(0);" title="流程預覽" onclick="PopFlowPreview@(itemList)()"><i class="fas fa-info-square"></i></a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDemandNo@(itemList)">需求來源</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboSourceId@(itemList)" name="cboSourceId@(itemList)"
+                                        data-msg-required="請選擇需求來源" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDemandNo@(itemList)">需求單號</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtDemandNo@(itemList)" name="txtDemandNo@(itemList)"
+                                       readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboItemTypeId@(itemList)">需求產品類別</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboItemTypeId@(itemList)" name="cboItemTypeId@(itemList)"
+                                        data-msg-required="請選擇需求產品類別" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDemandDesc@(itemList)">需求描述<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <textarea class="form-control" id="txtDemandDesc@(itemList)" name="txtDemandDesc@(itemList)" cols="2"
+                                          data-msg-required="請輸入需求描述" data-rule-required="true"
+                                          data-msg-maxlength="必須少於 50 個字元" maxlength="50"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label">需求日期 ~ 截止日期<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="txtDemandDate@(itemList)" name="txtDemandDate@(itemList)" placeholder="請輸入需求日期"
+                                           data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                           data-msg-required="請輸入需求日期" data-rule-required="true"
+                                           readonly />
+                                    <span class="input-group-addon">~</span>
+                                    <input type="text" class="form-control" id="txtDemandDeadline@(itemList)" name="txtDemandDeadline@(itemList)" placeholder="請輸入截止日期"
+                                           data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                           data-msg-required="請輸入截止日期" data-rule-required="true"
+                                           readonly />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label">部門/客戶<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9" style="margin: auto 0;">
+                                <label class="control control-solid control-solid-info control--radio" style="display: inline-block; margin-right: .3125rem;">
+                                    部門 <input type="radio" name="rdoDepCus@(itemList)" value="department"
+                                              data-msg-required="請選擇部門/客戶" data-rule-required="true" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                                <label class="control control-solid control-solid-info control--radio" style="display: inline-block; margin-right: .3125rem;">
+                                    客戶 <input type="radio" name="rdoDepCus@(itemList)" value="customer"
+                                              data-msg-required="請選擇部門/客戶" data-rule-required="true" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group row" data-dep-cus="department">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboDemandDepartment@(itemList)">需求部門</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboDemandDepartment@(itemList)" name="cboDemandDepartment@(itemList)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row" data-dep-cus="customer">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboDemandCustomer@(itemList)">需求客戶</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboDemandCustomer@(itemList)" name="cboDemandCustomer@(itemList)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboDemandUser@(itemList)">需求人員 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboDemandUser@(itemList)" name="cboDemandUser@(itemList)"
+                                        data-msg-required="請選擇需求人員" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="Save@(itemList)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal@(itemCertificate)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    憑證上傳
+                    <span class="sub-title">需求單號 <span class="sub-text" id="desDemandNo@(itemCertificate)"></span></span>
+                </h5>
+                <button class="close" type="button" onclick="Close@(itemCertificate)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-12 auth-add">
+                        <input type="file" class="read-hide" id="file@(itemCertificate)" name="file@(itemCertificate)" multiple />
+                        <input type="hidden" id="txtFileId@(itemCertificate)" name="txtFileId@(itemCertificate)" />
+                    </div>
+                </div>
+                <div class="row" id="listData@(itemCertificate)">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemCertificate)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 300px;">檔案名稱</th>
+                                        <th scope="col" style="min-width: 150px;">上傳時間</th>
+                                        <th scope="col" style="min-width: 175px;">編輯者</th>
+                                        <th scope="col" style="min-width: 250px;">描述</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemCertificate)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEdit@(itemCertificate)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">憑證資料編輯</h5>
+                <button class="close" type="button" onclick="CloseEdit@(itemCertificate)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemCertificate)">
+                    <fieldset>
+                        <input type="hidden" id="CertificateId" name="CertificateId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtNewFileName@(itemName)">新檔名 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtNewFileName@(itemCertificate)" name="txtNewFileName@(itemName)"
+                                       data-msg-required="請輸入新檔名" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtCertificateDesc@(itemName)">描述 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <textarea type="text" class="form-control" id="txtCertificateDesc@(itemCertificate)" name="txtCertificateDesc@(itemName)"
+                                          data-msg-required="請輸入描述" data-rule-required="true"></textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="Save@(itemCertificate)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewDemandNotification")
+@Html.Partial("ViewDemandPlatformSetting")
+
+@Html.Resource("js",
+    @<script src="@Url.Content("~/Scripts/demand.js")"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemList) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemList) = "#editForm@(itemList)";
+
+        let objPage@(itemCertificate) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemCertificate) = "#editForm@(itemCertificate)";
+
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let dt = new DemandTrigger();
+
+        const sidebar = new dhx.Sidebar("sidebar", {
+            css: "",
+            width: 75,
+            collapsed: false
+        });
+
+        let sidebarData = [
+            //{
+            //    id: "toggle",
+            //    css: "toggle-button",
+            //    icon: "fas fa-arrow-to-left"
+            //},
+            {
+                id: "demandList",
+                value: "需求列表",
+                icon: "fas fa-list"
+            },
+            {
+                id: "demandTrack",
+                value: "需求追蹤",
+                icon: "fas fa-paper-plane"
+            },
+            {
+                type: "separator"
+            },
+            {
+                id: "notification",
+                value: "通知訊息",
+                count: 0,
+                icon: "fas fa-bell"
+            },
+            {
+                id: "setting",
+                value: "系統設定",
+                icon: "fas fa-cog"
+            },
+        ];
+
+        let currentDemand = "@(DemandId)";
+
+        $(document).ready(function () {
+            sidebar.data.parse(sidebarData);
+
+            sidebar.events.on("click", function (id, e) {
+                switch (id) {
+                    //case "toggle":
+                    //    let toggleItem = sidebar.data.getItem("toggle");
+
+                    //    sidebar.toggle();
+
+                    //    if (sidebar.config.collapsed) {
+                    //        toggleItem.icon = "fas fa-bars";
+                    //    } else {
+                    //        toggleItem.icon = "fas fa-arrow-to-left";
+                    //    }
+                    //    break;
+                    case "demandList":
+                        window.history.replaceState(null, null,
+                            `DemandPlatform`);
+
+                        $(".platform-content").hide();
+                        sidebar.unselect();
+
+                        $("#@(itemList)").show();
+                        sidebar.select(id);
+
+                        let currentDate = new Date();
+                        Suites.DatePicker("txtEndDateQ@(itemList)", currentDate);
+                        currentDate.setDate(currentDate.getDate() - 7);
+                        Suites.DatePicker("txtStartDateQ@(itemList)", currentDate);
+
+                        ComboBoxs.Default("#cboSourceIdQ@(itemList)", "@Url.Action("GetDemandSource", "SsoBasicInformation")", { "Status": "A" }, "", "ALL", "", "SourceWithNo", "SourceId");
+                        ComboBoxs.Default("#cboDemandDepartmentQ@(itemList)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A" }, "", "ALL", "", "DepartmentWithNo", "DepartmentId");
+                        ComboBoxs.Default("#cboDemandCustomerQ@(itemList)", "@Url.Action("GetCustomer", "ScmBasicInformation")", { "Status": "A" }, "", "ALL", "", "CustomerWithNo", "CustomerId");
+
+                        $("#cboSourceIdQ@(itemList), #cboDemandDepartmentQ@(itemList), #cboDemandCustomerQ@(itemList)").select2({
+                            dropdownAutoWidth: true,
+                            width: "100%"
+                        });
+
+                        Datas@(itemName).GetDemand@(itemName)(objPage@(itemList));
+                        Datas@(itemName).GetNotificationLog@(itemName)();
+                        break;
+                    case "demandTrack":
+                        break;
+                    case "notification":
+                        PopViewDemandNotification();
+                        break;
+                    case "setting":
+                        PopViewDemandPlatformSetting();
+                        break;
+                }
+            });
+
+            DelayFn(function () { $(".dhx_sidebar-button[data-dhx-id='demandList']").trigger("click"); }, 100);
+            DelayFn(function () {
+                if (parseInt(currentDemand) > 0) {
+                    console.log(parseInt(currentDemand));
+                    DemandTrack@(itemList)(parseInt(currentDemand));
+                }
+            }, 500);
+
+            AutoRefresh();
+        });
+
+        function AutoRefresh() {
+            Datas@(itemName).GetNotificationLog@(itemName)();
+
+            setTimeout(AutoRefresh, 30000);
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetDemand@(itemName)", function (objPage) {
+                let innerHtml = '';
+                let pageCount = 0;
+
+                let targetUrl = "@Url.Action("GetDemand", "Demand")";
+                let postData = {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "SourceId": $("#cboSourceIdQ@(itemName)").val(),
+                    "DemandNo": $("#txtDemandNoQ@(itemName)").val(),
+                    "DemandDepartment": $("#cboDemandDepartmentQ@(itemName)").val(),
+                    "DemandCustomer": $("#cboDemandCustomerQ@(itemName)").val(),
+                    "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                    "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : ""),
+                    "Status": $("input[name='cbxStatusQ@(itemName)']:checked").toArray().map(item => item.value).join(",")
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                    if (pageCount > 0) {
+                        objPage = PageCaculate(pageCount, objPage);
+
+                        $.each(data.result, function (i, item) {
+                            let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                            innerHtml += `<tr>
+                                            <td>${_row}</td>
+                                            <td>${item.SourceName}</td>
+                                            <td>${item.DemandNo}</td>
+                                            <td class="text-center active-content">
+                                              <div class="btn-group mb-4 show" style="margin-bottom: 0 !important; position: static;">
+                                                <button type="button" class="btn btn-primary dropdown-toggle" data-demand-id="${item.DemandId}" style="padding-top: 0; padding-bottom: 0;">動作</button>
+                                                <div class="dropdown-menu btn-text-left-block" data-demand-id="${item.DemandId}" style="overflow-y: auto; z-index: 999; max-height: 150px;">
+                                                  ${item.DemandStatus == `P` ? `<a class="dropdown-item btn-text-left auth-update" href="javascript:Edit@(itemList)(${item.DemandId});" ><i class="fas fa-edit"></i>修改</a>` : ``}
+                                                  ${item.DemandStatus == `P` ? `<a class="dropdown-item btn-text-left auth-delete" href="javascript:Delete@(itemList)(${item.DemandId});" ><i class="fas fa-trash-alt"></i>刪除</a>` : ``}
+                                                  <a class="dropdown-item btn-text-left auth-cert" href="javascript:Pop@(itemCertificate)(${item.DemandId}, '${item.DemandNo}');" ><i class="fas fa-file-upload"></i>憑證上傳</a>
+                                                  ${item.DemandStatus == `P` ? `<a class="dropdown-item btn-text-left auth-confirm" href="javascript:Confirm@(itemList)(${item.DemandId});" ><i class="fas fa-check-circle"></i>確認</a>` : ``}
+                                                  ${item.DemandStatus == `I` ? `<a class="dropdown-item btn-text-left auth-reconfirm" href="javascript:ReConfirm@(itemList)(${item.DemandId});" ><i class="fas fa-undo-alt"></i>反確認</a>` : ``}
+                                                </div>
+                                              </div>
+                                            </td>
+                                            <td class="text-center">${item.DemandStatusName}</td>
+                                            <td class="text-center">
+                                              ${item.DemandStatus != `P` ? `<a href="javascript:DemandTrack@(itemList)(${item.DemandId});"><i class="fas fa-paper-plane"></i></a>` : ``}
+                                            </td>
+                                            <td>${item.DemandDesc}</td>
+                                            <td>${item.DemandDate}</td>
+                                            <td>${item.DemandDeadline}</td>
+                                            <td>${item.DemandDepartment != -1 ? item.DepartmentNo + ` ` + item.DepartmentName : item.CustomerNo + ` ` + item.CustomerShortName}</td>
+                                            <td>${item.DemandUserNo} ${item.DemandUserName}</td>
+                                          </tr>`;
+                        });
+                    } else {
+                        innerHtml += `<tr>
+                                        <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                      </tr>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#tblData@(itemList) tbody").html(innerHtml);
+                TableComponentInit();
+                Pager("#page@(itemList)", pageCount, objPage, Datas@(itemName).GetDemand@(itemName));
+
+                $(".dropdown-toggle").off("click").on("click", function () {
+                    let demandId = $(this).data("demand-id");
+
+                    if ($(`.dropdown-menu[data-demand-id='${demandId}']`).hasClass("show")) {
+                        $(".dropdown-menu").removeClass("show");
+                    } else {
+                        $(".dropdown-menu").removeClass("show");
+
+                        $(`.dropdown-menu[data-demand-id='${demandId}']`).addClass("show");
+                        $(`.dropdown-menu[data-demand-id='${demandId}']`).css({
+                            top: `${$(this).position().top + $(this).height() + 5}px`,
+                            left: `${$(this).position().left - $(this).width() + 38}px`
+                        });
+                    }
+                });
+
+                $("body").off("click").on("click", function (e) {
+                    if ($(".dropdown-menu").hasClass("show")) {
+                        if (!$(e.target).hasClass("dropdown-toggle")
+                            && !$(e.target).parents().hasClass("dropdown-toggle")) {
+                            $(".dropdown-menu").removeClass("show");
+                        }
+                    }
+                });
+            });
+
+            addMethod(this, "GetDemandCertificate@(itemName)", function (objPage) {
+                let innerHtml = '';
+                let pageCount = 0;
+
+                let targetUrl = "@Url.Action("GetDemandCertificate", "Demand")";
+                let postData = {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "DemandId": $("#currentDemand").val()
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                    if (pageCount > 0) {
+                        objPage = PageCaculate(pageCount, objPage);
+
+                        $.each(data.result, function (i, item) {
+                            let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                            innerHtml += `<tr>
+                                            <td><span class="stack-title">#</span>${_row}</td>
+                                            <td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileName}${item.FileExtension}" style="max-width: 300px;">
+                                              <span class="stack-title">檔案名稱</span>
+                                              <span data-target="${item.CertificateId}">${FilePreview(`/Web/GetFile?fileId=${item.FileId}`, item.CertificateId)}</span>
+                                              ${item.FileName}${item.FileExtension}
+                                            </td>
+                                            <td><span class="stack-title">上傳時間</span>${item.CreateDate}</td>
+                                            <td><span class="stack-title">編輯者</span>${item.UserWithNo}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.CertificateDesc}" style="max-width: 250px;"><span class="stack-title">描述</span>${item.CertificateDesc}</td>
+                                            <td class="text-center active-content">
+                                              <span class="stack-title">操作</span>
+                                              <a class="active-link" href="javascript:PopEdit@(itemCertificate)(${item.CertificateId});"><i class="fas fa-edit"></i></a>
+                                              ${item.DemandStatus == `P` ? `<a class="active-link" href="javascript:Delete@(itemCertificate)(${item.CertificateId});"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                            </td>
+                                          </tr>`;
+                        });
+                    } else {
+                        innerHtml += `<tr>
+                                        <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                      </tr>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#tblData@(itemCertificate) tbody").html(innerHtml);
+                TableComponentInit();
+                Pager("#page@(itemCertificate)", pageCount, objPage, Datas@(itemName).GetDemandCertificate@(itemName));
+            });
+
+            addMethod(this, "GetNotificationLog@(itemName)", function () {
+                sidebar.data.update("notification", { count: 0 });
+
+                let targetUrl = "@Url.Action("GetNotificationLog", "SystemSetting")";
+                let postData = {
+                    "TriggerFunction": "DemandPlatform",
+                    "ReadStatus": "N"
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    sidebar.data.update("notification", { count: data.result.length });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+        }
+
+        function PopFlowPreview@(itemList)() {
+            let sourceId = $("#cboSourceId@(itemList)").val();
+
+            if (sourceId > 0) {
+                let targetUrl = `@Url.Action("IFrameFlowPreview", "Demand")?SourceId=${sourceId}`;
+
+                Swal.fire({
+                    html: `<iframe id="FlowPreview@(itemList)" src="${targetUrl}" frameborder="0" scrolling="no"></iframe>`,
+                    showCloseButton: true,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    width: "90%",
+                    background: '#eef1f5'
+                });
+            } else {
+                alert("請選擇需求來源!");
+            }
+        }
+
+        function DemandTrack@(itemList)(DemandId) {
+            $(".platform-content").hide();
+            sidebar.unselect();
+
+            $("#@itemTrack").show();
+            sidebar.select("demandTrack");
+
+            window.history.replaceState(null, null,
+                    `?DemandId=${DemandId}`);
+
+            let targetUrl = `@Url.Action("IFrameDemandTrack", "Demand")?DemandId=${DemandId}`;
+
+            $("#track@(itemTrack)").attr("src", targetUrl);
+
+            $([document.documentElement, document.body]).animate({
+                scrollTop: $(".platform-body").offset().top
+            }, 500);
+        }
+
+        function Edit@(itemList)(DemandId) {
+            $("#DemandId").val(DemandId ? DemandId : 0);
+
+            $("div[data-dep-cus]").hide();
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtDemandDate@(itemList)", currentDate);
+            Suites.DatePicker("txtDemandDeadline@(itemList)", currentDate);
+
+            ComboBoxs.Default("#cboSourceId@(itemList)", "@Url.Action("GetDemandSource", "SsoBasicInformation")", { "Status": "A" }, "", "NA", "", "SourceWithNo", "SourceId");
+            ComboBoxs.Default("#cboDemandDepartment@(itemList)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇部門", "DepartmentWithNo", "DepartmentId");
+            ComboBoxs.Default("#cboDemandCustomer@(itemList)", "@Url.Action("GetCustomer", "ScmBasicInformation")", { "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇客戶", "CustomerWithNo", "CustomerId");
+            ComboBoxs.Default("#cboDemandUser@(itemList)", "@Url.Action("GetUser", "BasicInformation")", { "Gender": "M,F", "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇需求人員", "UserWithNo", "UserId");
+            ComboBoxs.Default("#cboItemTypeId@(itemList)", "@Url.Action("GetItemTypeSimple", "PdmBasicInformation")", { "Today": getNowFormatDate() }, "", "CHOOSE-NUMBER", "請選擇需求產品類別", "ItemTypeShow", "ItemTypeId");
+
+            if (DemandId > 0) {
+                let targetUrl = "@Url.Action("GetDemand", "Demand")";
+                let postData = {
+                    "DemandId": DemandId
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#cboSourceId@(itemList)").val(item.SourceId);
+                        $("#txtDemandNo@(itemList)").val(item.DemandNo);
+                        $("#txtDemandDesc@(itemList)").val(item.DemandDesc);
+                        $("#txtDemandDate@(itemList)").val(item.DemandDate);
+                        $("#txtDemandDeadline@(itemList)").val(item.DemandDeadline);
+                        $(`input[name="rdoDepCus@(itemList)"][value="${item.DepCus}"]`).prop("checked", true);
+                        $(`div[data-dep-cus=${item.DepCus}]`).show();
+                        $("#cboDemandDepartment@(itemList)").val(item.DemandDepartment);
+                        $("#cboDemandCustomer@(itemList)").val(item.DemandCustomer);
+                        $("#cboDemandUser@(itemList)").val(item.DemandUser);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            $("#modalEdit@(itemList)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#cboSourceId@(itemList), #cboDemandDepartment@(itemList), #cboDemandCustomer@(itemList), #cboDemandUser@(itemList), #cboItemTypeId@(itemList)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("input[name='rdoDepCus@(itemList)']").off("change").on("change", function () {
+                let target = $(this).val();
+
+                $("#cboDemandDepartment@(itemList)").prop("selectedIndex", 0).trigger("change");
+                $("#cboDemandCustomer@(itemList)").prop("selectedIndex", 0).trigger("change");
+
+                $("div[data-dep-cus]").hide();
+                $(`div[data-dep-cus=${target}]`).show();
+            });
+        }
+
+        function Save@(itemList)() {
+            if ($(objForm@(itemList)).valid()) {
+                let DemandId = parseInt($("#DemandId").val());
+
+                if (DemandId <= 0) {
+                    let targetUrl = "@Url.Action("AddDemand", "Demand")";
+                    let postData = {
+                        "SourceId": $("#cboSourceId@(itemList)").val(),
+                        "DemandDesc": $("#txtDemandDesc@(itemList)").val(),
+                        "DemandDate": $("#txtDemandDate@(itemList)").val(),
+                        "DemandDeadline": $("#txtDemandDeadline@(itemList)").val(),
+                        "DepCus": $("input[name='rdoDepCus@(itemList)']:checked").val(),
+                        "DemandDepartment": $("#cboDemandDepartment@(itemList)").val(),
+                        "DemandCustomer": $("#cboDemandCustomer@(itemList)").val(),
+                        "DemandUser": $("#cboDemandUser@(itemList)").val(),
+                        "ItemTypeId": $("#cboItemTypeId@(itemList)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Close@(itemList)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateDemand", "Demand")";
+                    let postData = {
+                        "DemandId": DemandId,
+                        "SourceId": $("#cboSourceId@(itemList)").val(),
+                        "DemandDesc": $("#txtDemandDesc@(itemList)").val(),
+                        "DemandDate": $("#txtDemandDate@(itemList)").val(),
+                        "DemandDeadline": $("#txtDemandDeadline@(itemList)").val(),
+                        "DepCus": $("input[name='rdoDepCus@(itemList)']:checked").val(),
+                        "DemandDepartment": $("#cboDemandDepartment@(itemList)").val(),
+                        "DemandCustomer": $("#cboDemandCustomer@(itemList)").val(),
+                        "DemandUser": $("#cboDemandUser@(itemList)").val(),
+                        "ItemTypeId": $("#cboItemTypeId@(itemList)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Close@(itemList)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemList)(DemandId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDemand", "Demand")";
+                    let postData = {
+                        "DemandId": DemandId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Datas@(itemName).GetDemand@(itemName)(objPage@(itemList));
+                    }
+                }
+            });
+        }
+
+        function Close@(itemList)() {
+            ResetForm(objForm@(itemList));
+            $("#modalEdit@(itemList)").modal("hide");
+            Datas@(itemName).GetDemand@(itemName)(objPage@(itemList));
+        }
+
+        function Confirm@(itemList)(DemandId) {
+            swal.fire({
+                titleText: "要將此需求進行確認嗎?",
+                text: "確認前需上傳相關憑證，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateDemandConfirm", "Demand")";
+                    let postData = {
+                        "DemandId": DemandId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Datas@(itemName).GetDemand@(itemName)(objPage@(itemList));
+                    }
+                }
+            });
+        }
+
+        function ReConfirm@(itemList)(DemandId) {
+            swal.fire({
+                titleText: "要將此需求進行反確認嗎?",
+                text: "流程尚未完成才能使用反確認，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateDemandReConfirm", "Demand")";
+                    let postData = {
+                        "DemandId": DemandId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Datas@(itemName).GetDemand@(itemName)(objPage@(itemList));
+                    }
+                }
+            });
+        }
+
+        function Pop@(itemCertificate)(DemandId, DemandNo) {
+            $("#currentDemand").val(DemandId);
+            $("#desDemandNo@(itemCertificate)").html(DemandNo);
+
+            Datas@(itemName).GetDemandCertificate@(itemName)(objPage@(itemCertificate));
+
+            let uploadConfig = {
+                fileSelector: "#file@(itemCertificate)",
+                targetSelector: "#txtFileId@(itemCertificate)",
+                required: false,
+                uploadPath: "/Demand/CertificateFile",
+                maxFileCount: 99
+            };
+            $(uploadConfig.fileSelector).fileinput('destroy');
+
+            let uploadSetting = {
+                theme: "fas",
+                language: "zh-TW",
+                showCaption: true,
+                showPreview: true,
+                showRemove: false,
+                showUpload: false,
+                showCancel: false,
+                uploadUrl: "/Web/Upload",
+                uploadAsync: true,
+                minFileCount: (uploadConfig.required ? 1 : 0),
+                maxFileCount: uploadConfig.maxFileCount,
+                validateInitialCount: true,
+                overwriteInitial: false,
+                initialPreviewAsData: true,
+                browseOnZoneClick: true,
+                uploadExtraData: {
+                    savePath: uploadConfig.uploadPath,
+                    isPreview: false
+                },
+                previewFileIconSettings: {
+                    doc: '<i class="fas fa-file-word" style="color: #0078d7;"></i>',
+                    docx: '<i class="fas fa-file-word" style="color: #0078d7;"></i>',
+                    xls: '<i class="fas fa-file-excel" style="color: #1d6f42;"></i>',
+                    xlsx: '<i class="fas fa-file-excel" style="color: #1d6f42;"></i>',
+                    csv: '<i class="fas fa-file-csv" style="color: #1d6f42;"></i>',
+                    ppt: '<i class="fas fa-file-powerpoint" style="color: #d04423"></i>',
+                    pptx: '<i class="fas fa-file-powerpoint" style="color: #d04423"></i>'
+                },
+                slugCallback: function (text) {
+                    return text;
+                }
+            };
+
+            $(uploadConfig.fileSelector).fileinput(uploadSetting)
+                .off('filebatchselected')
+                .on('filebatchselected', function (event, files) {
+                    $(uploadConfig.fileSelector).fileinput("upload");
+                })
+                .off('fileuploaded')
+                .on('fileuploaded', function (event, previewId, index, fileId) {
+                    let uploadPath = previewId.response.initialPreviewConfig[0]["key"];
+                    $(uploadConfig.fileSelector).fileinput('clear');
+
+                    let targetUrl = "@Url.Action("AddDemandCertificate", "Demand")";
+                    let postData = {
+                        "DemandId": $("#currentDemand").val(),
+                        "FileId": uploadPath,
+                        "CertificateDesc": $("#txtCertificateDesc@(itemCertificate)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                    if (result) {
+                        Datas@(itemName).GetDemandCertificate@(itemName)(objPage@(itemCertificate));
+                    }
+                });
+
+            $("#modal@(itemCertificate)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Close@(itemCertificate)() {
+            $("#modal@(itemCertificate)").modal("hide");
+            Datas@(itemName).GetDemand@(itemName)(objPage@(itemList));
+        }
+
+        function PopEdit@(itemCertificate)(CertificateId) {
+            $("#CertificateId").val(CertificateId);
+
+            if (CertificateId > 0) {
+                let targetUrl = "@Url.Action("GetDemandCertificate", "Demand")";
+                let postData = {
+                    "CertificateId": CertificateId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtNewFileName@(itemCertificate)").val(item.FileName);
+                        $("#txtCertificateDesc@(itemCertificate)").val(item.CertificateDesc);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            $("#modalEdit@(itemCertificate)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Save@(itemCertificate)() {
+            if ($(objForm@(itemCertificate)).valid()) {
+                let CertificateId = parseInt($("#CertificateId").val());
+
+                let targetUrl = "@Url.Action("UpdateDemandCertificate", "Demand")";
+                let postData = {
+                    "CertificateId": CertificateId,
+                    "NewFileName": $("#txtNewFileName@(itemCertificate)").val(),
+                    "CertificateDesc": $("#txtCertificateDesc@(itemCertificate)").val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    CloseEdit@(itemCertificate)();
+                    Datas@(itemName).GetDemandCertificate@(itemName)(objPage@(itemCertificate));
+                }
+            }
+        }
+
+        function Delete@(itemCertificate)(CertificateId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDemandCertificate", "Demand")";
+                    let postData = {
+                        "CertificateId": CertificateId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Datas@(itemName).GetDemandCertificate@(itemName)(objPage@(itemCertificate));
+                    }
+                }
+            });
+        }
+
+        function getNowFormatDate() {
+            var date = new Date();
+            var seperator1 = "-";
+            var year = date.getFullYear();
+            var month = date.getMonth() + 1;
+            var strDate = date.getDate();
+            if (month >= 1 && month <= 9) {
+                month = "0" + month;
+            }
+            if (strDate >= 0 && strDate <= 9) {
+                strDate = "0" + strDate;
+            }
+            var currentdate = year + seperator1 + month + seperator1 + strDate;
+            return currentdate;
+        }
+
+        function CloseEdit@(itemCertificate)() {
+            $("#modalEdit@(itemCertificate)").modal("hide");
+            ResetForm(objForm@(itemCertificate));
+        }
+    </script>
+)

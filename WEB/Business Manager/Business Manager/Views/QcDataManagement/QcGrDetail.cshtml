@@ -1,0 +1,949 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "QcGrDetail";
+    string itemNameText = "進貨檢單據詳細資料";
+    string authority = ViewBag.authority;
+}
+
+<link href="@Url.Content("~/Content/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.css")" rel="stylesheet" />
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                        )
+
+<div class="row">
+    <div class="col-12">
+        <select id="cboSystemType@(itemName)" class="form-control">
+            <option value="system-mode">系統選擇模式</option>
+            <option value="persion-mode">完全自定義模式</option>
+        </select>
+    </div>
+</div>
+
+<div style="height: 75%; width: 100%;" id="spreadsheet"></div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">製令</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)" placeholder="請輸入製令">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboProdModeQ@(itemName)">材料品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入材料品號">
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--選擇機台-->
+<div class="modal fade" id="machineSelect@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">選擇機台</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">車間</label>
+                            <div class="col-12">
+                                <select id="cboShopId@(itemName)" class="form-control"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">量測機台</label>
+                            <div class="col-12">
+                                <select id="cboQmmDetailId@(itemName)" class="form-control"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                @*<button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewQcGrDetailResult")
+@Html.Partial("ViewQcItem")
+
+@Html.Resource("js",
+    @<script>
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let qcRecordId@(itemName);
+
+        let data;
+
+        let spreadsheetJson =
+        {
+            spreadsheetInfo: []
+        }
+
+        let barcodeJson =
+        {
+            barcodeInfo: []
+        }
+
+        let dataLoadingCheck = false;
+
+        let grErpFullNo@(itemName);
+        let qcType@(itemName);
+        let inputType@(itemName);
+        let moProcessId@(itemName);
+        let defaultFileId@(itemName);
+        let checkQcMeasureData@(itemName);
+        let supportAqFlag@(itemName);
+        let supportProcessFlag@(itemName);
+        let mtlItemNo@(itemName);
+        let grMtlItemName@(itemName);
+        let grMtlItemSpec@(itemName);
+
+        let spreadsheet;
+
+        let defaultCell = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+
+        function Expand@(itemName)(qcRecordId, grErpFullNo, inputType, defaultFileId, checkQcMeasureData, mtlItemNo, grMtlItemName, grMtlItemSpec) {
+            ResetSpreadsheet@(itemName)();
+            dataLoadingCheck = false;
+            ComboBoxs.Default("#cboQcGroupQViewQcItem", "@Url.Action("GetQcGroup", "QcItemSetting")", {}, "", "ALL", "", "QcGroupName", "QcGroupId");
+            ComboBoxs.Default("#cboQcClassQViewQcItem", "@Url.Action("GetQcClass", "QcItemSetting")", { "QcGroupId": $("#cboQcGroupQViewQcItem").val() }, "", "ALL", "", "QcClassName", "QcClassId");
+            if (qcRecordId > 0) {
+                qcRecordId@(itemName) = qcRecordId;
+                grErpFullNo@(itemName) = grErpFullNo;
+                inputType@(itemName) = inputType;
+                defaultFileId@(itemName) = defaultFileId;
+                mtlItemNo@(itemName) = mtlItemNo;
+                grMtlItemName@(itemName) = grMtlItemName;
+                grMtlItemSpec@(itemName) = grMtlItemSpec;
+
+                GetCheckQcMeasureData@(itemName)();
+
+                spreadsheet.clear();
+
+                $("#spreadsheet").css("height", "1100px");
+
+                qcRecordId@(itemName) = qcRecordId;
+                $(".advanced-block").slideDown("slow");
+
+                if (!isMobile) {
+                    $("#cboShopId@(itemName)").select2({
+                        width: "100%"
+                    });
+                    $("#cboQmmDetailId@(itemName)").select2({
+                        width: "100%"
+                    });
+                }
+
+                ComboBoxs.Default("#cboShopId@(itemName)", "@Url.Action("GetWorkShop", "QcDataManagement")", {}, "", "NA", "", "ShopName", "ShopId");
+                ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", {}, "", "NA", "", "MachineName", "MachineNumber");
+
+                Return@(itemName)();
+
+                data = spreadsheet.serialize();
+
+                //載入新工作表後偵測
+                spreadsheet.events.on("afterSheetChange", function (sheet) {
+                    //spreadsheet.lock("A1:H1");
+                });
+
+                spreadsheet.events.on("afterFocusSet", function (cell) {
+                    let systemType = $("#cboSystemType@(itemName)").val();
+
+                    if (cell.indexOf("D") != -1 && cell != "D1" && systemType == "system-mode") {
+                        $("#machineSelect@(itemName)").modal("show");
+                    }
+                    if (cell.indexOf("B") != -1 && cell != "B1" && systemType == "system-mode") {
+                        let row = cell.split('B')[1];
+                        let fullItemNo = spreadsheet.getValue("A" + row);
+                        let qcItemDescCell = "C" + row;
+                        PopViewQcItem("A" + row, fullItemNo, cell, qcItemDescCell);
+                    }
+                });
+
+                spreadsheet.events.on("afterEditEnd", function (cell, value) {
+                    if (typeof (data) == `undefined`) {
+                        data = spreadsheet.serialize();
+                    }
+
+                    if (cell.indexOf("E") != -1 && cell != "E1") {
+                        let row = cell.split('E')[1];
+                        let designValue = parseFloat(value);
+                        let upperTolerance = spreadsheet.getValue("F" + row) != null ? parseFloat(spreadsheet.getValue("F" + row)) : -999;
+                        let lowerTolerance = spreadsheet.getValue("G" + row) != null ? parseFloat(spreadsheet.getValue("G" + row)) : 999;
+
+                        //取得measureValue
+                        let measureValue = -1;
+                        data = spreadsheet.serialize();
+                        $.each(data.sheets[0].data, function (i, item) {
+                            if (defaultCell.indexOf(item.cell.substring(0, 1)) == -1 && item.cell.substring(1) != "1") {
+                                if (item.cell.substring(1) == row) {
+                                    measureValue = item.value;
+
+                                    //計算是否入規
+                                    if (measureValue > (designValue + upperTolerance) || measureValue < (designValue + lowerTolerance)) {
+                                        spreadsheet.setStyle(item.cell, { color: "red" });
+                                    }
+                                    else {
+                                        spreadsheet.setStyle(item.cell, { color: "black" });
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    if (cell.indexOf("F") != -1 && cell != "F1") {
+                        let row = cell.split('F')[1];
+                        let designValue = spreadsheet.getValue("E" + row) != null ? parseFloat(spreadsheet.getValue("E" + row)) : -999;
+                        let upperTolerance = parseFloat(value);
+                        let lowerTolerance = spreadsheet.getValue("G" + row) != null ? parseFloat(spreadsheet.getValue("G" + row)) : 999;
+
+                        //取得measureValue
+                        let measureValue = -1;
+                        data = spreadsheet.serialize();
+                        $.each(data.sheets[0].data, function (i, item) {
+                            if (defaultCell.indexOf(item.cell.substring(0, 1)) == -1 && item.cell.substring(1) != "1") {
+                                if (item.cell.substring(1) == row) {
+                                    measureValue = item.value;
+
+                                    //計算是否入規
+                                    if (measureValue > (designValue + upperTolerance) || measureValue < (designValue + lowerTolerance)) {
+                                        spreadsheet.setStyle(item.cell, { color: "red" });
+                                    }
+                                    else {
+                                        spreadsheet.setStyle(item.cell, { color: "black" });
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    if (cell.indexOf("G") != -1 && cell != "G1") {
+                        let row = cell.split('G')[1];
+                        let designValue = spreadsheet.getValue("E" + row) != null ? parseFloat(spreadsheet.getValue("E" + row)) : -999;
+                        let upperTolerance = spreadsheet.getValue("F" + row) != null ? parseFloat(spreadsheet.getValue("F" + row)) : -999;
+                        let lowerTolerance = parseFloat(value);
+
+                        //取得measureValue
+                        let measureValue = -1;
+                        data = spreadsheet.serialize();
+                        $.each(data.sheets[0].data, function (i, item) {
+                            if (defaultCell.indexOf(item.cell.substring(0, 1)) == -1 && item.cell.substring(1) != "1") {
+                                if (item.cell.substring(1) == row) {
+                                    measureValue = item.value;
+
+                                    //計算是否入規
+                                    if (measureValue > (designValue + upperTolerance) || measureValue < (designValue + lowerTolerance)) {
+                                        spreadsheet.setStyle(item.cell, { color: "red" });
+                                    }
+                                    else {
+                                        spreadsheet.setStyle(item.cell, { color: "black" });
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    if (defaultCell.indexOf(cell.substring(0, 1)) == -1 && cell.substring(1) != "1") {
+                        let measureValue = parseFloat(value);
+                        let row = cell.split(cell.substring(0, 1))[1];
+                        let designValue = spreadsheet.getValue("E" + row) != null ? parseFloat(spreadsheet.getValue("E" + row)) : -999;
+                        let upperTolerance = spreadsheet.getValue("F" + row) != null ? parseFloat(spreadsheet.getValue("F" + row)) : -999;
+                        let lowerTolerance = spreadsheet.getValue("G" + row) != null ? parseFloat(spreadsheet.getValue("G" + row)) : -999;
+
+                        //計算是否入規
+                        if (measureValue > (designValue + upperTolerance) || measureValue < (designValue + lowerTolerance)) {
+                            spreadsheet.setStyle(cell, { color: "red" });
+                        }
+                        else {
+                            spreadsheet.setStyle(cell, { color: "black" });
+                        }
+                    }
+                });
+
+                spreadsheet.toolbar.events.on("click", function (id) {
+                    if (id == "SaveTempJson") {
+                        if (checkQcMeasureData@(itemName) == "Y" || checkQcMeasureData@(itemName) == "P") {
+                            alert("數據已上傳，無法更改!!")
+                            return false;
+                        }
+
+                        data = spreadsheet.serialize();
+
+                        let targetUrl = "@Url.Action("UploadTempSpreadsheetJson", "QcDataManagement")";
+                        let postData = {
+                            "QcRecordId": qcRecordId@(itemName),
+                            "UploadJsonString": JSON.stringify(data)
+                        };
+
+                        let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                        if (result) {
+                            Return@(itemName)();
+                        }
+                    }
+                    else if (id == "uploadJson") {
+                        let dataBool = ReLoadSpreadsheetData@(itemName)();
+                        if (dataBool == false) {
+                            let accuratelyResult = CheckBarcodeAccurately@(itemName)();
+                            if (accuratelyResult != "") {
+                                alert(accuratelyResult, 1500);
+                                return false;
+                            }
+
+                            let checkBool = false;
+                            let checkMeasureData = false;
+                            $.each(spreadsheetJson.spreadsheetInfo, function (i, item) {
+                                if (item.ItemNo == null) {
+                                    return
+                                }
+                                if (item.ItemNo.length != 10 && (item.DesignValue != null || item.UpperTolerance != null || item.LowerTolerance != null)) {
+                                    alert("欄位【" + item.CellHeader + "】量測項目或機台尚未設定完畢!!")
+                                    checkBool = true;
+                                    return false;
+                                }
+
+                                if (item.MeasureValue != null) {
+                                    checkMeasureData = true;
+                                }
+                            });
+
+                            if (checkMeasureData == false) {
+                                alert("請至少維護一個量測資料!!");
+                                return false;
+                            }
+
+                            if (checkBool == true) {
+                                return false;
+                            }
+
+                            if (spreadsheetJson.spreadsheetInfo.length <= 0) {
+                                alert("尚未上傳任何數據!!");
+                                return false;
+                            }
+
+                            PopViewQcGrDetailResult(qcRecordId@(itemName), grErpFullNo@(itemName), checkQcMeasureData@(itemName), supportAqFlag@(itemName), mtlItemNo@(itemName), grMtlItemName@(itemName), grMtlItemSpec@(itemName));
+                        }
+                    }
+                    else if (id == "deleteTempSpreadsheet") {
+                        DeleteTempSpreadsheet@(itemName)(qcRecordId@(itemName));
+                    }
+                    else if (id == "CheckGoods") {
+                        $("#modalReceiptGoodsQcDataManagement").modal("show");
+                    }
+                });
+
+            } else {
+                alert("量測記錄資料錯誤，請重新操作!", "alert");
+            }
+        }
+
+        function InitData@(itemName)(qcRecordId) {
+            spreadsheet.clear();
+            let targetUrl = "@Url.Action("GetQcGoodsReceipt", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": qcRecordId != null ? qcRecordId : qcRecordId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.result.length > 0) {
+                if (data.status = "success") {
+                    $.each(data.result, function (i, item) {
+                        if (item.SpreadsheetData != null && item.SpreadsheetData != "") {
+                            let dataset = JSON.parse(item.SpreadsheetData);
+                            spreadsheet.parse(dataset);
+                            data = dataset;
+                            let itemLength = spreadsheetJson.spreadsheetInfo.length / barcodeJson.barcodeInfo.length;
+                            //spreadsheet.lock("A1:G1");
+                            spreadsheet.setStyle("A2:A" + (itemLength + 1), { background: "#A9A9A9" });
+                        }
+                        else if (item.FileId != null && item.FileId != -1) {
+                            spreadsheet.load("/Web/GetFile?fileId=" + item.FileId + "", "xlsx");
+                        }
+                        else {
+                            let dataset = JSON.parse(item.DefaultSpreadsheetData);
+                            spreadsheet.parse(dataset);
+                            data = dataset;
+                        }
+
+                        if (checkQcMeasureData@(itemName) != "N") {
+                            //spreadsheet.lock("A1:Z50");
+                        }
+                    });
+
+                    data = spreadsheet.serialize();
+                }
+            }
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#spreadsheet").empty();
+
+            spreadsheet = new dhx.Spreadsheet("spreadsheet", {
+                menu: true,
+                //rowsCount: 10,
+                colsCount: 150
+            });
+
+            spreadsheet.toolbar.data.add({
+                type: "button",
+                icon: "fas fa-save",
+                tooltip: "儲存數據",
+                id: "SaveTempJson"
+            });
+
+            spreadsheet.toolbar.data.add({
+                type: "button",
+                icon: "fas fa-arrow-alt-square-up",
+                tooltip: "上傳數據",
+                id: "uploadJson"
+            });
+
+            spreadsheet.toolbar.data.add({
+                type: "button",
+                icon: "fas fa-trash-alt",
+                tooltip: "刪除暫存數據",
+                id: "deleteTempSpreadsheet"
+            });
+
+            //spreadsheet.toolbar.data.add({
+            //    type: "button",
+            //    icon: "fas fa-user-check",
+            //    tooltip: "確認收件",
+            //    id: "CheckGoods"
+            //});
+        }
+
+        function GetLetteringBarcodeData@(itemName)(itemSeq) {
+            let targetUrl = "@Url.Action("GetLetteringBarcodeData", "QcDataManagement")";
+            let postData = {
+                "MoId": moId@(itemName),
+                "ItemSeq": itemSeq
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            return data;
+        }
+
+        function GetBarcodeData@(itemName)(barcodeNo) {
+            let targetUrl = "@Url.Action("GetBarcodeData", "QcDataManagement")";
+            let postData = {
+                "MoId": moId@(itemName),
+                "BarcodeNo": barcodeNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            return data;
+        }
+
+        $("#cboQmmDetailId@(itemName)").change(function (e) {
+            let cell = spreadsheet.selection.getSelectedCell();
+            let machineName = $("#cboQmmDetailId@(itemName) option:selected").text();
+            $("#machineSelect@(itemName)").modal("hide");
+
+            let machineNumber = $("#cboQmmDetailId@(itemName)").val();
+            let row = cell.split('D')[1];
+
+            let shopId = $("#cboShopId@(itemName)").val();
+            ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": shopId }, "", "NA", "", "MachineName", "MachineNumber");
+
+            let fullItemNo = spreadsheet.getValue("A" + row);
+            if (fullItemNo == null) {
+                alert("請先維護量測項目後再選擇量測機台!!")
+                return false;
+            }
+
+            spreadsheet.setValue(cell, machineName);
+
+            let newItemNo = "";
+            if (fullItemNo.length == 10) {
+                newItemNo = fullItemNo.substr(0, 3) + machineNumber + fullItemNo.substr(6, 4);
+            }
+            else {
+                newItemNo = fullItemNo.substr(0, 3) + machineNumber + fullItemNo.substr(3, 4);
+            }
+            spreadsheet.setValue("A" + row, newItemNo);
+        });
+
+        $("#cboShopId@(itemName)").change(function () {
+            let shopId = $("#cboShopId@(itemName)").val();
+            ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": shopId }, "", "NA", "", "MachineName", "MachineNumber");
+        });
+
+        function ReLoadSpreadsheetData@(itemName)() {
+            let dataBool = false;
+            data = spreadsheet.serialize();
+            count = 0;
+
+            spreadsheetJson.spreadsheetInfo = [];
+            barcodeJson.barcodeInfo = [];
+
+            //取得量測條碼資料
+            $.each(data.sheets[0].data, function (i, item) {
+                let cell = item.cell;
+                let value = item.value;
+
+                if ((cell.length == 2 && cell.split('')[1] == "1") && (!cell.includes("A") && !cell.includes("B") && !cell.includes("C") && !cell.includes("D") && !cell.includes("E") && !cell.includes("F") && !cell.includes("G") && !cell.includes("H") && !cell.includes("I") && !cell.includes("J"))) {
+                    if (value == null) {
+                        //alert("量測資料填寫錯誤!!")
+                        //dataBool = true;
+                        return;
+                    }
+                    let cellHeader = cell.split('')[0];
+                    if (inputType@(itemName) == "Cavity") {
+                        if (value.toString().indexOf("-") == -1) {
+                            alert("此量測記錄輸入方式為【穴號】，格式參考如: 1-1 !!");
+                            return false;
+                        }
+                        else {
+                            //鏡片類穴號
+                            let cavity = value.toString().split("-")[0];
+
+                            let inputbarcodeJson =
+                            {
+                                "CellHeader": cellHeader,
+                                "Cavity": cavity,
+                                "FullCavityNo": value.toString()
+                            }
+
+                            barcodeJson.barcodeInfo.push(inputbarcodeJson);
+                        }
+                    }
+                    else if (inputType@(itemName) == "Lettering") {
+                        //普通條碼刻字狀況
+                        let lettering = "";
+                        let makeCount = "1";
+                        if (value.toString().indexOf("(") != -1) {
+                            lettering = value.toString().split("(")[0];
+                            makeCount = (parseInt(value.toString().split("(")[1].toString().split(")")[0]) + 1).toString();
+                        }
+                        else {
+                            lettering = item.value;
+                        }
+
+                        //搜尋原本資料是否有此刻號資訊
+                        let data = GetLetteringBarcodeData@(itemName)(lettering);
+                        let barcodeId;
+                        let barcodeNo;
+                        let letterValue;
+                        if (data.result.length <= 0) {
+                            alert("欄位【" + cell + "】刻字#" + lettering + "查無相關資料!!")
+                            dataBool = true;
+                            return false;
+                        }
+                        $.each(data.result, function (j, item2) {
+                            barcodeId = item2.BarcodeId;
+                            barcodeNo = item2.BarcodeNo;
+                            letterValue = item2.ItemValue;
+                        });
+
+                        let inputbarcodeJson =
+                        {
+                            "CellHeader": cellHeader,
+                            "BarcodeId": barcodeId,
+                            "BarcodeNo": barcodeNo,
+                            "MakeCount": makeCount,
+                            "LetterValue": letterValue
+                        }
+
+                        barcodeJson.barcodeInfo.push(inputbarcodeJson);
+                    }
+                    else if (inputType@(itemName) == "BarcodeNo") {
+                        //條碼模式
+                        let barcodeNo = "";
+                        let makeCount = "1";
+                        if (value.toString().indexOf("(") != -1) {
+                            barcodeNo = value.toString().split("(")[0];
+                            makeCount = (parseInt(value.toString().split("(")[1].toString().split(")")[0]) + 1).toString();
+                        }
+                        else {
+                            barcodeNo = item.value;
+                        }
+
+                        //搜尋原本資料是否有此條碼資訊
+                        let data = GetBarcodeData@(itemName)(barcodeNo);
+                        let barcodeId;
+                        let letterValue;
+                        if (data.result.length <= 0) {
+                            alert("欄位【" + cell + "】條碼" + barcodeNo + "查無相關資料!!")
+                            dataBool = true;
+                            return false;
+                        }
+                        $.each(data.result, function (j, item2) {
+                            barcodeId = item2.BarcodeId;
+                            letterValue = item2.ItemValue;
+                        });
+
+                        let inputbarcodeJson =
+                        {
+                            "CellHeader": cellHeader,
+                            "BarcodeId": barcodeId,
+                            "BarcodeNo": barcodeNo,
+                            "MakeCount": makeCount,
+                            "LetterValue": letterValue
+                        }
+
+                        barcodeJson.barcodeInfo.push(inputbarcodeJson);
+                    }
+                    else if (inputType@(itemName) == "LotNumber") {
+                        //批號類
+                        let lotNumber;
+                        let makeCount;
+                        if (value.toString().indexOf("-") != -1) {
+                            let lastDashIndex = value.toString().lastIndexOf('-');
+                            lotNumber = value.toString().substring(0, lastDashIndex);
+                            makeCount = value.toString().substring(lastDashIndex + 1);
+                        }
+                        else {
+                            lotNumber = value.toString();
+                            makeCount = "1";
+                        }
+
+                        let inputbarcodeJson =
+                        {
+                            "CellHeader": cellHeader,
+                            "LotNumber": lotNumber,
+                            "MakeCount": makeCount
+                        }
+
+                        barcodeJson.barcodeInfo.push(inputbarcodeJson);
+                    }
+                    else {
+                        alert("輸入方式錯誤!!");
+                        return false;
+                    }
+                }
+            });
+
+            $.each(barcodeJson.barcodeInfo, function (k, item3) {
+                $.each(data.sheets[0].data, function (i, item) {
+                    let cell = item.cell;
+
+                    if (cell.length == 2 && cell.split('')[1] == "1") {
+                        return;
+                    }
+
+                    //量測項目(編碼)
+                    if (cell.split('')[0] == "A") {
+                        let inputSpreadsheetInfo =
+                        {
+                            "CellHeader": item3.CellHeader,
+                            "BarcodeId": item3.BarcodeId,
+                            "BarcodeNo": item3.BarcodeNo,
+                            "MakeCount": item3.MakeCount,
+                            "Cavity": item3.Cavity,
+                            "Row": cell.split('A')[1],
+                            "ItemNo": item.value,
+                            "LetterValue": item3.LetterValue,
+                            "FullCavityNo": item3.FullCavityNo,
+                            "LotNumber": item3.LotNumber
+                        };
+
+                        spreadsheetJson.spreadsheetInfo.push(inputSpreadsheetInfo);
+                    }
+
+                    //量測項目(中文)
+                    if (cell.split('')[0] == "B") {
+                        let row = cell.split('B')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["QcItemName"] = item.value;
+                            }
+                        });
+                    }
+
+                    //量測備註
+                    if (cell.split('')[0] == "C") {
+                        let row = cell.split('C')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["QcItemDesc"] = item.value;
+                            }
+                        });
+                    }
+
+                    //量測機台
+                    if (cell.split('')[0] == "D") {
+                        let row = cell.split('D')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["QcMachine"] = item.value;
+                            }
+                        });
+                    }
+
+                    //設計值
+                    if (cell.split('')[0] == "E") {
+                        let row = cell.split('E')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["DesignValue"] = item.value;
+                            }
+                        });
+                    }
+
+                    //上限
+                    if (cell.split('')[0] == "F") {
+                        let row = cell.split('F')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["UpperTolerance"] = item.value;
+                            }
+                        });
+                    }
+
+                    //下限
+                    if (cell.split('')[0] == "G") {
+                        let row = cell.split('G')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["LowerTolerance"] = item.value;
+                            }
+                        });
+                    }
+
+                    //Z軸
+                    if (cell.split('')[0] == "H") {
+                        let row = cell.split('H')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["ZAxis"] = item.value;
+                            }
+                        });
+                    }
+
+                    //量測人員
+                    if (cell.split('')[0] == "I") {
+                        let row = cell.split('I')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["QcUserNo"] = item.value;
+                            }
+                        });
+                    }
+
+                    //量測工時
+                    if (cell.split('')[0] == "J") {
+                        let row = cell.split('J')[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.Row == row) {
+                                spreadsheetJson.spreadsheetInfo[j]["QcCycleTime"] = item.value;
+                            }
+                        });
+                    }
+
+                    //量測值
+                    if (cell.includes(item3.CellHeader)) {
+                        let row = cell.split(item3.CellHeader)[1];
+                        $.each(spreadsheetJson.spreadsheetInfo, function (j, item2) {
+                            if (item2.CellHeader == item3.CellHeader && item2.Row == row) {
+                                if (item.value == null) {
+                                    spreadsheetJson.spreadsheetInfo.splice(j, 1);
+                                    return false;
+                                }
+
+                                let value = item.value;
+                                if (isNaN(item.value) == false) {
+                                    value = Math.round(item.value * 100000) / 100000;
+                                }
+                                spreadsheetJson.spreadsheetInfo[j]["MeasureValue"] = value;
+                            }
+                        });
+                    }
+                });
+            });
+
+            let itemLength = spreadsheetJson.spreadsheetInfo.length / barcodeJson.barcodeInfo.length;
+            //spreadsheet.lock("A1:H1");
+            spreadsheet.setStyle("A2:A" + (itemLength + 1), { background: "#A9A9A9" });
+
+            return dataBool;
+        }
+
+        function CheckBarcodeAccurately@(itemName)() {
+            let accuratelyResult = "";
+            let barcodeList = [];
+            let lotNumberList = [];
+            $.each(barcodeJson.barcodeInfo, function (i, item) {
+                if (item.BarcodeNo == null) {
+                    return false;
+                }
+                else {
+                    if (barcodeList.indexOf(item.BarcodeNo) == -1) {
+                        barcodeList.push(item.BarcodeNo);
+                    }
+                }
+            });
+
+            $.each(barcodeJson.barcodeInfo, function (i, item) {
+                if (item.LotNumber == null) {
+                    return false;
+                }
+                else {
+                    if (lotNumberList.indexOf(item.LotNumber) == -1) {
+                        lotNumberList.push(item.LotNumber);
+                    }
+                }
+            });
+
+            if (barcodeList.length > 0) {
+                let targetUrl = "@Url.Action("GetBarcodeAccurately", "QcDataManagement")";
+                let postData = {
+                    "QcRecordId": qcRecordId@(itemName),
+                    "BarcodeListData": barcodeList.toString(),
+                    "QcType": qcType@(itemName),
+                    "MoProcessId": moProcessId@(itemName)
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status != "success") {
+                    accuratelyResult = data.msg;
+                }
+            }
+
+            if (lotNumberList.length > 0) {
+                let targetUrl = "@Url.Action("GetLotNumberAccurately", "QcDataManagement")";
+                let postData = {
+                    "QcRecordId": qcRecordId@(itemName),
+                    "LotNumberListData": lotNumberList.toString(),
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status != "success") {
+                    accuratelyResult = data.msg;
+                }
+            }
+
+            return accuratelyResult
+        }
+
+        function GetCheckQcMeasureData@(itemName)() {
+            let targetUrl = "@Url.Action("GetCheckQcMeasureData", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": qcRecordId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        checkQcMeasureData@(itemName) = item.CheckQcMeasureData;
+                        supportAqFlag@(itemName) = item.SupportAqFlag;
+                        supportProcessFlag@(itemName) = item.SupportProcessFlag;
+                    });
+                }
+            }
+        }
+
+        function DeleteTempSpreadsheet@(itemName)(qcRecordId) {
+            swal.fire({
+                titleText: "確認要刪除暫存數據嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteTempSpreadsheet", "QcDataManagement")";
+                    let postData = {
+                        "QcRecordId": qcRecordId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function exportXlsx() {
+            spreadsheet.export.xlsx(); // exports data into a .xlsx file
+        };
+
+        function exportJson() {
+            spreadsheet.export.json(); // exports data into a .json file
+        };
+
+        function Return@(itemName)() {
+            InitData@(itemName)();
+        }
+    </script>
+        )

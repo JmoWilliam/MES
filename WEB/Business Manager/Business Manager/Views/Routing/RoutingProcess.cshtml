@@ -1,0 +1,672 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "RoutingProcess";
+    string itemNameText = "途程製程維護";
+}
+
+@Html.Resource("css",
+    @<style>
+         .add-process-icon {
+             margin-right: 15px;
+             margin-top: 10px;
+             cursor: pointer;
+             color: coral;
+         }
+
+         .process-info {
+             border: 1px solid rgba(0,0,0,.125);
+             border-radius: 0.25rem;
+             padding: 10px;
+             box-shadow: 0 0 4px rgb(139 110 110 / 60%);
+             margin-bottom: 10px;
+         }
+
+         .tag-group {
+             display: inline-block;
+             background-color: #ebebeb;
+             border-radius: 4px;
+             cursor: text;
+             line-height: 1;
+             padding: 0.35rem 0.5rem;
+             margin: 0.15rem 0.375rem 0.15rem 0;
+             white-space: nowrap;
+             color: #0580ff;
+             font-weight: 700;
+         }
+    </style>
+                 )
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-12 col-sm-12 col-md-12 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();">
+                            <i class="fas fa-plus"></i>新增
+                        </a>
+                        <a class="btn btn-danger auth-excel-mode" href="javascript:PopExcel@(itemName)();">
+                            <i class="fas fa-file-excel"></i>批次EXCEL模式
+                        </a>
+                        <a class="btn btn-success confirm-routing" href="javascript:ConfirmRouting@(itemName)();">
+                            <i class="fas fa-check-double"></i>確認製程
+                        </a>
+                        <a class="btn btn-secondary unbind-confirm-routing" style="display: none;" href="javascript:UnbindConfirmRouting@(itemName)();">
+                            <i class="fas fa-ban"></i>取消確認製程
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">製程編號</th>
+                                        <th scope="col" style="min-width: 200px;">製程別名</th>
+                                        <th scope="col" style="min-width: 100px;">製程順序</th>
+                                        <th scope="col" style="min-width: 130px;">支援工程檢</th>
+                                        <th scope="col" style="min-width: 130px;">工程檢頻率</th>
+                                        <th scope="col" style="min-width: 130px;">是否支援包裝條碼</th>
+                                        <th scope="col" class="text-center" style="min-width: 150px;">是否顯示在流程卡</th>
+                                        <th scope="col" class="text-center" style="min-width: 150px;">必要過站</th>
+                                        <th class="text-center" scope="col" style="min-width: 250px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="RoutingProcessId" name="RoutingProcessId" value="-1" />
+                        <div class="add-group@(itemName)">
+                            <div class="form-group row">
+                                <label class="col-12 col-form-label" for="txtProcessId@(itemName)">製程資訊 <span class="text-danger">*</span></label>
+                                <div class="col-12">
+                                    <div class="input-group">
+                                        <input type="hidden" id="txtProcessId@(itemName)" name="txtProcessId@(itemName)" value="-1" />
+                                        <div class="input-group-append">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tag-class">
+                                <div class="process-info">
+                                    <span><code>製程資訊:</code></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="edit-group@(itemName)" style="display: none;">
+                            <div class="form-group row">
+                                <div class="col-12">
+                                    <label class="col-12 col-form-label" for="cboProcess@(itemName)">製程資訊 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboProcess@(itemName)" name="cboProcess@(itemName)">
+                                            <option value="">-- 請選擇製程資訊 --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-12">
+                                    <label class="col-12 col-form-label" for="txtProcessAlias@(itemName)">製程別名<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtProcessAlias@(itemName)" name="txtProcessAlias@(itemName)"
+                                               placeholder="請輸入製程別名"
+                                               data-msg-required="請輸入製程別名" data-rule-required="true"
+                                               data-msg-maxlength="必須少於 32 個字元" maxlength="32" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-12">
+                                    <label class="col-12 col-form-label" for="cboPackageFlag@(itemName)">是否支援包裝條碼<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select id="cboPackageFlag@(itemName)" class="form-control" required>
+                                            <option value="Y">是</option>
+                                            <option value="N" selected>否</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-12">
+                                    <label class="col-12 col-form-label" for="cboConsumeFlag@(itemName)">是否進行點膠<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select id="cboConsumeFlag@(itemName)" class="form-control" required>
+                                            <option value="Y">是</option>
+                                            <option value="N" selected>否</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-6">
+                                    <label class="col-12 col-form-label" for="cboProcessCheckStatus@(itemName)">是否支援工程檢<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select id="cboProcessCheckStatus@(itemName)" class="form-control" required>
+                                            <option value="Y" selected>是</option>
+                                            <option value="N">否</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="col-12 col-form-label" for="cboProcessCheckType@(itemName)">工程檢頻率<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select id="cboProcessCheckType@(itemName)" class="form-control">
+                                            <option value="">請選擇</option>
+                                            <option value="1">全檢</option>
+                                            <option value="2" selected>抽檢</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-6">
+                                    <label class="col-12 col-form-label">必要過站</label>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--checkbox">
+                                            是
+                                            <input type="checkbox" id="cbxNecessityStatus@(itemName)Y" name="cbxNecessityStatus@(itemName)" value="Y" checked />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="col-12 col-form-label">是否顯示在流程卡上</label>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--checkbox">
+                                            是
+                                            <input type="checkbox" id="cbxDisplayStatus@(itemName)Y" name="cbxDisplayStatus@(itemName)" value="Y" checked />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewProcess")
+@Html.Partial("ViewRoutingProcessItem")
+@Html.Partial("ViewRoutingProcessExcel")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let routingId@(itemName);
+
+        let processJson =
+        {
+            processInfo: []
+        };
+
+        $(function () {
+            $("#cboProcessCheckStatus@(itemName)").change(function () {
+                let processCheckStatus = $("#cboProcessCheckStatus@(itemName)").val();
+                if (processCheckStatus == "Y") {
+                    $("#cboProcessCheckType@(itemName)").prop("disabled", false);
+                    $("#cboProcessCheckType@(itemName)").prop("required", true);
+                    $("#cboProcessCheckType@(itemName)").val("2");
+                }
+                else {
+                    $("#cboProcessCheckType@(itemName)").prop("disabled", true);
+                    $("#cboProcessCheckType@(itemName)").prop("required", false);
+                    $("#cboProcessCheckType@(itemName)").val("");
+                }
+            });
+        });
+
+        function Expand@(itemName)(routingId) {
+            if (routingId > 0) {
+                routingId@(itemName) = routingId;
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+                ReturnRoutingItem();
+            } else {
+                alert("途程製程資料錯誤，請重新操作!", "alert");
+            }
+        }
+
+        function Query@(itemName)(routingId) {
+            routingId@(itemName) = routingId;
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            $(".confirm-routing").show();
+            $(".unbind-confirm-routing").hide();
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetRoutingProcess", "Routing")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "RoutingId": routingId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        if (item.RoutingConfirm == "N") {
+                            $(".confirm-routing").show();
+                            $(".unbind-confirm-routing").hide();
+                        }
+                        else {
+                            $(".confirm-routing").hide();
+                            $(".unbind-confirm-routing").show();
+                        }
+
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr id="${item.RoutingProcessId}">
+                                        <td scope="col" style="min-width: 150px;" class="text-center active-content auth-sort">
+                                            <a class="active-link sort-handle" href="javascript:void(0);"><i class="fas fa-arrows-alt"></i><span>製程順序</span></a>
+                                        </td>
+                                        <td class="un-auth auth-sort">${_row}</td>';
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessNo}" style="min-width: 150px;">${item.ProcessNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="min-width: 200px;">${item.ProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SortNumber}" style="min-width: 100px;">${item.SortNumber}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessCheckStatus == `Y` ? `是` : `否`}" style="min-width: 130px;">${item.ProcessCheckStatus == `Y` ? `是` : `否`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessCheckType != null ? (item.ProcessCheckType == `1` ? `全檢` : `抽檢`) : ``}" style="min-width: 130px;">${item.ProcessCheckType != null ? (item.ProcessCheckType == `1` ? `全檢` : `抽檢`) : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PackageFlag == `Y` ? `是` : `否`}" style="min-width: 130px;">${item.PackageFlag == `Y` ? `是` : `否`}</td>
+                                        ${JudgeDisplayStatus@(itemName)(`${item.RoutingConfirm}`, `${item.RoutingProcessId}`, `${item.DisplayStatus}`)}
+                                        ${JudgeNecessityStatus@(itemName)(`${item.RoutingConfirm}`, `${item.RoutingProcessId}`, `${item.NecessityStatus}`)}
+                                        <td class="text-center active-content" scope="col" style="min-width: 250px;">
+                                            <!--編輯-->
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.RoutingProcessId}');" style="">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <!--刪除-->
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.RoutingProcessId}');" style="">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                            <!--設定途程製程屬性-->
+                                            <a class="active-link auth-update" href="javascript:PopViewRoutingProcessItem('${item.RoutingProcessId}', '${item.ProcessAlias}');">
+                                                <i class="fas fa-cog"></i><span>設定製程屬性</span>
+                                            </a>
+                                        </td>
+                                    </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+                function JudgeDisplayStatus@(itemName)(routingConfirm, routingProcessId, displayStatus){
+                    let innerHtml = "";
+                    if (routingConfirm == "N") {
+                        innerHtml += `<td class="text-center auth-status-switch">
+                                        <input type="checkbox" name="chkDisplayStatus@(itemName)" data-routing-process-id="${routingProcessId}" ${displayStatus == `Y` ? `checked` : ''} />
+                                      </td>
+                                      <td class="text-center un-auth auth-status-switch">${StatusName(`Boolean`, `${displayStatus}`)}</td>`;
+                    }
+                    else {
+                        innerHtml += `<td class="text-center">${StatusName(`Boolean`, `${displayStatus}`)}</td>`;
+                    }
+                    return innerHtml;
+                }
+
+                function JudgeNecessityStatus@(itemName)(routingConfirm, routingProcessId, necessityStatus){
+                    let innerHtml = "";
+                    if (routingConfirm == "N") {
+                        innerHtml += `<td class="text-center auth-necessity-status">
+                                        <input type="checkbox" name="chkNecessityStatus@(itemName)" data-routing-process-id="${routingProcessId}" ${necessityStatus == `Y` ? `checked` : ''} />
+                                      </td>
+                                      <td class="text-center un-auth auth-necessity-status">${StatusName(`Boolean`, `${necessityStatus}`)}</td>`;
+                    }
+                    else {
+                        innerHtml += `<td class="text-center">${StatusName(`Boolean`, `${necessityStatus}`)}</td>`;
+                    }
+                    return innerHtml;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[name='chkNecessityStatus@(itemName)']").bootstrapToggle({
+                on: "是",
+                off: "否",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkDisplayStatus@(itemName)']").bootstrapToggle({
+                on: "是",
+                off: "否",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkNecessityStatus@(itemName)'][data-routing-process-id]").change(NecessityStatusSwitch@(itemName));
+            $("input[name='chkDisplayStatus@(itemName)'][data-routing-process-id]").change(DisplayStatusSwitch@(itemName));
+
+            ComboBoxs.Default("#cboProcess@(itemName)", "@Url.Action("GetProcess", "MesBasicInformation")", {}, "", "NA", "", "ProcessName", "ProcessId");
+            if (!isMobile) {
+                $("#cboProcess@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            $("#tblData@(itemName) tbody").sortable({
+                cancel: ".disabled-sort",
+                handle: ".sort-handle",
+                update: function (event, ui) {
+                    let targetUrl = "@Url.Action("UpdateRoutingProcessSort", "Routing")";
+                    let postData = {
+                        "RoutingProcessSort": $(this).sortable("toArray", { attribute: 'id' }).join()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)(routingId@(itemName));
+                    }
+                    else {
+                        return false;
+                    }
+                }
+            });
+        }
+
+        function Edit@(itemName)(routingProcessId) {
+            $("#RoutingProcessId").val(routingProcessId ? routingProcessId : 0);
+            if (routingProcessId > 0) {
+                Switch("#editData@(itemName), .edit-group@(itemName)", "#listData@(itemName), .add-group@(itemName)");
+                let targetUrl = "@Url.Action("GetRoutingProcess", "Routing")";
+                let postData = {
+                    "RoutingProcessId": routingProcessId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#cboProcess@(itemName)").val(item.ProcessId).trigger("change");
+                        $("#txtProcessAlias@(itemName)").val(item.ProcessAlias);
+                        $("#cboPackageFlag@(itemName)").val(item.PackageFlag);
+                        $("#cboConsumeFlag@(itemName)").val(item.ConsumeFlag);
+
+                        if (item.NecessityStatus == "N") $("#cbxNecessityStatus@(itemName)Y").prop("checked", false);
+                        if (item.DisplayStatus == "N") $("#cbxDisplayStatus@(itemName)Y").prop("checked", false);
+                        $("#cboProcessCheckStatus@(itemName)").val(item.ProcessCheckStatus);
+                        if (item.ProcessCheckStatus == "N") {
+                            $("#cboProcessCheckType@(itemName)").prop("disabled", true);
+                            $("#cboProcessCheckType@(itemName)").prop("required", false);
+                            $("#cboProcessCheckType@(itemName)").val("");
+                        }
+                        else {
+                            $("#cboProcessCheckType@(itemName)").prop("disabled", false);
+                            $("#cboProcessCheckType@(itemName)").prop("required", true);
+                            $("#cboProcessCheckType@(itemName)").val(item.ProcessCheckType);
+                        }
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+            else {
+                Switch("#editData@(itemName), .add-group@(itemName)", "#listData@(itemName), .edit-group@(itemName)");
+            }
+
+            let popConfig = {
+                targetSelector: "#txtProcessId@(itemName)",
+                popFunction: "PopViewProcess",
+                objectProcessId: "#txtProcessId@(itemName)",
+                objectProcess: "#txtProcess@(itemName)",
+                objectModeId: ProdMode
+            };
+            InitPopView(popConfig);
+        }
+
+        function NecessityStatusSwitch@(itemName)() {
+            let routingProcessId = $(this).data("routing-process-id");
+
+            let targetUrl = "@Url.Action("UpdateNecessityStatus", "Routing")";
+            let postData = {
+                "RoutingProcessId": routingProcessId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Query@(itemName)(routingId@(itemName));
+            }
+        }
+
+        function DisplayStatusSwitch@(itemName)() {
+            var routingProcessId = $(this).data("routing-process-id");
+
+            let targetUrl = "@Url.Action("UpdateDisplayStatus", "Routing")";
+            let postData = {
+                "RoutingProcessId": routingProcessId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Query@(itemName)(routingId@(itemName));
+            }
+        }
+
+        function Save@(itemName)() {
+            let routingProcessId = parseInt($("#RoutingProcessId").val());
+            if (routingProcessId <= 0) {
+                if (processJson.processInfo.length > 0) {
+                    let targetUrl = "@Url.Action("AddRoutingProcess", "Routing")";
+                    let postData = {
+                        "RoutingId": routingId@(itemName),
+                        "ProcessData": JSON.stringify(processJson)
+                        };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+                else {
+                    alert("至少需要選擇一個站別!");
+                }
+            } else {
+                if ($(objForm@(itemName)).valid()) {
+                    let targetUrl = "@Url.Action("UpdateRoutingProcess", "Routing")";
+                    let postData = {
+                        "RoutingProcessId": routingProcessId,
+                        "RoutingId": routingId@(itemName),
+                        "ProcessId": $("#cboProcess@(itemName)").val(),
+                        "ProcessAlias": $("#txtProcessAlias@(itemName)").val(),
+                        "NecessityStatus": $("#cbxNecessityStatus@(itemName)Y").prop("checked") ? 'Y' : 'N',
+                        "DisplayStatus": $("#cbxDisplayStatus@(itemName)Y").prop("checked") ? 'Y' : 'N',
+                        "ProcessCheckStatus": $("#cboProcessCheckStatus@(itemName)").val(),
+                        "ProcessCheckType": $("#cboProcessCheckType@(itemName)").val(),
+                        "PackageFlag": $("#cboPackageFlag@(itemName)").val(),
+                        "ConsumeFlag": $("#cboConsumeFlag@(itemName)").val()
+
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function AddDefaultRoutingQcitem3() {//routingIdRoutingProcess
+            let targetUrl = "@Url.Action("AddDefaultRoutingQcitem3", "MesBasicInformation")";
+            let postData = {
+                "RoutingId": routingId@(itemName),
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (result) {
+                Query@(itemName)(routingId@(itemName));
+            }
+        
+        }
+
+        function Delete@(itemName)(RoutingProcessId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteRoutingProcess", "Routing")";
+                    let postData = {
+                        "RoutingProcessId": RoutingProcessId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)(routingId@(itemName));
+                    }
+                }
+            });
+        }
+
+        function DeleteTag@(itemName)(tagId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.each(processJson.processInfo, function (i, item) {
+                        let tempNumber = item.TempNumber;
+                        if (tempNumber == tagId) {
+                            processJson.processInfo.splice(i,1);
+                            return false;
+                        }
+                    });
+                    ResetprocessViewProcess();
+                }
+            });
+        }
+
+        function ConfirmRouting@(itemName)() {
+            swal.fire({
+                titleText: "確認途程製程",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("ConfirmRouting", "Routing")";
+                    let postData = {
+                        "RoutingId": routingId@(itemName)
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        //AddDefaultRoutingQcitem3();
+                        Query@(itemName)(routingId@(itemName));
+                    }
+                }
+            });
+        }
+
+        function UnbindConfirmRouting@(itemName)() {
+            swal.fire({
+                titleText: "解除途程製程確認狀態",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UnbindConfirmRouting", "Routing")";
+                    let postData = {
+                        "RoutingId": routingId@(itemName)
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)(routingId@(itemName));
+                    }
+                }
+            });
+        }
+
+        function PopExcel@(itemName)() {
+            PopViewRoutingProcessExcel(routingId@(itemName));
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            ResetForm(objForm@(itemName));
+            processJson.processInfo = [];
+            $(".process-info").empty();
+            Query@(itemName)(routingId@(itemName));
+        }
+    </script>
+                )

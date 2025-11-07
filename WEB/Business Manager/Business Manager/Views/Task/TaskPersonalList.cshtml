@@ -1,0 +1,321 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TaskPersonalList";
+    string itemNameText = "個人任務進度管理";
+    string authority = ViewBag.authority;
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+
+    ViewBag.Title = itemNameText;
+}
+
+
+
+@Html.Resource("css",
+    @<style>
+        .body {
+            transition: none;
+        }
+
+        .statusI {
+            background-color: #eae9fc;
+        }
+
+        .statusB {
+            background-color: #e9f5fc;
+        }
+
+        .statusT {
+            background-color: #f7eef7;
+        }
+
+        .statusC {
+            background-color: #f0f7ee;
+        }
+
+        .master td, .general td {
+            white-space: nowrap;
+        }
+
+        .master .sideBar {
+            font-weight: 600;
+            font-size: 18px;
+            text-align: center;
+            color: #333;
+            border: none;
+            border-radius: 10px 10px 0 0;
+            background-color: #dcf;
+            caption-side: top;
+            padding: 5px 0;
+            vertical-align: middle;
+            width: 100%;
+        }
+
+        .master .openBar {
+            border-radius: 10px;
+        }
+
+        .general .sideBar {
+            font-weight: 600;
+            font-size: 18px;
+            text-align: center;
+            color: #333;
+            border: none;
+            border-radius: 10px 10px 0 0;
+            background-color: #ccebff;
+            caption-side: top;
+            padding: 5px 0;
+            vertical-align: middle;
+            width: 100%;
+        }
+
+        .general .openBar {
+            border-radius: 10px;
+        }
+        </style>)
+
+<div class="row">
+    <!--主要篩選列表-->
+    <div class="col-8 col-sm-8 col-md-8 mb-3">
+        <form autocomplete="off" id="queryForm@(itemName)">
+            <fieldset>
+                <div class="form-row align-items-center">
+                    <div class="col-auto">
+                        <input type="text" class="form-control" id="txtTaskNameQ@(itemName)" name="txtTaskNameQ@(itemName)" placeholder="請輸入任務名稱" />
+                    </div>
+                    <div class="col-auto">
+                        <select class="form-control" id="cboTaskStatusQ@(itemName)" name="cboTaskStatusQ@(itemName)"></select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-primary" onclick="InitData@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+
+    <div class="col-4 col-sm-4 col-md-4 mb-3 text-right">
+        <button type="button" class="btn btn-success auth-add" onclick="EditDataViewPersonalTask(-1)"><i class="far fa-plus"></i>新增個人任務</button>
+    </div>
+
+    <div class="col-12 col-sm-12 col-md-12 mb-3">
+        <div id="listData@(itemName)" class="row">
+            <div class="col-12">
+                <div class="table-custom master">
+                    <div class="sideBar" data-toggle="tooltip" title="收折">主任務<i class="fas fa-caret-down"></i></div>
+                    <div class="tableBox active">
+                        <table class="table table-bordered table-stack">
+                            <thead>
+                                <tr style="background-color:#d0d0d0; color:#333;">
+                                    <th scope="col" style="min-width: 75px;">#</th>
+                                    <th scope="col" style="min-width: 125px;">任務名稱</th>
+                                    @*<th scope="col" style="min-width: 200px;">任務結構</th>*@
+                                    <th scope="col" class="text-center" style="min-width: 125px;">開始時間</th>
+                                    <th scope="col" class="text-center" style="min-width: 125px;">結束時間</th>
+                                    <th scope="col" class="text-left" style="min-width: 125px;">任務成員</th>
+                                    <th scope="col" class="text-center" style="min-width: 125px;">任務狀態</th>
+                                    <th scope="col" class="text-left" style="min-width: 125px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="data-checklist@(itemName)"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="table-custom general">
+                    <div class="sideBar openBar" data-toggle="tooltip" title="展開">附加任務<i class="fas fa-caret-up"></i></div>
+                    <div class="tableBox" style="display: none;">
+                        <table class="table table-bordered table-stack">
+                            <thead>
+                                <tr style="background-color:#d0d0d0; color:#333;">
+                                    <th scope="col" style="min-width: 75px;">#</th>
+                                    <th scope="col" style="min-width: 125px;">任務名稱</th>
+                                    @*<th scope="col" style="min-width: 200px;">任務結構</th>*@
+                                    <th scope="col" class="text-center" style="min-width: 125px;">開始時間</th>
+                                    <th scope="col" class="text-center" style="min-width: 125px;">結束時間</th>
+                                    <th scope="col" class="text-left" style="min-width: 125px;">任務成員</th>
+                                    <th scope="col" class="text-center" style="min-width: 125px;">任務狀態</th>
+                                    <th scope="col" class="text-center col-sticky" style="min-width: 125px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="data-checklist@(itemName)"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+
+        let Tasks@(itemName) = new TaskControl@(itemName)();
+
+        function Expand@(itemName)() {
+
+            ComboBoxs.WithText("#cboTaskStatusQ@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "ProjectTask.TaskStatus" }, "", "CHOOSE", "全部", "StatusName", "StatusNo");
+
+            if (!isMobile) {
+                $("#cboTaskStatusQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+
+            $(`#txtTaskNameQ@(itemName)`).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+
+            Tasks@(itemName).Initialize@(itemName)(`#listData@(itemName)`);
+
+            let tempHtml = ``;
+            let innerHtml = ``;
+            let innerHtml2 = ``;
+
+            let targetUrl = "@Url.Action("GetPersonalTaskChecklist", "Task")";
+            let postData = {
+                "TaskName": $("#txtTaskNameQ@(itemName)").val(),
+                "TaskStatus": $("#cboTaskStatusQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            //UserRole
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+
+                        tempHtml = `<tr class=status${item.TaskStatus}>
+                                        <td class="ellipsis" style="max-width: 75px;"><span class="stack-title">#</span>${i + 1}.</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TaskName}" style="max-width: 175px;"><span class="stack-title">任務名稱</span>${item.TaskName}</td>
+                                        <td class="ellipsis text-center" data-toggle="tooltip" title="${item.PlannedStart}" style="max-width: 125px;"><span class="stack-title">開始時間</span>${item.PlannedStart}</td>
+                                        <td class="ellipsis text-center" data-toggle="tooltip" title="${item.PlannedEnd}" style="max-width: 125px;"><span class="stack-title">結束時間</span>${item.PlannedEnd}</td>
+                                        <td class="ellipsis text-left" data-toggle="tooltip" title="${item.TaskUser}" style="max-width: 175px;"><span class="stack-title">任務成員</span><i class="fas fa-users"></i> ${item.TaskUser}</td>
+                                        <td class="ellipsis text-center" style="max-width: 125px;"><span class="stack-title">任務狀態</span>${StatusIcon@(itemName)(item.TaskStatus)}${item.TaskStatusName}</td>
+                                        <td class="text-center active-content col-sticky">
+                                            <span class="stack-title">操作</span>
+                                            <a class="active-link" href="javascript:InitDataViewPersonalTask(${item.PersonalTaskId});"><i class="fas fa-info-circle"></i><span>任務資訊</span></a>
+                                            <a class="active-link" href="javascript:InitDataViewPersonalTaskReply(${item.PersonalTaskId});"><i class="far fa-comment-dots"></i><span>任務回報</span></a>
+                                        </td>
+                                    </tr>`;
+
+                        switch (item.UserRole) {
+                            case `Master`:
+                                innerHtml += tempHtml;
+                                break;
+                            case `General`:
+                                innerHtml2 += tempHtml;
+                                break;
+                        }
+                    });
+                }
+
+                tempHtml = `<tr>
+                            　<td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                            　<i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                            　</td>
+                            </tr>`;
+
+                if (innerHtml.length <= 0) innerHtml = tempHtml;
+                if (innerHtml2.length <= 0) innerHtml2 = tempHtml;
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $(`.master .data-checklist@(itemName)`).html(innerHtml);
+            $(`.general .data-checklist@(itemName)`).html(innerHtml2);
+            TableComponentInit();
+
+            function TaskList@(itemName)(source) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    for (let x = 0; x < json.data.length; x++) {
+                        html += ``;
+                    }
+                } else {
+                    html += ``;
+                }
+
+                return html;
+            }
+
+            function StatusIcon@(itemName)(taskStatus) {
+                let output = ``;
+
+                switch (taskStatus) {
+                    case "B":
+                        output = `<span style="text-align: center; font-size: 18px; color: #d0d0d0; line-height: 0;">
+                                    <i class="far fa-stop-circle"></i>
+                                  </span>`;
+                        break;
+                    case "I":
+                        output = `<span style="text-align: center; font-size: 18px; color: #ffa700; line-height: 0;">
+                                    <i class="far fa-play-circle"></i>
+                                  </span>`;
+                        break;
+                    case "T":
+                        break;
+                    case "C":
+                        output = `<span style="text-align: center; font-size: 18px; color: #228b22; line-height: 0;">
+                                    <i class="far fa-flag-checkered"></i>
+                                  </span>`;
+                        break;
+                }
+
+                return output;
+            }
+        }
+
+        function TaskControl@(itemName)() {
+            addMethod(this, "Initialize@(itemName)", function (targetSelector) {
+
+                let listTypes = [`master`, `general`];
+
+                $.each(listTypes, function (i, selector) {
+                    $(`${targetSelector} .${selector} .sideBar`).off('click').on('click', function () {
+                        let eventElement = $(this);
+                        let targetElement = $(`${targetSelector} .${selector} .tableBox`);
+
+                        if (targetElement.hasClass('active')) {
+                            targetElement.slideUp(500, function () {
+                                $(this).removeClass('active');
+                                eventElement.addClass('openBar').prop(`title`, `展開`);
+                            });
+                            eventElement.find('i').prop('class', 'fas fa-caret-up');
+                        }
+                        else {
+                            targetElement.slideDown(500, function () {
+                                $(this).addClass('active');
+                            });
+                            eventElement.removeClass('openBar').prop(`title`, `收折`);
+                            eventElement.find('i').prop('class', 'fas fa-caret-down');
+                        }
+                    });
+                });
+
+            });
+        }
+
+</script>
+)

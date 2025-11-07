@@ -1,0 +1,1006 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProjectDetail";
+    string itemNameText = "專案詳細資料管理";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+
+        .modal-title {
+            font-weight: 600;
+        }
+    </style>
+                                )
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        @*<a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>*@
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col">專案類型</th>
+                                        <th scope="col">版本</th>
+                                        <th scope="col">預算費用</th>
+                                        <th scope="col">預算費用(本幣)</th>
+                                        <th scope="col">狀態</th>
+                                        <th scope="col">註解</th>
+                                        <th class="text-center" scope="col" style="min-width: 250px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Edit Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="modalEdit@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="desEditTitle" class="modal-title">新增預算資料</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="ProjectDetailId@(itemName)" value="0" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboProjectType@(itemName)">專案類型<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboProjectType@(itemName)"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboCurrency@(itemName)">幣別<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboCurrency@(itemName)" name="cboCurrency@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtExchangeRate@(itemName)">匯率<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" step="any" min="0" max="99999" class="form-control" id="txtExchangeRate@(itemName)" name="txtExchangeRate@(itemName)"
+                                               value="1"
+                                               placeholder="請輸入匯率"
+                                               data-msg-required="請輸入匯率" data-rule-required="true" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label">預算費用<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtBudgetAmount@(itemName)" name="txtBudgetAmount@(itemName)"
+                                               oninput="EditBudgetAmount@(itemName)()"
+                                               placeholder="請輸入預算費用">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label">預算費用(本幣)<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtLocalBudgetAmount@(itemName)" name="txtLocalBudgetAmount@(itemName)"
+                                               placeholder="請輸入預算費用(本幣)" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">備註</label>
+                            <div class="col-12">
+                                <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                          placeholder="請輸入備註"
+                                          data-msg-required="請輸入備註"
+                                          data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">附件檔案</label>
+                            <div class="col-12">
+                                <input type="file" id="fileProjectFile@(itemName)" name="fileProjectFile@(itemName)" multiple />
+                                <input type="hidden" id="txtProjectFile@(itemName)" name="txtProjectFile@(itemName)" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-success" href="javascript: Save@(itemName)();"><i class="fas fa-check"></i>儲存</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--ProjectBudgetChangeLog Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="modalLog@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">專案預算變更紀錄</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="table-custom">
+                    <table class="table table-bordered table-striped table-sticky" id="tblLogData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="max-width: 75px;">#</th>
+                                <th scope="col">變更版本</th>
+                                <th scope="col">變更費用</th>
+                                <th scope="col">變更費用(本幣)</th>
+                                <th scope="col">變更時間</th>
+                                <th scope="col">變更備註</th>
+                                <th scope="col">變更人員</th>
+                                <th scope="col">簽核狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--ProjectBudgetChangeEdit Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="modalChangeEdit@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="desEditTitle" class="modal-title">變更預算資料</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="ChangeProjectDetailId@(itemName)" value="0" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboProjectType@(itemName)">專案類型<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input class="form-control" id="txtChangeProjectType@(itemName)" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboChangeCurrency@(itemName)">幣別<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboChangeCurrency@(itemName)" name="cboChangeCurrency@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtChangeExchangeRate@(itemName)">匯率<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" step="any" min="0" max="99999" class="form-control" id="txtChangeExchangeRate@(itemName)" name="txtChangeExchangeRate@(itemName)"
+                                               value="1"
+                                               placeholder="請輸入匯率"
+                                               data-msg-required="請輸入匯率" data-rule-required="true" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label">預算費用<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtChangeBudgetAmount@(itemName)" name="txtChangeBudgetAmount@(itemName)"
+                                               oninput="EditChangeBudgetAmount@(itemName)()"
+                                               placeholder="請輸入預算費用">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label">預算費用(本幣)<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtChangeLocalBudgetAmount@(itemName)" name="txtChangeLocalBudgetAmount@(itemName)"
+                                               placeholder="請輸入預算費用(本幣)" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">備註</label>
+                            <div class="col-12">
+                                <textarea class="form-control" id="txtChangeRemark@(itemName)" name="txtChangeRemark@(itemName)" rows="2"
+                                          placeholder="請輸入備註"
+                                          data-msg-required="請輸入備註"
+                                          data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">附件檔案</label>
+                            <div class="col-12">
+                                <input type="file" id="fileChangeProjectFile@(itemName)" name="fileChangeProjectFile@(itemName)" multiple />
+                                <input type="hidden" id="txtChangeProjectFile@(itemName)" name="txtChangeProjectFile@(itemName)" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-success" href="javascript: SaveChange@(itemName)();"><i class="fas fa-check"></i>儲存</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+
+        let projectId@(itemName);
+
+        let localCurrency@(itemName);
+
+        function Expand@(itemName)(projectId) {
+            if (projectId > 0) {
+                projectId@(itemName) = projectId;
+                $(".advanced-block").slideDown("slow");
+
+                GetErpLocalCurrency@(itemName)();
+
+                Return@(itemName)();
+
+                $("#cboCurrency@(itemName)").select2({
+                    width: "100%"
+                });
+
+                $("#cboChangeCurrency@(itemName)").select2({
+                    width: "100%"
+                });
+
+                initListener@(itemName)();
+            }
+            else {
+                alert("專案展開詳細資料錯誤，請重新操作!", "alert");
+            }
+        }
+
+        function initListener@(itemName)() {
+            $("#cboCurrency@(itemName)").change(function () {
+                //匯率
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "ExchangeRate",
+                    "Condition": $("#cboCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtExchangeRate@(itemName)").val(item.ExchangeRateName)
+                    });
+                }
+                else {
+                    alert(data.msg);
+                }
+
+                let exchangeRate = $("#txtExchangeRate@(itemName)").val();
+                let budgetAmount = $("#txtBudgetAmount@(itemName)").val();
+
+                let UnitDecimal = -1;
+                let TotalDecimal = -1;
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "CurrencyDecimal",
+                    "Condition": $("#cboCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        UnitDecimal = item.UnitDecimal;
+                        TotalDecimal = item.TotalDecimal;
+                    });
+                }
+
+                let UnitDecimalNumber = "1";
+                let TotalDecimalNumber = "1";
+
+                for (var i = 1; i <= parseInt(UnitDecimal); i++) {
+                    UnitDecimalNumber += "0";
+                }
+
+                for (var i = 1; i <= parseInt(TotalDecimal); i++) {
+                    TotalDecimalNumber += "0";
+                }
+
+                //預算金額
+                $("#txtBudgetAmount@(itemName)").val(Math.round(budgetAmount * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+
+                //預算金額(本幣)
+                $("#txtLocalBudgetAmount@(itemName)").val(Math.round(budgetAmount * exchangeRate * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+            });
+
+            $("#cboChangeCurrency@(itemName)").change(function () {
+                //匯率
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "ExchangeRate",
+                    "Condition": $("#cboChangeCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtChangeExchangeRate@(itemName)").val(item.ExchangeRateName)
+                    });
+                }
+                else {
+                    alert(data.msg);
+                }
+
+                let exchangeRate = $("#txtChangeExchangeRate@(itemName)").val();
+                let budgetAmount = $("#txtChangeBudgetAmount@(itemName)").val();
+
+                let UnitDecimal = -1;
+                let TotalDecimal = -1;
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "CurrencyDecimal",
+                    "Condition": $("#cboChangeCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        UnitDecimal = item.UnitDecimal;
+                        TotalDecimal = item.TotalDecimal;
+                    });
+                }
+
+                let UnitDecimalNumber = "1";
+                let TotalDecimalNumber = "1";
+
+                for (var i = 1; i <= parseInt(UnitDecimal); i++) {
+                    UnitDecimalNumber += "0";
+                }
+
+                for (var i = 1; i <= parseInt(TotalDecimal); i++) {
+                    TotalDecimalNumber += "0";
+                }
+
+                //預算金額
+                $("#txtChangeBudgetAmount@(itemName)").val(Math.round(budgetAmount * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+
+                //預算金額(本幣)
+                $("#txtChangeLocalBudgetAmount@(itemName)").val(Math.round(budgetAmount * exchangeRate * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetProjectDetail", "ScmBasicInformation")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ProjectId": projectId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProjectTypeName}">${item.ProjectTypeName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Edition}">${item.Edition} <a href="javascript: OpenLogModal@(itemName)('${item.ProjectDetailId}')"><i class="fas fa-info-circle"></i></a></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BudgetAmount.toLocaleString(`en`)} ${item.Currency}">${item.BudgetAmount.toLocaleString(`en`)} <code>${item.Currency}</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LocalBudgetAmount.toLocaleString(`en`)} ${localCurrency@(itemName)}">${item.LocalBudgetAmount.toLocaleString(`en`)} <code>${localCurrency@(itemName)}</code></td>
+                                        ${JdugeStatus@(itemName)(`${item.Status}`, `${item.StatusName}`)}
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}">${item.Remark}</td>
+                                        <td class="text-center active-content col-sticky" style="min-width: 250px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.ProjectDetailId}');"><i class="fas fa-edit"></i></a>
+                                            ${item.Status == `N` || item.Status == `E` ? `<a class="active-link auth-transfer" href="javascript:TransferBpm@(itemName)('${item.ProjectDetailId}');"><i class="far fa-exchange-alt"></i> 拋轉BPM</a>` : ``}
+                                            ${item.Status == `Y` || item.Status == `K` ? `<a class="active-link auth-transfer" href="javascript:EditChange@(itemName)('${item.ProjectDetailId}');"><i class="fas fa-sync-alt"></i> 變更預算</a>` : ``}
+                                            ${item.Status == `N` ? `<a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.ProjectDetailId}');"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                            ${item.Status == `K` ? `<a class="active-link auth-update" href="javascript:CancelChange@(itemName)('${item.ProjectDetailId}');"><i class="fas fa-arrow-circle-up"></i> 取消變更</a>` : ``}
+                                            ${item.Status == `P` ? `<a class="active-link auth-confirm" href="javascript:TempConfirm@(itemName)('${item.ProjectDetailId}');"><i class="fas fa-check-circle"></i> 手動簽核完成</a>` : ``}
+                                            ${item.Status == `C` ? `<a class="active-link auth-confirm" href="javascript:TempChangeConfirm@(itemName)('${item.LogId}');"><i class="fas fa-check-circle"></i> 手動簽核完成</a>` : ``}
+                                        </td>
+                                      </tr>`;
+
+                        function JdugeStatus@(itemName)(status, statusName) {
+                            let innerHtml = '';
+                            if (status == "P") {
+                                //BPM簽核流程
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: #3c66df; font-weight: 600;" class="far fa-money-check-edit"></i> ${statusName}</td>`;
+                            }
+                            else if (status == "Y") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: green; font-weight: 600;" class="fad fa-badge-check"></i> ${statusName}</td>`;
+                            }
+                            else if (status == "N") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: brown;" class="fad fa-flag-checkered"></i> ${statusName}</td>`;
+                            }
+                            else if (status == "E") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: cornflowerblue;" class="fas fa-user-edit"></i> ${statusName}</td>`;
+                            }
+                            else if (status == "C") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: #78716e;" class="fas fa-exclamation-circle"></i> ${statusName}</td>`;
+                            }
+                            else if (status == "K") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: cornflowerblue;" class="fas fa-user-edit"></i> ${statusName}</td>`;
+                            }
+                            else {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;">${statusName}</td>`;
+                            }
+                            return innerHtml;
+                        }
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(projectDetailId) {
+            $("#ProjectDetailId@(itemName)").val(projectDetailId ? projectDetailId : 0);
+
+            $("#modalEdit@(itemName)").modal("show");
+
+            $("#txtBudgetAmount@(itemName)").val("");
+            $("#txtRemark@(itemName)").val("");
+            $("#txtProjectFile@(itemName)").val("");
+
+            ComboBoxs.Default("#cboProjectType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "ProjectDetail.ProjectType" }, "1", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.WithText("#cboCurrency@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Currency" }, "", "NA", "", "CurrencyName", "Currency");
+
+            GetErpLocalCurrency@(itemName)();
+
+            if (projectDetailId > 0) {
+                let targetUrl = "@Url.Action("GetProjectDetail", "ScmBasicInformation")";
+
+                let postData = {
+                    "ProjectDetailId": projectDetailId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            $("#cboProjectType@(itemName)").val(item.ProjectType);
+                            $("#cboCurrency@(itemName)").val(item.Currency);
+                            $("#txtExchangeRate@(itemName)").val(item.ExchangeRate);
+                            $("#txtBudgetAmount@(itemName)").val(item.BudgetAmount);
+                            $("#txtLocalBudgetAmount@(itemName)").val(item.LocalBudgetAmount);
+                            $("#txtRemark@(itemName)").val(item.Remark);
+
+                            let projectFileList = [];
+                            if (item.ProjectFile != null) {
+                                let projectFileJson = JSON.parse(item.ProjectFile);
+                                $.each(projectFileJson.data, function (j, item2) {
+                                    projectFileList.push(item2.FileId);
+                                });
+                            }
+                            $("#txtProjectFile@(itemName)").val(item.ProjectFile != null ? projectFileList.toString() : "");
+                        });
+                    }
+                }
+            }
+
+            let uploadConfig = {
+                fileSelector: "#fileProjectFile@(itemName)",
+                targetSelector: "#txtProjectFile@(itemName)",
+                required: false,
+                uploadPath: "/ScmBasicInformation/ProjectBudgetManagement",
+                maxFileCount: 999,
+                defaultFile: $("#txtProjectFile@(itemName)").val()
+            };
+            Suites.FileUpload(uploadConfig);
+        }
+
+        let timer;
+        function EditBudgetAmount@(itemName)() {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                let exchangeRate = $("#txtExchangeRate@(itemName)").val();
+                let budgetAmount = $("#txtBudgetAmount@(itemName)").val();
+
+                let UnitDecimal = -1;
+                let TotalDecimal = -1;
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "CurrencyDecimal",
+                    "Condition": $("#cboCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        UnitDecimal = item.UnitDecimal;
+                        TotalDecimal = item.TotalDecimal;
+                    });
+                }
+
+                let UnitDecimalNumber = "1";
+                let TotalDecimalNumber = "1";
+
+                for (var i = 1; i <= parseInt(UnitDecimal); i++) {
+                    UnitDecimalNumber += "0";
+                }
+
+                for (var i = 1; i <= parseInt(TotalDecimal); i++) {
+                    TotalDecimalNumber += "0";
+                }
+
+                //預算金額
+                $("#txtBudgetAmount@(itemName)").val(Math.round(budgetAmount * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+
+                //預算金額(本幣)
+                $("#txtLocalBudgetAmount@(itemName)").val(Math.round(budgetAmount * exchangeRate * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+            }, 1000);
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let ProjectDetailId = parseInt($("#ProjectDetailId@(itemName)").val());
+                if (ProjectDetailId <= 0) {
+                    let targetUrl = "@Url.Action("AddProjectDetail", "ScmBasicInformation")";
+                    let postData = {
+                        "ProjectId": projectId@(itemName),
+                        "ProjectType": $("#cboProjectType@(itemName)").val(),
+                        "Currency": $("#cboCurrency@(itemName)").val(),
+                        "ExchangeRate": $("#txtExchangeRate@(itemName)").val(),
+                        "BudgetAmount": $("#txtBudgetAmount@(itemName)").val(),
+                        "LocalBudgetAmount": $("#txtLocalBudgetAmount@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                        "ProjectFile": $("#txtProjectFile@(itemName)").val(),
+                    }
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        $("#modalEdit@(itemName)").modal("hide");
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateProjectDetail", "ScmBasicInformation")";
+                    let postData = {
+                        "ProjectDetailId": ProjectDetailId,
+                        "ProjectId": projectId@(itemName),
+                        "ProjectType": $("#cboProjectType@(itemName)").val(),
+                        "Currency": $("#cboCurrency@(itemName)").val(),
+                        "ExchangeRate": $("#txtExchangeRate@(itemName)").val(),
+                        "BudgetAmount": $("#txtBudgetAmount@(itemName)").val(),
+                        "LocalBudgetAmount": $("#txtLocalBudgetAmount@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                        "ProjectFile": $("#txtProjectFile@(itemName)").val(),
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        $("#modalEdit@(itemName)").modal("hide");
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(PrDetailId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeletePrDetail", "PurchaseRequisition")";
+                    let postData = {
+                        "PrDetailId": PrDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function GetErpLocalCurrency@(itemName)() {
+            let targetUrl = "@Url.Action("GetErpLocalCurrency", "PurchaseRequisition")";
+
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        localCurrency@(itemName) = item.MA003;
+                    });
+
+                    $("#cboCurrency@(itemName)").val(localCurrency@(itemName)).trigger("change");
+                    $("#cboChangeCurrency@(itemName)").val(localCurrency@(itemName)).trigger("change");;
+                }
+            }
+            else {
+                alert(data.msg, 5000);
+            }
+        }
+
+        function OpenLogModal@(itemName)(projectDetailId) {
+            let targetUrl = "@Url.Action("GetProjectBudgetChangeLog", "ScmBasicInformation")";
+
+            let postData = {
+                "ProjectDetailId": projectDetailId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let _row = i+1 + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OriEdition}">${item.OriEdition}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BudgetAmount.toLocaleString(`en`)} ${item.Currency}">${item.BudgetAmount.toLocaleString(`en`)} <code>${item.Currency}</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LocalBudgetAmount.toLocaleString(`en`)} ${localCurrency@(itemName)}">${item.LocalBudgetAmount.toLocaleString(`en`)} <code>${localCurrency@(itemName)}</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}">${item.CreateDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}">${item.Remark}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserNo}${item.UserName}"><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BpmStatus == `Y` ? `已核准` : item.BpmStatus == `E` ? `已駁回` : `簽核中`}">${item.BpmStatus == `Y` ? `<i style="color: green; font-weight: 600;" class="fad fa-badge-check"></i> 已核准` : item.BpmStatus == `E` ? `<i style="color: #c9575c; font-weight: 600;" class="fas fa-times-circle"></i> 已駁回` : `<i style="color: #3c66df; font-weight: 600;" class="far fa-money-check-edit"></i> 簽核中`}</td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+
+            $("#tblLogData@(itemName) tbody").html(innerHtml);
+
+            $("#modalLog@(itemName)").modal("show");
+        }
+
+        function TransferBpm@(itemName)(projectDetailId) {
+            swal.fire({
+                titleText: "確認要拋轉BPM嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("TransferProjectToBpm", "ScmBasicInformation")";
+                    let postData = {
+                        "ProjectDetailId": projectDetailId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function EditChange@(itemName)(projectDetailId) {
+            $("#ChangeProjectDetailId@(itemName)").val(projectDetailId ? projectDetailId : 0);
+
+            $("#modalChangeEdit@(itemName)").modal("show");
+
+            $("#txtChangeBudgetAmount@(itemName)").val("");
+            $("#txtChangeRemark@(itemName)").val("");
+            $("#txtChangeProjectFile@(itemName)").val("");
+
+            ComboBoxs.WithText("#cboChangeCurrency@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Currency" }, "", "NA", "", "CurrencyName", "Currency");
+
+            GetErpLocalCurrency@(itemName)();
+
+            if (projectDetailId > 0) {
+                let targetUrl = "@Url.Action("GetProjectDetail", "ScmBasicInformation")";
+
+                let postData = {
+                    "ProjectDetailId": projectDetailId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            $("#txtChangeProjectType@(itemName)").val(item.ProjectTypeName);
+                            $("#cboChangeCurrency@(itemName)").val(item.Currency);
+                            $("#txtChangeExchangeRate@(itemName)").val(item.ExchangeRate);
+                            $("#txtChangeBudgetAmount@(itemName)").val(item.BudgetAmount);
+                            $("#txtChangeLocalBudgetAmount@(itemName)").val(item.LocalBudgetAmount);
+                        });
+                    }
+                }
+            }
+
+            let uploadConfig = {
+                fileSelector: "#fileChangeProjectFile@(itemName)",
+                targetSelector: "#txtChangeProjectFile@(itemName)",
+                required: false,
+                uploadPath: "/ScmBasicInformation/ProjectBudgetManagement",
+                maxFileCount: 999,
+                defaultFile: $("#txtChangeProjectFile@(itemName)").val()
+            };
+            Suites.FileUpload(uploadConfig);
+        }
+
+        function EditChangeBudgetAmount@(itemName)() {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                let exchangeRate = $("#txtChangeExchangeRate@(itemName)").val();
+                let budgetAmount = $("#txtChangeBudgetAmount@(itemName)").val();
+
+                let UnitDecimal = -1;
+                let TotalDecimal = -1;
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "CurrencyDecimal",
+                    "Condition": $("#cboChangeCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        UnitDecimal = item.UnitDecimal;
+                        TotalDecimal = item.TotalDecimal;
+                    });
+                }
+
+                let UnitDecimalNumber = "1";
+                let TotalDecimalNumber = "1";
+
+                for (var i = 1; i <= parseInt(UnitDecimal); i++) {
+                    UnitDecimalNumber += "0";
+                }
+
+                for (var i = 1; i <= parseInt(TotalDecimal); i++) {
+                    TotalDecimalNumber += "0";
+                }
+
+                //預算金額
+                $("#txtChangeBudgetAmount@(itemName)").val(Math.round(budgetAmount * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+
+                //預算金額(本幣)
+                $("#txtChangeLocalBudgetAmount@(itemName)").val(Math.round(budgetAmount * exchangeRate * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+            }, 1000);
+        }
+
+        function SaveChange@(itemName)() {
+            swal.fire({
+                titleText: "確認要變更專案預算嗎?",
+                text: "此動作會直接拋轉至BPM簽核，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let ProjectDetailId = parseInt($("#ChangeProjectDetailId@(itemName)").val());
+                    let targetUrl = "@Url.Action("AddProjectBudgetChangeLog", "ScmBasicInformation")";
+                    let postData = {
+                        "ProjectDetailId": ProjectDetailId,
+                        "Currency": $("#cboChangeCurrency@(itemName)").val(),
+                        "ExchangeRate": $("#txtChangeExchangeRate@(itemName)").val(),
+                        "BudgetAmount": $("#txtChangeBudgetAmount@(itemName)").val(),
+                        "LocalBudgetAmount": $("#txtChangeLocalBudgetAmount@(itemName)").val(),
+                        "Remark": $("#txtChangeRemark@(itemName)").val(),
+                        "ProjectFile": $("#txtChangeProjectFile@(itemName)").val(),
+                    }
+
+                    let data = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (data) {
+                        $("#modalChangeEdit@(itemName)").modal("hide");
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function CancelChange@(itemName)(projectDetailId) {
+            swal.fire({
+                titleText: "確認要取消變更專案預算嗎?",
+                text: "此動作會更改專案預算狀態，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("CancelChangeProject", "ScmBasicInformation")";
+                    let postData = {
+                        "ProjectDetailId": projectDetailId
+                    }
+
+                    let data = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (data) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function TempConfirm@(itemName)(projectDetailId) {
+            swal.fire({
+                titleText: "確認要手動核准專案預算嗎?",
+                text: "此動作會更改專案預算狀態，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("GetProjectBpmRequest", "ScmBasicInformation")";
+                    let postData = {
+                        "id": projectDetailId,
+                        "status": "Y",
+                        "rootId": "testRootId",
+                        "comfirmUser": "ZY01096",
+                        "bpmNo": "testBpmNo",
+                    }
+
+                    let data = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (data) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function TempChangeConfirm@(itemName)(logId) {
+            swal.fire({
+                titleText: "確認要手動核准專案預算嗎?",
+                text: "此動作會更改專案預算狀態，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("GetChangeProjectBpmRequest", "ScmBasicInformation")";
+                    let postData = {
+                        "id": logId,
+                        "status": "Y",
+                        "rootId": "testRootId",
+                        "comfirmUser": "ZY01096",
+                        "bpmNo": "testBpmNo",
+                    }
+
+                    let data = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (data) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+        }
+    </script>
+                        )

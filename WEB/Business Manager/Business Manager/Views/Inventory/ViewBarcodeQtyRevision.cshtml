@@ -1,0 +1,256 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewBarcodeQtyRevision";
+    string itemNameText = "條碼數量調整";
+}
+
+@Html.Resource("css",
+    @<style>
+        .overDanger {
+            color: red;
+        }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <h5 class="modal-title" style="margin-left:auto;">
+                    <span id="BarcodeQtyTotalRevision"></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <form autocomplete="off" id="editForm@(itemName)">
+                            <div class="modal-header" style="padding:1rem 0; border-bottom:0px">
+                                <h3 class="modal-title">
+                                    條碼管理
+                                </h3>
+                                <button type="button" class="btn btn-info" id="QueryButtomAll" onclick="AddBarcode()"><i class="fas fa-plus"></i>新增空條碼</button>
+                            </div>
+                            <div class="table-custom">
+                                <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" style="min-width: 75px;">#</th>
+                                            <th scope="col" style="min-width: 200px;">條碼編號</th>
+                                            <th scope="col" style="min-width: 200px;">原條碼數量</th>
+                                            <th scope="col" style="min-width: 200px;">更新條碼數量</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="mainTabody"></tbody>
+                                    <tbody class="tr01">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+
+        var listNum = 1;
+        var listNum = 1;
+        var totalOre = 0;
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)() {
+
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+            BarcodeQtyTotalRevision("IN")
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        $(document).ready(function () {
+
+            
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+
+
+            let targetUrl = "@Url.Action("GetMweBarcode", "Inventory")";
+            let postData = {
+                "MweId": $("#MweId").val(),
+                "MweDetailId": $("#MweDetailId").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                listNum += data.result.length 
+
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    $.each(data.result, function (i, item) {
+
+                        $("#MoId").val(item.MoId);
+
+                        innerHtml += `<tr>
+                                            <td>${i+1}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}" style="max-width: 200px;">${item.BarcodeNo}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeQty}" style="max-width: 200px;">${item.BarcodeQty}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" style="max-width: 200px;">
+                                                <input type="number" class="form-control txtNewBarcodeQty" id="txtNewBarcodeQty@(itemName)${item.BarcodeId}" name="txtNewBarcodeQty@(itemName)" data-Barcode=${item.BarcodeId} placeholder="請輸入數量" value="${item.BarcodeQty}" onchange="BarcodeQtyTotalRevision()" />
+                                            </td>
+                                      </tr>`;
+                        totalOre += item.BarcodeQty
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料
+                                    </td>
+                                  </tr>`;
+                }
+
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) .mainTabody").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function AddBarcode() {
+            let innerHtml = ""
+
+            innerHtml += `<tr>
+                            <td>${listNum}</td>
+                            <td class="ellipsis" data-toggle="tooltip" style="max-width: 200px;">空條碼</td>
+                            <td class="ellipsis" data-toggle="tooltip" style="max-width: 200px;">0</td>
+                            <td class="ellipsis" data-toggle="tooltip" style="max-width: 200px;">
+                                <input type="number" class="form-control txtNewBarcodeQty" id="txtNewBarcodeQty@(itemName)${listNum}" name="txtNewBarcodeQty@(itemName)" data-Barcode="0" placeholder="請輸入數量" value=0  onchange="BarcodeQtyTotalRevision()" />
+                            </td>
+                        </tr>`;
+            $("#tblData@(itemName) .tr01").append(innerHtml);
+            listNum++
+        }
+
+        function Save@(itemName)() {
+            let innerHtml = ""
+            innerHtml += `<tr class="tr01"> </tr>`;
+                            
+                       
+            if ($(objForm@(itemName)).valid()) {
+
+                var BarcodeListOre = [];
+                var BarcodeListAdd = [];
+
+                let BarcodeAllQty = 0;
+
+                $.each($("input[name='txtNewBarcodeQty@(itemName)']"), function () {
+                    var data = $(this).data();
+                    console.log(parseInt(data.barcode))
+                    if (parseInt(data.barcode) > 0) {
+                        BarcodeListOre.push(data.barcode + '+' + $(this).val())
+                    }
+                    else {
+                        BarcodeListAdd.push($(this).val())
+                    }
+                    BarcodeAllQty += parseInt($(this).val())
+                    
+                });
+                if (BarcodeListOre.length <= 0) {
+                    alert("資料錯誤,沒有資料要更新");
+                    return;
+                }
+
+                let targetUrl = "@Url.Action("UpdateBarcodeQty", "Inventory")";
+                let postData = {
+                    "MweDetailId": $("#MweDetailId").val(),
+                    "BarcodeListOre": BarcodeListOre.join(","),
+                    "BarcodeListAdd": BarcodeListAdd.join(","),
+                    "BarcodeAllQty": BarcodeAllQty,
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                    listNum = 1;
+                    $("#tblData@(itemName) .tr01").html("");
+                }
+            }
+        }
+
+        function BarcodeQtyTotalRevision(Type) {
+
+            var num = $(".txtNewBarcodeQty").length
+            var total = 0;
+            if (Type == "In") {
+                total = totalOre
+            }
+            else {
+                for (var i = 0; i < num; i++) {
+                    total += parseInt($(".txtNewBarcodeQty")[i].value)
+                }
+            }
+
+            console.log("A"+totalOre)
+            console.log("B"+total)
+            if (parseInt(totalOre) != parseInt(total)) {
+                $("#BarcodeQtyTotalRevision").addClass("overDanger")
+            }
+            else if (parseInt(totalOre) == parseInt(total)) {
+                $("#BarcodeQtyTotalRevision").removeClass("overDanger")
+            }
+            $("#BarcodeQtyTotalRevision").html("調整後的總數:" + parseInt(total))
+        }
+
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+            Close@(itemName)()
+            QueryViewMwePrint();
+
+            totalOre = 0;
+
+        }
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+                        )

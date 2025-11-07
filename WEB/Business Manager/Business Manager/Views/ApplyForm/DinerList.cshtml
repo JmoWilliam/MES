@@ -1,0 +1,968 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DinerList";
+    string itemDailyName = "DinerList";
+    string itemNameText = "團膳用餐明細表";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .table-log {
+             margin: 0;
+             padding: 0;
+             max-height: 30vh;
+             margin-bottom: .75rem;
+         }
+
+             .table-log th {
+                 background-color: #d7ecfa !important;
+             }
+
+             .table-log th, .table-log td {
+                 padding: 5px 0;
+                 text-align: center;
+             }
+
+         .active-icon {
+             background-color: #d7ecfa;
+             color: black;
+         }
+
+         .active-icon-detail {
+             background-color: white;
+             color: black;
+         }
+    </style>
+                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboCompanyIdQ@(itemName)">公司</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCompanyIdQ@(itemName)" name="cboCompanyIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboUserIdQ@(itemName)">員工</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboUserIdQ@(itemName)" name="cboUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboRestaurantIdQ@(itemName)">餐廳名稱</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboRestaurantIdQ@(itemName)" name="cboRestaurantIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMealNameQ@(itemName)">餐點名稱</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMealNameQ@(itemName)" name="txtMealNameQ@(itemName)" placeholder="請輸入餐點名稱" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">訂單日期 <input type="checkbox" id="cbxUseDate@(itemName)" checked /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3 justify-content-between">
+                    <div class="col-auto col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-danger auth-excel" href="javascript:PopDailyReport@(itemName)();"><i class="fas fa-file-excel"></i>外食餐點日報</a>
+                        <a class="btn file-excel auth-excel" href="javascript:DailyDinerExcel@(itemName)();"><i class="fas fa-file-excel"></i>每日訂餐明細</a>
+                        <a class="btn file-excel auth-excel" href="javascript:PopDinerInfo@(itemName)();"><i class="fas fa-file-excel"></i>每月訂餐總表</a>
+                        <a class="btn btn-success auth-excel" href="javascript:PopTotalMealList@(itemName)();"><i class="fas fa-file-excel"></i>中揚+紘立統計報表</a>
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky tiny-table" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 30px;">#</th>
+                                        <th scope="col" style="min-width: 115px;">訂單編號</th>
+                                        <th scope="col" style="min-width: 100px;">公司</th>
+                                        <th scope="col" style="min-width: 100px;">部門</th>
+                                        <th scope="col" style="min-width: 135px;">員工</th>
+                                        <th scope="col" style="min-width: 100px;">餐點日期</th>
+                                        <th scope="col" style="min-width: 150px; background-color:#FFECC9;">訂購日期</th>
+                                        <th scope="col" style="min-width: 75px;">總金額</th>
+                                        <th class="text-center" scope="col" style="min-width: 75px;">操作</th>
+                                        <th style="padding: 0; min-width: 750px;">
+                                            <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail-add">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 100px;">餐廳</th>
+                                                        <th style="width: 150px;">餐點</th>
+                                                        <th style="width: 50px;">份數</th>
+                                                        <th style="width: 75px;">價格</th>
+                                                        <th style="width: 150px;">備註</th>
+                                                        <th style="width: 150px;">客製化項目($)</th>
+                                                        <th style="width: 75px;">取餐區</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalOperate@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">刪除</h5>
+                <button class="close" type="button" onclick="CloseOperate@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblOperateData@(itemName)">
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="UmoId" name="UmoId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtUmoNo@(itemName)">訂單編號</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control edit-column" id="txtUmoNo@(itemName)" name="txtUmoNo@(itemName)" readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboCompanyId@(itemName)">公司<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control edit-column" id="cboCompanyId@(itemName)" name="cboCompanyId@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboUserId@(itemName)">人員<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboUserId@(itemName)"
+                                        data-msg-required="請選擇人員" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtUmoDate@(itemName)">日期 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control edit-column" id="txtUmoDate@(itemName)" name="txtUmoDate@(itemName)" placeholder="請輸入日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       data-msg-required="請輸入退貨日期" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtUmoDiscount@(itemName)">折扣</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control edit-column" id="txtUmoDiscount@(itemName)" name="txtUmoDiscount@(itemName)" value="0" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtUmoAmount@(itemName)">總金額</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control edit-column" id="txtUmoAmount@(itemName)" name="txtUmoAmount@(itemName)" readonly />
+                            </div>
+                        </div>
+                        <div class="row rmadetail-block">
+                            <div class="col-12 col-md-3 col-lg-3"></div>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="table-custom table-log">
+                                    <table class="table" id="tblLog@(itemName)">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">餐點</th>
+                                                <th scope="col">客製化項目名稱($)</th>
+                                                <th scope="col">
+                                                    操作
+                                                    <a class="active-icon auth-detail-add" href="javascript:PopViewUmoDetail();"><i class="fas fa-plus"></i></a>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right read-hide">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--外食餐點日報POP-->
+<div class="modal fade" id="modalDailyReport@(itemDailyName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close" type="button" onclick="CloseDailyReport@(itemDailyName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="DailyReportForm@(itemDailyName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtStartDate@(itemDailyName)">起始日期</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtStartDate@(itemDailyName)" name="txtStartDate@(itemDailyName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtEndDate@(itemDailyName)">結束日期</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtEndDate@(itemDailyName)" name="txtEndDate@(itemDailyName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboCompanyDaily@(itemDailyName)">公司</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboCompanyDaily@(itemDailyName)" name="cboCompanyDaily@(itemDailyName)"
+                                        data-msg-required="請選擇公司" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="DailyReportExcel@(itemDailyName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>下載檔案</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--每月訂餐POP-->
+<div class="modal fade" id="modalDinerInfo@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close" type="button" onclick="CloseDinerInfo@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="DinerInfoForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboYear_Di@(itemName)">年份</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboYear_Di@(itemName)" name="cboYear_Di@(itemName)"
+                                        data-msg-required="請選擇年份" data-rule-required="true"></select>
+                            </div>
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboMonth_Di@(itemName)">月份</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboMonth_Di@(itemName)" name="cboMonth_Di@(itemName)"
+                                        data-msg-required="請選擇月份" data-rule-required="true"></select>
+                            </div>
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboCompany@(itemName)">公司</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboCompany@(itemName)" name="cboCompany@(itemName)"
+                                        data-msg-required="請選擇公司" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="MonthDinerExcel@(itemName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>下載檔案</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--中揚+紘立統計報表POP-->
+<div class="modal fade" id="modalTotalMealList@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close" type="button" onclick="CloseTotalMealList@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="TotalMealListForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboYear_Tml@(itemName)">年份</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboYear_Tml@(itemName)" name="cboYear_Tml@(itemName)"
+                                        data-msg-required="請選擇年份" data-rule-required="true"></select>
+                            </div>
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboMonth_Tml@(itemName)">月份</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboMonth_Tml@(itemName)" name="cboMonth_Tml@(itemName)"
+                                        data-msg-required="請選擇月份" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="TotalMealListExcel@(itemName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>下載檔案</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewUmoDetail")
+
+@Html.Resource("js",
+    @<script>
+        let userId@(itemName) = -1;
+        let companyId@(itemName) = -1;
+        let mealJson = JSON.parse('{ "UmoDetail" : []}');
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            GetUserInfo@(itemName)();
+
+            let currentDate = new Date();
+            currentDate.setDate(currentDate.getDate() + 1);
+            Suites.DatePicker("txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 8);
+            Suites.DatePicker("txtStartDateQ@(itemName)", currentDate);
+
+            ComboBoxs.Default("#cboCompanyIdQ@(itemName)", "@Url.Action("GetCompany", "BasicInformation")", {}, "", "ALL", "", "CompanyName", "CompanyId");
+            ComboBoxs.Default("#cboUserIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "ALL", "", "UserWithNo", "UserId");
+            ComboBoxs.Default("#cboRestaurantIdQ@(itemName)", "@Url.Action("GetRestaurantId", "Meal")", {}, "", "NA", "", "RestaurantName", "RestaurantId");    //所屬餐廳
+
+            //修改公司時，需一併修正人員
+            $("#cboCompanyIdQ@(itemName)").change(function () {
+                ComboBoxs.Default("#cboUserIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": $("#cboCompanyIdQ@(itemName)").val(), "Status": "A" }, "", "NA", "", "UserWithDepartment", "UserId");
+            });
+
+            $("#cboCompanyIdQ@(itemName), #cboUserIdQ@(itemName), #cboRestaurantIdQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            Query@(itemName)();
+        });
+
+        function GetUserInfo@(itemName)() {
+            let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+            let postData = {
+                "UserNo": $.cookie("Login"),
+                "KeyText": $.cookie("LoginKey")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                companyId@(itemName) = data.returnData.CompanyId;
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetDinerInfo", "ApplyForm")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "CompanyId": $("#cboCompanyIdQ@(itemName)").val(),
+                "UserId": $("#cboUserIdQ@(itemName)").val(),
+                "RestaurantId": $("#cboRestaurantIdQ@(itemName)").val(),
+                "MealName": $("#txtMealNameQ@(itemName)").val(),
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : "")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">訂單編號</span>${item.UmoNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CompanyName}" style="width: 100px; max-width: 100px;">${item.CompanyName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DepartmentName}" style="width: 100px; max-width: 100px;">${item.DepartmentName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserInfo}" style="width: 135px; max-width: 135px;">${item.UserInfo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UmoDate}" style="width: 100px; max-width: 100px;">${item.UmoDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="width: 150px; max-width: 150px; background-color:#FFECC9;">${item.CreateDate}</td>
+                                        <td><span class="stack-title">總金額</span>$ ${item.UmoAmount - item.UmoDiscount}</td>
+                                        <td class="text-center active-content">
+                                          <div class="btn-group mb-4 show" style="margin-bottom: 0 !important;">
+                                            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" style="padding-top: 0; padding-bottom: 0;">動作</button>
+                                            <div class="dropdown-menu btn-text-left-block" x-placement="bottom-start" style="overflow-y: auto; z-index: 999; max-height: 150px;">
+                                              <a class="dropdown-item btn-text-left auth-update" href="javascript:Edit@(itemName)(${item.UmoId});"><i class="fas fa-edit"></i>修改</a>
+                                              <a class="dropdown-item btn-text-left auth-delete" href="javascript:Delete@(itemName)(${item.UmoId});"><i class="fas fa-trash"></i>刪除</a>
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td style="padding: 0;">
+                                          <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                            <tbody>
+                                              ${DetailData@(itemName)(item.UmoDetail)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function DetailData@(itemName)(source) {
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source); //需先轉成json
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<tr>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].RestaurantName}" style="width: 100px; max-width: 100px;">${json.data[x].RestaurantName}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].MealName}" style="width: 150px; max-width: 150px;">${json.data[x].MealName}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].UmoDetailQty}" style="width: 50px; max-width: 50px;">${json.data[x].UmoDetailQty}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${MealPrice(json.data[x].UmoDetailPrice, json.data[x].UmoAdditionalInfo)}" style="width: 75px; max-width: 75px;">$${MealPrice(json.data[x].UmoDetailPrice, json.data[x].UmoAdditionalInfo)}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].UmoDetailRemark}" style="width: 150px; max-width: 150px;">${json.data[x].UmoDetailRemark}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${McDetailData@(itemName)(json.data[x].UmoAdditionalInfo)}" style="width: 150px; max-width: 150px;">${McDetailData@(itemName)(json.data[x].UmoAdditionalInfo)}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].PickupName}" style="width: 75px; max-width: 75px;">${json.data[x].PickupName}</td>
+                             </tr>`;
+                }
+            }
+
+            return html;
+        }
+
+        function McDetailData@(itemName)(json) {
+            let html = '';
+
+            if (json) {
+                for (let x = 0; x < json.length; x++) {
+                    html += `${json[x].McDetailName} ($${json[x].UmoAdditionalPrice})`;
+
+                    if (x < json.length - 1) {
+                        html += `、`;
+                    }
+                }
+            }
+
+            return html;
+        }
+
+        //計算餐點金額及數量
+        function MealPrice(price, json) {
+            let totalPrice = 0;
+
+            totalPrice += price;
+            if (json) {
+                for (var i = 0; i < json.length; i++) {
+                    totalPrice += json[i].UmoAdditionalPrice;
+                }
+            }
+
+            return totalPrice;
+        }
+
+        function Edit@(itemName)(UmoId) {
+            $("#UmoId").val(UmoId ? UmoId : 0);
+
+            $(objForm@(itemName) + " fieldset").attr("disabled", false);
+            $(objForm@(itemName) + " select").attr("disabled", false);
+
+            $(".read-hide").show();
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtUmoDate@(itemName)", currentDate);
+
+            ComboBoxs.Default("#cboCompanyId@(itemName)", "@Url.Action("GetCompany", "BasicInformation")", {}, companyId@(itemName), "NA", "", "CompanyName", "CompanyId");
+            ComboBoxs.Default("#cboUserId@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { }, "", "NA", "", "UserWithDepartment", "UserId");
+
+            mealJson = JSON.parse('{ "UmoDetail" : []}');
+
+            if (UmoId > 0) {
+                let targetUrl = "@Url.Action("GetDinerInfo", "ApplyForm")";
+                let postData = {
+                    "UmoId": UmoId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtUmoNo@(itemName)").val(item.UmoNo);
+                        $("#cboCompanyId@(itemName)").val(item.CompanyId);
+                        $("#cboUserId@(itemName)").val(item.UserId);
+                        Suites.SetDateDropper("#txtUmoDate@(itemName)", new Date(item.UmoDate));
+                        $("#txtUmoDiscount@(itemName)").val(item.UmoDiscount);
+                        $("#txtUmoAmount@(itemName)").val(item.UmoAmount);
+
+                        $(".edit-column").attr("disabled", true);
+                        $(".edit-column-price").attr("disabled", false);
+
+                        mealJson.UmoDetail = JSON.parse(item.UmoDetail).data;
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            LoadMeal@(itemName)(mealJson);
+
+            //修改公司時，需一併修正人員及餐點
+            $("#cboCompanyId@(itemName)").change(function () {
+                ComboBoxs.Default("#cboUserId@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": $("#cboCompanyId@(itemName)").val() }, "", "NA", "", "UserWithDepartment", "UserId");
+            });
+
+            $("#cboCompanyId@(itemName), #cboUserId@(itemName), #cboMealId@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        //餐點詳細資訊
+        function LoadMeal@(itemName)(json) {
+            let innerHtml = '';
+            if (json) {
+                if (json.UmoDetail.length > 0) {
+                    for (var i = 0; i < json.UmoDetail.length; i++) {
+                        innerHtml += `<tr>
+                                        <td>${json.UmoDetail[i].MealName}</td>
+                                        <td>${MealDetailData@(itemName)(json.UmoDetail[i].UmoAdditionalInfo)}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-icon-detail auth-detail-delete" href="javascript:DeleteDetail@(itemName)(${i});"><i class="fas fa-trash"></i></a>
+                                        </td>
+                                      </tr>`;
+                    }
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="3" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="3" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                              </tr>`;
+            }
+
+
+            $("#tblLog@(itemName) tbody").html(innerHtml);
+        }
+
+        function MealDetailData@(itemName)(json) {
+            let html = '';
+
+            if (json) {
+                for (let x = 0; x < json.length; x++) {
+                    html += `${json[x].McDetailName} ($${json[x].UmoAdditionalPrice})`;
+
+                    if (x < json.length - 1) {
+                        html += `、`;
+                    }
+                }
+            }
+
+            return html;
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let UmoId = parseInt($("#UmoId").val());
+
+                if (UmoId <= 0) {
+                    let targetUrl = "@Url.Action("AddDinerInfo", "ApplyForm")";
+                    let postData = {
+                        "CompanyId": $("#cboCompanyId@(itemName)").val(),
+                        "UserId": $("#cboUserId@(itemName)").val(),
+                        "UmoDate": $("#txtUmoDate@(itemName)").val(),
+                        "UmoDiscount": $("#txtUmoDiscount@(itemName)").val(),
+                        "UmoAmount": $("#txtUmoAmount@(itemName)").val(),
+                        "MealDetails": JSON.stringify(mealJson)
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateDinerInfo", "ApplyForm")";
+                    let postData = {
+                        "UmoId": UmoId,
+                        "UmoNo": $("#txtUmoNo@(itemName)").val(),
+                        "CompanyId": $("#cboCompanyId@(itemName)").val(),
+                        "UserId": $("#cboUserId@(itemName)").val(),
+                        "UmoDate": $("#txtUmoDate@(itemName)").val(),
+                        "UmoDiscount": $("#txtUmoDiscount@(itemName)").val(),
+                        "UmoAmount": $("#txtUmoAmount@(itemName)").val(),
+                        "MealDetails": JSON.stringify(mealJson)
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(UmoId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDinerInfo", "ApplyForm")";
+                    let postData = {
+                        "UmoId": UmoId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        //客製化選項刪除
+        function DeleteDetail@(itemName)(index) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (mealJson.UmoDetail.length <= 1) {
+                        alert("至少需有一筆【餐點相關資料】!");
+                    } else {
+                        mealJson.UmoDetail.splice(index, 1);
+                        LoadMeal@(itemName)(mealJson);
+                    }
+                }
+            });
+        }
+
+        //-----------外食餐點日報-------------------
+
+        //外食餐點日報-POP
+        function PopDailyReport@(itemDailyName)() {
+
+            let currentDate = new Date();
+            currentDate.setDate(currentDate.getDate());
+            Suites.DatePicker("txtEndDate@(itemDailyName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.DatePicker("txtStartDate@(itemDailyName)", currentDate);
+
+            ComboBoxs.Default("#cboCompanyDaily@(itemDailyName)", "@Url.Action("GetCompany", "BasicInformation")", {}, "", "NA", "", "CompanyName", "CompanyId");
+            Date_Dr();
+
+            $("#cboCompanyDaily@(itemDailyName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#modalDailyReport@(itemDailyName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+        }
+
+        function CloseDailyReport@(itemDailyName)() {
+            ResetForm("#DailyReportForm@(itemDailyName)");
+
+            $("#modalDailyReport@(itemDailyName)").modal("hide");
+
+            Query@(itemName)();
+        }
+
+        //外食餐點日報
+        function DailyReportExcel@(itemDailyName)() {
+
+            let targetUrl = "@Url.Action("DailyReportExcelDownload", "ApplyForm")";
+            let postData = {
+                "StartDate": $("#txtStartDate@(itemName)").val(),
+                "EndDate": $("#txtEndDate@(itemName)").val(),
+                "CompanyId": $("#cboCompanyDaily@(itemDailyName)").val()
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+
+        //外食餐點日報-下拉式選單日期
+        function Date_Dr() {
+            // date
+            let currentDate = new Date();
+            currentDate.setDate(currentDate.getDate());
+            Suites.DatePicker("txtEndDate@(itemDailyName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.DatePicker("txtStartDate@(itemDailyName)", currentDate);
+        }
+
+        //-----------每日訂餐明細-------------------
+
+        //每日訂餐明細
+        function DailyDinerExcel@(itemName)() {
+
+            let targetUrl = "@Url.Action("DailyDinerExcelDownload", "ApplyForm")";
+            let postData = {
+                "CompanyId": $("#cboCompanyIdQ@(itemName)").val(),
+                "UserId": $("#cboUserIdQ@(itemName)").val(),
+                "RestaurantId": $("#cboRestaurantIdQ@(itemName)").val(),
+                "MealName": $("#txtMealNameQ@(itemName)").val(),
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : "")
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+
+        //-----------每月訂餐總表-------------------
+
+        //每月訂餐總表-POP
+        function PopDinerInfo@(itemName)() {
+
+            ComboBoxs.Default("#cboCompany@(itemName)", "@Url.Action("GetCompany", "BasicInformation")", {}, "", "NA", "", "CompanyName", "CompanyId");
+            Yearmonth_Di();
+
+            $("#cboYear_Di@(itemName), #cboMonth_Di@(itemName), #cboCompany@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#modalDinerInfo@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+        }
+
+        function CloseDinerInfo@(itemName)() {
+            ResetForm("#DinerInfoForm@(itemName)");
+
+            $("#modalDinerInfo@(itemName)").modal("hide");
+
+            Query@(itemName)();
+        }
+
+        //每月訂餐總表
+        function MonthDinerExcel@(itemName)() {
+
+            let targetUrl = "@Url.Action("MonthDinerExcelDownload", "ApplyForm")";
+            let postData = {
+                "Year": $("#cboYear_Di@(itemName)").val(),
+                "Month": $("#cboMonth_Di@(itemName)").val(),
+                "CompanyId": $("#cboCompany@(itemName)").val()
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+
+        //每月訂餐總表-下拉式選單年份與月份
+        function Yearmonth_Di() {
+            // year
+            $("#cboYear_Di@(itemName) option").remove();
+            $("#cboYear_Di@(itemName)").append("<option value=''>請選擇</option>");
+            var d = new Date().getFullYear();
+            for (var i = -2; i < 3; i++) {
+                $("#cboYear_Di@(itemName)").append("<option value='" + (d + i) + "'>" + (d + i) + "</option>");
+            }
+            // month
+            $("#cboMonth_Di@(itemName) option").remove();
+            $("#cboMonth_Di@(itemName)").append("<option value=''>請選擇</option>");
+            for (var i = 1; i <= 12; i++) {
+                $("#cboMonth_Di@(itemName)").append("<option value='" + i + "'>" + i.toString().padStart(2, "0") + "</option>");
+            }
+        }
+
+        //-----------中揚+紘立統計報表-------------------
+
+        //中揚+紘立統計報表-POP
+        function PopTotalMealList@(itemName)() {
+
+            Yearmonth_Tml();
+
+            $("#cboYear_Tml@(itemName), #cboMonth_Tml@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#modalTotalMealList@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function CloseTotalMealList@(itemName)() {
+            ResetForm("#TotalMealListForm@(itemName)");
+
+            $("#modalTotalMealList@(itemName)").modal("hide");
+
+            Query@(itemName)();
+        }
+
+        //中揚+紘立統計報表
+        function TotalMealListExcel@(itemName)() {
+
+            let targetUrl = "@Url.Action("TotalMealListExcelDownload", "ApplyForm")";
+            let postData = {
+                "Year": $("#cboYear_Tml@(itemName)").val(),
+                "Month": $("#cboMonth_Tml@(itemName)").val()
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+
+        //中揚+紘立統計報表-下拉式選單年份與月份
+        function Yearmonth_Tml() {
+            // year
+            $("#cboYear_Tml@(itemName) option").remove();
+            $("#cboYear_Tml@(itemName)").append("<option value=''>請選擇</option>");
+            var d = new Date().getFullYear();
+            for (var i = -2; i < 3; i++) {
+                $("#cboYear_Tml@(itemName)").append("<option value='" + (d + i) + "'>" + (d + i) + "</option>");
+            }
+            // month
+            $("#cboMonth_Tml@(itemName) option").remove();
+            $("#cboMonth_Tml@(itemName)").append("<option value=''>請選擇</option>");
+            for (var i = 1; i <= 12; i++) {
+                $("#cboMonth_Tml@(itemName)").append("<option value='" + i + "'>" + i.toString().padStart(2, "0") + "</option>");
+            }
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block");
+            Query@(itemName)();
+        }
+</script>
+)

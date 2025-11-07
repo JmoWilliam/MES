@@ -1,0 +1,235 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewSourceFlowUser";
+    string itemNameText = "來源流程使用者";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    使用者/角色設定
+                    <span class="sub-title">流程名稱 <span class="sub-text" id="desFlowName@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row justify-content-end mb-2">
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-info" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 200px;">角色/使用者</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                            <fieldset>
+                                <div class="form-group row">
+                                    <label class="col-12 col-md-3 col-lg-3 col-form-label">使用者/角色</label>
+                                    <div class="col-12 col-md-9 col-lg-9" style="margin: auto 0;">
+                                        <label class="control control-solid control-solid-info control--radio" style="display: inline-block; margin-right: .3125rem;">
+                                            使用者 <input type="radio" name="rdoUserRole@(itemName)" value="user" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                        <label class="control control-solid control-solid-info control--radio" style="display: inline-block; margin-right: .3125rem;">
+                                            角色 <input type="radio" name="rdoUserRole@(itemName)" value="role" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group row" data-user-role="user">
+                                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboUsers@(itemName)">使用者</label>
+                                    <div class="col-12 col-md-9 col-lg-9">
+                                        <div class="input-group">
+                                            <select class="form-control" id="cboUsers@(itemName)" name="cboUsers@(itemName)"
+                                                    multiple></select>
+                                            <div class="input-group-append">
+                                                <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row" data-user-role="role">
+                                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboRoles@(itemName)">角色</label>
+                                    <div class="col-12 col-md-9 col-lg-9">
+                                        <select class="form-control" id="cboRoles@(itemName)" name="cboRoles@(itemName)"
+                                                multiple></select>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let settingId@(itemName);
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(settingId, flowName) {
+            settingId@(itemName) = settingId;
+            $("#desFlowName@(itemName)").html(flowName);
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetSourceFlowUser", "SsoSystemSetting")";
+            let postData = {
+                "SettingId": settingId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td>
+                                          ${item.RoleStatus == `Y` ? `<i class="fas fa-users"></i>` : `<i class="fas fa-user"></i>`}
+                                          ${item.RoleUserName}
+                                        </td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link" href="javascript:Delete@(itemName)(${item.RoleId}, ${item.UserId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="2" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function Edit@(itemName)() {
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode, div[data-user-role]");
+
+            ComboBoxs.Default("#cboUsers@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇使用者", "UserWithNo", "UserId");
+            ComboBoxs.Default("#cboRoles@(itemName)", "@Url.Action("GetDemandRole", "SsoBasicInformation")", { "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇角色", "RoleName", "RoleId");
+
+            $("#cboUsers@(itemName), #cboRoles@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            let popConfig = {
+                targetSelector: "#cboUsers@(itemName)",
+                popFunction: "PopViewUser",
+                objectUserId: "#cboUsers@(itemName)",
+                type: "checkbox"
+            };
+            InitPopView(popConfig);
+
+            $("input[name='rdoUserRole@(itemName)']").off("change").on("change", function () {
+                let target = $(this).val();
+
+                $("div[data-user-role]").hide();
+                $(`div[data-user-role=${target}]`).show();
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("AddSourceFlowUser", "SsoSystemSetting")";
+                let postData = {
+                    "SettingId": settingId@(itemName),
+                    "UserRole": $("input[name='rdoUserRole@(itemName)']:checked").val(),
+                    "Users": $("#cboUsers@(itemName) option:selected").toArray().map(item => item.value).join(),
+                    "Roles": $("#cboRoles@(itemName) option:selected").toArray().map(item => item.value).join()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function Delete@(itemName)(RoleId, UserId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteSourceFlowUser", "SsoSystemSetting")";
+                    let postData = {
+                        "SettingId": settingId@(itemName),
+                        "RoleId": RoleId,
+                        "UserId": UserId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        InitData@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            InitData@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+            ResetSourceFlowSetting()
+        }
+    </script>
+)

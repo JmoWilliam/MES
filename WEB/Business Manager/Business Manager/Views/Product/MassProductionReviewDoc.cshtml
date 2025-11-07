@@ -1,0 +1,532 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MassProductionReviewDoc";
+    string itemNameText = "量產驗證文件管理";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .table-detail {
+            margin: 0;
+            padding: 0;
+            max-height: 30vh;
+            display: none;
+        }
+
+            .table-detail.active {
+                display: block;
+                margin-bottom: .75rem;
+            }
+
+            .table-detail th {
+                background-color: #d7ecfa !important;
+            }
+
+            .table-detail th, .table-detail td {
+                padding: 5px 0;
+                text-align: center;
+            }
+
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form autocomplete="off" id="queryForm">
+                    <fieldset>
+                        <div class="form-row align-items-center mb-2">
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="cboDocSettingQ">文件分類</label>
+                                <select class="form-control" id="cboDocSettingQ" name="cboDocSettingQ"></select>
+                            </div>
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtMtlItemNoQ">品號</label>
+                                <input type="text" class="form-control" id="txtMtlItemNoQ" name="txtMtlItemNoQ" placeholder="請輸入品號"
+                                       data-msg-extraRegex="請輸入品號" />
+                            </div>
+                            <div class="col-lg-2 col-6 mt-2 mt-lg-0">
+                                <label class="form-label" for="txtMtlItemNameQ">品名</label>
+                                <input type="text" class="form-control" id="txtMtlItemNameQ" name="txtMtlItemNameQ" placeholder="請輸入品名"
+                                       data-msg-extraRegex="請輸入品名" />
+                            </div>
+                            <div class="col-lg-2 col-12 mt-2 mt-lg-4">
+                                <button type="button" class="btn btn-primary" onclick="Query()"><i class="fas fa-search"></i>搜尋</button>
+                                <button type="button" class="btn btn-info" onclick="DocUploadEdit()"><i class="fas fa-upload"></i>文件上傳</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+                <div class="table-custom customization">
+                    <table class="table table-bordered table-striped table-sticky table-stack" id="tblData">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="min-width: 75px;">#</th>
+                                <th scope="col" style="min-width: 200px;">品號</th>
+                                <th scope="col" style="min-width: 300px;">品名</th>
+                                <th scope="col" style="min-width: 200px;">規格</th>
+                                <th scope="col" style="min-width: 200px;">文件類型</th>
+                                <th scope="col" style="min-width: 300px;">檔案</th>
+                                <th scope="col" style="min-width: 200px;">上傳人員</th>
+                                <th scope="col" style="min-width: 200px;">上傳時間</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="page"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="docUploadModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">驗證文件上傳</h5>
+                <button class="close" type="button" onclick="Operations.DocUploadEditClose()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="docUploadEditForm">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMtlItem">品號/品名</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="txtMtlItem" />
+                                    <input type="hidden" id="txtMtlItemId" name="txtMtlItemId" />
+                                    <div class="input-group-append">
+                                        <a class="btn btn-success" href="javascript:void(0);" onclick="Operations.MtlItemSearch()"><i class="fas fa-search"></i></a>
+                                    </div>
+                                </div>
+                                <dl class="help-block">
+                                    <dt>品號</dt>
+                                    <dd id="desMtlItemNo"></dd>
+                                    <dt>品名</dt>
+                                    <dd id="desMtlItemName"></dd>
+                                    <dt>規格</dt>
+                                    <dd id="desMtlItemSpec"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="table-custom table-detail">
+                                    <table class="table" id="tblMtlItem">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">品號</th>
+                                                <th scope="col">品名</th>
+                                                <th scope="col">規格</th>
+                                                <th scope="col">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" id="tblDocList"></div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fileUploadModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button class="close" type="button" onclick="Operations.FileUploadClose()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="txtDocId" name="txtDocId" />
+                <input type="file" id="docFile" name="docFile" />
+                <input type="hidden" id="txtFileId" name="txtFileId" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let apiPath = {
+            QueryDocSetting: "@Url.Action("GetMassProductionReviewDocSetting", "Product")",
+            QueryMtlItem: "@Url.Action("GetMtlItem", "Product")",
+            Select: "@Url.Action("GetMassProductionReviewDoc", "Product")",
+            UpdateFile: "@Url.Action("UpdateMassProductionReviewDocFile", "Product")",
+        };
+
+        let Operations = new OperationControl();
+
+        $(document).ready(function () {
+            ComboBoxs.Default("#cboDocSettingQ", apiPath.QueryDocSetting, {}, "", "ALL", "", "DocName", "DocId");
+
+            $("#cboDocSettingQ").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            Query();
+
+            $("#queryForm").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query();
+                }
+            });
+        });
+
+        function Query() {
+            objPage.pageIndex = 0;
+            InitData(objPage);
+        }
+
+        function InitData(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let postData = {
+                OrderBy: "",
+                PageIndex: (objPage.pageIndex + 1),
+                PageSize: objPage.pageSize,
+                DocId: $("#cboDocSettingQ").val(),
+                MtlItemNo: $("#txtMtlItemNoQ").val(),
+                MtlItemName: $("#txtMtlItemNameQ").val(),
+            };
+            let data = DataAccess.Get(apiPath.Select, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td>
+                                          <span class="stack-title">品號</span>
+                                          ${item.MtlItemNo}
+                                          <a href="javascript:void(0);" onclick="DocUploadEdit(${item.MtlItemId})"><i class="fas fa-info-square"></i></a>
+                                        </td>
+                                        <td><span class="stack-title">品名</span>${item.MtlItemName}</td>
+                                        <td><span class="stack-title">規格</span>${item.MtlItemSpec}</td>
+                                        <td><span class="stack-title">文件類型</span>${item.DocName}</td>
+                                        <td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileName}${item.FileExtension}" style="max-width: 300px;">
+                                          <span class="stack-title">檔案</span>
+                                          <span class="stack-content">
+                                            <a class="active-link" href="/Web/GetFile?fileId=${item.FileId}"><i class="fas fa-download"></i><span>檔案下載</span></a>
+                                            ${item.FileName}${item.FileExtension}
+                                          </div>
+                                        </td>
+                                        <td><span class="stack-title">上傳人員</span>${item.UploadUser}</td>
+                                        <td><span class="stack-title">上傳時間</span>${item.UploadTime}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page", pageCount, objPage, InitData);
+        }
+
+        function DocUploadEdit(MtlItemId) {
+            $("#tblDocList").html("");
+
+            if (MtlItemId > 0) {
+                let postData = {
+                    MtlItemId: MtlItemId
+                };
+                let data = DataAccess.Get(apiPath.QueryMtlItem, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            $("#txtMtlItemId").val(item.MtlItemId);
+                            $("#txtMtlItem").val(item.MtlItemNo);
+                            $("#desMtlItemNo").html(item.MtlItemNo);
+                            $("#desMtlItemName").html(item.MtlItemName);
+                            $("#desMtlItemSpec").html(item.MtlItemSpec);
+
+                            $("#docUploadModal .help-block").css("display", "grid");
+
+                            Operations.DocList();
+                        });
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            $("#docUploadModal").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#txtMtlItem").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Operations.MtlItemSearch();
+                }
+            });
+        }
+
+        function FileUpload(DocId, DocName) {
+            $("#fileUploadModal").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#txtDocId").val(DocId);
+            $("#fileUploadModal .modal-title").html(DocName);
+
+            let uploadConfig = {
+                fileSelector: "#docFile",
+                targetSelector: "#txtFileId",
+                required: true,
+                uploadPath: "/Produce/MassProductionReviewDoc",
+                maxFileCount: 1
+            };
+            $(uploadConfig.fileSelector).fileinput('destroy');
+
+            let uploadSetting = {
+                theme: "fas",
+                language: "zh-TW",
+                showCaption: true,
+                showPreview: true,
+                showRemove: false,
+                showUpload: false,
+                showCancel: false,
+                uploadUrl: "/Web/Upload",
+                uploadAsync: true,
+                minFileCount: (uploadConfig.required ? 1 : 0),
+                maxFileCount: uploadConfig.maxFileCount,
+                validateInitialCount: true,
+                overwriteInitial: false,
+                initialPreviewAsData: true,
+                browseOnZoneClick: true,
+                uploadExtraData: {
+                    savePath: uploadConfig.uploadPath,
+                    isPreview: false
+                },
+                previewFileIconSettings: {
+                    doc: '<i class="fas fa-file-word" style="color: #0078d7;"></i>',
+                    docx: '<i class="fas fa-file-word" style="color: #0078d7;"></i>',
+                    xls: '<i class="fas fa-file-excel" style="color: #1d6f42;"></i>',
+                    xlsx: '<i class="fas fa-file-excel" style="color: #1d6f42;"></i>',
+                    csv: '<i class="fas fa-file-csv" style="color: #1d6f42;"></i>',
+                    ppt: '<i class="fas fa-file-powerpoint" style="color: #d04423"></i>',
+                    pptx: '<i class="fas fa-file-powerpoint" style="color: #d04423"></i>'
+                },
+                slugCallback: function (text) {
+                    return text;
+                }
+            };
+
+            $(uploadConfig.fileSelector).fileinput(uploadSetting)
+                .off('filebatchselected')
+                .on('filebatchselected', function (event, files) {
+                    $(uploadConfig.fileSelector).fileinput("upload");
+                })
+                .off('fileuploaded')
+                .on('fileuploaded', function (event, previewId, index, fileId) {
+                    let uploadPath = previewId.response.initialPreviewConfig[0]["key"];
+                    $(uploadConfig.fileSelector).fileinput('clear');
+
+                    let postData = {
+                        MtlItemId: $("#txtMtlItemId").val(),
+                        DocId: $("#txtDocId").val(),
+                        FileId: uploadPath
+                    };
+
+                    let result = DataAccess.Add(apiPath.UpdateFile, postData, false, false);
+
+                    if (result) {
+                        Operations.FileUploadClose();
+                    }
+                });
+        }
+
+        function OperationControl() {
+            addMethod(this, "DocUploadEditClose", function () {
+                ResetForm("#docUploadEditForm");
+
+                $("#docUploadModal .help-block").css("display", "none");
+
+                $("#docUploadModal").modal("hide");
+                Query();
+            });
+
+            addMethod(this, "FileUploadClose", function () {
+                Operations.DocList();
+                $("#fileUploadModal").modal("hide");
+            });
+
+            addMethod(this, "MtlItemSearch", function () {
+                $("#tblDocList").html("");
+
+                let innerHtml = '';
+
+                $("#docUploadModal .table-detail").addClass("active");
+
+                if ($("#txtMtlItem").val().length > 1) {
+                    let postData = {
+                        SearchKey: $("#txtMtlItem").val(),
+                        TransferStatus: "Y"
+                    };
+                    let data = DataAccess.Get(apiPath.QueryMtlItem, postData, false);
+
+                    if (data.status == "success") {
+                        if (data.result.length > 0) {
+                            $.each(data.result, function (i, item) {
+                                innerHtml += `<tr>
+                                                <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 175px;">${item.MtlItemNo}</td>
+                                                <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 175px;">${item.MtlItemName}</td>
+                                                <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 150px;">${item.MtlItemSpec}</td>
+                                                <td class="text-center">
+                                                  <input type="radio" name="chkMtlItemId" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemId}" />
+                                                  <input type="hidden" name="txtMtlItemNo" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemNo}" />
+                                                  <input type="hidden" name="txtMtlItemName" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemName}" />
+                                                  <input type="hidden" name="txtMtlItemSpec" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemSpec}" />
+                                                </td>
+                                              </tr>`;
+                            });
+                        } else {
+                            innerHtml += `<tr>
+                                        <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                      </tr>`;
+                        }
+                    } else {
+                        alert(data.msg, "alert", 0);
+                    }
+                } else {
+                    $("#txtMtlItemId").val("-1");
+                    $("#editData .help-block").hide();
+
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+                $("#tblMtlItem tbody").html(innerHtml);
+
+                $("input[type='radio']").click(function () {
+                    if ("[data-mtl-item-id]:checked") {
+                        let mtlItemId = $(this).data("mtl-item-id");
+
+                        if (mtlItemId) {
+                            let mtlItemNo = $(`input[name="txtMtlItemNo"][data-mtl-item-id="${mtlItemId}"]`).val();
+                            let mtlItemName = $(`input[name="txtMtlItemName"][data-mtl-item-id="${mtlItemId}"]`).val();
+                            let mtlItemSpec = $(`input[name="txtMtlItemSpec"][data-mtl-item-id="${mtlItemId}"]`).val();
+
+                            $("#txtMtlItemId").val(mtlItemId);
+                            $("#txtMtlItem").val(mtlItemNo);
+                            $("#desMtlItemNo").html(mtlItemNo);
+                            $("#desMtlItemName").html(mtlItemName);
+                            $("#desMtlItemSpec").html(mtlItemSpec);
+
+                            $("#docUploadModal .help-block").css("display", "grid");
+
+                            Operations.DocList();
+                        }
+
+                        $("#docUploadModal .table-detail").removeClass("active");
+                    }
+                });
+            });
+
+            addMethod(this, "DocList", function () {
+                let innerHtml = `<div class="col-12 pt-2 pb-2 border text-primary font-weight-bold">目前上傳文件</div>`;
+                let postData = {};
+                let data = DataAccess.Get(apiPath.QueryDocSetting, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        let _row = (i + 1) + ".";
+
+                        innerHtml += `<div class="col-sm-12 col-lg-6 pt-2 pb-2 border font-weight-bold">
+                                        ${_row} ${item.DocName}
+                                        <a class="text-danger" href="javascript:FileUpload(${item.DocId}, '${item.DocName}');"><i class="fas fa-upload"></i></a>
+                                      </div>
+                                      <div class="col-sm-12 col-lg-6 pt-2 pb-2 border text-center" data-doc="${item.DocId}">
+                                      ${Operations.DocFile(item.DocId)}
+                                      </div>`;
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#tblDocList").html(innerHtml);
+            });
+
+            addMethod(this, "DocFile", function (DocId) {
+                let innerHtml = ``;
+
+                let postData = {
+                    DocId: DocId,
+                    MtlItemNo: $("#txtMtlItem").val()
+                };
+                let data = DataAccess.Get(apiPath.Select, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<a class="text-secondary" href="/Web/GetFile?fileId=${item.FileId}"><i class="fas fa-download"></i> ${item.FileName}${item.FileExtension}</a>`;
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                return innerHtml;
+            });
+        }
+    </script>
+)

@@ -1,0 +1,114 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QRCodeGenerator";
+    string itemNameText = "QR Code 產生器";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        video {
+            object-fit: cover;
+        }
+
+        @@media (min-width: 1000px) {
+            video {
+                height: 480px;
+            }
+        }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtInputText@(itemName)">產生字串 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control input-trigger" id="txtInputText@(itemName)" name="txtInputText@(itemName)" placeholder="請輸入用途"
+                                           data-msg-required="請輸入產生字串" data-rule-required="true" />
+                                    <div class="input-group-append">
+                                        <a class="btn btn-success" href="javascript:void(0);" onclick="InitCamera()"><i class="fas fa-camera"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDimension@(itemName)">尺寸</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="range" class="form-control-range input-trigger" id="txtDimension@(itemName)" name="txtDimension@(itemName)" value="250"
+                                       min="100" max="500" step="5" />
+                                <span id="rangeDimension@(itemName)">250</span>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <img class="gen-qrcode" src="" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div id="cameraList"></div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <video autoplay playsinline id="preview"></video>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let scanner;
+        let cameras = [];
+        let scans = [];
+
+        $(document).ready(function () {
+            $("#txtInputText@(itemName)").keydown(DelayTrigger(function (e) {
+                $(".gen-qrcode").attr("src", `@Url.Action("QRCodeOutput", "SystemSetting")?inputString=${$(`#txtInputText@(itemName)`).val()}&dimension=${$(`#txtDimension@(itemName)`).val()}`);
+            }, 500));
+
+            $("#txtDimension@(itemName)").on("input", function (e) {
+                console.log($(this).val());
+                $(".gen-qrcode").attr("src", `@Url.Action("QRCodeOutput", "SystemSetting")?inputString=${$(`#txtInputText@(itemName)`).val()}&dimension=${$(`#txtDimension@(itemName)`).val()}`);
+                $("#rangeDimension@(itemName)").html($(this).val());
+            });
+        });
+
+        function InitCamera() {
+            'use strict';
+
+            var constraints = {
+                video: true
+            };
+
+            var video = document.getElementById('preview');
+
+            function handleSuccess(stream) {
+                window.stream = stream; // only to make stream available to console
+                video.srcObject = stream;
+            }
+
+            function handleError(error) {
+                console.log('getUserMedia error: ', error);
+            }
+
+            navigator.mediaDevices.getUserMedia(constraints).
+                then(handleSuccess).catch(handleError);
+        }
+    </script>
+)

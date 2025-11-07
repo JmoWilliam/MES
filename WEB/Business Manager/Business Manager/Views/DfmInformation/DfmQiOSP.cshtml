@@ -1,0 +1,312 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DfmQiOSP";
+    string itemNameText = "委外加工管理";
+}
+
+@Html.Resource("css",
+    @<style>
+
+         .inputStyle {
+             background-color: unset !important;
+             border: unset;
+         }
+
+         .noWriteDfmItem {
+             border: #ff518a 3px solid;
+             border-radius: 5px;
+         }
+
+         .color1 {
+             color: #ff518a;
+         }
+    </style>
+                        )
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset></fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info " id="AddNewItem@(itemName)" href="javascript:NewDetail@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                        <a class="btn btn-warning " id="AllEdit@(itemName)" href="javascript:AllEdit@(itemName)();"><i class="far fa-sort-circle"></i>全部變更</a>
+                        <a class="btn btn-secondary " id="Cancel@(itemName)" href="javascript:Return@(itemName)();"><i class="far fa-sort-circle"></i>取消</a>
+                        <a class="btn btn-success " id="AllSave@(itemName)" href="javascript:AllSave@(itemName)();"><i class="fas fa-cloud-upload"></i>全部儲存</a>
+                        <a class="btn btn-danger " id="SelectDelete@(itemName)" href="javascript:SelectDelete@(itemName)();"><i class="fas fa-trash-alt"></i>項目刪除</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">委外名稱</th>
+                                        <th scope="col" style="min-width: 150px;">委外金額</th>
+                                        <th class="text-center" scope="col" style="min-width: 265px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="baseData@(itemName)"></tbody>
+                                <tbody class="newItem@(itemName)"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset></fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+@Html.Resource("js",
+    @<script>
+        var listNum = 1;
+        $("#AllSave@(itemName)").hide()
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Expand@(itemName)() {
+            if (parseInt($("#DfmQiId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+            } else {
+                alert("DFM成本表資料錯誤", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 999;
+
+            let targetUrl = "@Url.Action("GetDfmQiOSP", "DfmInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "DfmQiId": $("#DfmQiId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                listNum += data.result.length
+
+                if (data.result.length > 0) {
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td class="dfmqmItem" data-dfmqiosp-id="${item.DfmQiOSPId}">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="OspName" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtOspName@(itemName)${item.DfmQiOSPId}" name="inputStyle" value="${item.OspName}" data-dfmqiosp-id="${item.DfmQiOSPId}" style="width: 100%;" readonly /> </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="Amount" style="max-width: 150px;"><input type="text" class="form-control inputStyle" id="txtAmount@(itemName)${item.DfmQiOSPId}" name="inputStyle" value="${item.Amount}" data-dfmqiosp-id="${item.DfmQiOSPId}" style="width: 100%;" readonly /> </td>
+                                        <td class="text-center active-content">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-type="DfmQiOSPId" id="cbxDfmQiOSPId@(itemName)${item.DfmQiOSPId}" name="cbxDfmQiOSPId@(itemName)" value="${item.DfmQiOSPId}" checked>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr class="noData@(itemName)">
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) .baseData@(itemName)").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function NewDetail@(itemName)() {
+            $(".noData@(itemName)").hide()
+            let innerHtml = ""
+            innerHtml += `<tr id="detail${listNum}">
+                            <td class="dfmqmItem" data-dfmqiosp-id="${listNum}">${listNum}</td>
+                            <td class="ellipsis" data-toggle="tooltip" title="OspName" style="max-width: 150px;"><input class="form-control" type="text" id="txtOspName@(itemName)${listNum}" class="inputStyle" name="inputStyle" value="" data-dfmqiosp-id="${listNum}" style="width: 100%;" /> </td>
+                            <td class="ellipsis" data-toggle="tooltip" title="Amount" style="max-width: 150px;"><input class="form-control" type="text" id="txtAmount@(itemName)${listNum}" class="inputStyle" name="inputStyle" value="" data-dfmqiosp-id="${listNum}" style="width: 100%;" /> </td>
+                            <td class="text-center active-content">
+                                <a class="active-link" href="javascript:RemoveDetail@(itemName)(${listNum});"><i class="fas fa-trash-alt"></i></a>
+                            </td>
+                        </tr>`;
+            $("#tblData@(itemName) .newItem@(itemName)").append(innerHtml);
+            listNum++
+        }
+        function RemoveDetail@(itemName)(listNum) {
+            $(`#detail${listNum}`).remove()
+            if ($(".newItem@(itemName)").html() == "") {
+                $(".noData@(itemName)").show()
+            }
+        }
+
+        function AllEdit@(itemName)() {
+            $.each($("input[name='inputStyle']"), function () {
+                $(this).removeClass("inputStyle")
+                $(this).attr("readonly", false);
+            });
+            $("#AllEdit@(itemName)").hide()
+            $("#AllSave@(itemName)").show()
+            $("#Cancel@(itemName)").show()
+            $("#AddNewItem@(itemName)").show()
+        }
+
+        function AllSave@(itemName)() {
+            let innerHtml = ""
+            innerHtml += `<tr class="newItem@(itemName)"> </tr>`;
+
+            //let noWriteDfmItemId = []
+            //$.each($("select[name='inputStyle']"), function () {
+            //    $(this).next("span").removeClass("noWriteDfmItem")
+            //    if ($(this).val() == "") {
+            //        noWriteDfmItemId.push($(this).data("dfmqm-id"))
+            //        $(this).next("span").addClass("noWriteDfmItem")
+            //    }
+            //});
+            //if (noWriteDfmItemId.length > 0) {
+            //    alert("項目尚未維護完成不能儲存!!!")
+            //    return
+            //}
+
+            let dfmqiospItemList = [];
+            $.each($(".dfmqmItem"), function () {
+                var DfmQiOSPId = $(this).data("dfmqiosp-id")
+                dfmqiospItemList.push(DfmQiOSPId);
+            });
+
+            let dfmqiospContentList = [];
+            dfmqiospItemList.forEach(function (item) {
+                var DfmQiOSPId = item
+                var OspName = $(`#txtOspName@(itemName)${DfmQiOSPId}`).val()
+                var Amount = $(`#txtAmount@(itemName)${DfmQiOSPId}`).val()
+                var str = DfmQiOSPId + "❤" + OspName + "❤" + Amount
+
+                dfmqiospContentList.push(str);
+            })
+
+            let targetUrl = "@Url.Action("AddDfmQiOSP", "DfmInformation")";
+            let postData = {
+                "DfmQiId": $("#DfmQiId").val(),
+                "DfmqiospContentList": dfmqiospContentList.join(','),
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (result) {
+
+                Return@(itemName)();
+                $("#tblData@(itemName) .newItem@(itemName)").html("");
+                $("#AllEdit@(itemName)").show()
+                $("#AllSave@(itemName)").hide()
+                $("#AddNewItem@(itemName)").hide()
+            }
+        }
+
+
+
+
+        function SelectDelete@(itemName)() {
+            var DfmQiOSPIdList = []
+            $.each($("input[name='cbxDfmQiOSPId@(itemName)']:checked"), function () {
+                DfmQiOSPIdList.push($(this).val())
+            });
+
+            swal.fire({
+                title: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDfmQiOSP", "DfmInformation")";
+                    let postData = {
+                        "DfmQiOSPIdList": DfmQiOSPIdList.join(',')
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)()
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            listNum = 1;
+            $("#AllEdit@(itemName)").show()
+            $("#AllSave@(itemName)").hide()
+            $("#Cancel@(itemName)").hide()
+            $("#AddNewItem@(itemName)").hide()
+            $(".newItem@(itemName)").html("")
+            Query@(itemName)();
+        }
+    </script>
+                        )

@@ -1,0 +1,482 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "RandDWorkingPlatform";
+    string itemNameText = "研發工作平台";
+    string itemMtlItemList = "MtlItemList";
+    string itemList = "DemandList";
+    string itemTrack = "DemandTrack";
+    string itemCertificate = "DemandCertificate";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+
+    string OpenDrawingFlag = Request["OpenDrawingFlag"] ?? "";
+}
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/demand.min.css")?@dateCache" rel="stylesheet" />
+                )
+
+@Html.Resource("css",
+    @<style>
+         iframe {
+             width: 100%;
+             height: 90vh;
+         }
+    </style>
+                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="modal fade" id="modalQuery@(itemList)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemList)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboSourceIdQ@(itemList)">需求來源</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSourceIdQ@(itemList)" name="cboSourceIdQ@(itemList)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtDemandNoQ@(itemList)">需求單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtDemandNoQ@(itemList)" name="txtDemandNoQ@(itemList)" placeholder="請輸入需求單號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboDemandDepartmentQ@(itemList)">需求部門</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDemandDepartmentQ@(itemList)" name="cboDemandDepartmentQ@(itemList)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboDemandCustomerQ@(itemList)">需求客戶</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDemandCustomerQ@(itemList)" name="cboDemandCustomerQ@(itemList)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">需求日期 <input type="checkbox" id="cbxUseDate@(itemList)" /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemList)" name="txtStartDateQ@(itemList)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemList)" name="txtEndDateQ@(itemList)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-4 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    需求規劃
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)P" name="cbxStatusQ@(itemName)" value="P" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    需求進行中
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)I" name="cbxStatusQ@(itemName)" value="I" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-4 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    需求完成
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)C" name="cbxStatusQ@(itemName)" value="C" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemList)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="platform-wrapper">
+    <div class="platform-sidebar" id="sidebar"></div>
+    <div class="platform-container">
+        <div class="platform-title">@(itemNameText)</div>
+        <div class="platform-body">
+            <div class="platform-content platform-list" id="@(itemList)">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemList)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemList)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky tiny-table" id="tblData@(itemList)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">需求來源</th>
+                                        <th scope="col" style="min-width: 125px;">需求單號</th>
+                                        <th class="text-center" scope="col" style="min-width: 75px;">操作</th>
+                                        <th class="text-center" scope="col" style="min-width: 100px;">需求狀態</th>
+                                        <th class="text-center" scope="col" style="min-width: 100px;">目前進度</th>
+                                        <th scope="col" style="min-width: 200px;">需求描述</th>
+                                        <th scope="col" style="min-width: 150px;">需求日期</th>
+                                        <th scope="col" style="min-width: 150px;">截止日期</th>
+                                        <th scope="col" style="min-width: 200px;">部門/客戶</th>
+                                        <th scope="col" style="min-width: 200px;">需求人員</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemList)"></div>
+                    </div>
+                </div>
+            </div>
+            @Html.Partial("MtlItem")
+        </div>
+        <div class="platform-content" id="@(itemTrack)">
+            <iframe id="track@(itemTrack)" src="#" frameborder="0" scrolling="yes"></iframe>
+        </div>
+    </div>
+</section>
+
+@*<section class="platform-wrapper">
+        <div class="platform-sidebar" id="sidebar"></div>
+
+        <div class="platform-container">
+            <div class="platform-body">
+                <div class="platform-content" id="demandDashboard">
+                    <div class="platform-flow-container">
+                        <div class="flow-body">
+                            <div class="flow-card">
+                                <div class="flow-info">
+                                    <img src="/Content/images/flow-13.png" />
+                                    <span class="flow-name">品號建立</span>
+                                </div>
+                                <div class="flow-status">
+                                    <span class="flow-count flow-count-backlog"><span>待確認：</span><a href="javascript:void(0);">2</a></span>
+                                    <span class="flow-count flow-count-in-progress"><span>進行中：</span><a href="javascript:void(0);">5</a></span>
+                                    <span class="flow-count flow-count-completed"><span>已完成：</span><a href="javascript:void(0);">10</a></span>
+                                    <span class="flow-remark">統計時間 8/1 ~ 8/31</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="platform-content" id="mtlItem">
+                    @Html.Partial("MtlItem")
+                </div>
+            </div>
+        </div>
+    </section>*@
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemList) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemList) = "#editForm@(itemList)";
+
+        let objPage@(itemCertificate) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemCertificate) = "#editForm@(itemCertificate)";
+        let Datas@(itemName) = new DataControl@(itemName)();
+
+        const sidebar = new dhx.Sidebar("sidebar", {
+            css: "",
+            width: 75,
+            collapsed: false
+        });
+
+        let sidebarData = [
+            {
+                id: "demandList",
+                value: "需求列表",
+                icon: "fas fa-list",
+            },
+            {
+                id: "mtlItem",
+                value: "產品管理",
+                icon: "fas fa-box",
+            },
+            {
+                id: "drawing",
+                value: "圖面管理",
+                icon: "fas fa-image",
+            },
+            {
+                type: "separator"
+            },
+            {
+                id: "notification",
+                value: "通知訊息",
+                count: 0,
+                icon: "fas fa-bell"
+            },
+            {
+                id: "setting",
+                value: "系統設定",
+                icon: "fas fa-cog"
+            }
+        ];
+
+        $(document).ready(function () {
+            sidebar.data.parse(sidebarData);
+
+            sidebar.events.on("click", function (id, e) {
+                switch (id) {
+                    case "demandList":
+                        $(".platform-content").hide();
+                        sidebar.unselect();
+
+                        $("#@(itemList)").show();
+                        sidebar.select(id);
+
+                        let currentDate = new Date();
+                        Suites.DatePicker("txtEndDateQ@(itemList)", currentDate);
+                        currentDate.setDate(currentDate.getDate() - 7);
+                        Suites.DatePicker("txtStartDateQ@(itemList)", currentDate);
+
+                        ComboBoxs.Default("#cboSourceIdQ@(itemList)", "@Url.Action("GetDemandSource", "SsoBasicInformation")", { "Status": "A" }, "", "ALL", "", "SourceWithNo", "SourceId");
+                        ComboBoxs.Default("#cboDemandDepartmentQ@(itemList)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A" }, "", "ALL", "", "DepartmentWithNo", "DepartmentId");
+                        ComboBoxs.Default("#cboDemandCustomerQ@(itemList)", "@Url.Action("GetCustomer", "ScmBasicInformation")", { "Status": "A" }, "", "ALL", "", "CustomerWithNo", "CustomerId");
+
+                        $("#cboSourceIdQ@(itemList), #cboDemandDepartmentQ@(itemList), #cboDemandCustomerQ@(itemList)").select2({
+                            dropdownAutoWidth: true,
+                            width: "100%"
+                        });
+
+                        Datas@(itemName).GetDemand@(itemName)(objPage@(itemList));
+                        Datas@(itemName).GetNotificationLog@(itemName)();
+                        break;
+                    //case "mtlItem":
+                    //    $(".platform-content").hide();
+                    //    sidebar.unselect();
+
+                    //    $(`#${id}`).show();
+                    //    sidebar.select(id);
+                    //    break;
+                    //case "routing":
+                    //    $(".platform-content").hide();
+                    //    sidebar.unselect();
+
+                    //    $(`#${id}`).show();
+                    //    sidebar.select(id);
+                    //    break;
+                }
+            });
+
+            DelayFn(function () { $(".dhx_sidebar-button[data-dhx-id='demandList']").trigger("click"); }, 100);
+
+            setTimeout(function () {
+                if ('@OpenDrawingFlag') {
+                    ExpandDrawing();
+                }
+            }, 250);
+        });
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetDemand@(itemName)", function (objPage) {
+                let innerHtml = '';
+                let pageCount = 0;
+
+                let targetUrl = "@Url.Action("GetDemand", "Demand")";
+                let postData = {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "SourceId": $("#cboSourceIdQ@(itemName)").val(),
+                    "DemandNo": $("#txtDemandNoQ@(itemName)").val(),
+                    "DemandDepartment": $("#cboDemandDepartmentQ@(itemName)").val(),
+                    "DemandCustomer": $("#cboDemandCustomerQ@(itemName)").val(),
+                    "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                    "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : ""),
+                    "Status": $("input[name='cbxStatusQ@(itemName)']:checked").toArray().map(item => item.value).join(",")
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                    if (pageCount > 0) {
+                        objPage = PageCaculate(pageCount, objPage);
+
+                        $.each(data.result, function (i, item) {
+                            let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                            innerHtml += `<tr>
+                                            <td>${_row}</td>
+                                            <td>${item.SourceName}</td>
+                                            <td>${item.DemandNo}</td>
+                                            <td class="text-center active-content">
+                                              <div class="btn-group mb-4 show" style="margin-bottom: 0 !important; position: static;">
+                                                <button type="button" class="btn btn-primary dropdown-toggle" data-demand-id="${item.DemandId}" style="padding-top: 0; padding-bottom: 0;">動作</button>
+                                                <div class="dropdown-menu btn-text-left-block" data-demand-id="${item.DemandId}" style="overflow-y: auto; z-index: 999; max-height: 150px;">
+                                                  ${item.DemandStatus == `I` ? `<a class="dropdown-item btn-text-left auth-add-mtlitem" href="javascript:MtlItem@(itemName)(${item.DemandId}, ${item.ItemTypeId});" ><i class="fas fa-box"></i>管理品號結構</a>` : ``}
+                                                </div>
+                                              </div>
+                                            </td>
+                                            <td class="text-center">${item.DemandStatusName}</td>
+                                            <td class="text-center">
+                                              ${item.DemandStatus != `P` ? `<a href="javascript:DemandTrack@(itemName)(${item.DemandId});"><i class="fas fa-paper-plane"></i></a>` : ``}
+                                            </td>
+                                            <td>${item.DemandDesc}</td>
+                                            <td>${item.DemandDate}</td>
+                                            <td>${item.DemandDeadline}</td>
+                                            <td>${item.DemandDepartment != -1 ? item.DepartmentNo + ` ` + item.DepartmentName : item.CustomerNo + ` ` + item.CustomerShortName}</td>
+                                            <td>${item.DemandUserNo} ${item.DemandUserName}</td>
+                                          </tr>`;
+                        });
+                    } else {
+                        innerHtml += `<tr>
+                                        <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                      </tr>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#tblData@(itemList) tbody").html(innerHtml);
+                TableComponentInit();
+                Pager("#page@(itemList)", pageCount, objPage, Datas@(itemName).GetDemand@(itemName));
+
+                $(".dropdown-toggle").off("click").on("click", function () {
+                    let demandId = $(this).data("demand-id");
+
+                    if ($(`.dropdown-menu[data-demand-id='${demandId}']`).hasClass("show")) {
+                        $(".dropdown-menu").removeClass("show");
+                    } else {
+                        $(".dropdown-menu").removeClass("show");
+
+                        $(`.dropdown-menu[data-demand-id='${demandId}']`).addClass("show");
+                        $(`.dropdown-menu[data-demand-id='${demandId}']`).css({
+                            top: `${$(this).position().top + $(this).height() + 5}px`,
+                            left: `${$(this).position().left - $(this).width() + 38}px`
+                        });
+                    }
+                });
+
+                $("body").off("click").on("click", function (e) {
+                    if ($(".dropdown-menu").hasClass("show")) {
+                        if (!$(e.target).hasClass("dropdown-toggle")
+                            && !$(e.target).parents().hasClass("dropdown-toggle")) {
+                            $(".dropdown-menu").removeClass("show");
+                        }
+                    }
+                });
+            });
+
+            addMethod(this, "GetDemandCertificate@(itemName)", function (objPage) {
+                let innerHtml = '';
+                let pageCount = 0;
+
+                let targetUrl = "@Url.Action("GetDemandCertificate", "Demand")";
+                let postData = {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "DemandId": $("#currentDemand").val()
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                    if (pageCount > 0) {
+                        objPage = PageCaculate(pageCount, objPage);
+
+                        $.each(data.result, function (i, item) {
+                            let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                            innerHtml += `<tr>
+                                            <td><span class="stack-title">#</span>${_row}</td>
+                                            <td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileName}${item.FileExtension}" style="max-width: 300px;">
+                                              <span class="stack-title">檔案名稱</span>
+                                              <span data-target="${item.CertificateId}">${FilePreview(`/Web/GetFile?fileId=${item.FileId}`, item.CertificateId)}</span>
+                                              ${item.FileName}${item.FileExtension}
+                                            </td>
+                                            <td><span class="stack-title">上傳時間</span>${item.CreateDate}</td>
+                                            <td><span class="stack-title">編輯者</span>${item.UserWithNo}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.CertificateDesc}" style="max-width: 250px;"><span class="stack-title">描述</span>${item.CertificateDesc}</td>
+                                            <td class="text-center active-content">
+                                              <span class="stack-title">操作</span>
+                                              <a class="active-link" href="javascript:PopEdit@(itemCertificate)(${item.CertificateId});"><i class="fas fa-edit"></i></a>
+                                              ${item.DemandStatus == `P` ? `<a class="active-link" href="javascript:Delete@(itemCertificate)(${item.CertificateId});"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                            </td>
+                                          </tr>`;
+                        });
+                    } else {
+                        innerHtml += `<tr>
+                                        <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                      </tr>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#tblData@(itemCertificate) tbody").html(innerHtml);
+                TableComponentInit();
+                Pager("#page@(itemCertificate)", pageCount, objPage, Datas@(itemName).GetDemandCertificate@(itemName));
+            });
+
+            addMethod(this, "GetNotificationLog@(itemName)", function () {
+                sidebar.data.update("notification", { count: 0 });
+
+                let targetUrl = "@Url.Action("GetNotificationLog", "SystemSetting")";
+                let postData = {
+                    "TriggerFunction": "DemandPlatform",
+                    "ReadStatus": "N"
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    sidebar.data.update("notification", { count: data.result.length });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+        }
+
+        function MtlItem@(itemName)() {
+            ExpandMtlItem();
+        }
+
+        function Routing@(itemName)() {
+            $(".platform-content").hide();
+            sidebar.unselect();
+
+            $(`#routing`).show();
+            sidebar.select("routing");
+        }
+    </script>
+                )

@@ -1,0 +1,535 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TaskCalendar";
+    string itemNameText = "任務行事曆";
+    string authority = ViewBag.authority;
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css", 
+    @<link href="@Url.Content("~/Content/dhtmlx/event.calendar.commercial/1.0.0/event-calendar.css")" rel="stylesheet" />
+    )
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/eventCalendar.min.css")?@dateCache" rel="stylesheet" />
+    )
+
+
+@Html.Resource("css", @<style>
+    .wx-event-calendar-calendar_item .wxi-plus {
+    display:none;
+    }
+</style>)
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div id="calendar@(itemName)Box" class="g-wrap">
+    <div class="g-btn-row" hidden>
+        <label class="switch">
+            <input id="readonly" type="checkbox" name="cbxOptions@(itemName)" value="readonly" disabled/>
+            <span class="slider round"></span>
+        </label> <label>鎖定</label>
+        <label class="switch">
+            <input id="dragCreate" type="checkbox" name="cbxOptions@(itemName)" value="dragCreate" />
+            <span class="slider round"></span>
+        </label> <label>拖曳新增事件</label>
+        <label class="switch">
+            <input id="dragMove" type="checkbox" name="cbxOptions@(itemName)" value="dragMove" />
+            <span class="slider round"></span>
+        </label> <label>事件拖曳</label>
+        <label class="switch">
+            <input id="dragResize" type="checkbox" name="cbxOptions@(itemName)" value="dragResize" disabled/>
+            <span class="slider round"></span>
+        </label> <label>事件長度</label>
+        <label class="switch">
+            <input id="editorOnDblClick" type="checkbox" name="cbxOptions@(itemName)" value="editorOnDblClick" disabled/>
+            <span class="slider round"></span>
+        </label> <label>雙擊開啟編輯器</label>
+
+        <label class="switch">
+            <input id="createEventOnDbClick" type="checkbox" name="cbxOptions@(itemName)" value="createEventOnDbClick" disabled/>
+            <span class="slider round"></span>
+        </label> <label>雙擊建立事件</label>
+    </div>
+    @*<div>
+        <button class="btn btn-sm btn-primary" onclick="Edit@(itemName)()"><i class="far fa-plus tree-icon"></i>新增事件</button>
+    </div>*@
+    <!-- Event Calendar container -->
+    <div id="eventCalendar@(itemName)"></div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let eventCalendar@(itemName);
+        let objFrom@(itemName) = `#eventCalendar@(itemName)`;
+
+        let newEvent = {};
+        let cellId = -1;
+
+        $(function () {
+            DefaultOptions@(itemName)(); //讀取預設 設定
+        });
+
+        function Expand@(itemName)() {
+            $(".task-nav").removeClass("active");
+            if (parseInt($("#UserId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                InitData@(itemName)();
+            }
+        }
+
+        function GetData@(itemName)() {
+            let targetUrl = "@Url.Action("GetUserTaskCalendar", "Task")";
+            let postData = {};
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                return data.result.filter(f => f.SubTask == 0);
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function InitData@(itemName)() {
+            EventCalendar@(itemName)(GetData@(itemName)());
+        }
+
+        function Edit@(itemName)(taskId) {
+            @*eventCalendar@(itemName).api.exec("edit-event", { add: true });*@
+
+            if (taskId > 0) {
+                let event_data = eventCalendarTaskCalendar.getEvent({ id: taskId.toString() }); //透過Calendar api 以id取得任務資料
+                if (event_data.TaskType == 'Project')
+                    InitDataViewProjectTask(taskId);
+                if (event_data.TaskType == 'Personal')
+                    InitDataViewPersonalTask(taskId);
+            }
+            else {
+                EditDataViewPersonalTask(taskId);
+            }
+        }
+
+        let calendars = [];
+        function DefaultOptions@(itemName)() {
+            //#region 事件類型
+            calendars = [
+                //...eventCalendar.defaultCalendars,
+                {
+                    id: "B", //為資料type識別，不得隨意更改
+                    label: "待處理",
+                    readonly: false,
+                    active: true,
+                    color: {
+                        background: "#3AA3E3",
+                        border: "#098CDC", //"#d5eaf7",
+                        textColor: "#fff"
+                    }
+                },
+                {
+                    id: "I", //為資料type識別，不得隨意更改
+                    label: "進行中",
+                    readonly: false,
+                    active: true,
+                    color: {
+                        background: "#9585EF",
+                        border: "#7A67EB", //"#E6E5EC",
+                        textColor: "#fff"
+                    }
+                },
+                //{
+                //    id: "D", //為資料type識別，不得隨意更改
+                //    label: "延宕",
+                //    readonly: false,
+                //    active: true,
+                //    color: {
+                //        background: "#ff4d4d",
+                //        border: "#ff1a1a", //"#EDD1EC",
+                //        textColor: "#fff"
+                //    }
+                //},
+                {
+                    id: "T", //為資料type識別，不得隨意更改
+                    label: "待檢驗",
+                    readonly: false,
+                    active: false,
+                    color: {
+                        background: "#BD69BC",
+                        border: "#AD44AB", //"#EDD1EC",
+                        textColor: "#fff"
+                    }
+                },
+                {
+                    id: "C", //為資料type識別，不得隨意更改
+                    label: "已完成",
+                    readonly: false,
+                    active: false,
+                    color: {
+                        background: "#61A649",
+                        border: "#84BF70", //"#CEEDC3",
+                        textColor: "#fff"
+                    }
+                }
+            ];
+            //#endregion
+        }
+
+        function EventCalendar@(itemName)(events) {
+            if (eventCalendar@(itemName)) eventCalendar@(itemName).destructor();
+
+            //format date string to date object
+            events.forEach(item => {
+                if (item.start_date.substring(0, 10) === item.end_date.substring(0, 10)) Object.assign(item, { color: { textColor: '#000' } }); //修復套件字體顏色錯誤
+                let dtSObj = new Date(item.start_date);
+                let dtEObj = new Date(item.end_date);
+                item.start_date = dtSObj;
+                item.end_date = dtEObj;
+                item.text = item.TaskType == 'Personal' ? `個人: ${item.text}` : `專案: ${item.text}`;
+            });
+
+            //#region 時間格式組態檔
+            @*let dateToStr = eventCalendar@(itemName).date.date_to_str("%Y-%m-%d"); //日期格式
+            let dateOfWeekToStr = eventCalendar@(itemName).date.date_to_str("%Y-%m-%d (%D)"); //日期格式(含星期)
+            let datetimeToStr = eventCalendar@(itemName).date.date_to_str("%Y-%m-%d %H:%i"); //日期時間格式
+            let timeToStr = eventCalendar@(itemName).date.date_to_str("%H:%i"); //時間格式*@
+            //#endregion
+
+            //資料
+            //let events = [
+            //    {
+            //        id: 1,
+            //        type: "B",
+            //        start_date: new Date("2023-11-08T08:00:00"),
+            //        end_date: new Date("2023-12-31T10:25:00"),
+            //        text: "套件研究",
+            //        details: "Philippe-Chatrier Court\n Paris, FRA",
+            //        allDay: false,
+            //        //color: {
+            //        //    background: "#098CDC",
+            //        //    border: "#098CDC",
+            //        //    textColor: "#fff"
+            //        //}
+            //    },
+            //    {
+            //        id: 2,
+            //        type: "I",
+            //        start_date: new Date("2023-11-12T08:00:00"),
+            //        end_date: new Date("2023-12-31T10:25:00"),
+            //        text: "前端調參測試",
+            //        details: "Philippe-Chatrier Court\n Paris, FRA",
+            //        allDay: false,
+            //        //color: {
+            //        //    background: "#7A67EB",
+            //        //    border: "#7A67EB",
+            //        //    textColor: "#fff"
+            //        //}
+            //    },
+            //    {
+            //        id: 3,
+            //        type: "T",
+            //        start_date: new Date("2023-11-16T08:00:00"),
+            //        end_date: new Date("2023-12-31T10:25:00"),
+            //        text: "檢驗",
+            //        details: "The Queens Club\n London, ENG",
+            //        allDay: false,
+            //        //color: {
+            //        //    background: "#AD44AB",
+            //        //    border: "#AD44AB",
+            //        //    textColor: "#fff"
+            //        //}
+            //    }
+            //];
+
+            //#region 時間軸顏色
+            //let colors = [
+            //    {
+            //        background: "#d5eaf7",
+            //        border: "#098CDC",
+            //        textColor: "#fff",
+            //        colorpicker: "background"
+            //    },
+            //    {
+            //        background: "#E6E5EC",
+            //        border: "#7A67EB",
+            //        textColor: "#fff",
+            //        colorpicker: "background"
+            //    },
+            //    {
+            //        background: "#EDD1EC",
+            //        border: "#AD44AB",
+            //        textColor: "#e5f01d",
+            //        colorpicker: "border"
+            //    }
+            //];
+            //#endregion
+
+            //編輯器外觀
+            let defaultEditorShape = [
+                {
+                    key: "text",
+                    type: "text",
+                    label: "Event name",
+                    config: {
+                        placeholder: "New Event"
+                    }
+                },
+                {
+                    type: "date",
+                    key: "start_date",
+                    label: "Start date",
+                    time: true
+                },
+                {
+                    type: "date",
+                    key: "end_date",
+                    label: "End date",
+                    time: true
+                },
+                {
+                    type: "checkbox",
+                    key: "allDay",
+                    text: "All day"
+                },
+                {
+                    type: "combo",
+                    key: "type",
+                    label: "Type"
+                },
+                {
+                    key: "details",
+                    type: "textarea",
+                    label: "Description",
+                    config: {
+                        placeholder: "描述"
+                    }
+                },
+                {
+                    type: "recurring",
+                    label: "Repeat event"
+                }
+            ];
+
+            //事件成員
+            let users = [
+                {
+                    id: "SteveSmith",
+                    label: "Steve Smith",
+                    avatar: "https://snippet.dhtmlx.com/codebase/data/kanban/01/img/user-1.jpg",
+                },
+                {
+                    id: "AaronLong",
+                    label: "Aaron Long",
+                    avatar: "https://snippet.dhtmlx.com/codebase/data/kanban/01/img/user-2.jpg",
+                },
+                {
+                    id: "AngelaAllen",
+                    label: "Angela Allen",
+                    avatar: "https://snippet.dhtmlx.com/codebase/data/kanban/01/img/user-3.jpg",
+                },
+                {
+                    id: "AngelaLong",
+                    label: "Angela Long",
+                    avatar: "https://snippet.dhtmlx.com/codebase/data/kanban/01/img/user-4.jpg",
+                },
+            ]
+
+            function optionTemplate(option) {
+                return `<div class="multiselect-wraper">
+	                        <img src=${option.avatar} alt="" class="multieselectOption-img" />
+	                        ${option.label}
+                        </div>`;
+            }
+
+            //#region  event priorities
+            //let priorities = [
+            //    { value: 1, label: "High" },
+            //    { value: 2, label: "Medium" },
+            //    { value: 3, label: "Low" }
+            //];
+            //#endregion
+
+            //#region editor settings
+            //let editorShape = [
+            //    ...defaultEditorShape, // include the default settings
+            //    {
+            //        type: "multiselect",
+            //        key: "users",
+            //        label: "Users",
+            //        options: users,
+            //        template: optionTemplate
+            //    },
+            //    { // add custom radio field
+            //        type: "radio",
+            //        key: "priority",
+            //        label: "Priority",
+            //        options: priorities
+            //    }
+            //];
+            //#endregion
+
+            //開關選項
+            let checkboxes = {
+                dragResize: false, //透過調整大小來重新安排事件
+                readonly: false, //阻止事件的操作
+                dragCreate: false, //透過拖放創建新事件
+                dragMove: true, //透過拖放重新安排事件
+                editorOnDblClick: false, //透過雙擊開啟編輯器
+                createEventOnDbClick: false, //透過雙擊創建新事件
+            };
+
+
+            //#region 設定檔
+            let config = {
+                timeRange: [0, 24],
+                readonly: checkboxes.readonly,
+                dragMove: checkboxes.dragMove,
+                dragCreate: checkboxes.dragCreate,
+                dragResize: checkboxes.dragResize,
+                editorOnDblClick: checkboxes.editorOnDblClick,
+                createEventOnDbClick: checkboxes.createEventOnDbClick,
+                eventInfoOnClick: true,
+                //dateClick: false,
+                views: [
+                    {
+                        id: "day", label: "Day", layout: "day", config: {
+                            hourHeight: 70,
+                        }
+                    },
+                    { id: "week", label: "Week", layout: "week" },
+                    { id: "month", label: "Month", layout: "month" },
+                ]
+            };
+            //#endregion
+
+            Object.keys(checkboxes).forEach(key => {
+                document.querySelector(`#${key}`).checked = checkboxes[key];
+            });
+
+
+            //#region template options
+            let templates = {
+                popup: ({ event, calendar }) => {
+                    let start_date = event.start_date.Format(`yyyy-MM-dd hh:mm`);
+                    let end_date = event.end_date.Format(`yyyy-MM-dd hh:mm`);
+                    return `
+                    <div class="event_wrapper">
+                        <h1>${event.text}</h1>
+                        <div class="event_info">
+                            <span><b>描述:</b>${event.details}</span></br>
+                            <span><b>時間:</b>${start_date} - ${end_date}</span></br>
+                            <span><b>共同成員:</b>${event.TaskUser}</span>
+                        </div>
+                    </div>`;
+                }
+            }
+            //#endregion
+
+            eventCalendar@(itemName) = new eventCalendar.EventCalendar(objFrom@(itemName), {
+                date: new Date(),
+                mode: "month",
+                config,
+                locale: eventCalendarLocales,
+                //editorShape,
+                calendars,
+                theme: "willow",
+                //colors
+                templates
+            });
+
+            //顯示/隱藏左側邊欄
+            @*eventCalendar@(itemName).toggleSidebar({ show: false });*@
+
+            //編輯事件
+            @*eventCalendar@(itemName).api.on("edit-event", (obj) => {
+                console.log(obj);
+            });*@;
+
+            //選擇事件
+            @*eventCalendar@(itemName).api.on("select-event", (obj) => {
+                //InitDataViewProjectTask(obj.id);
+
+                //測試
+                @*let event_data = eventCalendar@(itemName).getEvent({ id: obj.id });
+                console.log(event_data);
+            });*@
+
+            //新增日曆事件
+            eventCalendar@(itemName).api.on("add-calendar", (obj) => {
+                console.log(obj);
+
+                //測試
+                @*let event_data = eventCalendar@(itemName).getEvent({ id: obj.id });
+                console.log(event_data);*@
+            });
+
+            //新增事件
+            eventCalendar@(itemName).api.on("add-event", (obj) => {
+                console.log(obj);
+
+                //測試
+                let event_data = eventCalendar@(itemName).getEvent({ id: obj.id });
+                console.log(event_data);
+            });
+
+            @*//設定日期事件(點選小日曆)
+            eventCalendar@(itemName).api.on("set-date", (obj) => {
+                console.log(obj);
+
+                //測試
+                let event_data = eventCalendar@(itemName).getEvent({ id: obj.id });
+                console.log(event_data);
+            });*@
+
+            //切換側邊攔事件(左側收展)
+            eventCalendar@(itemName).api.on("toggle-sidebar", (obj) => {
+                console.log(obj);
+            });
+
+            //更新日曆事件
+            eventCalendar@(itemName).api.on("update-calendar", (obj) => {
+                console.log(obj);
+            });
+
+            //更新事件
+            eventCalendar@(itemName).api.on("update-event", (obj) => {
+                console.log(obj);
+                alert(JSON.stringify(obj), 'success', 0);
+            });
+
+            @*const state = eventCalendar@(itemName).api.getReactiveState();
+            // subscribe on the calendars changes and output the calendars data
+            state.calendars.subscribe((data) => {
+                console.log(data);
+            });*@
+
+            @*let state = eventCalendar@(itemName).api.getState();
+            console.log(state.events); // output the events data
+            console.log(state.mode); // output the selected mode
+            console.log(state.config); // output the configuration object
+            console.log(state.calendars); // output the calendars data
+            console.log(state.editorShape); // output the editor configuration object
+            console.log(state.selected); // output the selected event data*@
+
+
+            //介面選項
+            $(`input[name="cbxOptions@(itemName)"]`).off("change").on("change", function () {
+                let id = this.value;
+                checkboxes[id] = !checkboxes[id];
+
+                @*if (id == 'createEventOnDbClick') { //啟用、禁用編輯器
+                    if (checkboxes[id]) eventCalendar@(itemName).openEditor();
+                    else eventCalendar@(itemName).closeEditor();
+                }*@
+                document.querySelector(`#${id}`).checked = checkboxes[id];
+                eventCalendar@(itemName).setConfig({ config: { ...config, ...checkboxes, ...calendars } });
+            });
+
+            eventCalendar@(itemName).parse(events);
+        }
+    </script>
+                )

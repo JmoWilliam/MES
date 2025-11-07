@@ -1,0 +1,247 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewOspBarcodeSelect";
+    string itemNameText = "選擇託外生產條碼";
+}
+
+@Html.Resource("css",
+    @<style>
+        .qcitem-info {
+            border: 1px solid rgba(0,0,0,.125);
+            border-radius: 0.25rem;
+            padding: 10px;
+            box-shadow: 0 0 4px rgb(139 110 110 / 60%);
+            margin-bottom: 10px;
+        }
+
+        .tag-group {
+            display: inline-block;
+            background-color: #ebebeb;
+            border-radius: 4px;
+            cursor: text;
+            line-height: 1;
+            padding: 0.35rem 0.5rem;
+            margin: 0.15rem 0.375rem 0.15rem 0;
+            white-space: nowrap;
+            color: #0580ff;
+            font-weight: 700;
+        }
+
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)"
+                                               placeholder="請輸入條碼代碼" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 200px;">條碼代碼</th>
+                                        <th scope="col" style="min-width: 200px;">目前製程</th>
+                                        <th scope="col" style="min-width: 200px;">下一站製程</th>
+                                        <th scope="col" style="max-width: 200px;">條碼數量</th>
+                                        <th class="text-center checkbox-mode col-sticky" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+        let tempNumber@(itemName) = 1;
+        let moId@(itemName);
+        let moProcessId@(itemName);
+        let ospDetailId@(itemName);
+        let osrDetailId@(itemName);
+
+        function Pop@(itemName)(config) {
+            moId@(itemName) = config.objectMoId;
+            moProcessId@(itemName) = config.objectMoProcessId;
+            ospDetailId@(itemName) = config.objectOspDetailId;
+            osrDetailId@(itemName) = config.objectOsrDetailId;
+            Query@(itemName)();
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-osp-barcode-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-osp-barcode-id]").not(":disabled").prop("checked", false);
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetOspBarcode", "OutsourcingProduction")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "OspDetailId": ospDetailId@(itemName),
+                "MoProcessId": moProcessId@(itemName),
+                "MoId": moId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    let count = 0;
+                    $.each(data.result, function (i, item) {
+                        if (item.OspBarcodeId == null) {
+                            return;
+                        }
+
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                            innerHtml += `<tr>
+                                            <td scope="col" style="min-width: 75px;">${_row}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}" style="max-width: 200px;">${item.BarcodeNo}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.CurrentProcessAlias}" style="max-width: 200px;">${item.CurrentProcessAlias}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.NextProcessAlias}" style="max-width: 200px;">${item.NextProcessAlias}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeQty}" style="max-width: 200px;">${item.BarcodeQty}</td>
+                                            <td class="text-center col-sticky">
+                                                <label class="control control-solid control-solid-info control--checkbox">
+                                                    <input type="checkbox" data-osp-barcode-id="${item.OspBarcodeId}" value="${item.OspBarcodeId}" />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                                <input type="hidden" name="txtBarcodeNo@(itemName)" data-osp-barcode-id="${item.OspBarcodeId}" value="${item.BarcodeNo}" />
+                                            </td>
+                                          </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $(".radio-mode").hide();
+            $(".checkbox-mode").show();
+        }
+
+        function Save@(itemName)() {
+            if ($("input[type='checkbox'][data-osp-barcode-id]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-osp-barcode-id]:checked"), function (i) {
+                    let ospBarcodeId = $(this).val();
+
+                    let checkbool = false;
+                    $.each(osrReceiptBarcodeJson.osrReceiptBarcodeInfo, function (j, item) {
+                        if (item.OspBarcodeId == ospBarcodeId) {
+                            checkbool = true;
+                            return false;
+                        }
+                    });
+
+                    if (checkbool == false) {
+                        let barcodeNo = $(`input[name='txtBarcodeNo@(itemName)'][data-osp-barcode-id='${ospBarcodeId}']`).val();
+                        let inputData =
+                        {
+                            "TempNumber": tempNumber@(itemName),
+                            "OsrDetailId": osrDetailId@(itemName),
+                            "OspBarcodeId": ospBarcodeId,
+                            "BarcodeNo": barcodeNo
+                        }
+                        osrReceiptBarcodeJson.osrReceiptBarcodeInfo.push(inputData);
+                        tempNumber@(itemName)++;
+                    }
+                });
+            }
+
+            Reset@(itemName)();
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+
+        function Reset@(itemName)() {
+            let innerHtml = '';
+            $.each(osrReceiptBarcodeJson.osrReceiptBarcodeInfo, function (i, item) {
+                innerHtml += `<div class="tag-group">
+                                <span>${item.BarcodeNo}</span>
+                                <a href="javascript:DeleteTagViewOspReceiptBarcode('${item.TempNumber}');">
+                                    <i style="color:slategrey" class="fas fa-times"></i>
+                                </a>
+                              </div>`;
+            });
+            $(".osr-barcode-info").html(innerHtml);
+        }
+    </script>
+                        )

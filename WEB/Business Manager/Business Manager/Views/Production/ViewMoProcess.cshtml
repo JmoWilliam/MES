@@ -1,0 +1,568 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMoProcess";
+    string itemNameText = "修改製令製程相關設定";
+}
+
+@Html.Resource("css",
+@<style>
+     #modal@(itemName) .modal-body {
+         max-height: 75vh;
+         overflow-y: auto;
+     }
+
+     .add-process-icon {
+         margin-right: 15px;
+         margin-top: 10px;
+         cursor: pointer;
+         color: coral;
+     }
+
+     .process-info {
+         border: 1px solid rgba(0,0,0,.125);
+         border-radius: 0.25rem;
+         padding: 10px;
+         box-shadow: 0 0 4px rgb(139 110 110 / 60%);
+         margin-bottom: 10px;
+     }
+
+     .tag-group {
+         display: inline-block;
+         background-color: #ebebeb;
+         border-radius: 4px;
+         cursor: text;
+         line-height: 1;
+         padding: 0.35rem 0.5rem;
+         margin: 0.15rem 0.375rem 0.15rem 0;
+         white-space: nowrap;
+         color: #0580ff;
+         font-weight: 700;
+     }
+
+    .table-sticky thead .col-sticky:nth-last-child(1) {
+        right: 0;
+    }
+
+    .table-sticky tbody .col-sticky:nth-last-child(1) {
+        right: 0;
+    }
+</style>
+)
+
+<div class="modal fade" id="modal@(itemName)" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">製令: <span class="sub-text" id="desWoErpFullNo@(itemName)"></span></span>
+                    <span class="sub-title">品號: <span class="sub-text" id="desMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">品名: <span class="sub-text" id="desMtlItemName@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <div class="card card-shadow mb-4">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-12" style="margin-bottom: 5px;">
+                                        <a class="btn btn-info auth-update-mo-process" href="javascript:Edit@(itemName)();">
+                                            <i class="fas fa-plus"></i>新增
+                                        </a>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="table-custom">
+                                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col" style="min-width: 75px;">#</th>
+                                                        <th scope="col" style="min-width: 125px;">製程編號</th>
+                                                        <th scope="col" style="min-width: 125px;">製程別名</th>
+                                                        <th scope="col" style="min-width: 100px;">製程順序</th>
+                                                        <th scope="col" style="min-width: 130px;">支援工程檢</th>
+                                                        <th scope="col" style="min-width: 130px;">工程檢頻率</th>
+                                                        <th scope="col" class="text-center" style="min-width: 150px;">是否顯示在流程卡</th>
+                                                        <th scope="col" class="text-center" style="min-width: 150px;">必要過站</th>
+                                                        <th class="text-center col-sticky" scope="col" style="min-width: 250px;">操作</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody></tbody>
+                                            </table>
+                                        </div>
+                                        <div class="pagination" id="page@(itemName)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <div class="card card-shadow mb-4">
+                            <div class="card-body">
+                                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                                    <fieldset>
+                                        <input type="hidden" id="MoProcessId" name="MoProcessId" value="-1" />
+                                        <div class="add-group@(itemName)">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label" for="txtProcessId@(itemName)">製程資訊 <span class="text-danger">*</span></label>
+                                                <div class="col-12">
+                                                    <div class="input-group">
+                                                        <input type="hidden" id="txtProcessId@(itemName)" name="txtProcessId@(itemName)" value="-1" />
+                                                        <div class="input-group-append">
+                                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="tag-class">
+                                                <div class="process-info">
+                                                    <span><code>製程資訊:</code></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="edit-group@(itemName)" style="display: none;">
+                                            <div class="form-group row">
+                                                <div class="col-12">
+                                                    <label class="col-12 col-form-label" for="cboProcess@(itemName)">製程資訊 <span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <select class="form-control" id="cboProcess@(itemName)" name="cboProcess@(itemName)">
+                                                            <option value="">-- 請選擇製程資訊 --</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-12">
+                                                    <label class="col-12 col-form-label" for="txtProcessAlias@(itemName)">製程別名<span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <input type="text" class="form-control" id="txtProcessAlias@(itemName)" name="txtProcessAlias@(itemName)"
+                                                               placeholder="請輸入製程別名"
+                                                               data-msg-required="請輸入製程別名" data-rule-required="true"
+                                                               data-msg-maxlength="必須少於 32 個字元" maxlength="32" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-12">
+                                                    <label class="col-12 col-form-label" for="cboPackageFlag@(itemName)">是否支援包裝條碼<span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <select id="cboPackageFlag@(itemName)" class="form-control" required>
+                                                            <option value="Y">是</option>
+                                                            <option value="N" selected>否</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-6">
+                                                    <label class="col-12 col-form-label" for="cboProcessCheckStatus@(itemName)">是否支援工程檢<span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <select id="cboProcessCheckStatus@(itemName)" class="form-control" required>
+                                                            <option value="Y" selected>是</option>
+                                                            <option value="N">否</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="col-12 col-form-label" for="cboProcessCheckType@(itemName)">工程檢頻率<span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <select id="cboProcessCheckType@(itemName)" class="form-control">
+                                                            <option value="">請選擇</option>
+                                                            <option value="1">全檢</option>
+                                                            <option value="2" selected>抽檢</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-6">
+                                                    <label class="col-12 col-form-label">必要過站</label>
+                                                    <div class="col-lg-3 col-md-4 col-6">
+                                                        <label class="control control-solid control-solid-info control--checkbox">
+                                                            是
+                                                            <input type="checkbox" id="cbxNecessityStatus@(itemName)Y" name="cbxNecessityStatus@(itemName)" value="Y" checked />
+                                                            <span class="control__indicator"></span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="col-12 col-form-label">是否顯示在流程卡上</label>
+                                                    <div class="col-lg-3 col-md-4 col-6">
+                                                        <label class="control control-solid control-solid-info control--checkbox">
+                                                            是
+                                                            <input type="checkbox" id="cbxDisplayStatus@(itemName)Y" name="cbxDisplayStatus@(itemName)" value="Y" checked />
+                                                            <span class="control__indicator"></span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-12">
+                                                    <label class="col-12 col-form-label" for="txtRoutingItemProcessDesc@(itemName)">加工細項<span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <textarea style="margin-top:10px" class="form-control" id="txtRoutingItemProcessDesc@(itemName)" rows="3"></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @*<div class="form-group row">
+                                                <div class="col-12">
+                                                    <label class="col-12 col-form-label" for="txtRemark@(itemName)">加工備註<span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <textarea  rows="4" cols="50" type="text" class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)"
+                                                               placeholder="請輸入加工備註" />
+                                                    </div>
+                                                </div>
+                                            </div>*@
+                                        </div>
+                                    </fieldset>
+                                </form>
+                            </div>
+                            <div class="card-footer text-center text-lg-right">
+                                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("../Routing/ViewProcess")
+@Html.Partial("ViewMoProcessItem")
+
+@Html.Resource("js",
+@<script>
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 999
+    };
+    let objForm@(itemName) = "#editForm@(itemName)";
+    let moId@(itemName);
+    let woErpFullNo@(itemName);
+    let processJson =
+    {
+        processInfo : []
+    };
+    let modeId@(itemName);
+
+    function Pop@(itemName)(moId, woErpFullNo, mtlItemNo, mtlItemName, modeId) {
+        moId@(itemName) = moId;
+        woErpFullNo@(itemName) = woErpFullNo;
+        modeId@(itemName) = modeId;
+
+        $("#desWoErpFullNo@(itemName)").html(woErpFullNo);
+        $("#desMtlItemNo@(itemName)").html(mtlItemNo);
+        $("#desMtlItemName@(itemName)").html(mtlItemName);
+
+        Query@(itemName)();
+
+        $("#modal@(itemName)").modal({
+            backdrop: "static",
+            keyboard: false,
+            show: true
+        });
+    }
+
+    function Query@(itemName)() {
+        objPage@(itemName).pageIndex = 0;
+        InitData@(itemName)(objPage@(itemName));
+    }
+
+    function InitData@(itemName)(objPage) {
+        let innerHtml = '';
+        let pageCount = 0;
+
+        let targetUrl = "@Url.Action("GetMoProcess", "Production")";
+
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage.pageIndex + 1),
+            "PageSize": objPage.pageSize,
+            "MoId": moId@(itemName)
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+            if (pageCount > 0) {
+                objPage = PageCaculate(pageCount, objPage);
+
+                $.each(data.result, function (i, item) {
+                    let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                    innerHtml += `<tr class="${item.BarcodeProcess != null ? `disabled-sort` : ``}" id="${item.MoProcessId}">
+                                    <td scope="col" style="min-width: 150px;" class="text-center active-content auth-sort">
+                                        <a class="active-link sort-handle" href="javascript:void(0);"><i class="fas fa-arrows-alt"></i><span>製程順序</span></a>
+                                    </td>
+                                    <td class="un-auth auth-sort">${_row}</td>';
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessNo}" style="min-width: 125px;">${item.ProcessNo}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="min-width: 125px;">${item.ProcessAlias}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.SortNumber}" style="min-width: 100px;">${item.SortNumber}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessCheckStatus == `Y` ? `是` : `否`}" style="min-width: 130px;">${item.ProcessCheckStatus == `Y` ? `是` : `否`}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessCheckType != null ? (item.ProcessCheckType == `1` ? `全檢` : `抽檢`) : ``}" style="min-width: 130px;">${item.ProcessCheckType != null ? (item.ProcessCheckType == `1` ? `全檢` : `抽檢`) : ``}</td>
+                                    <td class="text-center auth-status-switch">
+                                        <input type="checkbox" name="chkDisplayStatus@(itemName)" data-mo-process-id="${item.MoProcessId}" ${item.DisplayStatus == `Y` ? `checked` : ''} />
+                                    </td>
+                                    <td class="text-center un-auth auth-status-switch">${StatusName(`Boolean`, `${item.DisplayStatus}`)}</td>
+                                    <td class="text-center auth-status-switch">
+                                        <input type="checkbox" name="chkNecessityStatus@(itemName)" data-mo-process-id="${item.MoProcessId}" ${item.NecessityStatus == `Y` ? `checked` : ''} />
+                                    </td>
+                                    <td class="text-center un-auth auth-necessity-status">${StatusName(`Boolean`, `${item.NecessityStatus}`)}</td>
+                                    <td class="text-center active-content col-sticky" scope="col" style="min-width: 250px;">
+                                        <!--編輯-->
+                                        <a class="active-link auth-update-mo-process" href="javascript:Edit@(itemName)('${item.MoProcessId}');" style="">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <!--刪除-->
+                                        <a class="active-link auth-update-mo-process" href="javascript:Delete@(itemName)('${item.MoProcessId}');" style="">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                        <!--設定途程製程屬性-->
+                                        <a class="active-link auth-update-mo-process" href="javascript:PopViewMoProcessItem('${item.MoProcessId}', '${item.ProcessAlias}', '${woErpFullNo@(itemName)}');">
+                                            <i class="fas fa-cog"></i><span>設定製程屬性</span>
+                                        </a>
+                                    </td>
+                                </tr>`;
+                });
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                                </tr>`;
+            }
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+
+        $("#tblData@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+        Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+        $("input[name='chkNecessityStatus@(itemName)']").bootstrapToggle({
+            on: "是",
+            off: "否",
+            onstyle: "success",
+            offstyle: "danger",
+            size: "mini"
+        });
+
+        $("input[name='chkDisplayStatus@(itemName)']").bootstrapToggle({
+            on: "是",
+            off: "否",
+            onstyle: "success",
+            offstyle: "danger",
+            size: "mini"
+        });
+
+        $("input[name='chkNecessityStatus@(itemName)'][data-mo-process-id]").change(NecessityStatusSwitch@(itemName));
+        $("input[name='chkDisplayStatus@(itemName)'][data-mo-process-id]").change(DisplayStatusSwitch@(itemName));
+
+        ComboBoxs.Default("#cboProcess@(itemName)", "@Url.Action("GetProcess", "MesBasicInformation")", {}, "", "NA", "", "ProcessName", "ProcessId");
+        if (!isMobile) {
+            $("#cboProcess@(itemName)").select2({
+                width: "100%"
+            });
+        }
+
+        $("#tblData@(itemName) tbody").sortable({
+            cancel: ".disabled-sort",
+            handle: ".sort-handle",
+            update: function (event, ui) {
+                let targetUrl = "@Url.Action("UpdateMoProcessSort", "Production")";
+                let postData = {
+                    "MoProcessSort": $(this).sortable("toArray", { attribute: 'id' }).join()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    Query@(itemName)();
+                }
+                else {
+                    return false;
+                }
+            }
+        });
+    }
+
+    function Edit@(itemName)(MoProcessId) {
+        $("#MoProcessId").val(MoProcessId ? MoProcessId : 0);
+        Switch("#editData@(itemName), .edit-group@(itemName)", "#listData@(itemName), .add-group@(itemName), .list-mode");
+        if (MoProcessId > 0) {
+            let targetUrl = "@Url.Action("GetMoProcess", "Production")";
+            let postData = {
+                "MoProcessId": MoProcessId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            console.log(data);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    $("#cboProcess@(itemName)").val(item.ProcessId).trigger("change");
+                    $("#txtProcessAlias@(itemName)").val(item.ProcessAlias);
+                    $("#cboPackageFlag@(itemName)").val(item.PackageFlag);
+                    if (item.NecessityStatus == "N") $("#cbxNecessityStatus@(itemName)Y").prop("checked", false);
+                    if (item.DisplayStatus == "N") $("#cbxDisplayStatus@(itemName)Y").prop("checked", false);
+                    $("#cboProcessCheckStatus@(itemName)").val(item.ProcessCheckStatus);
+                    if (item.ProcessCheckStatus == "N") {
+                        $("#cboProcessCheckType@(itemName)").prop("disabled", true);
+                        $("#cboProcessCheckType@(itemName)").prop("required", false);
+                        $("#cboProcessCheckType@(itemName)").val("");
+                    }
+                    else {
+                        $("#cboProcessCheckType@(itemName)").prop("disabled", false);
+                        $("#cboProcessCheckType@(itemName)").prop("required", true);
+                        $("#cboProcessCheckType@(itemName)").val(item.ProcessCheckType);
+                    }
+                    $("#txtRoutingItemProcessDesc@(itemName)").val(item.RoutingItemProcessDesc);
+                    $("#txtRemark@(itemName)").val(item.Remark);
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+        else {
+            Switch("#editData@(itemName), .add-group@(itemName)", "#listData@(itemName), .edit-group@(itemName)");
+        }
+
+        let popConfig = {
+            targetSelector: "#txtProcessId@(itemName)",
+            popFunction: "PopViewProcess",
+            objectProcessId: "#txtProcessId@(itemName)",
+            objectProcess: "#txtProcess@(itemName)",
+            objectModeId: modeId@(itemName)
+        };
+        InitPopView(popConfig);
+
+        $("#cboProcessCheckStatus@(itemName)").change(function () {
+            if ($("#cboProcessCheckStatus@(itemName)").val() == "Y") {
+                $("#cboProcessCheckType@(itemName)").prop("disabled", false);
+                $("#cboProcessCheckType@(itemName)").prop("required", true);
+            }
+            else {
+                $("#cboProcessCheckType@(itemName)").prop("disabled", true);
+                $("#cboProcessCheckType@(itemName)").prop("required", false);
+                $("#cboProcessCheckType@(itemName)").val("");
+            }
+        });
+    }
+
+    function NecessityStatusSwitch@(itemName)() {
+        let moProcessId = $(this).data("mo-process-id");
+
+        let targetUrl = "@Url.Action("UpdateMoNecessityStatus", "Production")";
+        let postData = {
+            "MoProcessId": moProcessId
+        };
+
+        DataAccess.Update(targetUrl, postData, false, true);
+
+        Query@(itemName)();
+    }
+
+    function DisplayStatusSwitch@(itemName)() {
+        let moProcessId = $(this).data("mo-process-id");
+
+        let targetUrl = "@Url.Action("UpdateMoDisplayStatus", "Production")";
+        let postData = {
+            "MoProcessId": moProcessId
+        };
+
+        DataAccess.Update(targetUrl, postData, false, true);
+
+        Query@(itemName)();
+    }
+
+    function Save@(itemName)() {
+        let moProcessId = parseInt($("#MoProcessId").val());
+        if (moProcessId <= 0) {
+            if (processJson.processInfo.length > 0) {
+                let targetUrl = "@Url.Action("AddMoProcess", "Production")";
+                let postData = {
+                    "MoId": moId@(itemName),
+                    "ProcessData": JSON.stringify(processJson)
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+            else {
+                alert("至少需要選擇一個站別!");
+            }
+        } else {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("UpdateMoProcess", "Production")";
+                let postData = {
+                    "MoProcessId": moProcessId,
+                    "ProcessId": $("#cboProcess@(itemName)").val(),
+                    "ProcessAlias": $("#txtProcessAlias@(itemName)").val(),
+                    "NecessityStatus": $("#cbxNecessityStatus@(itemName)Y").prop("checked") ? 'Y' : 'N',
+                    "DisplayStatus": $("#cbxDisplayStatus@(itemName)Y").prop("checked") ? 'Y' : 'N',
+                    "ProcessCheckStatus": $("#cboProcessCheckStatus@(itemName)").val(),
+                    "ProcessCheckType": $("#cboProcessCheckType@(itemName)").val(),
+                    "PackageFlag": $("#cboPackageFlag@(itemName)").val(),
+                    "RoutingItemProcessDesc": $("#txtRoutingItemProcessDesc@(itemName)").val(),
+                    "Remark": $("#Remark@(itemName)").val() 
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+    }
+
+    function Delete@(itemName)(MoProcessId) {
+        swal.fire({
+            titleText: "確認要刪除嗎?",
+            text: "此動作無法復原，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let targetUrl = "@Url.Action("DeleteMoProcess", "Production")";
+                let postData = {
+                    "MoProcessId": MoProcessId
+                };
+
+                let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                if (result) {
+                    Query@(itemName)();
+                }
+            }
+        });
+    }
+
+    function Return@(itemName)() {
+        Switch("#listData@(itemName), .list-mode", "#editData@(itemName)");
+        ResetForm(objForm@(itemName));
+        processJson.processInfo = [];
+        $(".process-info").empty();
+        Query@(itemName)();
+    }
+
+    function Close@(itemName)() {
+        $("#modal@(itemName)").modal('hide');
+    }
+</script>
+        )

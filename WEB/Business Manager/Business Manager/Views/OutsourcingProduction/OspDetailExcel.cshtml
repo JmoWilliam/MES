@@ -1,0 +1,1541 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "OspDetailExcel";
+    string itemNameText = "託外生產單詳細資料管理(Excel)";
+}
+
+<script src="@Url.Content("~/Scripts/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.js")"></script>
+<link href="@Url.Content("~/Content/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.css")" rel="stylesheet" />
+
+
+@Html.Resource("css",
+    @<style>
+         .showStyle {
+             display: inline-block;
+             margin-top: -1px;
+         }
+
+         .AddNewItem {
+             margin: 2px 0;
+         }
+    </style>
+        )
+     
+     <div class="col-12">
+                 <div class="card card-shadow mb-4">
+                     <div class="card-body">
+                         <div class="row mb-3">
+                             <div class="col-6 col-sm-6 col-md-6">
+                                 <div class="form-group row">
+                                     <div class="col-3">
+                                         <select class="form-control" id="cboMode@(itemName)" name="cboMode@(itemName)" required>
+                                             <option value="M" selected>管理模式</option>
+                                             <option value="U">編輯模式</option>
+                                         </select>
+                                     </div>
+                                 </div>
+                             </div>
+                             <div class="col-6 col-sm-6 col-md-6 text-right ">
+                                 <span id="Add">
+                                     <a class="btn btn-info auth-add" href="javascript:OpenPopView@(itemName)('ManufactureOrder');"><i class="fas fa-plus"></i>新增</a>
+                                 </span>
+                                 <span id="Save">
+                                     <a class="btn btn-success auth-update" href="javascript:Save@(itemName)('-1');"><i class="fas fa-save"></i>儲存</a>
+                                 </span>
+                                 <span id="Delete">
+                                     <a class="btn btn-danger auth-delete" href="javascript:Action@(itemName)('Delete','-1');"><i class="fas fa-trash-alt"></i>刪除</a>
+                                 </span>
+                                 <span id="Reset">
+                                     <a class="btn btn-warning auth-add" href="javascript:Action@(itemName)('Reset','-1');"><i class="fas fa-eraser"></i>重置</a>
+                                 </span>
+                                 <span id="Confirm">
+                                     <a class="btn btn-success auth-confirm" href="javascript:Action@(itemName)('Confirm','-1');"><i class="fas fa-check"></i>確認</a>
+                                 </span>
+                                 <span id="ReConfirm">
+                                     <a class="btn btn-danger auth-reconfirm" href="javascript:Action@(itemName)('ReConfirm','-1');"><i class="fas fa-undo-alt"></i>反確認</a>
+                                 </span>
+                             </div>
+                         </div>
+                         <div class="row mb-3">
+                             <div style="height: 75%; width: 100%;" id="ExcelTemporary"></div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+
+     <div class="modal fade" id="PopView@(itemName)" data-backdrop="static" data-keyboard="false">
+         <div class="modal-dialog modal-xl">
+             <div class="modal-content">
+                 <div class="modal-header">
+                     <h5 id="PopViewTitle" class="modal-title"></h5>
+                     <button class="close" type="button" onclick="ClosePopView()">
+                         <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                     </button>
+                 </div>
+                 <div class="modal-body">
+                     <div class="row" id="listDataPopOrder@(itemName)">
+                         <div class="col-lg-12 MoIdList" >
+                             <form autocomplete="off" id="popOrderForm@(itemName)">
+                                 <fieldset>
+                                     <div class="form-row align-items-center mb-2">
+                                         <div class="col-3">
+                                             <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)"
+                                                    placeholder="請輸入製令單號(EX:5101-...)" />
+                                         </div>
+                                         <div class="col-2">
+                                             <input type="text" class="form-control" id="txtMoIdQ@(itemName)" name="txtMoIdQ@(itemName)"
+                                                    placeholder="請輸入製令條碼(EX:19)" />
+                                         </div>
+                                         <div class="col-2">
+                                             <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                                    placeholder="請輸入品號" />
+                                         </div>
+                                         <div class="col-2">
+                                             <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                                    placeholder="請輸入品名" />
+                                         </div>
+                                         <div class="col-3">
+                                             <select class="form-control" id="cboProdModeQ@(itemName)" name="cboProdModeQ@(itemName)"></select>
+                                         </div>
+                                         <div class="col-2">
+                                             <button type="button" class="btn btn-primary" onclick="QueryMes@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                         </div>
+                                     </div>
+                                     <div class="form-row align-items-center mb-2">
+                                         <div class="col-auto">
+                                             <label class="col-form-label">暫存列表 - 數量：<span id="TemporaryListNum@(itemName)" name="TemporaryListNum@(itemName)">0</span></label>
+                                         </div>
+                                         <div class="col-auto" style="width: 20%;">
+                                             <select class="form-control" id="cboTemporaryList@(itemName)" name="cboTemporaryList@(itemName)"></select>
+                                         </div>
+                                         <div class="col-auto">
+                                             <a class="btn btn-warning" onclick="DeleteOption@(itemName)(cboTemporaryList@(itemName))"><i class="fal fa-trash-alt"></i>移除</a>
+                                             <a class="btn btn-danger" onclick="ClearTemporaryList@(itemName)()"><i class="fal fa-trash-alt"></i>清空</a>
+                                             <a class="btn btn-success" onclick="TemporaryItemSave@(itemName)()"><i class="fal fa-save"></i>暫存</a>
+                                             <a class="btn btn-success" onclick="SentData@(itemName)()"><i class="fal fa-save"></i>傳送資料</a>
+                                         </div>
+                                     </div>
+                                 </fieldset>
+                             </form>
+                             <div class="table-custom">
+                                 <table class="table table-bordered table-striped table-sticky" id="tblMoIdList@(itemName)">
+                                     <thead>
+                                         <tr>
+                                             <th scope="col" style="min-width: 75px;">#</th>
+                                             <th scope="col" style="min-width: 250px;">製令</th>
+                                             <th scope="col" style="min-width: 250px;">生產模式</th>
+                                             <th scope="col" style="min-width: 175px;">品號</th>
+                                             <th scope="col" style="min-width: 175px;">品名</th>
+                                             <th scope="col" style="min-width: 175px;">綁定途程</th>
+                                             <th scope="col" style="min-width: 175px;">預計產量</th>
+                                             <th scope="col" style="min-width: 175px;">已領套數</th>
+                                             <th scope="col" style="min-width: 175px;">已投入數量</th>
+                                             <th scope="col" style="min-width: 175px;">完工數量</th>
+                                             <th scope="col" style="min-width: 175px;">報廢數量</th>
+                                             <th class="text-center col-sticky" scope="col" style="min-width: 110px;">
+                                                 全選 <input type="checkbox" id="cbxMoFullNoSelectAll@(itemName)" />
+                                             </th>
+                                         </tr>
+                                     </thead>
+                                     <tbody></tbody>
+                                 </table>
+                             </div>
+                             <div class="pagination" id="pagePopOrder@(itemName)"></div>
+                         </div>
+                         <div class="col-lg-12 BarcodeList" >
+                             <form autocomplete="off" id="popOrderForm@(itemName)">
+                                 <fieldset>
+                                 </fieldset>
+                             </form>
+                             <div class="table-custom">
+                                 <table class="table table-bordered table-striped table-sticky" id="tblBarcodeList@(itemName)">
+                                     <thead>
+                                         <tr>
+                                             <th scope="col" style="min-width: 75px;">#</th>
+                                             <th scope="col" style="min-width: 250px;">條碼代碼</th>
+                                             <th scope="col" style="min-width: 250px;">托外狀態</th>
+                                             <th scope="col" style="min-width: 175px;">目前製程</th>
+                                             <th scope="col" style="min-width: 175px;">下一站製程</th>
+                                             <th scope="col" style="min-width: 175px;">條碼數量</th>
+                                             <th scope="col" style="min-width: 175px;">在製狀態</th>
+                                             <th scope="col" style="min-width: 175px;">條碼狀態</th>
+                                             <th class="text-center col-sticky" scope="col" style="min-width: 110px;">
+                                                 全選 <input type="checkbox" id="cbxBarcodeSelectAll@(itemName)" />
+                                             </th>
+                                         </tr>
+                                     </thead>
+                                     <tbody></tbody>
+                                 </table>
+                             </div>
+                             <div class="pagination" id="pagePopOrder@(itemName)"></div>
+                         </div>
+                     </div>
+                     </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-success BarcodeList" id="TemporaryBarcodeSave" onclick="TemporaryBarcodeSave@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                     <button type="button" class="btn btn-secondary" onclick="ClosePopView()"><i class="fas fa-paper-plane"></i>關閉</button>
+                 </div>
+             </div>
+         </div>
+     </div>
+
+@Html.Resource("js",
+    @<script>
+        let newMode = ""
+        let ospId@(itemName);
+        let supplierNo@(itemName);
+
+        // Excel使用
+        let spreadsheet@(itemName);
+        let spreadsheetData@(itemName);
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfo: []
+        }
+        let TemplateDefault = ``;
+        let DetailSeeArr = ["👁️查看", "🗑️刪除"]
+        let DetailEditArr = ["✎編輯", "🗑️刪除"]
+        let ProcessCodeArr = []
+        let ProcessCheckStatusArr = ["Y:是", "N:否"]
+        let ProcessCheckTypeArr = ["0:不需", "1:全檢", "2:抽檢"]
+
+
+        //Excel抬頭欄位預設值
+        //properties(欄位性質):A=操作欄位 R=必填欄位,NR非必填欄位,S系統自動帶入欄位
+        const TableColumn = [
+            {
+                colum: "Action",
+                label: "操作",
+                width: 100,
+                properties: "A",
+                format: "text"
+            },
+            {
+                colum: "MoFullNo",
+                label: "製令",
+                width: 170,
+                properties: "R",
+                format: "text"
+            },
+            {
+                colum: "MtlItemNo",
+                label: "品號",
+                width: 170,
+                properties: "S",
+                format: "text",
+            },
+            {
+                colum: "MtlItemName",
+                label: "品名",
+                width: 170,
+                properties: "S",
+                format: "text",
+            },
+            {
+                colum: "MtlItemSpec",
+                label: "規格",
+                width: 170,
+                properties: "S",
+                format: "text"
+            },
+            {
+                colum: "MoProcess",
+                label: "加工製程",
+                width: 170,
+                properties: "R",
+                format: "text"
+            },
+            {
+                colum: "ProcessCode",
+                label: "加工代碼",
+                width: 120,
+                properties: "R",
+                format: "text"
+            },
+            {
+                colum: "BarcodeList",
+                label: "條碼列表",
+                width: 170,
+                properties: "R",
+                format: "text"
+            },
+            {
+                colum: "OspQty",
+                label: "託外加工數量",
+                width: 120,
+                properties: "S",
+                format: "text"
+            },
+            {
+                colum: "SuppliedQty",
+                label: "供貨生產數量",
+                width: 120,
+                properties: "S",
+                format: "text"
+            },
+            {
+                colum: "ExpectedDate",
+                label: "預計回廠日期",
+                width: 120,
+                properties: "R",
+                format: "text"
+            },
+            {
+                colum: "ProcessCheckStatus",
+                label: "是否支援工程檢",
+                width: 120,
+                properties: "S",
+                format: "text"
+            },
+            {
+                colum: "ProcessCheckType",
+                label: "工程檢頻率",
+                width: 120,
+                properties: "S",
+                format: "text"
+            }
+            ,
+            {
+                colum: "ID",
+                label: "Id",
+                width: 120,
+                properties: "S",
+                format: "text"
+            }
+        ]
+
+        //Excel儲存撈取欄位 -,目前欄位採自行定義通過機制故只能採用自行定義對應欄位機制,如果Excel抬頭欄位有異動,GetColumn也需要異動,讓兩邊位置匹配,
+        const GetColumn = {
+            A: "Action",
+            B: "MoFullNo",
+            F: "MoProcess",
+            G: "ProcessCode",
+            I: "OspQty",
+            J: "SuppliedQty",
+            K: "ExpectedDate",
+            L: "ProcessCheckStatus",
+            M: "ProcessCheckType",
+            N: "OspDetailId"
+        }
+
+        function Expand@(itemName)(ospId, supplierNo) {
+            if (ospId > 0) {
+                newMode = ""
+                ospId@(itemName) = ospId;
+                supplierNo@(itemName) = supplierNo;
+                ProcessCodeArr = []
+
+                ResetSpreadsheet@(itemName)();
+                ResetExcel()
+                GetSelectInputData('ProcessCode')
+
+                $(".advanced-block").slideDown("slow");
+
+                $("#cboMode@(itemName)").change(function () {
+                    $("#Add").hide()
+                    $("#Save").hide()
+                    $("#Delete").hide()
+                    $("#Reset").hide()
+                    $("#Confirm").hide()
+                    $("#ReConfirm").hide()
+
+                    let Mode = $("#cboMode@(itemName)").val()
+
+                    switch (Mode) {
+                        case "M":
+                            if (newMode == "U" && Status == "N") {
+                                titleText = "是否要切換管理模式"
+                                text = "該動作會清除待更新資料,請確認是否要執行!"
+                                swal.fire({
+                                    titleText: `${titleText}`,
+                                    text: `${text}`,
+                                    icon: "warning",
+                                    allowOutsideClick: false,
+                                    allowEscapeKey: false,
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#d33',
+                                    reverseButtons: true
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        newMode = "M"
+
+                                        if (Status == "Y") {
+                                            $("#ReConfirm").show()
+                                        }
+                                        else {
+                                            $("#Confirm").show()
+                                            $("#Delete").show()
+                                        }
+                                        Query@(itemName)()
+                                    }
+                                    else {
+                                        $("#cboMode@(itemName)").val("U").trigger('change');
+                                    }
+                                });
+                            }
+                            else {
+                                newMode = "M"
+
+                                if (Status == "Y") {
+                                    $("#ReConfirm").show()
+                                }
+                                else {
+                                    $("#Confirm").show()
+                                    $("#Delete").show()
+                                }
+                                Query@(itemName)()
+                            }
+
+                            break
+                        case "U":
+                            newMode = "U"
+                            if (Status == "Y") {
+                                $("#cboMode@(itemName)").val("M").trigger('change');
+                                alert("目前單據處於確認狀態,無法開啟編輯模式", "alert");
+                                return
+                            }
+                            $("#Add").show()
+                            $("#Save").show()
+                            $("#Reset").show()
+                            Query@(itemName)()
+                            break
+                    }
+                })
+                $("#cboMode@(itemName)").val("M").trigger('change');
+
+                ComboBoxs.Default("#cboProdModeQ@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "NA", "", "txtProdModeWithText", "ModeId");
+
+                $("#txtWoErpFullNoQ@(itemName), #txtMoIdQ@(itemName), #cboProdModeQ@(itemName)").change(function () {
+                    QueryMes@(itemName)()
+                })
+
+                //製令列表全選
+                $("#cbxMoFullNoSelectAll@(itemName)").off("click").on("click", function () {
+                    if ($("#cbxMoFullNoSelectAll@(itemName)").is(":checked")) {
+                        $("input[type='checkbox'][name='cbxItem@(itemName)']").not(":disabled").prop("checked", true);
+                    } else {
+                        $("input[type='checkbox'][name='cbxItem@(itemName)']").not(":disabled").prop("checked", false);
+                    }
+                })
+
+
+                //條碼列表全選
+                $("#cbxBarcodeSelectAll@(itemName)").off("click").on("click", function () {
+                    if ($("#cbxBarcodeSelectAll@(itemName)").is(":checked")) {
+                            $("input[type='checkbox'][name='cbxBarcode@(itemName)']").not(":disabled").prop("checked", true);
+                    } else {
+                           $("input[type='checkbox'][name='cbxBarcode@(itemName)']").not(":disabled").prop("checked", false);
+                    }
+                })
+
+                //Return@(itemName)();
+                @*if (!isMobile) {
+                    $("#cboMode@(itemName)").select2({
+                        width: "100%"
+                    });
+                }*@
+                if (!isMobile) {
+                $("#cboProdModeQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+            }
+            else {
+                alert("找不到託外生產單,無法開啟Excel模式,請重新整理確認!!", "alert");
+                ResetExcel()
+            }
+        }
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        function Query@(itemName)() {
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+
+            let targetUrl = "@Url.Action("GetOspDetail", "OutsourcingProduction")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "OspId": ospId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    ResetExcel()
+
+                    $.each(data.result, function (i, item) {
+                        let row = i + 2
+                        let MoFullNo = `${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})`
+                        let MoProcessId = item.MoProcessId
+                        let OspDetailId = item.OspDetailId
+
+                        let MoProcessArr = GetSelectInputData('MoProcess', item.MoId)
+                        // 计算两个日期之间的毫秒数差异
+                        let date1 = new Date(item.ExpectedDate);
+                        let date2 = new Date("1899-12-30");
+                        let timeDifference = date1 - date2;
+
+                        // 将毫秒数转换为天数
+                        let dayDifference = timeDifference / (1000 * 60 * 60 * 24);
+                        let Mode = $("#cboMode@(itemName)").val()
+                        let DetailStatusArr =[]
+                        if (Mode == "M") {
+                            DetailStatusArr = DetailSeeArr
+                        }
+                        else if (Mode == "U") {
+                            DetailStatusArr = DetailEditArr
+                        }
+
+                        spreadsheet@(itemName).setValidation(`A` + row, DetailStatusArr)
+                        spreadsheet@(itemName).setValidation(`F` + row, MoProcessArr)
+                        spreadsheet@(itemName).setValidation(`G` + row, ProcessCodeArr)
+                        spreadsheet@(itemName).setValidation(`L` + row, ProcessCheckStatusArr)
+                        spreadsheet@(itemName).setValidation(`M` + row, ProcessCheckTypeArr)
+
+
+                        spreadsheet@(itemName).setFormat("I" + row, "number")
+                        spreadsheet@(itemName).setFormat("J" + row, "number")
+                        spreadsheet@(itemName).setFormat("K" + row, "date")
+
+                        spreadsheet@(itemName).setValue("A" + row, DetailStatusArr[0])
+                        spreadsheet@(itemName).setValue("B" + row, MoFullNo)
+                        spreadsheet@(itemName).setValue("C" + row, item.MtlItemNo)
+                        spreadsheet@(itemName).setValue("D" + row, item.MtlItemName)
+                        spreadsheet@(itemName).setValue("E" + row, item.MtlItemSpec)
+                        spreadsheet@(itemName).setValue("F" + row, `${item.MoProcessId}:${item.ProcessAlias}`)
+                        spreadsheet@(itemName).setValue("G" + row, `${item.ProcessCode}:${item.ProcessCodeName}`)
+                        spreadsheet@(itemName).setValue("H" + row, `👁️查看列表${row}`)
+                        spreadsheet@(itemName).setValue("I" + row, item.OspQty)
+                        spreadsheet@(itemName).setValue("J" + row, item.SuppliedQty)
+                        spreadsheet@(itemName).setValue("K" + row, dayDifference)
+                        spreadsheet@(itemName).setValue("L" + row, item.ProcessCheckStatus == "Y" ? ProcessCheckStatusArr[0] : ProcessCheckStatusArr[1] )
+                        spreadsheet@(itemName).setValue("M" + row, item.ProcessCheckType != "" ? ProcessCheckTypeArr[item.ProcessCheckType - 1] : ProcessCheckTypeArr[0] )
+                        spreadsheet@(itemName).setValue("N" + row, OspDetailId)
+
+                        //spreadsheet@(itemName).lock("A" + row);
+                        QueryBarcode@(itemName)(row, MoFullNo, MoProcessId, OspDetailId)
+
+                        spreadsheet@(itemName).lock("B" + row);
+                        spreadsheet@(itemName).lock("C" + row);
+                        spreadsheet@(itemName).lock("D" + row);
+                        spreadsheet@(itemName).lock("E" + row);
+                        spreadsheet@(itemName).lock("I" + row);
+                        spreadsheet@(itemName).lock("J" + row);
+                        spreadsheet@(itemName).lock("N" + row);
+                        spreadsheet@(itemName).lock("L" + row);
+                        spreadsheet@(itemName).lock("M" + row);
+
+                    })
+                }
+                else {
+                    ResetExcel()
+                }
+            }
+            else {
+                ResetExcel()
+            }
+        }
+        function Save@(itemName)() {
+            //Excel資料撈取
+            spreadsheetJson@(itemName).spreadsheetInfo = [];
+            spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+
+            var errMsg = ""
+            var ExcelData = [];
+            var ExcelObj = {};
+            let CompriseArr = []
+            $.each(spreadsheetData@(itemName).sheets[0].data, function (i, item) {
+                let cell = item.cell;
+                let row = parseInt(cell.substring(1))
+                var CompriseKey = ""
+                if (cell.charAt(0) == "B" && row > 1) {
+                    let MoFullNo = spreadsheet@(itemName).getValue("B" + row)
+                    let MoProcess = spreadsheet@(itemName).getValue("F" + row)
+                    let Key = `${MoFullNo}:${MoProcess}`
+                    for (let key in GetColumn) {
+                        let value = spreadsheet@(itemName).getValue(key + row);
+                        let ColumName = GetColumn[key]
+                        let nowRow = key + row
+                        switch (key) {
+                            case "A":
+                                if (!!!value) {
+                                    errMsg += `【${nowRow}-操作】不可為空<br>`
+                                }
+                                else{
+                                    switch (value) {
+                                        case "📌待新增":
+                                            value = "A"
+                                            break
+                                        case "✎編輯":
+                                            value = "U"
+                                            break
+                                        case "🗑️刪除":
+                                            value = "D"
+                                            break
+                                    }
+                                }
+                                break;
+                            case "B":
+                                CompriseKey += value
+                                if (!!!value)
+                                    errMsg += `【${nowRow}-製令】不可為空<br>`
+                                break;
+                            case "F":
+                                if (!!!value) {
+                                    errMsg += `【${nowRow}-加工製程】不可為空<br>`
+                                }
+                                else {
+                                    value = value.split(':')[0]
+                                    CompriseKey += value
+                                    if (!!!CompriseArr.includes(CompriseKey)) {
+                                        CompriseArr.push(CompriseKey)
+                                    }
+                                    else {
+                                        errMsg += `【${nowRow}-製令+加工製程】組合重複<br>`
+                                    }
+                                }
+                                break;
+                            case "G":
+                                if (!!!value) {
+                                    errMsg += `【${nowRow}-加工代碼】不可為空<br>`
+                                }
+                                else {
+                                    if (!ProcessCodeArr.includes(value)) {
+                                        errMsg += `【${nowRow}-加工代碼】資料異常<br>`
+                                    }
+                                    value = value.split(':')[0]
+                                }
+                                break;
+                            case "I":
+                                if (!!!value) {
+                                    value = 0
+                                    errMsg += `【${nowRow}-託外加工數量】不可為0<br>`
+                                }
+
+                                break;
+                            case "J":
+                                if (!!!value) {
+                                    value = 0
+                                    errMsg += `【${nowRow}-供貨生產數量】不可為0<br>`
+                                }
+                                break;
+                            case "K":
+                                if (!!!value) {
+                                    errMsg += `【${nowRow}-預計回廠日期】不可為空<br>`
+                                }
+                                else {
+                                    let date = new Date("1899-12-30");
+                                    date.setDate(date.getDate() + parseInt(value));
+                                    let year = date.getFullYear();
+                                    let month = (date.getMonth() + 1).toString().padStart(2, '0');
+                                    let day = date.getDate().toString().padStart(2, '0');
+                                    value = year + '-' + month + '-' + day;
+                                }
+                                break;
+                            case "L":
+                                if (!!!value) {
+                                    errMsg += `【${nowRow}-工程檢】不可為空<br>`
+                                }
+                                else {
+                                    if (!ProcessCheckStatusArr.includes(value)) {
+                                        errMsg += `【${nowRow}-工程檢】資料異常<br>`
+                                    }
+                                    value = value.split(':')[0]
+                                }
+                                break;
+                            case "M":
+                                if (!!!value) {
+                                    errMsg += `【${nowRow}-工程檢頻率】不可為空<br>`
+                                }
+                                else {
+                                    if (!ProcessCheckTypeArr.includes(value)) {
+                                        errMsg += `【${nowRow}-工程檢頻率】資料異常<br>`
+                                    }
+                                    value = value.split(':')[0]
+                                }
+                                break;
+                            case "N":
+                                if (!!!value) {
+                                    value = 0
+                                }
+                                break;
+                        }
+                        ExcelObj[ColumName] = value;
+
+                    }
+
+                    if (!!!TemporaryBarcodeList[Key]) {
+                        ExcelObj.BarcodeList = ``
+                    }
+                    else {
+                        ExcelObj.BarcodeList = TemporaryBarcodeList[Key].BarcodeList.join(",")
+                    }
+                    ExcelData.push(ExcelObj)
+                    ExcelObj = {}
+                }
+            });
+
+
+            if (!!errMsg) {
+                alert(errMsg, "alert", 0);
+                return
+            }
+            let targetUrl = "@Url.Action("AddOspDetailExcel", "OutsourcingProduction")";
+            let postData = {
+                "OspId": ospId@(itemName),
+                "ExcelData": JSON.stringify(ExcelData)
+            };
+
+            let result = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (result) {
+                Return@(itemName)();
+                alert("編輯成功", "success", 0)
+            }
+
+        }
+
+
+        //Excel模板啟用
+        function ResetSpreadsheet@(itemName)() {
+            $("#ExcelTemporary").empty();
+            $("#ExcelTemporary").css("height", "550px");
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("ExcelTemporary", {
+                colsCount: 13,
+                topSplit: 1,
+                menu: false,
+                dateFormat: "%Y-%m-%d",
+                toolbarBlocks: [
+                    "format"
+                ]
+            });
+            //右鍵鎖定功能不顯示
+            spreadsheet@(itemName).contextMenu.data.remove("lock");
+
+            GeneratedTemplateDefault()
+            ExcelAction()
+        }
+
+        //Excel動態產出預設欄位
+        function GeneratedTemplateDefault() {
+            let sheetsData = []
+            let sheetsCols = []
+            if (TableColumn.length > 702) {
+                alert("目前只支援到欄位ZZ", "alert", 0);
+                return
+            }
+            else {
+                for (let i = 0; i < TableColumn.length; i++) {
+                    let dataObj = {}
+                    let colsObj = {}
+                    let width = 0
+                    let properties1, cell, css, format, label = ""
+                    let times = Math.ceil(i / 26)
+                    let Remainder = i % 26
+                    if (Remainder == 0 && i != 0) {
+                        Remainder = 26
+                    }
+                    if (times > 1) {
+                        cell = String.fromCharCode(64 + times) + String.fromCharCode(65 + Remainder) + 1
+                    }
+                    else {
+                        cell = String.fromCharCode(65 + Remainder) + 1
+                    }
+
+                    properties1 = TableColumn[i].properties
+                    switch (properties1) {
+                        case "A":
+                            css = `dhx_generated_class_u1690959030041`;
+                            break;
+                        case "R":
+                            css = `dhx_generated_class_u1690959030043`;
+                            break;
+                        case "NR":
+                            css = `dhx_generated_class_u1690959030044`;
+                            break;
+                        case "S":
+                            css = `dhx_generated_class_u1690959030049`;
+                            break;
+                    }
+
+                    format = TableColumn[i].format
+                    label = TableColumn[i].label
+                    width = TableColumn[i].width
+                    dataObj.cell = cell
+                    dataObj.css = css
+                    dataObj.format = format
+                    dataObj.value = label
+                    colsObj.width = width
+                    sheetsData.push(dataObj)
+                    sheetsCols.push(colsObj)
+                }
+            }
+
+            const sheetsDataJson = JSON.stringify(sheetsData);
+            const sheetsColsJson = JSON.stringify(sheetsCols);
+
+            TemplateDefault = `
+                    {
+                     "sheets":
+                              [
+                               {
+                                "name":"sheet1"
+                               ,"data":${sheetsDataJson}
+                               ,"cols":${sheetsColsJson}
+                               ,"rows":[{"height":32}]
+                              }
+                             ]
+                    ,"styles":{
+                                "dhx_generated_class_u1690959030041":{"background":"#FFACAF","text-align":"center","justify-content":"center"}
+                               ,"dhx_generated_class_u1690959030043":{"background":"#FDFFB4","text-align":"center","justify-content":"center"}
+                               ,"dhx_generated_class_u1690959030044":{"background":"#CCFFBE","text-align":"center","justify-content":"center"}
+                               ,"dhx_generated_class_u1690959030049":{"background":"#D8E3DF","text-align":"center","justify-content":"center"}
+                              }
+                    ,"formats":[
+                                {"name":"Common","id":"common","mask":"","example":"1500.31"}
+                                ,{"name":"Number","id":"number","mask":"#,##0.00","example":"1500.31"}
+                                ,{"name":"Percent","id":"percent","mask":"#,##0.00%","example":"15.0031"}
+                                ,{"name":"Currency","id":"currency","mask":"$#,##0.00","example":"1500.31"}
+                                ,{"name":"Date","id":"date","mask":"yy-mm-dd","example":"2023-11-20","dateFormat":"%y/%m/%d"}
+                                ,{"name":"Time","id":"time","mask":"h:mm:ss am/pm","example":"0.5625","timeFormat":12}
+                                ,{"name":"Text","id":"text","mask":"@@","example":"some text"}
+                               ]
+                    }`;
+        }
+
+        //Excel-背景監聽動作
+        function ExcelAction() {
+            //單元格-選擇後觸發(開啟彈窗)
+            spreadsheet@(itemName).events.on("afterSelectionSet", function (cell) {
+                let row = cell.substr(1);
+                if (cell.split('')[0] == "H" && row > 1) {
+                    // 開啟彈窗視窗
+                    let MoFullNo = spreadsheet@(itemName).getValue("B" + row)
+
+                    if (!!MoFullNo) {
+                        let MoProcess = spreadsheet@(itemName).getValue("F" + row)
+                        let BarcodeListSee = spreadsheet@(itemName).getValue("H" + row)
+                        BarcodeListSee = BarcodeListSee.replace("👁️查看列表",'')
+                        if (!!MoProcess) {
+                            if (BarcodeListSee != row) {
+
+                                spreadsheet@(itemName).unlock("I" + row);
+                                spreadsheet@(itemName).unlock("J" + row);
+                                spreadsheet@(itemName).setValidation(`A` + row, ["📌待新增"])
+                                spreadsheet@(itemName).setValue(`A` + row, "📌待新增")
+                                spreadsheet@(itemName).setValue(`F` + row, "")
+                                spreadsheet@(itemName).setValue(`G` + row, "")
+                                spreadsheet@(itemName).setValue("H" + row, `👁️查看列表${row}`)
+                                spreadsheet@(itemName).setValue(`I` + row, 0)//託外加工數量
+                                spreadsheet@(itemName).setValue(`J` + row, 0)//供貨生產數量
+                                spreadsheet@(itemName).setValue(`L` + row, ProcessCheckStatusArr[1])
+                                spreadsheet@(itemName).setValue(`M` + row, ProcessCheckTypeArr[0])
+                                spreadsheet@(itemName).setValue(`N` + row, "")
+                                spreadsheet@(itemName).lock("I" + row);
+                                spreadsheet@(itemName).lock("J" + row);
+                                spreadsheet@(itemName).lock("N" + row);
+                                spreadsheet@(itemName).lock("L" + row);
+                                spreadsheet@(itemName).lock("M" + row);
+                                spreadsheet@(itemName).lock("N" + row);
+
+                                alert(`條碼列表不能開啟,因該條碼列表非其所對應行數`, "alert", 0);
+
+                                //alert(`條碼列表不能開啟,請確認第${row}行的加工製程欄位是否有資料`, "alert", 0);
+                                return
+                            }
+                            let MoProcessId = spreadsheet@(itemName).getValue("F" + row).split(":")[0]
+                            let OspDetailId = spreadsheet@(itemName).getValue("N" + row)
+                            OpenViewRow = row
+                            OpenPopView@(itemName)('BarcodeList')
+                            QueryBarcode@(itemName)(row, MoFullNo, MoProcessId, OspDetailId)
+                        }
+                        else {
+                            alert(`條碼列表不能開啟,請確認第${row}行的加工製程欄位是否有資料`, "alert", 0);
+
+                        }
+                    }
+                }
+            });
+            // 單元格-值改變觸發
+            spreadsheet@(itemName).events.on("afterValueChange", function (cell) {
+                var row = cell.substr(1);
+                //品號清空就刪除改row
+                if (cell.split('')[0] == "B" && row > 1) {
+                    let MoFullNo = spreadsheet@(itemName).getValue("B" + row)
+                    let Action = spreadsheet@(itemName).getValue("A" + row)
+                    if (!!!MoFullNo) {
+
+                        spreadsheet@(itemName).deleteRow("B" + row);
+                        delete TemporaryBarcodeList[row];
+                        
+                    }
+                }
+            });
+            //單元值改變後
+            spreadsheet@(itemName).events.on("afterEditEnd", function (cell) {
+                let row = cell.substr(1);
+                if (cell.split('')[0] == "F" && row > 1) {
+                    delete TemporaryBarcodeList[row];
+                    let OspDetailId = spreadsheet@(itemName).getValue("N" + row)
+                    let BarcodeListSee = spreadsheet@(itemName).getValue("H" + row)
+                    BarcodeListSee = BarcodeListSee.replace("👁️查看列表", '')
+
+                    spreadsheet@(itemName).unlock("I" + row);
+                    spreadsheet@(itemName).unlock("J" + row);
+                    if (OspDetailId == "" || BarcodeListSee != row) {
+                        spreadsheet@(itemName).setValidation(`A` + row, ["📌待新增"])
+                        spreadsheet@(itemName).setValue(`A` + row, "📌待新增")
+                        spreadsheet@(itemName).setValue(`N` + row, "")
+                    }
+                    
+                    spreadsheet@(itemName).setValue("H" + row, `👁️查看列表${row}`)
+                    spreadsheet@(itemName).setValue(`I` + row, 0)//託外加工數量
+                    spreadsheet@(itemName).setValue(`J` + row, 0)//供貨生產數量
+                    spreadsheet@(itemName).setValue(`L` + row, ProcessCheckStatusArr[1])
+                    spreadsheet@(itemName).setValue(`M` + row, ProcessCheckTypeArr[0])
+                    spreadsheet@(itemName).lock("L" + row);
+                    spreadsheet@(itemName).lock("M" + row);
+                    spreadsheet@(itemName).lock("N" + row);
+
+
+                    let MoFullNo = spreadsheet@(itemName).getValue("B" + row)
+                    let MoProcessId = spreadsheet@(itemName).getValue("F" + row).split(":")[0]
+                    QueryBarcode@(itemName)(row, MoFullNo, MoProcessId, OspDetailId)
+                    spreadsheet@(itemName).lock("I" + row);
+                    spreadsheet@(itemName).lock("J" + row);
+
+                }
+            });
+            //轉移焦點後觸發
+            spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+
+            });
+
+            //點擊觸發
+            spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+
+            });
+        }
+
+
+        //彈跳視窗相關
+        //視窗頁顯示設定
+        let PopObjPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        //視窗開啟
+        function OpenPopView@(itemName)(Type) {
+            $(".MoIdList").hide()
+            $(".BarcodeList").hide()
+            let PopViewTitle = ""
+            $("#PopView@(itemName)").modal("show");
+            switch (Type) {
+                case "ManufactureOrder":
+                    PopViewTitle = `查看MES製令資料`;
+                    $(".MoIdList").show()
+                    $("#txtWoErpFullNoQ@(itemName)").val("")
+                    QueryMes@(itemName)()
+                    if (Object.keys(TemporaryItemObjOspDetailExcel).length > 0) {
+                        alert("請注意暫存列表還有資料!!!請自行判斷是否要清空")
+                    }
+                    break
+                case "BarcodeList":
+                    PopViewTitle = `條碼列表`;
+                    $(".BarcodeList").show()
+                    break
+            }
+            
+            $("#PopViewTitle").text(PopViewTitle)
+        }
+        //視窗關閉
+        function ClosePopView() {
+            //ClearTemporaryList@(itemName)()
+            $("#PopView@(itemName)").modal("hide");
+        }
+        //彈窗列表執行
+        function QueryMes@(itemName)() {
+            PopObjPage@(itemName).pageIndex = 0;
+            InitMesData@(itemName)(PopObjPage@(itemName));
+        }
+        //製令列表資料取得
+        function InitMesData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetManufactureOrder", "Production")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+                "MoId": $("#txtMoIdQ@(itemName)").val(),
+                "ModeId": $("#cboProdModeQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "QcTypeStatus":""
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})</td>
+                                        <td>${item.ModeNo} ${item.ModeName}</td>
+                                        <td>${item.MtlItemNo}</td>
+                                        <td>${item.MtlItemName}</td>
+                                        ${JudgeMoRouting(`${item.MoRoutingId}`)}
+                                        <td>${item.Quantity}</td>
+                                        <td>${item.RequisitionSetQty}</td>
+                                        <td>${item.InputQty}</td>
+                                        <td>${item.CompleteQty}</td>
+                                        <td>${item.ScrapQty}</td>
+                                        ${item.Status == `Ｙ` ? `<td class="text-center col-sticky"></td>`:`
+                                        <td class="text-center col-sticky">
+                                          ${JudgeMoRouting2(`${item.MoRoutingId}`, `${item.MoId}`)}
+                                          <input type="hidden" id="txtWoErpPrefix@(itemName)" data-mo-id="${item.MoId}" value="${item.WoErpPrefix}"/>
+                                          <input type="hidden" id="txtWoErpNo@(itemName)" data-mo-id="${item.MoId}" value="${item.WoErpNo}"/>
+                                          <input type="hidden" id="txtPlanQty@(itemName)" data-mo-id="${item.MoId}" value="${item.PlanQty}"/>
+                                          <input type="hidden" id="txtMesQuantity@(itemName)" data-mo-id="${item.MoId}" value="${item.Quantity}"/>
+                                          <input type="hidden" id="txtInputQty@(itemName)" data-mo-id="${item.MoId}" value="${item.InputQty}"/>
+                                          <input type="hidden" id="txtInventoryId@(itemName)" data-mo-id="${item.MoId}" value="${item.InventoryId}"/>
+                                          <input type="hidden" id="txtUomId@(itemName)" data-mo-id="${item.MoId}" value="${item.InventoryUomId }"/>
+                                          <input type="hidden" id="txtMtlItemId@(itemName)" data-mo-id="${item.MoId}" value="${item.MtlItemId}"/>
+                                          <input type="hidden" id="txtMtlItemNo@(itemName)" data-mo-id="${item.MoId}" value="${item.MtlItemNo}"/>
+                                          <input type="hidden" id="txtMtlItemName@(itemName)" data-mo-id="${item.MoId}" value="${item.MtlItemName}"/>
+                                          <input type="hidden" id="txtMtlItemSpec@(itemName)" data-mo-id="${item.MoId}" value="${item.MtlItemSpec}"/>
+                                          <input type="hidden" id="txtRequisitionSetQty@(itemName)" data-mo-id="${item.MoId}" value="${item.RequisitionSetQty}"/>
+                                          <input type="hidden" id="txtStockInQty@(itemName)" data-mo-id="${item.MoId}" value="${item.StockInQty}"/>
+                                          <input type="hidden" id="txtLotStatus@(itemName)" data-mo-id="${item.MoId}" value="${item.LotStatus}"/>
+                                          <input type="hidden" id="txtWoSeq@(itemName)" data-mo-id="${item.MoId}" value="${item.WoSeq}"/>
+                                          <input type="hidden" id="txtModeId@(itemName)" data-mo-id="${item.MoId}" value="${item.ModeId}"/>
+                                          <input type="hidden" id="txtProductionQty@(itemName)" data-mo-id="${item.MoId}" value="${item.ProductionQty}"/>
+                                          <input type="hidden" id="txtMoScrapQty@(itemName)" data-mo-id="${item.MoId}" value="${item.MoScrapQty}"/>
+                                        </td>`}
+                                      </tr>`;
+                    });
+
+                    function JudgeMoRouting(moRoutingId) {
+                        let innerHtml = '';
+                        if (moRoutingId != "null") {
+                            innerHtml += `<td>已綁定途程</td>`;
+                        }
+                        else {
+                            innerHtml += `<td>未綁定途程</td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeMoRouting2(moRoutingId, moId) {
+                        let innerHtml = '';
+                        if (moRoutingId != "null") {
+                            innerHtml += `<label class="control control-solid control-solid-info">
+                                            <input type="checkbox" data-mo-id="${moId}" value="${moId}" name="cbxItem@(itemName)"/>
+                                            <span class="control__indicator"></span>
+                                          </label>`;
+                        }
+                        else {
+                            innerHtml += `<label class="control control-solid control-solid-info">
+                                            <input type="checkbox" data-mo-id="${moId}" value="${moId}" name="cbxItem@(itemName)"/>
+                                            <span class="control__indicator"></span>
+                                          </label>`;
+                        }
+                        return innerHtml;
+                    }
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblMoIdList@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#pagePopOrder@(itemName)", pageCount, objPage, InitMesData@(itemName));
+        }
+
+        //多選列表資料暫存
+        let TemporaryItemObj@(itemName) = {};
+        //列表資料選取
+        function TemporaryItemSave@(itemName)() {
+            $.each($("input[name='cbxItem@(itemName)']"), function () {
+                if ($(this).is(":checked")) {
+                    //只需要改動要傳入的物件相關值即可套用
+                    let moId = $(this).data("mo-id");
+                    if (moId) {
+                        let woErpPrefix = $(`input[id="txtWoErpPrefix@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let woErpNo = $(`input[id="txtWoErpNo@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let woSeq = $(`input[id="txtWoSeq@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let mtlItemNo = $(`input[id="txtMtlItemNo@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let mtlItemName = $(`input[id="txtMtlItemName@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let mtlItemSpec = $(`input[id="txtMtlItemSpec@(itemName)"][data-mo-id="${moId}"]`).val();
+                        let woFullNo = `${woErpPrefix}-${woErpNo}(${woSeq})`
+                        TemporaryItemObj@(itemName)[woFullNo] = {
+                            MoId: moId,
+                            MtlItemNo: mtlItemNo,
+                            MtlItemName: mtlItemName,
+                            MtlItemSpec: mtlItemSpec
+                        }
+                        let repeat = false;
+                        $('#cboTemporaryList@(itemName) option').each(function () {
+                            if (this.value === woFullNo) {
+                                repeat = true;
+                                return false; // 退出循环
+                            }
+                        });
+                        if (!!!repeat) {
+                            AddOption(cboTemporaryList@(itemName), woFullNo)
+                        }
+                    }
+                }
+            })
+
+            $("#TemporaryListNum@(itemName)").text(Object.keys(TemporaryItemObj@(itemName)).length)
+        }
+        //暫存列表-項目儲存進列表
+        function AddOption(list, text) {
+            var index = list.options.length;
+            list.options[index] = new Option(text);
+            list.selectedIndex = index;
+        }
+        //暫存列表-項目從列表移除
+        function DeleteOption@(itemName)(list) {
+            var index = list.selectedIndex;
+            if (index >= 0) {
+                let deleteItem = $('#cboTemporaryList@(itemName) option:selected').text();
+                delete TemporaryItemObj@(itemName)[deleteItem];
+                list.options[index] = null;
+                $("#TemporaryListNum@(itemName)").text(Object.keys(TemporaryItemObj@(itemName)).length)
+            }
+            else {
+                alert("無反白選項！");
+            }
+        }
+        //暫存列表-清空
+        function ClearTemporaryList@(itemName)() {
+            $("#cboTemporaryList@(itemName)").empty();
+            TemporaryItemObj@(itemName) = {};
+            $("#TemporaryListNum@(itemName)").text(0)
+        }
+
+        //傳送資料到Excel
+        function SentData@(itemName)() {
+            let row = GetSpreadsheetNum()
+
+            // 计算两个日期之间的毫秒数差异
+            let date1 = new Date();
+            let date2 = new Date("1899-12-30");
+            let timeDifference = date1 - date2;
+
+            // 将毫秒数转换为天数
+            let TodayDifference = timeDifference / (1000 * 60 * 60 * 24);
+
+
+            for (let key in TemporaryItemObj@(itemName)) {
+                let MoId = TemporaryItemObj@(itemName)[`${key}`].MoId
+                let MtlItemNo = TemporaryItemObj@(itemName)[`${key}`].MtlItemNo
+                let MtlItemName = TemporaryItemObj@(itemName)[`${key}`].MtlItemName
+                let MtlItemSpec = TemporaryItemObj@(itemName)[`${key}`].MtlItemSpec
+                let MoProcessArr = GetSelectInputData('MoProcess', MoId)
+
+                spreadsheet@(itemName).setFormat("I" + row, "number")
+                spreadsheet@(itemName).setFormat("J" + row, "number")
+                spreadsheet@(itemName).setFormat("K" + row, "date")
+
+
+                spreadsheet@(itemName).setValidation(`A` + row, ["📌待新增"])
+                spreadsheet@(itemName).setValidation(`F` + row, MoProcessArr)
+                spreadsheet@(itemName).setValidation(`G` + row, ProcessCodeArr)
+                spreadsheet@(itemName).setValidation(`L` + row, ProcessCheckStatusArr)
+                spreadsheet@(itemName).setValidation(`M` + row, ProcessCheckTypeArr)
+
+
+                spreadsheet@(itemName).setValue(`A` + row, "📌待新增")
+                spreadsheet@(itemName).setValue(`B` + row, key)//品號
+                spreadsheet@(itemName).setValue(`C` + row, MtlItemNo)//品號
+                spreadsheet@(itemName).setValue(`D` + row, MtlItemName)//品名
+                spreadsheet@(itemName).setValue(`E` + row, MtlItemSpec)//規格
+                spreadsheet@(itemName).setValue("H" + row, `👁️查看列表${row}`)
+                spreadsheet@(itemName).setValue(`I` + row, 0)//託外加工數量
+                spreadsheet@(itemName).setValue(`J` + row, 0)//供貨生產數量
+                spreadsheet@(itemName).setValue(`K` + row, TodayDifference)//預計回廠日期
+                spreadsheet@(itemName).setValue(`L` + row, ProcessCheckStatusArr[1])//是否支援工程檢
+                spreadsheet@(itemName).setValue(`M` + row, ProcessCheckTypeArr[0])//工程檢頻率
+
+                spreadsheet@(itemName).lock("A" + row);
+                spreadsheet@(itemName).lock("C" + row);
+                spreadsheet@(itemName).lock("D" + row);
+                spreadsheet@(itemName).lock("E" + row);
+                spreadsheet@(itemName).lock("I" + row);
+                spreadsheet@(itemName).lock("J" + row);
+                spreadsheet@(itemName).lock("N" + row);
+                spreadsheet@(itemName).lock("L" + row);
+                spreadsheet@(itemName).lock("M" + row);
+                row++
+            }
+            ClosePopView()
+        }
+
+        //功能區
+        //Excel-取得當前Excel最大數
+        function GetSpreadsheetNum() {
+            let num =0
+            spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+            $.each(spreadsheetData@(itemName).sheets[0].data, function (i, item) {
+                let cell = item.cell;
+
+                if (cell.charAt(0) == "A" && parseInt(cell.substring(1))) {
+                    row = parseInt(cell.substring(1))
+                    if (row > 1 && item.value != undefined) {
+                        num++
+                    }
+                }
+            });
+
+            return num+2
+        }
+
+        //取得下拉選框資料
+        function GetSelectInputData(DataType, MoId) {
+            let targetUrl
+            let postData
+            let data
+
+            switch (DataType) {
+                case "ProcessCode":
+                    targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                    postData = {
+                        "ColumnName": "ProcessCode",
+                        "Condition": supplierNo@(itemName).split(' ')[0]
+                    };
+                    data = DataAccess.Get(targetUrl, postData, false);
+                    if (data.status == "success") {
+                        $.each(data.result, function (i, item) {
+                            ProcessCodeArr.push(`${item.MW001}:${item.MW002}`)
+                        });
+                    }
+                    else {
+                        alert(data.msg, "alert", 0);
+                    }
+                    break
+                case "MoProcess":
+                    let MoProcessArr = []
+                    targetUrl = "@Url.Action("GetMoProcess", "Production")";
+                    postData = {
+                        "MoId": MoId,
+                    };
+                    data = DataAccess.Get(targetUrl, postData, false);
+                    if (data.status == "success") {
+                        $.each(data.result, function (i, item) {
+                            MoProcessArr.push(item.MoProcessId + ':' + item.ProcessAlias)
+                        });
+                        return MoProcessArr
+                    }
+                    else {
+                        alert(data.msg, "alert", 0);
+                    }
+                    break
+            }
+        }
+
+        function QueryBarcode@(itemName)(row, MoFullNo, MoProcess, OspDetailId) {
+            PopObjPage@(itemName).pageIndex = 0;
+            InitBarcodeData@(itemName)(PopObjPage@(itemName), row, MoFullNo, MoProcess, OspDetailId);
+        }
+        //條碼列表資料取得
+        function InitBarcodeData@(itemName)(objPage, row, MoFullNo, MoProcess, OspDetailId) {
+            let targetUrl = "@Url.Action("GetBarcodeExcel", "OutsourcingProduction")";
+            let postData = {
+                "OspId": ospId@(itemName),
+                "MoFullNo": MoFullNo,
+                "MoProcess": MoProcess,
+                "OspDetailId": OspDetailId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = "";
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    //只要製程變更就要清空原本選擇的條碼,如果是原本組合就帶該組合原先數量和條碼,如果非原本組合就帶目前可以託外數量和條碼
+                    //如果條碼目前未被生產單綁定或是沒有存在有綁定未過站的資料,就處於未綁定狀態可以被選擇
+                    //如果條碼處於被綁定的單據上,可以被勾選
+                    let BarcodeQtyTatol = 0
+                    let TemporaryBarcode = []
+                    let key =""
+                    $.each(data.result, function (i, item) {
+                        let MoFullNo = spreadsheet@(itemName).getValue("B" + row)
+                        let MoProcess = spreadsheet@(itemName).getValue("F" + row)
+                        let BarcodeId = item.BarcodeId
+                        let BarcodeQty = item.BarcodeQty
+                        key = `${MoFullNo}:${MoProcess}`
+                        let CurrentBind = item.CurrentBind
+                        let OtherBind = item.OtherBind
+                        let OspBind = item.OspBind
+
+                        let checkStatus = ""
+                        let disabledStatus = ""
+
+
+
+                        switch (CurrentBind) {
+                            case "Y":
+                                checkStatus = "checked"
+                                if (!!TemporaryBarcodeList[key]) {
+                                    if (TemporaryBarcodeList[key].BarcodeList.includes(BarcodeId)) {
+                                        checkStatus = "checked"
+                                    }
+                                    else {
+                                        checkStatus = ""
+                                    }
+                                }
+                                break;
+                            case "N":
+                                if (!!TemporaryBarcodeList[key]) {
+                                    if (TemporaryBarcodeList[key].BarcodeList.includes(BarcodeId)) {
+                                        checkStatus = "checked"
+                                    }
+                                    else {
+                                        checkStatus = ""
+                                    }
+                                }
+                                else {
+                                    if (OspBind != "Y") {
+                                        checkStatus = "checked"
+                                    }
+                                }
+                                break;
+                        }
+
+                        if (CurrentBind == "Y" || OtherBind == "N") {
+                            disabledStatus = ""
+                        }
+
+                        if (CurrentBind == "N" && OtherBind == "Y") {
+                            disabledStatus = "disabled"
+                            checkStatus = ""
+                        }
+                        if (checkStatus != "") {
+                            BarcodeQtyTatol += BarcodeQty
+                            TemporaryBarcode.push(BarcodeId)
+                        }
+                      
+
+                        innerHtml += `<tr>
+                                        <td>${i + 1}. </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}">${item.BarcodeNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${OtherBind == `Y` ? `已綁定` : `未綁定`}">${OtherBind == `Y` ? `已綁定` : `未綁定`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CurrentProcessAlias}">${item.CurrentProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.NextProcessAlias}">${item.NextProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${BarcodeQty}">${BarcodeQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StatusName}">${item.StatusName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TypeName}">${item.TypeName}</td>
+                                        <td class="text-center col-sticky" style="max-width: 150px; min-width: 135px;">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" name="cbxBarcode@(itemName)" data-key="${key}" data-barcode-id="${BarcodeId}" data-barcode-qty="${BarcodeQty}" ${checkStatus} ${disabledStatus} />
+                                                <span class="control__indicator" ${disabledStatus != `` ? `style="background: #c9c1c1;"`:``}></span>
+                                            </label>
+                                          <input type="hidden" id="txtBarcodeQtyTatol@(itemName)${BarcodeId}" data-key="${key}" value="${BarcodeQtyTatol}"/>
+                                        </td>
+                                      </tr>`;
+                    });
+
+                    TemporaryBarcodeList[key] = {
+                        BarcodeList: TemporaryBarcode
+                    }
+                    if (Status == 'Y') {
+                        $("#TemporaryBarcodeSave").hide()
+                    }
+                    else {
+                        $("#TemporaryBarcodeSave").show()
+                        spreadsheet@(itemName).setValue(`I` + row, BarcodeQtyTatol)//託外加工數量
+                        spreadsheet@(itemName).setValue(`J` + row, BarcodeQtyTatol)//供貨生產數量
+                    }
+
+                    
+
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblBarcodeList@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+        }
+
+        //條碼暫存
+        let TemporaryBarcodeList = {}
+        let OpenViewRow = 0
+        //列表資料選取
+        function TemporaryBarcodeSave@(itemName)() {
+            let TemporaryBarcode = []
+            let num = 0
+            let row = OpenViewRow
+            let MoFullNo = spreadsheet@(itemName).getValue("B" + row)
+            let MoProcess = spreadsheet@(itemName).getValue("F" + row)
+            let Key = `${MoFullNo}:${MoProcess}`
+
+            $.each($("input[name='cbxBarcode@(itemName)']"), function () {
+                if ($(this).is(":checked")) {
+                    let BarcodeId = $(this).data("barcode-id");
+                    let BarcodeQty = $(this).data("barcode-qty");
+                    TemporaryBarcode.push(BarcodeId)
+                    num += BarcodeQty
+                }
+            })
+            if (num == 0) {
+                alert("至少需勾選一筆條碼才能執行儲存", "alert", 0);
+                return
+            }
+            TemporaryBarcodeList[Key] = {
+                BarcodeList: TemporaryBarcode
+            }
+            spreadsheet@(itemName).unlock("I" + row);
+            spreadsheet@(itemName).unlock("J" + row);
+            spreadsheet@(itemName).setValue(`I` + row, num)//託外加工數量
+            spreadsheet@(itemName).setValue(`J` + row, num)//供貨生產數量
+            spreadsheet@(itemName).lock("I" + row);
+            spreadsheet@(itemName).lock("J" + row);
+            ClosePopView()
+        }
+
+
+        function Action@(itemName)(Type) {
+            let titleText =""
+            let text =""
+            let targetUrl = "";
+            let postData = {};
+            let apiAction = true
+            let ConfirmStatus
+            switch (Type) {
+                case "Reset":
+                    titleText = "是否執行Excel列表t重置"
+                    text = "該動作無法復原,請確認是否要執行!"
+                    apiAction = false
+                    break;
+                case "Delete":
+                    spreadsheetJson@(itemName).spreadsheetInfo = [];
+                    spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+
+                    var ExcelData = [];
+                    $.each(spreadsheetData@(itemName).sheets[0].data, function (i, item) {
+                        let cell = item.cell;
+
+                        if (cell.charAt(0) == "A" && parseInt(cell.substring(1))) {
+                            row = parseInt(cell.substring(1))
+                            if (row > 1 && item.value == "🗑️刪除") {
+                                let Id = spreadsheet@(itemName).getValue("N" + row)
+                                ExcelData.push(Id)
+                            }
+                        }
+                    });
+                    if (ExcelData.length <= 0) {
+                        alert("尚未選擇欲刪除的單身資料,如欲執行刪除<br>請將該筆單身的操作改成【🗑️刪除】", "alert", 0);
+                        return
+                    }
+
+                    titleText = "是否執行列表選取資料刪除"
+                    text = "該動作無法復原,請確認是否要執行!"
+                    targetUrl = "@Url.Action("DeleteOspDetailExcel", "OutsourcingProduction")";
+                    postData = {
+                        "ExcelData":ExcelData.join(",")
+                    };
+                    break;
+                case "Confirm":
+                    titleText = "是否執行單據確認"
+                    text = "請確認是否要執行!"
+                    targetUrl = "@Url.Action("UpdateOspConfirm", "OutsourcingProduction")";
+                    postData = {
+                        "OspId": ospId@(itemName)
+                    };
+                    ConfirmStatus = true
+                    break;
+                case "ReConfirm":
+                    titleText = "是否執行單據反確認"
+                    text = "請確認是否要執行!"
+                    targetUrl = "@Url.Action("UpdateOspReConfirm", "OutsourcingProduction")";
+                    postData = {
+                        "OspId": ospId@(itemName)
+                    };
+                    ConfirmStatus = false
+                    break;
+            }
+
+            swal.fire({
+                titleText: `${titleText}`,
+                text: `${text}`,
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    if (apiAction) {
+                        let result = DataAccess.Update(targetUrl, postData, false, true);
+                        if (result) {
+                            if (Status == "N" && ConfirmStatus == true) {
+                                Status = "Y"
+                            }
+                            else if (Status == "Y" && ConfirmStatus == false) {
+                                Status = "N"
+                            }
+                            $("#cboMode@(itemName)").val("M").trigger('change');
+
+                            Query@(itemName)();
+
+                        }
+                    }
+                    else {
+                        Return@(itemName)()
+                    }
+                }
+            });
+        }
+
+        function ResetExcel() {
+            let dataset = JSON.parse(TemplateDefault);
+            spreadsheet@(itemName).parse(dataset);
+            spreadsheetData@(itemName) = dataset;
+            TemporaryBarcodeList = {}
+            ClearTemporaryList@(itemName)()
+
+        }
+
+        function Return@(itemName)() {
+            ResetExcel()
+            Query@(itemName)();
+        }
+</script>
+                                                        )

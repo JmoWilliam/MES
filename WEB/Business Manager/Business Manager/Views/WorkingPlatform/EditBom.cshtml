@@ -1,0 +1,710 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "EditBom";
+    string itemNameText = "編輯元件資料";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .mtlitem-btn {
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #c7cbca;
+            color: #837b7b;
+            font-weight: 600;
+            font-size: 18px;
+            transition: all .3s;
+            width: 100%;
+            text-align: center;
+        }
+            .mtlitem-btn:hover {
+                background: #e5e5e5;
+                color: #292929;
+            }
+
+        .mtl-control {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .mtl-active {
+            background: #d9d9d9;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    @itemNameText
+                    <span class="sub-title">目前階層: <span class="sub-text" id="desLevel@(itemName)"></span></span>
+                    <span class="sub-title">上層品號: <span class="sub-text" id="desParentMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">上層階層: <span class="sub-text" id="desParentLevel@(itemName)">1</span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body bom-edit-body">
+                <div class="row" id=" ">
+                    <div class="col-12">
+                        <form id="ComponentEdit@(itemName)" autocomplete="off" style="padding:1rem 0rem;">
+                            <div class="container">
+                                <div class="form-group row">
+                                    <div class="col-12">
+                                        <div class="mtl-control">
+                                            <a id="aEditOMode@(itemName)" class="mtlitem-btn mtl-active" href="javascript: EditMode@(itemName)('O');"><i class="fas fa-search-plus"></i> 舊品號</a>
+                                            <a id="aEditNMode@(itemName)" class="mtlitem-btn" href="javascript: EditMode@(itemName)('N');"><i class="fas fa-plus"></i> 新品號</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="editBody@(itemName)">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12">元件品號<span class="text-danger">*</span></label>
+                                        <div class="col-12">
+                                            <div class="input-group">
+                                                <input type="hidden" id="txtMtlItemId@(itemName)" />
+                                                <input type="text" class="form-control" id="txtMtlItemNo@(itemName)" name="txtMtlItemNo@(itemName)" onkeyup="trimStr(this, value)" placeholder="請輸入元件品號" />
+                                                <div class="input-group-append">
+                                                    <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                                    <a class="btn btn-outline-danger pop-clear" href="javascript:Clear@(itemName)();"><i class="fas fa-eraser"></i></a>
+                                                </div>
+                                            </div>
+                                            <dl class="help-block">
+                                                <dt>品名</dt>
+                                                <dd id="desMtlItemName@(itemName)"></dd>
+                                                <dt>規格</dt>
+                                                <dd id="desMtlItemSpec@(itemName)"></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtBomSequence@(itemName)">序號<span class="text-danger">*</span></label>
+                                        <div class="col-12">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="txtBomSequence@(itemName)" name="txtBomSequence@(itemName)" placeholder="請輸入序號"
+                                                       value="0010"
+                                                       data-msg-required="請輸入序號" data-rule-required="true">
+                                                <div class="input-group-append">
+                                                    <a class="btn btn-danger" href="javascript:void(0);" onclick="">
+                                                        <i class="fa fa-random"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtCompositionQuantity@(itemName)">單位用量<span class="text-danger">*</span></label>
+                                        <div class="col-12">
+                                            <input type="number" class="form-control" id="txtCompositionQuantity@(itemName)" name="txtCompositionQuantity@(itemName)" placeholder="請輸入單位用量"
+                                                   data-msg-required="請輸入單位用量" data-rule-required="true" value="1">
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtBase@(itemName)">底數<span class="text-danger">*</span></label>
+                                        <div class="col-12">
+                                            <input type="number" class="form-control" id="txtBase@(itemName)" name="txtBase@(itemName)" placeholder="請輸入底數"
+                                                   data-msg-required="請輸入底數" data-rule-required="true" value="1">
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtLossRate@(itemName)">損壞率<span class="text-danger">*</span></label>
+                                        <div class="col-12">
+                                            <input type="number" class="form-control" id="txtLossRate@(itemName)" name="txtLossRate@(itemName)" placeholder="請輸入損壞率"
+                                                   data-msg-required="請輸入損壞率" data-rule-required="true" value="0">
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtMaterialProperties@(itemName)">材料性質<span class="text-danger">*</span></label>
+                                        <div class="col-12">
+                                            <select class="form-control" id="cboMaterialProperties@(itemName)" name="cboMaterialProperties@(itemName)"></select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="chkStandardCostingType@(itemName)">標準成本計算<span class="text-danger">*</span></label>
+                                        <div class="col-12">
+                                            <div class="row">
+                                                <div class="col-lg-3 col-md-4 col-6">
+                                                    <label class="control control-solid control-solid-info control--radio col-12">
+                                                        是
+                                                        <input type="radio" id="chkStandardCostingType@(itemName)Y" name="chkStandardCostingType@(itemName)" value="Y"
+                                                               data-msg-required="請選擇是否修改標準成本計算" data-rule-required="true" />
+                                                        <span class="control__indicator"></span>
+                                                    </label>
+                                                </div>
+                                                <div class="col-lg-3 col-md-4 col-6">
+                                                    <label class="control control-solid control-solid-info control--radio col-12">
+                                                        否
+                                                        <input type="radio" id="chkStandardCostingType@(itemName)N" name="chkStandardCostingType@(itemName)" value="N"
+                                                               data-msg-required="請選擇是否修改標準成本計算" data-rule-required="true" checked />
+                                                        <span class="control__indicator"></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtEffectiveDate@(itemName)">生效日期</label>
+                                        <div class="input-group col-12">
+                                            <input type="text" class="form-control datedropper" id="txtEffectiveDate@(itemName)" name="txtEffectiveDate@(itemName)"
+                                                   data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                                   placeholder="請輸入生效日期" readonly />
+                                            <div class="input-group-append">
+                                                <button type="button" class="btn btn-outline-danger" onclick="$('#txtEffectiveDate@(itemName)').val('')" title="清除">
+                                                    <i class="fas fa-eraser"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtExpirationDate@(itemName)">失效日期</label>
+                                        <div class="input-group col-12">
+                                            <input type="text" class="form-control datedropper" id="txtExpirationDate@(itemName)" name="txtExpirationDate@(itemName)"
+                                                   data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                                   placeholder="請輸入失效日期" readonly />
+                                            <div class="input-group-append">
+                                                <button type="button" class="btn btn-outline-danger" onclick="$('#txtExpirationDate@(itemName)').val('')" title="清除">
+                                                    <i class="fas fa-eraser"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtBomDetailRemark@(itemName)">備註</label>
+                                        <div class="col-12">
+                                            <textarea class="form-control" id="txtBomDetailRemark@(itemName)" name="txtBomDetailRemark@(itemName)" placeholder="請輸入備註"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let level@(itemName);
+        let parentMtlItemNo@(itemName);
+        let mainMtlItemNo@(itemName);
+        let bomJson = {
+            bomInfo: []
+        }
+
+        function Pop@(itemName)(parentLevel, parentMtlItemNo, mainMtlItemNo) {
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            level@(itemName) = parseInt(parentLevel) + 1;
+            parentLevel@(itemName) = parentLevel;
+            parentMtlItemNo@(itemName) = parentMtlItemNo;
+            mainMtlItemNo@(itemName) = mainMtlItemNo;
+
+            $("#desLevel@(itemName)").html(level@(itemName));
+            $("#desParentMtlItemNo@(itemName)").html(parentMtlItemNo);
+            $("#desParentLevel@(itemName)").html(parentLevel@(itemName));
+
+            ComboBoxs.Default("#cboMaterialProperties@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialProperties" }, "1", "NA", "", "TypeName", "TypeNo");
+
+            Suites.DateDropper("#txtEffectiveDate@(itemName), #txtExpirationDate@(itemName)");
+
+            Suites.SetDateDropper("#txtEffectiveDate@(itemName)");
+            Suites.SetDateDropper("#txtExpirationDate@(itemName)");
+
+            let popConfig = {
+                targetSelector: "#txtMtlItemNo@(itemName)",
+                popFunction: "PopViewMtlItem",
+                objectMtlItemId: "#txtMtlItemId@(itemName)",
+                objectMtlItemNo: "#txtMtlItemNo@(itemName)",
+                @*objectMtlItemNo: "#desMtlItemNo@(itemName)",*@
+                objectMtlItemName: "#desMtlItemName@(itemName)",
+                objectMtlItemSpec: "#desMtlItemSpec@(itemName)",
+                objectCheckMtlDate: (new Date()).Format('yyyy-MM-dd')
+            };
+
+            InitPopView(popConfig);
+        }
+
+        function GetBomSequence@(itemName)() {
+            let targetUrl = "@Url.Action("GetBomSequence", "Product")";
+            let postData = {
+                "BomId": $("#BomId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    var seq = parseInt(item.BomSequence);
+
+                    if (seq == 0) {
+                        seq = 10;
+                    } else {
+                        seq = seq + 10;
+                    }
+                    var serial = "0000" + seq;
+
+                    $(BomSequence).val(serial.substr(serial.length - 4));
+                });
+
+                if (data.result.length <= 0) {
+                    $(BomSequence).val("0010");
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function Save@(itemName)() {
+            let mtlItemNo = $("#txtMtlItemNo@(itemName)").val();
+            let inputBomInfo =
+            {
+                "MtlItemNo": mtlItemNo,
+                "MainMtlItemNo": mainMtlItemNo@(itemName),
+                "ParentMtlItemNo": parentMtlItemNo@(itemName),
+                "Level": level@(itemName),
+                "ParentLevel": parentLevel@(itemName)
+            };
+
+            let innerHtml = `<div data-level="${level@(itemName)}" class="table-row">
+                                <div class="column-sub-container" style="flex:3;">
+                                    ${ExpandMinus@(itemName)()}
+                                    <div class="row-item row-icon row-icon-main">
+                                        <i class="far fa-level-up"></i>
+                                    </div>
+                                    <div class="row-item" style="justify-content: flex-start;">3Y35E005-2307-1101213</div>
+                                </div>
+                                <div class="row-item" style="flex:2;">頂針底板 8CAV-D16CORE-LBX-D01-108</div>
+                                <div class="row-item">7.9*21.9</div>
+                                <div class="row-item">2PCS</div>
+                                <div class="row-item">1</div>
+                                <div class="row-item">
+                                    <a href="#" class="action-icon add02">
+                                        <i class="fas fa-save"></i>
+                                    </a>
+                                    <a href="javascript: OpenEditModal@(itemName)('3A11待編輯-2402-???');" class="action-icon add02">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="javascript: PopEditBom('${level@(itemName)}', '3A11待編輯-2402-???');" class="action-icon add02">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                    <a href="#" class="action-icon add02">
+                                        <i class="far fa-clone"></i>
+                                    </a>
+                                    <a href="javascript: Drawing@(itemName)();" class="action-icon">
+                                        <i class="fas fa-image"></i>
+                                    </a>
+                                </div>
+                            </div>`;
+
+            function ExpandMinus@(itemName)() {
+                let innerHtml = '';
+                for (let i = 1; i <= parentLevel@(itemName) - 1; i++) {
+                    innerHtml += `<div class="row-item row-icon row-icon-sub">
+                                      <i class="fal fa-minus"></i>
+                                  </div>`;
+                }
+
+                return innerHtml;
+            }
+
+            //$.each(mtlItemJson.mtlItemInfo, function (i, item) {
+            //    if (item.MtlItemNo == mainMtlItemNo) {
+            //        mtlItemJson.mtlItemInfo[i]["BomInfo"].push(inputBomInfo);
+            //    }
+            //});
+
+            $("#tblMtlItemDataMtlItem").append(innerHtml);
+
+            $("#modal@(itemName)").modal("hide");
+        }
+
+        function EditMode@(itemName)(mode) {
+            let innerHtml = '';
+
+            if (mode == "O") {
+                $("#aEditOMode@(itemName)").addClass("mtl-active");
+                $("#aEditNMode@(itemName)").removeClass("mtl-active");
+
+                innerHtml += `  <div class="form-group row">
+                                    <label class="form-label col-12">元件品號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="hidden" id="txtMtlItemId@(itemName)" />
+                                            <input type="text" class="form-control" id="txtMtlItemNo@(itemName)" name="txtMtlItemNo@(itemName)" onkeyup="trimStr(this, value)" placeholder="請輸入元件品號" />
+                                            <div class="input-group-append">
+                                                <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                                <a class="btn btn-outline-danger pop-clear" href="javascript:Clear@(itemName)();"><i class="fas fa-eraser"></i></a>
+                                            </div>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>品名</dt>
+                                            <dd id="desMtlItemName@(itemName)"></dd>
+                                            <dt>規格</dt>
+                                            <dd id="desMtlItemSpec@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtBomSequence@(itemName)">序號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="txtBomSequence@(itemName)" name="txtBomSequence@(itemName)" placeholder="請輸入序號"
+                                                    value="0010"
+                                                    data-msg-required="請輸入序號" data-rule-required="true">
+                                            <div class="input-group-append">
+                                                <a class="btn btn-danger" href="javascript:void(0);" onclick="">
+                                                    <i class="fa fa-random"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtCompositionQuantity@(itemName)">單位用量<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtCompositionQuantity@(itemName)" name="txtCompositionQuantity@(itemName)" placeholder="請輸入單位用量"
+                                                data-msg-required="請輸入單位用量" data-rule-required="true" value="1">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtBase@(itemName)">底數<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtBase@(itemName)" name="txtBase@(itemName)" placeholder="請輸入底數"
+                                                data-msg-required="請輸入底數" data-rule-required="true" value="1">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtLossRate@(itemName)">損壞率<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtLossRate@(itemName)" name="txtLossRate@(itemName)" placeholder="請輸入損壞率"
+                                                data-msg-required="請輸入損壞率" data-rule-required="true" value="0">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtMaterialProperties@(itemName)">材料性質<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboMaterialProperties@(itemName)" name="cboMaterialProperties@(itemName)"></select>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="chkStandardCostingType@(itemName)">標準成本計算<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="row">
+                                            <div class="col-lg-3 col-md-4 col-6">
+                                                <label class="control control-solid control-solid-info control--radio col-12">
+                                                    是
+                                                    <input type="radio" id="chkStandardCostingType@(itemName)Y" name="chkStandardCostingType@(itemName)" value="Y"
+                                                            data-msg-required="請選擇是否修改標準成本計算" data-rule-required="true" />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </div>
+                                            <div class="col-lg-3 col-md-4 col-6">
+                                                <label class="control control-solid control-solid-info control--radio col-12">
+                                                    否
+                                                    <input type="radio" id="chkStandardCostingType@(itemName)N" name="chkStandardCostingType@(itemName)" value="N"
+                                                            data-msg-required="請選擇是否修改標準成本計算" data-rule-required="true" checked />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtEffectiveDate@(itemName)">生效日期</label>
+                                    <div class="input-group col-12">
+                                        <input type="text" class="form-control datedropper" id="txtEffectiveDate@(itemName)" name="txtEffectiveDate@(itemName)"
+                                                data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                                placeholder="請輸入生效日期" readonly />
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-danger" onclick="$('#txtEffectiveDate@(itemName)').val('')" title="清除">
+                                                <i class="fas fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtExpirationDate@(itemName)">失效日期</label>
+                                    <div class="input-group col-12">
+                                        <input type="text" class="form-control datedropper" id="txtExpirationDate@(itemName)" name="txtExpirationDate@(itemName)"
+                                                data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                                placeholder="請輸入失效日期" readonly />
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-danger" onclick="$('#txtExpirationDate@(itemName)').val('')" title="清除">
+                                                <i class="fas fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtBomDetailRemark@(itemName)">備註</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtBomDetailRemark@(itemName)" name="txtBomDetailRemark@(itemName)" placeholder="請輸入備註"></textarea>
+                                    </div>
+                                </div>`;
+            }
+            else {
+                $("#aEditOMode@(itemName)").removeClass("mtl-active");
+                $("#aEditNMode@(itemName)").addClass("mtl-active");
+
+                innerHtml += `  <div class="form-group row">
+                                    <label class="form-label col-12">品號類型<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboItemTypeId@(itemName)" name="cboItemTypeId@(itemName)"
+                                                data-msg-required="品號類型"></select>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12">元件品號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="txtMtlItemNo@(itemName)" name="" placeholder="請輸入品號" readonly required />
+                                        </div>
+                                    </div>
+                                </div>
+                                <a class="btn btn-collapse" data-toggle="collapse" id="colItemTypeBottom@(itemName)" href="#colItemType" role="button" aria-expanded="false" aria-controls="colItemType" style="margin-bottom: 12px;">
+                                    <span><i class="fas fa-clipboard"></i>品號編碼</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </a>
+                                <div class="collapse table-custom show" id="colItemType">
+                                    <div class="card card-body">
+                                        <div class="col-12">
+                                            <div class="form-group row" style="border:none;">
+                                                <label class="col-12 col-form-label" style="display: flex; justify-content: space-between;line-height:1;">排序1:固定值 <span class="text-danger" style="font-size: 12px">是否要加後綴碼: 不要</span></label>
+                                                <div class="col-12">
+                                                    <input type="text" class="form-control" id="" name="" placeholder="請輸入固定值" value="3A11" readonly />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-group row" style="border:none;">
+                                                <label class="col-12 col-form-label" style="display: flex; justify-content: space-between;line-height:1;">排序2:編碼節段值 <span class="text-danger" style="font-size: 12px">是否要加後綴碼: 要</span></label>
+                                                <div class="col-12">
+                                                    <select id="cboSegmentType@(itemName)" class="form-control" required>
+                                                        <option selected="">請選擇</option>
+                                                        <option value="A002">A002-海華科技</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-group row" style="border:none;">
+                                                <label class="col-12 col-form-label" style="display: flex; justify-content: space-between;line-height:1;">排序3:日期 <span class="text-danger" style="font-size: 12px">是否要加後綴碼: 要</span></label>
+                                                <div class="col-12">
+                                                    <input type="text" class="form-control" id="" name="" placeholder="請輸入固定值"
+                                                            data-msg-required="請輸入固定值" data-rule-required="true" value="2402" readonly />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-group row" style="border:none;">
+                                                <label class="col-12 col-form-label" style="display: flex; justify-content: space-between;line-height:1;">排序4:流水號碼數 <span class="text-danger" style="font-size: 12px">是否要加後綴碼: 不要</span></label>
+                                                <div class="col-12">
+                                                    <input type="text" class="form-control" id="" name="" placeholder="請輸入固定值"
+                                                            data-msg-required="請輸入固定值" data-rule-required="true" value="3" readonly />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12">元件品名<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="txtMtlItemName@(itemName)" name="txtMtlItemName@(itemName)" placeholder="請輸入品名" required />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12">元件規格<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="txtMtlItemSpec@(itemName)" name="txtMtlItemSpec@(itemName)" placeholder="請輸入規格" required />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtBomSequence@(itemName)">序號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="txtBomSequence@(itemName)" name="txtBomSequence@(itemName)" placeholder="請輸入序號"
+                                                    value="0010"
+                                                    data-msg-required="請輸入序號" data-rule-required="true">
+                                            <div class="input-group-append">
+                                                <a class="btn btn-danger" href="javascript:void(0);" onclick="">
+                                                    <i class="fa fa-random"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtCompositionQuantity@(itemName)">單位用量<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtCompositionQuantity@(itemName)" name="txtCompositionQuantity@(itemName)" placeholder="請輸入單位用量"
+                                                data-msg-required="請輸入單位用量" data-rule-required="true" value="1">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtBase@(itemName)">底數<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtBase@(itemName)" name="txtBase@(itemName)" placeholder="請輸入底數"
+                                                data-msg-required="請輸入底數" data-rule-required="true" value="1">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtLossRate@(itemName)">損壞率<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtLossRate@(itemName)" name="txtLossRate@(itemName)" placeholder="請輸入損壞率"
+                                                data-msg-required="請輸入損壞率" data-rule-required="true" value="0">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtMaterialProperties@(itemName)">材料性質<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboMaterialProperties@(itemName)" name="cboMaterialProperties@(itemName)"></select>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="chkStandardCostingType@(itemName)">標準成本計算<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="row">
+                                            <div class="col-lg-3 col-md-4 col-6">
+                                                <label class="control control-solid control-solid-info control--radio col-12">
+                                                    是
+                                                    <input type="radio" id="chkStandardCostingType@(itemName)Y" name="chkStandardCostingType@(itemName)" value="Y"
+                                                            data-msg-required="請選擇是否修改標準成本計算" data-rule-required="true" />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </div>
+                                            <div class="col-lg-3 col-md-4 col-6">
+                                                <label class="control control-solid control-solid-info control--radio col-12">
+                                                    否
+                                                    <input type="radio" id="chkStandardCostingType@(itemName)N" name="chkStandardCostingType@(itemName)" value="N"
+                                                            data-msg-required="請選擇是否修改標準成本計算" data-rule-required="true" checked />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtEffectiveDate@(itemName)">生效日期</label>
+                                    <div class="input-group col-12">
+                                        <input type="text" class="form-control datedropper" id="txtEffectiveDate@(itemName)" name="txtEffectiveDate@(itemName)"
+                                                data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                                placeholder="請輸入生效日期" readonly />
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-danger" onclick="$('#txtEffectiveDate@(itemName)').val('')" title="清除">
+                                                <i class="fas fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtExpirationDate@(itemName)">失效日期</label>
+                                    <div class="input-group col-12">
+                                        <input type="text" class="form-control datedropper" id="txtExpirationDate@(itemName)" name="txtExpirationDate@(itemName)"
+                                                data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                                placeholder="請輸入失效日期" readonly />
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-danger" onclick="$('#txtExpirationDate@(itemName)').val('')" title="清除">
+                                                <i class="fas fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtBomDetailRemark@(itemName)">備註</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtBomDetailRemark@(itemName)" name="txtBomDetailRemark@(itemName)" placeholder="請輸入備註"></textarea>
+                                    </div>
+                                </div>`;
+            }
+
+            $("#editBody@(itemName)").html(innerHtml);
+
+            $("#colItemTypeBottom@(itemName)").click();
+
+            if (!isMobile) {
+                $("#cboItemTypeId@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboItemTypeId@(itemName)", "@Url.Action("GetItemTypeSimple", "PdmBasicInformation")", { "Today": GetCurrentDate@(itemName)() }, "", "CHOOSE-NUMBER", "請選擇需求產品類別", "ItemTypeShow", "ItemTypeId");
+
+            $("#cboItemTypeId@(itemName)").change(function (i, item) {
+                $("#txtMtlItemNo@(itemName)").val("3A11待編輯-2402-???");
+
+                if ($("#colItemTypeBottom@(itemName)").hasClass("collapsed")) {
+                    $("#colItemTypeBottom@(itemName)").click();
+                }
+            });
+
+            $("#cboSegmentType@(itemName)").change(function (i, item) {
+                let segmentType = $(this).val();
+                let mtlItemNo = $("#txtMtlItemNo@(itemName)").val();
+                mtlItemNo = mtlItemNo.replace("待編輯", segmentType);
+                $("#txtMtlItemNo@(itemName)").val(mtlItemNo);
+            });
+
+            ComboBoxs.Default("#cboMaterialProperties@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialProperties" }, "1", "NA", "", "TypeName", "TypeNo");
+
+            Suites.DateDropper("#txtEffectiveDate@(itemName), #txtExpirationDate@(itemName)");
+
+            Suites.SetDateDropper("#txtEffectiveDate@(itemName)");
+            Suites.SetDateDropper("#txtExpirationDate@(itemName)");
+
+            let popConfig = {
+                targetSelector: "#txtMtlItemNo@(itemName)",
+                popFunction: "PopViewMtlItem",
+                objectMtlItemId: "#txtMtlItemId@(itemName)",
+                objectMtlItemNo: "#txtMtlItemNo@(itemName)",
+                @*objectMtlItemNo: "#desMtlItemNo@(itemName)",*@
+                objectMtlItemName: "#desMtlItemName@(itemName)",
+                objectMtlItemSpec: "#desMtlItemSpec@(itemName)",
+                objectCheckMtlDate: (new Date()).Format('yyyy-MM-dd')
+            };
+
+            InitPopView(popConfig);
+        }
+
+        function GetCurrentDate@(itemName)() {
+            // 建立一個新的 Date 物件
+            let currentDate = new Date();
+
+            // 獲取年、月、日
+            let year = currentDate.getFullYear();
+            let month = ('0' + (currentDate.getMonth() + 1)).slice(-2); // 月份從 0 開始，所以要加1；再用 slice(-2) 取得兩位數，不足補0
+            let day = ('0' + currentDate.getDate()).slice(-2); // 取得日期，同樣補0
+
+            // 格式化成 YYYY-MM-DD 的形式
+            let formattedDate = year + '-' + month + '-' + day;
+
+            return formattedDate
+        }
+
+        function Clear@(itemName)() {
+            $('#txtMtlItemNo@(itemName)').val('');
+            $(".help-block").css("display", "none");
+        }
+    </script>
+        )

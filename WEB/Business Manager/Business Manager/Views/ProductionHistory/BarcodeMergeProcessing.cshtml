@@ -1,0 +1,292 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "BarcodeMergeProcessing";
+    string itemNameText = "條碼入庫後拆併盤作業";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+
+@Html.Resource("css",
+@<link href="@Url.Content("~/Content/barcode-process.min.css")" rel="stylesheet" />
+                          )
+<div>
+    <div class="process_header" style="">
+        <a href="/ProductionHistory/BarcodeBatchIndex" class="back">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <a href="#" class="header_title">
+            <h2>入庫後拆併盤作業</h2>
+        </a>
+
+    </div>
+    <!--內容-->
+    <!--包裝有內容-->
+    <div class="container">
+
+        <div class="content merge-section">
+
+            <!-- Left Side: Scanner Box -->
+            <div class="scanner-box">
+                <div class="new-product">
+                    <span class="merge-tag">步驟一</span>
+                    <h3>來源條碼</h3>
+                    <div class="input-group" style="padding-right:0px; padding-left: 0px;">
+                        <input type="text" class="form-control" id="txtFromBarcodeNo@(itemName)" name="txtFromBarcodeNo@(itemName)" style="text-transform:uppercase;margin-bottom: 0;" placeholder="請輸入來源產品條碼" aria-invalid="false">
+                        <span class="input-group-append">
+                            <a class="btn btn-outline-danger no-edit-detail" title="清除" onclick="ResetFromBarcode@(itemName)();">
+                                <i class="fas fa-eraser"></i>
+                            </a>
+                        </span>
+                    </div>
+                    <div id="divFromBarcodeInfo@(itemName)" class="product-details">
+                        <p>
+                            尚無資訊
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <!-- Center Side: Scanner Box -->
+            <div class="scanner-box">
+                <div class="new-product">
+                    <span class="merge-tag">步驟二</span>
+                    <h3>目標條碼</h3>
+                    <div class="input-group" style="padding-right:0px; padding-left: 0px;">
+                        <input type="text" class="form-control" id="txtToBarcodeNo@(itemName)" name="txtToBarcodeNo@(itemName)" style="text-transform:uppercase;margin-bottom: 0;" placeholder="請輸入目標產品條碼" aria-invalid="false">
+                        <span class="input-group-append">
+                            <a class="btn btn-outline-danger no-edit-detail" title="清除" onclick="ResetToBarcode@(itemName)();">
+                                <i class="fas fa-eraser"></i>
+                            </a>
+                        </span>
+                    </div>
+                    <div id="divToBarcodeInfo@(itemName)" class="product-details">
+                        <p>
+                            尚無資訊
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <!-- Right Side: Scanner Box -->
+            <div class="scanner-box">
+                <div class="new-product">
+                    <span class="merge-tag">步驟三</span>
+                    <h3>請輸入數量</h3>
+                    <div class="input-group" style="padding-right:0px; padding-left: 0px;">
+                        <input type="number" class="form-control" id="txtMergeQty@(itemName)" name="txtMergeQty@(itemName)" style="text-transform:uppercase;margin-bottom: 0;" placeholder="請輸入數量" aria-invalid="false">
+                        <span class="input-group-append">
+                            <a class="btn btn-outline-danger no-edit-detail" title="清除" onclick="$(`#txtMergeQty@(itemName)`).val(``)">
+                                <i class="fas fa-eraser"></i>
+                            </a>
+                        </span>
+                    </div>
+                    <a class="action_btn" style="" href="javascript: Merge@(itemName)();">
+                        <i class="fas fa-copy"></i>
+                        拆併
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(function () {
+            $("#txtFromBarcodeNo@(itemName)").off('keydown');
+            $("#txtFromBarcodeNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    InitFromBarcodeInfo@(itemName)();
+                    $("#txtFromBarcodeNo@(itemName)").val("");
+                    return false;
+                }
+            });
+
+            $("#txtToBarcodeNo@(itemName)").off('keydown');
+            $("#txtToBarcodeNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    InitToBarcodeInfo@(itemName)();
+                    $("#txtToBarcodeNo@(itemName)").val("");
+                    return false;
+                }
+            });
+
+            $("#txtMergeQty@(itemName)").off('keydown');
+            $("#txtMergeQty@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Merge@(itemName)();
+                    return false;
+                }
+            });
+        });
+
+        function InitFromBarcodeInfo@(itemName)() {
+            let fromBarcodeNo = $("#txtFromBarcodeNo@(itemName)").val();
+            if (fromBarcodeNo.length <= 0) {
+                alert("來源條碼不能為空!!");
+                return false;
+            }
+            let targetUrl = "@Url.Action("GetBarcodeForBatchProcessing", "ProductionHistory")";
+            let postData = {
+                "BarcodeNo": fromBarcodeNo.trim()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.PrevBarcodeId != null) {
+                            alert("此產品條碼已註冊在其他包裝，無法拆併!!");
+                            innerHtml += `<p>
+                                            尚無資訊
+                                          </p>`;
+                            return false;
+                        }
+
+                        if (item.TrayNo != "") {
+                            innerHtml += `<p>
+                                            Tray條碼: <span id="desFromTrayNo@(itemName)">${item.TrayNo}</span>
+                                          </p>`;
+                        }
+
+                        innerHtml += `<p>
+                                        產品條碼: <span id="desFromBarcodeNo@(itemName)">${item.BarcodeNo}</span>
+                                      </p>
+                                      <p>
+                                        產品品名: <span>${item.MtlItemName}</span>
+                                      </p>
+                                      <p>
+                                        產品規格:<span>${item.MtlItemSpec}</span>
+                                      </p>
+                                      <p>
+                                        產品數量:<span id="desFromBarcodeQty@(itemName)">${item.BarcodeQty}</span>
+                                      </p>`;
+                    });
+                }
+                else {
+                    alert("查無條碼資料!!");
+                    innerHtml += `<p>
+                                    尚無資訊
+                                  </p>`;
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+
+            $("#divFromBarcodeInfo@(itemName)").html(innerHtml);
+        }
+
+        function InitToBarcodeInfo@(itemName)() {
+            let toBarcodeNo = $("#txtToBarcodeNo@(itemName)").val();
+            if (toBarcodeNo.length <= 0) {
+                alert("目標條碼不能為空!!");
+                return false;
+            }
+            let targetUrl = "@Url.Action("GetBarcodeForBatchProcessing", "ProductionHistory")";
+            let postData = {
+                "BarcodeNo": toBarcodeNo.trim()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.PrevBarcodeId != null) {
+                            alert("此產品條碼已註冊在其他包裝，無法拆併!!");
+                            innerHtml += `<p>
+                                            尚無資訊
+                                          </p>`;
+                            return false;
+                        }
+
+                        if (item.TrayNo != "") {
+                            innerHtml += `<p>
+                                            Tray條碼: <span id="desToTrayNo@(itemName)">${item.TrayNo}</span>
+                                          </p>`;
+                        }
+
+                        innerHtml += `<p>
+                                        產品條碼: <span id="desToBarcodeNo@(itemName)">${item.BarcodeNo}</span>
+                                      </p>
+                                      <p>
+                                        產品品名: <span>${item.MtlItemName}</span>
+                                      </p>
+                                      <p>
+                                        產品規格:<span>${item.MtlItemSpec}</span>
+                                      </p>
+                                      <p>
+                                        產品數量:<span id="desToBarcodeQty@(itemName)">${item.BarcodeQty}</span>
+                                      </p>`;
+                    });
+                }
+                else {
+                    alert("查無條碼資料!!");
+                    innerHtml += `<p>
+                                    尚無資訊
+                                  </p>`;
+                }
+            }
+
+            $("#divToBarcodeInfo@(itemName)").html(innerHtml);
+        }
+
+        function Merge@(itemName)() {
+            let fromBarcodeNo = $("#desFromBarcodeNo@(itemName)").html();
+            let toBarcodeNo = $("#desToBarcodeNo@(itemName)").html();
+            let transactionQty = $("#txtMergeQty@(itemName)").val();
+
+            if (typeof (fromBarcodeNo) == `undefined` || fromBarcodeNo.length <= 0) {
+                alert("來源條碼不能為空!!");
+                return false;
+            }
+            else if (typeof (toBarcodeNo) == `undefined` || toBarcodeNo.length <= 0) {
+                alert("目標條碼不能為空!!");
+                return false;
+            }
+            else if (typeof (transactionQty) == `undefined` || transactionQty.length <= 0) {
+                alert("拆併數量不能為空!!");
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("BarcodeMergerTransaction", "ProductionHistory")";
+            let postData = {
+                "FromBarcodeNo": fromBarcodeNo.trim(),
+                "ToBarcodeNo": toBarcodeNo.trim(),
+                "TransactionQty": transactionQty
+            };
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                $.each(data.BarcodeResult, function (i, item) {
+                    $("#desFromBarcodeQty@(itemName)").html(item.FromBarcodeQty);
+                    $("#desToBarcodeQty@(itemName)").html(item.ToBarcodeQty);
+                });
+
+                $("#txtMergeQty@(itemName)").val("");
+
+                Swal.fire(
+                    "拆併成功!",
+                    "請確認數量是否正確!",
+                    "success",
+                );
+
+                setTimeout(function () {
+                    Swal.close();
+                }, 1500);
+            }
+        }
+
+        function ResetFromBarcode@(itemName)() {
+            $("#txtFromBarcodeNo@(itemName)").val("");
+            $("#divFromBarcodeInfo@(itemName)").html(`<p>尚無資訊</p>`);
+        }
+
+        function ResetToBarcode@(itemName)() {
+            $("#txtToBarcodeNo@(itemName)").val("");
+            $("#divToBarcodeInfo@(itemName)").html(`<p>尚無資訊</p>`);
+        }
+    </script>
+            )

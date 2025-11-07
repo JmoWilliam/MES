@@ -1,0 +1,234 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "SuggestionsForPurchaseRecord";
+    string itemNameText = "粗胚建議請購清單";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+
+    //連結到這個頁面的參數
+    string queryCondition = Request["queryCondition"] ?? "";
+    string MB005 = Request["MB005"] ?? "";
+    string MB007 = Request["MB007"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+         .btn-secondary {
+             color: #6c757d;
+             background-color: #fff;
+             border-color: #6c757d;
+         }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--搜尋內容-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 450px;overflow-y: auto;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboTypeOneQ@(itemName)">第一分類</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboTypeOneQ@(itemName)" name="cboTypeOneQ@(itemName)"
+                                        data-msg-required="請選擇第一分類" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboTypeTwoQ@(itemName)">第二分類</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboTypeTwoQ@(itemName)" name="cboTypeTwoQ@(itemName)"
+                                        data-msg-required="請選擇第二分類" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboTypeThreeQ@(itemName)">第三分類</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboTypeThreeQ@(itemName)" name="cboTypeThreeQ@(itemName)"
+                                        data-msg-required="請選擇第三分類" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboTypeFourQ@(itemName)">第四分類</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboTypeFourQ@(itemName)" name="cboTypeFourQ@(itemName)"
+                                        data-msg-required="請選擇第四分類" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+                <button type="button" class="btn btn-success  auth-excel" onclick="Excel@(itemName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>匯出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 60px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">品號</th>
+                                        <th scope="col" style="min-width: 90px;">品名</th>
+                                        <th scope="col" style="min-width: 50px;">規格</th>
+                                        <th scope="col" style="min-width: 90px;">庫存單位</th>
+                                        <th scope="col" style="min-width: 90px;">第一分類</th>
+                                        <th scope="col" style="min-width: 90px;">第二分類</th>
+                                        <th scope="col" style="min-width: 90px;">第三分類</th>
+                                        <th scope="col" style="min-width: 90px;">第四分類</th>
+                                        <th scope="col" style="min-width: 90px;">最低補量</th>
+                                        <th scope="col" style="min-width: 90px;">補貨倍量</th>
+                                        <th scope="col" style="min-width: 90px;">安全存量</th>
+                                        <th scope="col" style="min-width: 90px;">庫存數量</th>
+                                        <th scope="col" style="min-width: 90px;">建議採購數</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            ComboBoxs.WithText("#cboTypeOneQ@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MtlItemType", "Condition": 1 }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.WithText("#cboTypeTwoQ@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MtlItemType", "Condition": 2 }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.WithText("#cboTypeThreeQ@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MtlItemType", "Condition": 3 }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.WithText("#cboTypeFourQ@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MtlItemType", "Condition": 4 }, "", "NA", "", "TypeName", "TypeNo");
+
+            //初始化
+            let currentDate = new Date();
+            let queryCondition = "@queryCondition";
+            let MB005 = "@MB005";
+            if (MB005) {
+                $("#cboTypeOneQ@(itemName)").val(MB005);             
+            }
+            let MB007 = "@MB007";
+            if (MB007) {
+                $("#cboTypeThreeQ@(itemName)").val(MB007);             
+            }
+            //搜尋動作
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetSuggestionsForPurchase", "PurchaseRequisition")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MB005": $("#cboTypeOneQ@(itemName)").val(),
+                "MB006": $("#cboTypeTwoQ@(itemName)").val(),
+                "MB007": $("#cboTypeThreeQ@(itemName)").val(),
+                "MB008": $("#cboTypeFourQ@(itemName)").val(),
+                "Condition":"@queryCondition"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                console.log("pageCount=" + pageCount);
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">品號</span>${item.MB001}</td>                                        
+                                        <td><span class="stack-title">品名</span>${item.品名}</td>
+                                        <td><span class="stack-title">規格</span>${item.規格}</td>
+                                        <td><span class="stack-title">庫存單位</span>${item.庫存單位}</td>
+                                        <td><span class="stack-title">第一分類</span>${item.第一分類}</td>
+                                        <td><span class="stack-title">第二分類</span>${item.第二分類}</td>
+                                        <td><span class="stack-title">第三分類</span>${item.第三分類}</td>
+                                        <td><span class="stack-title">第四分類</span>${item.第四分類}</td>
+                                        <td><span class="stack-title">最低補量</span>${item.最低補量}</td>
+                                        <td><span class="stack-title">補貨倍量</span>${item.補貨倍量}</td>
+                                        <td><span class="stack-title">安全存量</span>${item.安全存量}</td>
+                                        <td><span class="stack-title">庫存數量</span>${item.庫存數量}</td>                                        
+                                        <td><span class="stack-title">建議採購數</span>${item.建議採購數}</td>
+                                      </tr>`;
+                    });
+
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+    </script>
+)

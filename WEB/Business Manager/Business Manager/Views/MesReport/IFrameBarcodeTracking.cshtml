@@ -1,0 +1,972 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "IFrameBarcodeTracking";
+    string itemNameText = "條碼追蹤查詢";
+    string authority = ViewBag.authority;
+
+    string BarcodeNo = Request["BarcodeNo"] ?? "";
+    string Iframe = Request["Iframe"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+         .container {
+             margin-left: 0 !important;
+         }
+
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             vertical-align: middle !important;
+         }
+
+         .baseline .baseline-list {
+             padding-bottom: 9.6px !important;
+         }
+
+             .baseline .baseline-list:after {
+                 border: none !important;
+                 top: 27px !important;
+             }
+
+         .txt-skyblue {
+             font-size: 87.5%;
+         }
+
+         iframe {
+             width: 100%;
+             height: 80vh;
+             aspect-ratio: 16 / 9;
+         }
+
+         .table-custom {
+             overflow-x: auto;
+             max-width: 100vw;
+         }
+
+             .table-custom table {
+                 table-layout: fixed;
+                 width: auto;
+             }
+
+             .table-custom th,
+             .table-custom td {
+                 width: 200px !important;
+                 max-width: 200px !important;
+                 overflow: hidden;
+             }
+
+                 .table-custom td:hover {
+                     overflow: visible;
+                     background-color: #f8f9fa;
+                     z-index: 10;
+                     position: relative;
+                     white-space: normal;
+                 }
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-header">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-row align-items-center mb-2">
+                            <div class="col-lg-3 col-6">
+                                <label class="form-label" for="cboQueryType@(itemName)">查詢方式</label>
+                                <select class="form-control" id="cboQueryType@(itemName)">
+                                    <option value="BarcodeNo" selected>條碼</option>
+                                    <option value="Lettering">刻字</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-3 col-6">
+                                <label class="form-label" for="txtBarcodeNoQ@(itemName)">搜尋條件</label>
+                                <input type="text" class="form-control" id="txtBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)" placeholder="請輸入條碼或是刻字" />
+                            </div>
+                            <div class="col-lg-3 col-6 mt-4">
+                                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                            </div>
+                            <div class="col-lg-3 col-6">
+                                <label class="form-label" for="txtBarcodeNoQ@(itemName)">製程篩選</label>
+                                <select class="form-control" id="cboMoProcessIdQ@(itemName)" multiple></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="width: 75px;">#</th>
+                                        <th scope="col" style="width: 165px;">產品條碼</th>
+                                        <th scope="col" style="width: 165px;">目前製令</th>
+                                        <th scope="col" style="width: 165px;">目前製程</th>
+                                        <th scope="col" style="width: 165px;">下一站製程</th>
+                                        <th scope="col" style="width: 165px;">目前數量</th>
+                                        <th scope="col" style="width: 180px;">產品品號</th>
+                                        <th scope="col" style="width: 150px;">條碼狀態</th>
+                                        <th scope="col" style="width: 150px;">加工狀態</th>
+                                        @*<th class="text-center" scope="col" style="min-width: 100px;">操作</th>*@
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let moProcessList = [];
+
+        $(document).ready(function () {
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            $("#tblData@(itemName)").hide();
+
+            if ("@Iframe" == "T") {
+                $(objForm@(itemName) + " input").attr("disabled", true);
+                $(objForm@(itemName) + " select").attr("disabled", true);
+            }
+
+            $("#txtBarcodeNoQ@(itemName)").val("@(BarcodeNo)");
+            if ('@(BarcodeNo)') {
+                Query@(itemName)();
+            }
+
+            //$("#txtBarcodeNoQ@(itemName)").val("@(BarcodeNo)");
+
+            //Query@(itemName)();
+
+            @*$("#txtBarcodeNoQ@(itemName)").keydown(DelayTrigger(function (e) {
+                Query@(itemName)();
+            }, 100));*@
+
+            $("#txtBarcodeNoQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#cboMoProcessIdQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+
+            $("#cboMoProcessIdQ@(itemName)").change(function () {
+                let select2Data = $("#cboMoProcessIdQ@(itemName)").select2("data");
+                moProcessList = [];
+                $.each(select2Data, function (i, item) {
+                    moProcessList.push(item.id);
+                });
+
+                ProcessInit@(itemName)();
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let barcodeNo = $("#txtBarcodeNoQ@(itemName)").val();
+            if (barcodeNo == "") {
+                alert("請輸入欲查詢之產品條碼!!");
+                return false;
+            }
+
+            $("#tblData@(itemName)").show();
+
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+            let targetUrl = "@Url.Action("GetBarcodeTracking", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "BarcodeNo": $("#txtBarcodeNoQ@(itemName)").val().toUpperCase(),
+                "MoProcessList": moProcessList.toString(),
+                "QueryType": $("#cboQueryType@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                //pageCount = data.result.length;
+                pageCount = data.result.length > 0 ? parseInt(data.TotalCount) : 0;
+                console.log(pageCount);
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        let style = 'style="display: none"';
+                        let style2 = '';
+                        if (i == 0) style = '';
+                        //if (i == 0) { style = ''; style2 = 'style="display: none"';} ;
+
+                        ComboBoxs.Default("#cboMoProcessIdQ@(itemName)", "@Url.Action("GetMoProcess", "MesReport")", { "MoId": item.MoId }, "", "NA", "", "ProcessAlias", "MoProcessId");
+
+                        innerHtml += `<tr>
+                                        <td style="width: 50px;" >${_row}</td>
+                                        <td style="width: 165px;" >
+                                            <a href="javascript:PopOQCMeasurement@(itemName)('${item.WoErpFullNo}', '${item.WoSeq}', '${item.CurrentMoProcessId}', '${item.BarcodeNo}');">
+                                            ${item.BarcodeNo}
+                                            </a>
+                                            ${JudgeTrayNo@(itemName)(`${item.TrayNo}`)}
+                                            ${JudgeItemValue@(itemName)(`${item.ItemValue}`)}
+                                        </td>
+                                        <td style="width: 165px;" >${item.WoErpFullNo}(${item.WoSeq})</td>
+                                        <td style="width: 165px;" >${item.CurrentProcessName}</td>
+                                        <td style="width: 165px;" >${item.NextProcessName}</td>
+                                        <td style="width: 165px;" >${item.BarcodeQty}</td>
+                                        <td style="width: 165px;" >${item.MtlItemNo}</td>
+                                        <td style="width: 165px;" >${item.CurrentProdStatus} ${item.CurrentProdStatusName}</td>
+                                        <td style="width: 165px;" >${StatusName("Barcode.BarcodeStatus", item.BarcodeStatus)}</td>
+                                      </tr>
+                                      <tr>
+                                        <td style="width: 165px;"><h1 class="form-label" style="font-weight:bold;">製程</h1></td>
+                                      </tr>
+                                      <tr style="width: 165px;" data-processbarcode-id="${item.BarcodeId}" id="ProcessBarcode${item.BarcodeId}">
+                                        <td style="width: 165px;" colspan="10">
+                                          <table style="width: 100%; margin: auto; border: 1px solid #d7d7e1;">
+                                            <thead>
+                                             <tr>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">製令</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">製程</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">數量</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">狀態</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">過站時間</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">操作人員</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">加工工時</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">機台</th>
+                                              </tr>
+                                           </thead>
+                                            <tbody>
+                                                ${DetailData@(itemName)(item.ProcessDetail, item.CurrentMoProcessId, item.BarcodeNo)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td style="width: 165px;" ><h1 class="form-label" style="font-weight:bold;">上料</h1></td>
+                                      </tr>
+                                      <tr data-componentbarcode-id="${item.BarcodeId}" id="ComponentBarcode${item.BarcodeId}">
+                                        <td style="width: 165px;" colspan="10">
+                                          <table style="width: 100%; margin: auto; border: 1px solid #d7d7e1;">
+                                            <thead>
+                                             <tr>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">上料條碼</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">上料批號</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">物料品號</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">物料品名</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">上料製程</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">上料時間</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">上料人員</th>
+                                              </tr>
+                                           </thead>
+                                            <tbody>
+                                                  ${GetComponent@(itemName)(item.BarcodeId, item.WoErpFullNo, item.WoSeq, item.CurrentMoProcessId)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                      </tr>
+                                      <tr>
+  <td style="width: 250px !important; max-width: 250px !important;  " class="d-flex align-items-center gap-3">
+    <h1 class="form-label fw-bold m-0">IOT報表</h1>
+    <button class="btn btn-success" onclick="Excel@(itemName)('${item.LensBarcode}')">匯出</button>
+<button class="btn btn-info iot-toggle-btn" data-barcode-id="${item.BarcodeId}" onclick="toggleIOTTable('${item.BarcodeId}')">
+    <i class="fas fa-expand"></i> 展開
+</button>
+  </td>
+</tr>
+<tr data-iot-id="${item.BarcodeId}" id="iotTable${item.BarcodeId}" style="display: none;">
+                                        <td style="width: 165px;" colspan="100">
+                                          <table style="width: 100%; margin: auto; border: 1px solid #d7d7e1;">
+                                            <thead>
+                                             <tr>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">QR</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">MeasurementSN</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">MachineSN</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">Location_X</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">Location_Y</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">Class</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">CheckFreq</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">FBL</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">DOF_Index</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">DOF_minus</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">DOF_plus</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">DOF_T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">GDOF_Index</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">GDOF_minus</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">GDOF_plus</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">GDOF_T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">EFL</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_1S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_1T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_2S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_2T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_3S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_3T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_4S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_4T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_5S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_5T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_6S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_6T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_7S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_7T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_8S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_8T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_9S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_9T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_10S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_10T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_11S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_11T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_12S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_12T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_13S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_13T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_14S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_14T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_15S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_15T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_16S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_16T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_17S</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W_17T</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W1S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W1T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W2S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W2T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W3S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W3T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W4S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W4T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W5S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W5T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W6S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W6T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W7S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W7T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W8S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W8T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W9S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W9T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W10S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W10T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W11S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W11T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W12S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W12T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W13S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W13T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W14S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W14T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W15S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W15T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W16S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W16T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W17S_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">W17T_Peak</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">MTF_DateTime</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">RecordTime</th>
+                                                <th class="thead-customized"  style="width: 165px;" scope="col">Status</th>
+                                              </tr>
+                                           </thead>
+                                            <tbody>
+                                                  ${GetIOT@(itemName)(item.LensBarcode)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                      </tr>
+`;
+
+                        function JudgeItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null" && itemValue != null) {
+                                let itemValueJson = JSON.parse(itemValue);
+                                let dateCode = "";
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<br><code>${item2.ItemValue}</code>`;
+
+                                    if (k == 0) {
+                                        dateCode = item2.DateCode;
+                                    }
+
+                                    if (k == itemValueJson["data"].length - 1 && dateCode != undefined) {
+                                        innerHtml += `<br><code>${dateCode}</code>`;
+                                    }
+                                });
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function JudgeTrayNo@(itemName)(trayNo) {
+                            let innerHtml = '';
+                            if (trayNo != "null") {
+                                innerHtml += `<br><code>Tray:${trayNo}</code>`;
+                            }
+
+                            return innerHtml;
+                        }
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function ProcessInit@(itemName)() {
+            objPage = objPage@(itemName);
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetBarcodeTracking", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "BarcodeNo": $("#txtBarcodeNoQ@(itemName)").val().toUpperCase(),
+                "MoProcessList": moProcessList.toString()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        let style = 'style="display: none"';
+
+                        if (i == 0) style = '';
+
+                        innerHtml += `<tr>
+                                        <td style="width: 165px;">${_row}</td>
+                                        <td style="width: 165px;">
+                                            ${item.BarcodeNo}
+                                            ${JudgeTrayNo@(itemName)(`${item.TrayNo}`)}
+                                            ${JudgeItemValue@(itemName)(`${item.ItemValue}`)}
+                                        </td>
+                                        <td style="width: 165px;">${item.WoErpFullNo}(${item.WoSeq})</td>
+                                        <td style="width: 165px;">${item.CurrentProcessName}</td>
+                                        <td style="width: 165px;">${item.NextProcessName}</td>
+                                        <td style="width: 165px;">${item.BarcodeQty}</td>
+                                        <td style="width: 165px;">${item.MtlItemNo}</td>
+                                        <td style="width: 165px;">${item.CurrentProdStatus} ${item.CurrentProdStatusName}</td>
+                                        <td style="width: 165px;">${StatusName("Barcode.BarcodeStatus", item.BarcodeStatus)}</td>
+                                        <td style="width: 165px;" class="text-center active-content">
+                                            <a class="active-link detail-button" href="javascript:Detail@(itemName)(${item.BarcodeId});"><i class="fas fa-list"></i><span>過站資訊</span></a>
+                                        </td>
+                                        </tr>
+                                        <tr data-barcode-id="${item.BarcodeId}" ${style}>
+                                        <td style="width: 165px;" colspan="10">
+                                            <table style="width: 100%; margin: auto; border: 1px solid #d7d7e1;">
+                                            <thead>
+                                                <tr>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">製令</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">製程</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">數量</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">狀態</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">過站時間</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">操作人員</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">加工工時</th>
+                                                <th class="thead-customized" style="width: 165px;" scope="col">機台</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${DetailData@(itemName)(item.ProcessDetail, item.CurrentMoProcessId)}
+                                            </tbody>
+                                            </table>
+                                        </td>
+                                        </tr>
+                                        <tr></tr>`;
+                        function JudgeItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null") {
+                                let itemValueJson = JSON.parse(itemValue);
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<br><code>${item2.ItemValue}</code>`;
+                                });
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function JudgeTrayNo@(itemName)(trayNo) {
+                            let innerHtml = '';
+                            if (trayNo != "null") {
+                                innerHtml += `<br><code>Tray:${trayNo}</code>`;
+                            }
+
+                            return innerHtml;
+                        }
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td  class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                    </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, ProcessInit@(itemName));
+        }
+
+        function GetComponent@(itemName)(barcodeId, WoErpFullNo, WoSeq, ProcessId) {
+            let html = '';
+
+            let targetUrl = "@Url.Action("GetComponentTracking", "MesReport")";
+            let postData = {
+                "BarcodeId": barcodeId
+
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+               // html = data.result
+                html = ComponentData@(itemName)(data.result, WoErpFullNo, WoSeq, ProcessId)
+                console.log(987, data.result);
+
+            } else {
+                html = `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                    </tr>`
+                alert(data.msg, "alert", 0);
+            }
+
+            return html;
+        }
+
+        function ComponentData@(itemName)(source, WoErpFullNo, WoSeq, ProcessId) {
+            let html = '';
+            let index = 0;
+            let inProcess;
+            console.log(986, source)
+            if (source) {
+                //let json = JSON.parse(source);
+                $.each(source, function (i, item) {
+                    let barcode = item.ComponentBarcodeNo != null ? item.ComponentBarcodeNo : "";
+                    //let lotbarcode = item.ComponentBarcodeNo == null ? item.ComponentLotNumberNo : "";
+                    //<td class="tbody-customized">${barcode}</td>
+                    //<td class="tbody-customized">${item.ComponentLotNumberNo}</td>
+                    //<a href="javascript:PopIQCMeasurement@(itemName)('${item.WoErpFullNo}', '${item.WoSeq}', '${item.CurrentProcessName}', '${item.BarcodeNo}');">
+                    //<a href="javascript:PopIQCMeasurement@(itemName)('${item.WoErpFullNo}', '${item.WoSeq}', '${item.ProcessId}', '${item.ComponentLotNumberNo}');">
+
+
+                    html += `<tr class="baseline baseline-border">
+
+                                <td style="width: 165px;" class="text-primary" style="width: 165px;">
+                                    <a href="javascript:PopIQCMeasurement2@(itemName)('${item.ComponentLotNumberNo}', '${item.ComponentMtlItemNo}');">
+                                      ${barcode}
+                                    </a>
+                                </td>
+                                <td style="width: 165px;" class="text-primary" style="width: 165px;">
+                                    <a href="javascript:PopIQCMeasurement@(itemName)('${item.ComponentLotNumberNo}', '${item.ComponentMtlItemNo}');">
+                                      ${item.ComponentLotNumberNo}
+                                    </a>
+
+                                </td>
+                                <td class="tbody-customized" style="width: 165px;">${item.ComponentMtlItemNo}</td>
+                                <td class="tbody-customized" style="width: 165px;">${item.ComponentMtlItemName}</td>
+                                <td class="tbody-customized" style="width: 165px;">${item.ProcessAlias}</td>
+                                <td class="tbody-customized" style="width: 165px;">${item.CreateDate}</td>
+                                <td class="tbody-customized" style="width: 165px;">${item.UserName}</td>
+
+                             </tr>`;
+                })
+
+                //for (let x = 0; x < json.data.length; x++) {
+
+
+
+
+                //    index++;
+                //}
+            }
+
+            return html;
+        }
+
+        function GetIOT@(itemName)(barcodeNos) {
+            let html = '';
+            console.log(564, barcodeNos)
+
+            let targetUrl = "@Url.Action("GetIOTQRData", "MesReport")";
+            let postData = {
+                "QRNos": barcodeNos
+
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                console.log(5645, data.result)
+
+               // html = data.result
+                html = IOTData@(itemName)(data.result)
+                //console.log(987, data.result);
+
+            } else {
+                html = `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                    </tr>`
+                alert(data.msg, "alert", 0);
+            }
+
+            return html;
+        }
+
+        function IOTData@(itemName)(source) {
+            let html = '';
+            let index = 0;
+            let inProcess;
+            console.log(5645, source)
+
+            if (source) {
+                //let json = JSON.parse(source);
+                $.each(source, function (i, item) {
+
+                    html += `<tr class="baseline baseline-border">
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.QR}">${item.QR}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.MeasurementSN}">${item.MeasurementSN}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.MachineSN}">${item.MachineSN}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.Location_X}">${item.Location_X}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.Location_Y}">${item.Location_Y}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.Class}">${item.Class}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.CheckFreq}">${item.CheckFreq}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.FBL}">${item.FBL}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.DOF_Index}">${item.DOF_Index}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.DOF_minus}">${item.DOF_minus}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.DOF_plus}">${item.DOF_plus}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.DOF_T}">${item.DOF_T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.GDOF_Index}">${item.GDOF_Index}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.GDOF_minus}">${item.GDOF_minus}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.GDOF_plus}">${item.GDOF_plus}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.GDOF_T}">${item.GDOF_T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.EFL}">${item.EFL}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_1S}">${item.W_1S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_1T}">${item.W_1T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_2S}">${item.W_2S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_2T}">${item.W_2T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_3S}">${item.W_3S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_3T}">${item.W_3T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_4S}">${item.W_4S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_4T}">${item.W_4T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_5S}">${item.W_5S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_5T}">${item.W_5T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_6S}">${item.W_6S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_6T}">${item.W_6T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_7S}">${item.W_7S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_7T}">${item.W_7T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_8S}">${item.W_8S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_8T}">${item.W_8T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_9S}">${item.W_9S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_9T}">${item.W_9T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_10S}">${item.W_10S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_10T}">${item.W_10T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_11S}">${item.W_11S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_11T}">${item.W_11T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_12S}">${item.W_12S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_12T}">${item.W_12T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_13S}">${item.W_13S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_13T}">${item.W_13T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_14S}">${item.W_14S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_14T}">${item.W_14T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_15S}">${item.W_15S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_15T}">${item.W_15T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_16S}">${item.W_16S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_16T}">${item.W_16T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_17S}">${item.W_17S}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W_17T}">${item.W_17T}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W1S_Peak}">${item.W1S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W1T_Peak}">${item.W1T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W2S_Peak}">${item.W2S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W2T_Peak}">${item.W2T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W3S_Peak}">${item.W3S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W3T_Peak}">${item.W3T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W4S_Peak}">${item.W4S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W4T_Peak}">${item.W4T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W5S_Peak}">${item.W5S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W5T_Peak}">${item.W5T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W6S_Peak}">${item.W6S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W6T_Peak}">${item.W6T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W7S_Peak}">${item.W7S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W7T_Peak}">${item.W7T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W8S_Peak}">${item.W8S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W8T_Peak}">${item.W8T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W9S_Peak}">${item.W9S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W9T_Peak}">${item.W9T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W10S_Peak}">${item.W10S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W10T_Peak}">${item.W10T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W11S_Peak}">${item.W11S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W11T_Peak}">${item.W11T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W12S_Peak}">${item.W12S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W12T_Peak}">${item.W12T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W13S_Peak}">${item.W13S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W13T_Peak}">${item.W13T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W14S_Peak}">${item.W14S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W14T_Peak}">${item.W14T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W15S_Peak}">${item.W15S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W15T_Peak}">${item.W15T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W16S_Peak}">${item.W16S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W16T_Peak}">${item.W16T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W17S_Peak}">${item.W17S_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.W17T_Peak}">${item.W17T_Peak}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.MTF_DateTime}">${item.MTF_DateTime}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.RecordTime}">${item.RecordTime}</td>
+                                <td class="tbody-customized"  style="width: 165px;" title="${item.Status}">${item.Status}</td>
+                             </tr>`;
+                })
+
+                //for (let x = 0; x < json.data.length; x++) {
+
+
+
+
+                //    index++;
+                //}
+            }
+
+            return html;
+        }
+
+        function PopIPQCMeasurement@(itemName)(WoErpFullNo, WoSeq, ProcessId, BarcodeNo) {//工程
+
+            let targetUrl = `@Url.Action("IFrameMeasurementRecord", "MesReport")?WoErpFullNo=${WoErpFullNo}&WoSeq=${WoSeq}&ProcessId=${ProcessId}&BarcodeNo=${BarcodeNo}&QcType=IPQC&Iframe=T`;
+            console.log("IPQCURL: ", targetUrl)
+
+            Swal.fire({
+                html: `<iframe id="MeasurementRecord@(itemName)" src="${targetUrl}" frameborder="0" scrolling="no"></iframe>`,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: "100%",
+                background: '#eef1f5'
+            });
+        }
+
+        function PopOQCMeasurement@(itemName)(WoErpFullNo, WoSeq, ProcessId, BarcodeNo) {//出貨
+
+            let targetUrl = `@Url.Action("IFrameMeasurementRecord", "MesReport")?WoErpFullNo=${WoErpFullNo}&WoSeq=${WoSeq}&ProcessId=-1&BarcodeNo=${BarcodeNo}&Iframe=T`;
+            console.log("OQCURL: ", targetUrl)
+
+            Swal.fire({
+                html: `<iframe id="MeasurementRecord@(itemName)" src="${targetUrl}" frameborder="0" scrolling="no"></iframe>`,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: "100%",
+                background: '#eef1f5'
+            });
+        }
+
+        function PopIQCMeasurement@(itemName)(BarcodeNo, MtlItemNo) {//進貨
+
+            let targetUrl = `@Url.Action("IFrameMeasurementRecord", "MesReport")?LotNumber=${BarcodeNo}&MtlItemNo=${MtlItemNo}&QcType=IQC&Iframe=T`;
+            console.log("IQCURL: ", targetUrl)
+            Swal.fire({
+                html: `<iframe id="MeasurementRecord@(itemName)" src="${targetUrl}" frameborder="0" scrolling="no"></iframe>`,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: "100%",
+                background: '#eef1f5'
+            });
+        }
+
+        function PopIQCMeasurement2@(itemName)(BarcodeNo, MtlItemNo) {//進貨
+
+            let targetUrl = `@Url.Action("IFrameMeasurementRecord", "MesReport")?LotNumber=${BarcodeNo}&MtlItemNo=${MtlItemNo}&QcType=IQC&Iframe=T`;
+            console.log("IQCURL: ", targetUrl)
+            Swal.fire({
+                html: `<iframe id="MeasurementRecord@(itemName)" src="${targetUrl}" frameborder="0" scrolling="no"></iframe>`,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: "100%",
+                background: '#eef1f5'
+            });
+        }
+
+
+        function DetailData@(itemName)(source, currentProcess, barcodeNo) {
+            let html = '';
+            let index = 0;
+            let inProcess;
+            console.log(985, source)
+            if (source) {
+                let json = JSON.parse(source);
+
+                let color = ["primary", "success", "warning", "info"];
+
+                for (let x = 0; x < json.data.length; x++) {
+
+                    if (index >= 4) index = 0;
+
+                    json.data[x].MoProcessId == currentProcess && json.data[x].FinishDate.length < 0 ? inProcess = true : inProcess = false;
+
+                    html += `<tr class="baseline baseline-border">
+                                <td style="width: 165px;" class="tbody-customized baseline-list baseline-border baseline-${color[index]}">
+                                    ${json.data[x].WoErpFullNo}(${json.data[x].WoSeq})
+                                </td>
+                                <td style="width: 165px;" class="tbody-customized">
+                                    <a href="javascript:PopIPQCMeasurement@(itemName)('${json.data[x].WoErpFullNo}', '${json.data[x].WoSeq}', '${json.data[x].MoProcessId}', '${barcodeNo}');">
+                                        <span class="baseline-info">${json.data[x].ProcessAlias} </span>
+                                        ${inProcess == true ? `<span class="badge badge-pill badge-danger"> 加工中</span>` : ``}
+                                    </a>
+                                </td>
+                                <td style="width: 165px;" class="tbody-customized">${json.data[x].StationQty}</td>
+                                <td style="width: 165px;" class="tbody-customized">${StatusName("BarcodeProcess.ProdStatus", json.data[x].ProdStatus)}</td>
+                                <td style="width: 165px;" class="tbody-customized">
+                                    <span class="txt-skyblue">開工 </span>${json.data[x].StartDate} </br>
+                                    <span class="txt-skyblue">完工 </span>${json.data[x].FinishDate}
+                                </td>
+                                <td style="width: 165px;" class="tbody-customized">
+                                    <code>${json.data[x].SupplierNo != null ? json.data[x].SupplierNo : json.data[x].StartUserNo}</code> ${json.data[x].SupplierShortName != null ? json.data[x].SupplierShortName : json.data[x].StartUserName} </br>
+                                    <code>${json.data[x].SupplierNo != null ? json.data[x].SupplierNo : json.data[x].FinishUserNo}</code> ${json.data[x].SupplierShortName != null ? json.data[x].SupplierShortName : json.data[x].FinishUserName}
+                                </td>
+                                <td style="width: 165px;" class="tbody-customized">${json.data[x].CycleTime} 秒</td>
+                                <td style="width: 165px;" class="tbody-customized">${json.data[x].MachineName}</td>
+                             </tr>`;
+
+                    index++;
+                }
+            }
+
+            return html;
+        }
+
+        function Detail@(itemName)(BarcodeId) {//ProcessBarcode$
+            //if ($(`tr[data-barcode-id=${BarcodeId}]`).css("display") == "none") {
+            //    $("tr[data-barcode-id]").hide();
+            //    $(`tr[data-barcode-id=${BarcodeId}]`).show();
+            //} else {
+            //    $("tr[data-barcode-id]").hide();
+            //}
+            if ($(`tr[data-processbarcode-id=${BarcodeId}]`).css("display") == "none") {
+                $(`tr[data-processbarcode-id=${BarcodeId}]`).show();
+                $(`tr[data-componentbarcode-id=${BarcodeId}]`).hide();
+            } else {
+                $(`tr[data-processbarcode-id=${BarcodeId}]`).hide();
+                $(`tr[data-componentbarcode-id=${BarcodeId}]`).hide();
+            }
+
+        }
+
+        function ComponentDetail@(itemName)(BarcodeId) {
+            if ($(`tr[data-componentbarcode-id=${BarcodeId}]`).css("display") == "none") {
+                $(`tr[data-componentbarcode-id=${BarcodeId}]`).show();
+                $(`tr[data-processbarcode-id=${BarcodeId}]`).hide();
+            } else {
+                $(`tr[data-processbarcode-id=${BarcodeId}]`).hide();
+                $(`tr[data-componentbarcode-id=${BarcodeId}]`).hide();
+            }
+
+        }
+
+        function Excel@(itemName)(qRNos) {
+            let targetUrl = "";
+            targetUrl = "@Url.Action("GetIOTDataExcel9", "MesReport")"
+
+
+            let postData = {
+                "QRNos": qRNos
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                alert("匯出成功!!!!", "success")
+                FileAccess.AjaxDownload(targetUrl, postData, false);
+            }
+        }
+
+        function toggleIOTTable(barcodeId) {
+            // 使用正確的選擇器
+            const iotRow = $(`#iotTable${barcodeId}`);
+            const button = $(`.iot-toggle-btn[data-barcode-id="${barcodeId}"]`);
+
+            if (iotRow.is(':visible')) {
+                iotRow.hide();
+                button.html('<i class="fas fa-expand"></i> 展開');
+                button.removeClass('btn-warning').addClass('btn-info');
+            } else {
+                iotRow.show();
+                button.html('<i class="fas fa-compress"></i> 收合');
+                button.removeClass('btn-info').addClass('btn-warning');
+            }
+        }
+    </script>
+        )

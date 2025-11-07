@@ -1,0 +1,248 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewUmoDetail";
+    string itemNameText = "餐點客製化選項資料";
+
+    string MealId = Request["MealId"] ?? "";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        td {
+            vertical-align: middle;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form autocomplete="off" id="queryForm@(itemName)"></form>
+                <div class="form-group row">
+                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboMealId@(itemName)">餐點<span class="text-danger">*</span></label>
+                    <div class="col-12 col-md-6 col-lg-6">
+                        <select class="form-control" id="cboMealId@(itemName)" name="cboMealId@(itemName)"></select>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtUmoDetailRemark@(itemName)">備註</label>
+                    <div class="col-12 col-md-6 col-lg-6">
+                        <input class="form-control" id="txtUmoDetailRemark@(itemName)" name="txtUmoDetailRemark@(itemName)" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtUmoDetailQty@(itemName)">數量<span class="text-danger">*</span></label>
+                    <div class="col-12 col-md-6 col-lg-6">
+                        <input class="form-control" id="txtUmoDetailQty@(itemName)" name="txtUmoDetailQty@(itemName)" />
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboPickupType@(itemName)">取餐區<span class="text-danger">*</span></label>
+                    <div class="col-12 col-md-6 col-lg-6">
+                        <select class="form-control" id="cboPickupType@(itemName)" name="cboPickupType@(itemName)"></select>
+                    </div>
+                </div>
+                <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="min-width: 75px;">#</th>
+                            <th scope="col" style="min-width: 200px;">客製化類別</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="card-footer text-center text-lg-right read-hide">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        function Pop@(itemName)() {
+            ComboBoxs.Default("#cboMealId@(itemName)", "@Url.Action("GetMcDetail", "ApplyForm")", {}, "", "NA", "", "MealName", "MealId");
+            ComboBoxs.Default("#cboPickupType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "UmoDetail.Pickup" }, "", "NA", "", "TypeName", "TypeNo");    //取餐區
+
+            //選擇餐點後，自動代出原餐點資訊
+            $("#cboMealId@(itemName)").off("change").on("change", function () {
+                InitData@(itemName)();
+            });
+
+            $("#cboPickupType@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetMcDetail", "ApplyForm")";
+            let postData = {
+                "MealId": $("#cboMealId@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let _row = (i + 1) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${CategoryData@(itemName)(item.MealCategory)}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function CategoryData@(itemName)(source) {
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source); //需先轉成json
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `${json.data[x].CategoryName}
+                             ${DetailData@(itemName)(json.data[x].MealCgId, json.data[x].CategoryName, json.data[x].CategoryType, JSON.stringify(json.data[x].McDetail))}`;
+                }
+            }
+            return html;
+        }
+
+        function DetailData@(itemName)(id, name, type, source) {
+            let html = '';
+            if (source) {
+                let json = JSON.parse(source);
+                for (let x = 0; x < json.data.length; x++) {
+                    if (type == 'Y') {
+                        html += `<label class="control control--checkbox">
+                                    ${json.data[x].McDetailName}<span class="pick-list-price">${json.data[x].McDetailPrice > 0 ? ` +$ ${json.data[x].McDetailPrice}` : ` $免費`}</span>
+                                    <input type="checkbox" id="mcDetail_${id}_${json.data[x].McDetailId}" name="mcDetail_${id}_${json.data[x].McDetailId}"
+                                           data-mc-name="${name}" data-mc-detail-name="${json.data[x].McDetailName}" data-mc-detail-price="${json.data[x].McDetailPrice}" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                                `;
+                    } else {
+                        html += `<label class="control control01 control--radio">
+                                    ${json.data[x].McDetailName}<span class="pick-list-price">${json.data[x].McDetailPrice > 0 ? ` +$ ${json.data[x].McDetailPrice}` : ` $免費`}</span>
+                                    <input type="radio" id="mcDetail_${id}_${json.data[x].McDetailId}" name="mcDetail_${id}"
+                                           data-mc-name="${name}" data-mc-detail-name="${json.data[x].McDetailName}" data-mc-detail-price="${json.data[x].McDetailPrice}"
+                                           ${x == 0 ? `checked` : ``} />
+                                    <span class="control__indicator"></span>
+                                </label>
+                                `;
+                    }
+                    html += `</div>`;
+                }
+            }
+            return html;
+        }
+
+        function Save@(itemName)() {
+
+            let isValid = true;
+            let errorMsg = "";
+
+            if ($("#cboMealId@(itemName)").val() == "") {
+                isValid = false;
+                errorMsg += "請選擇餐點";
+            }
+
+            if ($("#cboPickupType@(itemName)").val() == "") {
+                isValid = false;
+                errorMsg += "請選擇取餐區";
+            }
+
+            if (isValid) {
+                let targetUrl = "@Url.Action("GetRestaurantMeal", "Meal")";
+                let postData = {
+                    "MealId": $("#cboMealId@(itemName)").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                let mealName = "";
+                let mealPrice = 0;
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        mealName = item.MealName;
+                        mealPrice = parseInt(item.MealPrice);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                let mealIndex = -1;
+                let meal = {
+                    MealId: $("#cboMealId@(itemName)").val(),
+                    MealName: mealName,
+                    UmoDetailRemark: $("#txtUmoDetailRemark@(itemName)").val(),
+                    UmoDetailPrice: mealPrice * $("#txtUmoDetailQty@(itemName)").val(),
+                    UmoDetailQty: $("#txtUmoDetailQty@(itemName)").val(),
+                    Pickup: $("#cboPickupType@(itemName)").val(),
+                    UmoAdditional: []
+                }
+
+                mealJson.UmoDetail.push(meal);
+
+                mealIndex = mealJson.UmoDetail.length - 1;
+
+                if ($("input[id^='mcDetail_']:checked").length > 0) {
+                    $.each($("input[id^='mcDetail_']:checked"), function (i) {
+                        let currentId = $(this).attr("id");
+                        let mcDetailId = currentId.split('_')[2];
+
+                        let mcDetail = {
+                            McDetailId: mcDetailId,
+                            McDetailName: $(this).data("mc-detail-name"),
+                            UmoAdditionalPrice: $(this).data("mc-detail-price")
+                        }
+
+                        mealJson.UmoDetail[mealIndex].UmoAdditional.push(mcDetail);
+                    });
+                }
+
+                LoadMealDinerList(mealJson);
+                Close@(itemName)();
+            } else {
+                alert(errorMsg);
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

@@ -1,0 +1,163 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewChangeMoId";
+    string itemNameText = "治具綁定條碼資料";
+}
+
+@Html.Resource("css",
+@<style>
+     .modal-body {
+         max-height: 50vh;
+         overflow-y: auto;
+     }
+</style>
+                              )
+
+
+<div class="modal fade" id="modal@(itemName)" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    更換製令製程
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <span class="input-group-addon font18" id="basic-addon13">
+                        <i class="fas fa-barcode" style="padding-right: 5px;"></i> 製令條碼
+                    </span>
+                    <input type="text" class="form-control form-control-add" id="txtOtherInfo@(itemName)"
+                           aria-describedby="basic-addon13" placeholder="請輸入製令或條碼">
+                </div>
+                <div id="divMachine@(itemName)" class="input-group" style="margin-top: 10px; display: none;">
+                    <span class="input-group-addon font18" id="basic-addon13">
+                        <i class="far fa-computer-classic" style="padding-right: 5px;"></i> 機台
+                    </span>
+                    <select id="cboMachineId@(itemName)" class="form-control"></select>
+                </div>
+                <div id="divMoProcess@(itemName)" class="input-group" style="margin-top: 10px; display: none;">
+                    <span class="input-group-addon font18" id="basic-addon13">
+                        <i class="fa fa-laptop" style="padding-right: 5px;"></i> 製令製程
+                    </span>
+                    <select id="cboMoProcessId@(itemName)" class="form-control"></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="sendMfg@(itemName)" type="button" class="btn-sure btn btn-success btn-flat mb-2 weight-600"
+                        onclick="javascript: EnterMesIPQC@(itemName)();">
+                    確定
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+    let moId@(itemName);
+    let woErpFullNo@(itemName);
+    let deviceIp@(itemName);
+    let machineId@(itemName);
+    let newWoErpFullNo@(itemName);
+
+    function Pop@(itemName)(machineId) {
+        machineId@(itemName) = machineId;
+        $("#modal@(itemName)").modal({
+            backdrop: "static",
+            keyboard: false,
+            show: true
+        });
+
+        deviceIp@(itemName) = GetDeviceIp@(itemName)();
+
+        $("#txtOtherInfo@(itemName)").val();
+        $("#divMachine@(itemName)").hide();
+        $("#divMoProcess@(itemName)").hide();
+    }
+
+    $("#txtOtherInfo@(itemName)").keydown(function (event) {
+        if (event.keyCode == 13) {
+            EnterMesIPQC@(itemName)()
+        }
+    });
+
+    function EnterMesIPQC@(itemName)() {
+        let moProcessId = $("#cboMoProcessId@(itemName)").val();
+
+        if (!moProcessId) {
+            let otherInfo = $("#txtOtherInfo@(itemName)").val();
+            if (otherInfo == "") {
+                alert("製令或條碼不能為空!", alert, 0);
+                return false;
+            }
+            let targetUrl = "@Url.Action("GetManufactureOrder", "Production")";
+
+            let postData = {
+                "OtherInfo": otherInfo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $("#divMachine@(itemName)").show();
+                    $("#divMoProcess@(itemName)").show();
+                    $("#sendMfg@(itemName)").show();
+                    $.each(data.result, function (i, item) {
+                        newWoErpFullNo@(itemName) = item.WoErpPrefix + "-" + item.WoErpNo + "(" + item.WoSeq + ")";
+                        moId@(itemName) = item.MoId;
+                        MoId = item.MoId;
+                        MoProcessId = item.MoProcessId;
+                        ComboBoxs.Default("#cboMachineId@(itemName)", "@Url.Action("GetMachineByDevice", "ProductionHistory")", { "PageIndex": 1, "PageSize": 999, "DeviceIdentifierCode": deviceIp@(itemName) }, "" + machineId@(itemName)+ "", "NA", "", "MachineDesc", "MachineId");
+                        ComboBoxs.Default("#cboMoProcessId@(itemName)", "@Url.Action("GetMoProcess", "Production")", { "MoId": item.MoId, "MachineId": machineId@(itemName) }, "", "NA", "", "ProcessAlias", "MoProcessId");
+                    });
+                }
+                else {
+                    alert("查無此製令資訊!", "alert", 0);
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+        else {
+            let moProcessId = $("#cboMoProcessId@(itemName)").val();
+            let processAlias = $("#cboMoProcessId@(itemName) :selected").text();
+            let machineId = $("#cboMachineId@(itemName)").val();
+            let machineName = $("#cboMachineId@(itemName)").find(':selected').text();
+            PopViewJigBarcode(moProcessId, newWoErpFullNo@(itemName), processAlias, machineId, machineName);
+
+            $("#txtOtherInfo@(itemName)").val("");
+            $("#cboMoProcessId@(itemName)").empty();
+            $("#divMoProcess@(itemName)").hide();
+
+            Close@(itemName)();
+        }
+
+        $("#cboMachineId@(itemName)").change(function () {
+            let machineId = $("#cboMachineId@(itemName)").val();
+            ComboBoxs.Default("#cboMoProcessId@(itemName)", "@Url.Action("GetMoByProcess", "ProductionHistory")", { "MoId": moId@(itemName), "MachineId": machineId }, "", "NA", "", "ProcessAlias", "MoProcessId");
+        });
+    }
+
+    function GetDeviceIp@(itemName)() {
+        let deviceIp = "";
+        let targetUrl = "@Url.Action("GetDeviceIp", "ProductionHistory")";
+        let postData = {
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            deviceIp  = data.result;
+        }
+        return deviceIp
+    }
+
+    function Close@(itemName)() {
+        $("#txtOtherInfo@(itemName)").val("");
+        $("#cboMoProcessId@(itemName)").empty();
+        $("#divMoProcess@(itemName)").hide();
+        $("#modal@(itemName)").modal('hide');
+    }
+</script>
+        )

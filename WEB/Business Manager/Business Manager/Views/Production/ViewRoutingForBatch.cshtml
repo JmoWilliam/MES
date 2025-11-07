@@ -1,0 +1,297 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRoutingForBatch";
+    string itemNameText = "選擇途程(批次開立用)";
+}
+
+@Html.Resource("css",
+    @<style>
+         .sp-container {
+             overflow: scroll;
+         }
+    </style>
+                                                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">品號: <span class="sub-text" id="desMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">品名: <span class="sub-text" id="desMtlItemName@(itemName)"></span></span>
+                    <span class="sub-title">規格: <span class="sub-text" id="desMtlItemSpec@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">辨識碼</th>
+                                        <th scope="col" style="min-width: 250px;">途程名稱</th>
+                                        <th scope="col" style="min-width: 175px;">生產模式</th>
+                                        <th scope="col" style="min-width: 200px;">版次</th>
+                                        <th scope="col" style="min-width: 200px;">2D研發設計圖</th>
+                                        <th class="text-center" scope="col" style="min-width: 150px;">製程資訊</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--檢視-途程站別-->
+<div class="modal fade" id="modalView@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="card-body"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+        let mtlItemNo@(itemName);
+        let cell@(itemName);
+
+        function Pop@(itemName)(mtlItemNo, mtlItemName, mtlItemSpec, cell) {
+            if (!mtlItemNo) {
+                alert("請先維護品號後再進行途程設定!");
+                return false;
+            }
+
+            mtlItemNo@(itemName) = mtlItemNo;
+            cell@(itemName) = cell;
+            $("#txtMtlItemNoQ@(itemName)").val(mtlItemNo);
+            $("#desMtlItemNo@(itemName)").html(mtlItemNo);
+            $("#desMtlItemName@(itemName)").html(mtlItemName);
+            $("#desMtlItemSpec@(itemName)").html(mtlItemSpec);
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetRoutingItem", "Routing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "RoutingItemConfirm": "Y",
+                "RoutingConfirm": "Y",
+                "Status": "A",
+                "MtlItemNo": mtlItemNo@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    $(".save-mode").show();
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td scope="col" style="min-width: 75px;">${_row}</td>
+                                        <td scope="col" style="min-width: 100px;">${item.RoutingItemId}</td>
+                                        <td scope="col" style="min-width: 250px;">${item.RoutingName}</td>
+                                        <td scope="col" style="min-width: 145px;">${item.ModeNo}-${item.ModeName}</td>
+                                        ${JudgeEdition(`${item.Edition}`, `${item.Version}`)}
+                                        ${JudgeCad2DFileAbsolutePath(`${item.Cad2DFileAbsolutePath}`, `${item.Cad2DFile}`, `${item.Cad2DFileInfo}`)}
+                                        <td class="text-center active-content" scope="col" style="min-width: 100px;">
+                                          <a class="active-link auth-read" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalView@(itemName)" href="javascript:void(0);" onclick="ViewRoutingProcess@(itemName)('${item.RoutingId}','${item.RoutingName}')">
+                                            <i class="far fa-eye"></i>
+                                          </a>
+                                        </td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                             <input type="radio" data-routing-id="${item.RoutingId}" data-routing-name="${item.RoutingName}" value="${item.RoutingItemId}" />
+                                             <span class="control__indicator"></span>
+                                          </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+                function JudgeEdition(edition, version) {
+                    let innerHtml = '';
+                    if (edition != "null") {
+                        innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${edition}(${version})" style="max-width: 200px;">${edition}<code>(${version})</code></td>`;
+                    }
+                    else {
+                        innerHtml += `<td></td>`;
+                    }
+                    return innerHtml;
+                }
+
+                function JudgeCad2DFileAbsolutePath(cad2DFileAbsolutePath, cad2DFile, cad2DFileInfo) {
+                    let innerHtml = '';
+                    if (cad2DFileAbsolutePath != "null") {
+                        let fileFullNameList = cad2DFileAbsolutePath.split('\\');
+                        let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                        innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 250px;">
+                                            <a class="active-link mr-1" href="/Drawing/GetCadFile?FilePath=${cad2DFileAbsolutePath}"><i class="fas fa-download"></i></a>
+                                            ${fileFullName}
+                                          </td>`;
+                    }
+                    else if (cad2DFile != "null") {
+                        innerHtml += JudgeCad2DFile(cad2DFile, cad2DFileInfo);
+                    }
+                    else {
+                        innerHtml += `<td></td>`;
+                    }
+                    return innerHtml;
+                }
+
+                function JudgeCad2DFile(cad2DFile, cad2DFileInfo) {
+                    let innerHtml = '';
+                    if (cad2DFile != "null") {
+                        innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${cad2DFileInfo}" style="max-width: 145px;">
+                                        <a class="active-link mr-1" href="/Drawing/GetPdmFile?fileId=${cad2DFile}"><i class="fas fa-download"></i></a>
+                                        ${cad2DFileInfo}
+                                      </td>`;
+                    }
+                    else {
+                        innerHtml += `<td></td>`;
+                    }
+                    return innerHtml;
+                }
+
+                function JudgeSortNumber(sortNumber, routingItemId, i) {
+                    let innerHtml = '';
+                    if (sortNumber != "null") {
+                        innerHtml += `<input type="number" data-type="sort" data-routing-item-id="${routingItemId}" class="form-control" value="${sortNumber}"/>`;
+                    }
+                    else {
+                        innerHtml += `<input type="number" data-type="sort" data-routing-item-id="${routingItemId}" class="form-control" value="${parseInt(i) + 1}"/>`;
+                    }
+                    return innerHtml;
+                }
+
+                function JudgeMoRouting(moRoutingId, routingId, routingItemId) {
+                    let innerHtml = '';
+                    if (moRoutingId != "null") {
+                        innerHtml += `<input type="checkbox" data-type="MoRoutingY" data-routing-id="${routingId}" data-routing-item-id="${routingItemId}" value="${routingItemId}" checked disabled/>`;
+                    }
+                    else {
+                        innerHtml += `<input type="checkbox" data-type="MoRouting" data-routing-id="${routingId}" data-routing-item-id="${routingItemId}" value="${routingItemId}" />`;
+                    }
+                    return innerHtml;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-routing-id][data-routing-name]:checked") {
+                    let routingItemId = $(this).val();
+                    let routingName = $(this).data("routing-name");
+                    if (routingItemId) {
+                        spreadsheetViewBatchManufactureOrder.setValue(cell@(itemName), routingItemId + ":" + routingName);
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function ViewRoutingProcess@(itemName)(routingId, routingName) {
+            let targetUrl = "@Url.Action("GetRoutingProcess", "Routing")";
+            let postData = {
+                "RoutingId": routingId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                let innerHtml = '';
+                $("#modalView@(itemName) h5[class='modal-title']").html("途程名稱: " + routingName);
+                if (data.result.length==0) {
+                    innerHtml += `<span class="empty-data-style"><i class="fas fa-exclamation-triangle"></i> 此途程尚未設定任何製程。</span>`;
+                }
+                else {
+                    innerHtml += `<div class="baseline baseline-border">`;
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `${JudgeCount(`${i}`)}
+                                            <div class="baseline-info">
+                                                <div>
+                                                    <strong> <code>${item.SortNumber}</code> </strong>
+                                                    站別名稱：${item.ProcessName}
+                                                </div>
+                                                <span class="text-muted">途程站別類別:${item.ProcessNo}&nbsp;&nbsp;,是否必須過站:${item.NecessityStatus}</span>
+                                            </div>
+                                        </div>
+                                      <div>`;
+                    });
+
+                    function JudgeCount(i) {
+                        let innerHtml = '';
+                        if (i % 2 == 0) innerHtml += `<div class="baseline-list baseline-border baseline-info">`;
+                        else innerHtml += `<div class="baseline-list baseline-border baseline-warning">`;
+                        return innerHtml;
+                    }
+                }
+                $("#modalView@(itemName) div[class='card-body']").html(innerHtml);
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+          )

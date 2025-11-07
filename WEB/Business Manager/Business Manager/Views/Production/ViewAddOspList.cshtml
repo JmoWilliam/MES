@@ -1,0 +1,914 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewAddOspList";
+    string itemNameText = "新增委外預排資料";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+        #modalViewAddOspList .modal-xl {
+            max-width: 1750px;
+        }
+
+         .modal-body {
+             max-height: 80vh;
+             overflow: auto;
+         }
+
+         .cell-customer01 {
+             background: #a6c9e7;
+             font-size: 18px;
+             font-weight: 600;
+             min-width: 300px;
+         }
+
+         .cell-customer02 {
+             background: #e7c19f;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer03 {
+             background: #c7c0a2;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer04 {
+             background: #df8d73;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer05 {
+             background: #ebc2cd;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer06 {
+             background: #f9bdaa;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer07 {
+             background: #68cacf;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer08 {
+             background: #ef8f92;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer09 {
+             background: #96d1e3;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer10 {
+             background: #a7c9f5;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer11 {
+             background: #ddd2b9;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .expand-modal-title {
+             font-weight: 600;
+         }
+
+         .mtl-group {
+             min-height: 39px;
+             height: 100% !important;
+         }
+
+         .tag-group {
+             display: inline-block;
+             background-color: #ebebeb;
+             border-radius: 4px;
+             cursor: text;
+             line-height: 1;
+             padding: 0.35rem 0.5rem;
+             margin: 0.15rem 0.375rem 0.15rem 0;
+             white-space: nowrap;
+             color: #0580ff;
+             font-weight: 700;
+         }
+
+        .modal-title {
+            font-weight: 600;
+        }
+
+        #loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            border-radius: 5px;
+            z-index: 9999;
+        }
+    </style>
+                        )
+
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@itemNameText</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group row">
+                    <div class="col-6" style="display: flex; gap: 7px;">
+                        <input type="text" class="form-control" id="txtWoErpFullNo@(itemName)" name="txtWoErpFullNo@(itemName)"
+                               placeholder="請輸入製令單號 EX:5101-20250609001(1)">
+                        <input type="text" class="form-control" id="txtMoId@(itemName)" name="txtMoId@(itemName)"
+                               placeholder="請輸入製令號碼 EX: 1684">
+                        <div class="input-group-append">
+                            <div class="btn-group">
+                                <a class="btn btn-success pop-view" href="javascript:OpenModalImport@(itemName)();"><i class="fal fa-search"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <select class="form-control" id="cboEditMode">
+                        <option value="Y" selected>系統選擇模式</option>
+                        <option value="N">自定義模式</option>
+                    </select>
+                </div>
+
+                <div style="height: 750px; width: 100%" id="spreadsheet@(itemName)"></div>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-success" href="javascript: Save@(itemName)('N');"><i class="fas fa-save"></i>儲存</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Import MoProcess Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="modalImport@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">匯入製令製程</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="table-custom">
+                    <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">製程代號</th>
+                                <th scope="col">製程名稱</th>
+                                <th class="text-center col-sticky" scope="col" style="min-width: 110px;">
+                                    <label class="col-12 col-form-label ">
+                                        全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                    </label>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-success" href="javascript: ImportMoProcess@(itemName)();"><i class="fas fa-save"></i> 匯入製程</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--日期選擇-->
+<div class="modal fade" id="modalDatePicker@(itemName)" data-keyboard="false" data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">日期選擇</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="datePickerForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="txtCell@(itemName)" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDatePicker@(itemName)">選擇日期</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="date" class="form-control" id="txtDatePicker@(itemName)" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer text-center">
+                <button type="button" class="btn btn-success" onclick="SaveDate@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--供應商選擇-->
+<div class="modal fade" id="modalSupplier@(itemName)" data-keyboard="false" data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">供應商選擇</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="supplierForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="txtSupplierCell@(itemName)" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSupplierNo@(itemName)">選擇供應商</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboSupplierNo@(itemName)"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer text-center">
+                <button type="button" class="btn btn-success" onclick="SaveDate@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loadingdiv" id="loading" style="display: none">
+    <img src="~/assets/images/loading.gif" style="width: 75px;" />
+</div>
+
+<link href="@Url.Content("~/Content/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.css")" rel="stylesheet" />
+<script src="@Url.Content("~/Scripts/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.js")"></script>
+<script src="@Url.Content("~/Scripts/spreadsheet-default/batch-osp-list.js")"></script>
+
+@Html.Resource("js",
+    @<script>
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfo: []
+        };
+
+        let spreadsheet@(itemName);
+
+        let defaultCell@(itemName) = [];
+
+        let ospListJson =
+        {
+            ospListInfo: []
+        };
+
+        let supplierArray = [];
+
+        $(document).ready(function () {
+            for (let i = 0; i < 26; i++) {
+                defaultCell@(itemName).push(String.fromCharCode(65 + i) + "1");
+            }
+
+            $("#txtWoErpFullNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    OpenModalImport@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-mo-process-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-mo-process-id]").not(":disabled").prop("checked", false);
+                }
+            });
+        });
+
+        function Pop@(itemName)() {
+            $("#spreadsheet@(itemName)").show();
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            spreadsheetJson@(itemName).spreadsheetInfo = [];
+
+            ResetSpreadsheet@(itemName)();
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#spreadsheet@(itemName)").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("spreadsheet@(itemName)", {
+                menu: false,
+                //rowsCount: 10,
+                colsCount: 10,
+                exportModulePath: "https://bm.zy-tech.com.tw/Scripts/json2excel-master/worker.js",
+                importModulePath: "https://bm.zy-tech.com.tw/Scripts/excel2json-master/worker.js",
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-sync-alt",
+                tooltip: "重新載入",
+                id: "Reload"
+            });
+
+            @*spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-excel",
+                tooltip: "匯入EXCEL",
+                id: "Import"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-download",
+                tooltip: "匯出EXCEL",
+                id: "Export"
+            });*@
+
+            spreadsheet@(itemName).parse(defaultOspList);
+
+            spreadsheet@(itemName).setFormat("A1:Z99", "text");
+
+            GetDepartment@(itemName)();
+
+            spreadsheet@(itemName).events.on("afterEditEnd", function (cell, value) {
+                if (((cell.indexOf("I") != -1 && cell != "I1") || (cell.indexOf("D") != -1 && cell != "D1"))
+                    && typeof (value) != `undefined`) {
+                    if (ValidDate@(itemName)(value)) {
+                        spreadsheet@(itemName).setValue(cell, value);
+                    }
+                    else {
+                        alert("日期格式錯誤，請雙擊輸入框使用日期選擇器!!", alert);
+                        spreadsheet@(itemName).setValue(cell, "");
+                    }
+                }
+                return true;
+            });
+
+            spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                let editMode = $("#cboEditMode").val();
+                if (editMode == "Y" &&
+                    ((cell.indexOf("I") != -1 && cell != "I1") || (cell.indexOf("D") != -1 && cell != "D1"))) {
+                    PopModalDatePicker@(itemName)(cell);
+                }
+            });
+
+            spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                if (id == "Upload") {
+                    swal.fire({
+                        titleText: "確定要執行上傳嗎?",
+                        text: "此動作會批次建立請購單，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Save@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Reload") {
+                    swal.fire({
+                        titleText: "確定要重整EXCEL嗎?\n這會導致目前資料遺失!!",
+                        text: "此動作無法復原，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            ResetSpreadsheet@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Import") {
+                    spreadsheet@(itemName).load("", "xlsx");
+                }
+                else if (id == "Export") {
+                    spreadsheet@(itemName).export.xlsx("batch-" + '@DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")');
+                }
+            });
+
+            spreadsheet@(itemName).events.on("afterAction", (actionName, config) => {
+                if (actionName === "groupAction") {
+                    spreadsheet@(itemName).sortCells("A2:Z99", -1);
+                    return false;
+                }
+            });
+
+            SetProcessCheckStatus@(itemName)();
+        }
+
+        function OpenModalImport@(itemName)() {
+            let woErpFullNo = $("#txtWoErpFullNo@(itemName)").val();
+            let moId = $("#txtMoId@(itemName)").val();
+            if (woErpFullNo.length <= 0 && moId.length <= 0) {
+                alert("請輸入製令單號或製令號碼!!");
+                return false;
+            }
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+            InitMoProcess@(itemName)();
+
+            $("#modalImport@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function InitMoProcess@(itemName)() {
+            let innerHtml = '';
+            let targetUrl = "@Url.Action("GetMoProcessForOspList", "Production")";
+
+            let postData = {
+                "WoErpFullNo": $("#txtWoErpFullNo@(itemName)").val().trim(),
+                "MoId": $("#txtMoId@(itemName)").val().trim(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td>${i + 1}.</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessNo}">${item.ProcessNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}">${item.ProcessAlias}</td>
+                                        <td style="max-width: 75px; text-align: center;">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                              <input type="checkbox" data-mo-process-id="${item.MoProcessId}" 
+                                                    data-mo-id="${item.MoId}"data-wo-erp-full-no="${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})"
+                                                    data-process-no="${item.ProcessNo}" data-process-alias="${item.ProcessAlias}" 
+                                                    data-mtl-item-no="${item.MtlItemNo}" data-mtl-item-name="${item.MtlItemName}" 
+                                                    data-mtl-item-spec="${item.MtlItemSpec}" data-quantity = "${item.Quantity}"
+                                                    data-department-no="${item.DepartmentNo}" data-department-name="${item.DepartmentName}"
+                                                    value="${item.MoProcessId}" />
+                                              <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+
+            $("#txtWoErpFullNo@(itemName)").val("");
+        }
+
+        function ImportMoProcess@(itemName)() {
+            ospListJson.ospListInfo = [];
+            if ($("input[type='checkbox'][data-mo-process-id]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-mo-process-id]:checked"), function (i) {
+                    let moProcessId = $(this).val();
+
+                    let inputOspListInfo =
+                    {
+                        "MoProcessId": moProcessId,
+                        "MoId": $(this).data("mo-id"),
+                        "WoErpFullNo": $(this).data("wo-erp-full-no"),
+                        "ProcessNo": $(this).data("process-no"),
+                        "ProcessAlias": $(this).data("process-alias"),
+                        "MtlItemNo": $(this).data("mtl-item-no"),
+                        "MtlItemName": $(this).data("mtl-item-name"),
+                        "MtlItemSpec": $(this).data("mtl-item-spec"),
+                        "Quantity": $(this).data("quantity"),
+                        "DepartmentNo": $(this).data("department-no"),
+                        "DepartmentName": $(this).data("department-name"),
+                    }
+                    ospListJson.ospListInfo.push(inputOspListInfo);
+                });
+            }
+
+            LoadOspListSpreadsheet();
+
+            $("#modalImport@(itemName)").modal("hide");
+        }
+
+        function LoadOspListSpreadsheet() {
+            //ResetSpreadsheet@(itemName)();
+            let initIndex = GetLastRowWithData() + 1;
+            $.each(ospListJson.ospListInfo, function (i, item) {
+                spreadsheet@(itemName).setValue("A" + initIndex.toString(), item.WoErpFullNo);
+                spreadsheet@(itemName).setValue("B" + initIndex.toString(), item.ProcessNo + " " + item.ProcessAlias);
+                spreadsheet@(itemName).setValue("C" + initIndex.toString(), item.DepartmentNo == "J557" ? "J550 制造一部" : item.DepartmentNo == "J542" ? "J540 制造二部" : item.DepartmentNo + " " + item.DepartmentName);
+                spreadsheet@(itemName).setValue("D" + initIndex.toString(), '@DateTime.Now.ToString("yyyy-MM-dd")');
+                spreadsheet@(itemName).setValue("E" + initIndex.toString(), item.MtlItemNo);
+                spreadsheet@(itemName).setValue("F" + initIndex.toString(), item.MtlItemName);
+                spreadsheet@(itemName).setValue("G" + initIndex.toString(), item.MtlItemSpec);
+                spreadsheet@(itemName).setValue("H" + initIndex.toString(), item.Quantity);
+                spreadsheet@(itemName).setValue("I" + initIndex.toString(), "");
+                spreadsheet@(itemName).setValue("J" + initIndex.toString(), "");
+                spreadsheet@(itemName).setValue("K" + initIndex.toString(), "N");
+
+                initIndex++;
+            });
+        }
+
+        function GetLastRowWithData() {
+            let lastRow = 1;
+    
+            for (let row = 2; row <= 999; row++) {
+                let cellValue = spreadsheet@(itemName).getValue("A" + row);
+                if (cellValue && cellValue.toString().trim() !== "") {
+                    lastRow = row;
+                } else {
+                    break;
+                }
+            }
+    
+            return lastRow;
+        }
+
+        function GetSupplier@(itemName)() {
+            let targetUrl = "@Url.Action("GetSupplier", "ScmBasicInformation")";
+
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let inputJson =
+                        {
+                            id: item.SupplierNo + " " + item.SupplierShortName,
+                            text: item.SupplierNo + " " + item.SupplierShortName
+                        }
+                        supplierArray.push(inputJson);
+                    });
+                }
+
+                $('#cboSupplierNo@(itemName)').select2({
+                    data: supplierArray,
+                    width: "100%"
+                });
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function GetProcessCode@(itemName)(supplierNo, row) {
+            if (supplierNo.length <= 0) {
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+
+            let postData = {
+                "ColumnName": "ProcessCode",
+                "Condition": supplierNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let processCodeArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        processCodeArray.push(item.MW001 + " " + item.MW002);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation(`F${row}`, processCodeArray);
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function GetDepartment@(itemName)() {
+            //晶彩只顯示兩個部門
+            let departmentArray = [];
+            if (companyIdOspListManagement != 4) {
+                let targetUrl = "@Url.Action("GetDepartment", "BasicInformation")";
+
+                let postData = {
+                    "CompanyId": companyIdOspListManagement,
+                    "Status": "A"
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            departmentArray.push(item.DepartmentNo + " " + item.DepartmentName);
+                        });
+                    }
+
+                    spreadsheet@(itemName).setValidation("C2:C99", departmentArray);
+                }
+                else {
+                    alert(data.msg, "alert");
+                }
+            }
+            else {
+                departmentArray.push("J550 制一部");
+                departmentArray.push("J540 制二部");
+                spreadsheet@(itemName).setValidation("C2:C99", departmentArray);
+            }
+        }
+
+        function SetProcessCheckStatus@(itemName)() {
+            let supplierArray = ["Y", "N"];
+            spreadsheet@(itemName).setValidation("K2:K99", supplierArray);
+        }
+
+        function PopModalDatePicker@(itemName)(cell) {
+            $("#txtCell@(itemName)").val(cell);
+            $("#txtDatePicker@(itemName)").val("@DateTime.Now.ToString("yyyy-MM-dd")");
+            $("#modalDatePicker@(itemName)").modal("show");
+
+            $("#txtDatePicker@(itemName)").on("change input", function () {
+                let cell = $("#txtCell@(itemName)").val();
+                let $this = $(this);
+                $this.blur().focus();
+                spreadsheet@(itemName).setValue(cell, $(this).val());
+                $("#modalDatePicker@(itemName)").modal("hide");
+            });
+        }
+
+        function SaveDate@(itemName)() {
+            let cell = $("#txtCell@(itemName)").val();
+            let date = $("#txtDatePicker@(itemName)").val();
+            spreadsheet@(itemName).setValue(cell, date);
+            $("#modalDatePicker@(itemName)").modal("hide");
+        }
+
+        function ValidDate@(itemName)(dateString) {
+            const regex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!regex.test(dateString)) {
+                return false;
+            }
+
+            const date = new Date(dateString);
+            const timestamp = date.getTime();
+
+            if (typeof timestamp !== 'number' || isNaN(timestamp)) {
+                return false;
+            }
+
+            return dateString === date.toISOString().split('T')[0];
+        }
+
+        function Save@(itemName)(transferFlag) {
+            transferFlag = "N";
+
+            if (transferFlag == "Y") {
+                swal.fire({
+                    titleText: "確認要儲存並拋轉嗎?",
+                    text: "此動作會直接建立托外生產單並拋轉BPM，請確認後再執行!",
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        uploadData();
+                    }
+                });
+            }
+            else {
+                uploadData();
+            }
+
+            function uploadData() {
+                let data = spreadsheet@(itemName).serialize().sheets[0].data;
+
+                let uploadJson = [];
+
+                let errorMessages = "";
+                let dataIndex = [];
+                $.each(data, function (i, item) {
+                    if (defaultCell@(itemName).indexOf(item.cell) == -1) {
+                        initIndex = item.cell.substring(1);
+                        prErpPrefix = spreadsheet@(itemName).getValue("A" + initIndex.toString());
+                        if (prErpPrefix != null) {
+                            if (dataIndex.indexOf(initIndex) == -1) {
+                                dataIndex.push(initIndex);
+                            }
+                        }
+                        else {
+                            return false;
+                        }
+                    }
+                });
+
+                if (dataIndex.length <= 0) {
+                    alert("請新增項目後再儲存!!");
+                    return false;
+                }
+
+                $.each(dataIndex, function (i, item) {
+                    let woErpFullNo = spreadsheet@(itemName).getValue("A" + item);
+                    if (woErpFullNo == null) {
+                        errorMessages += `行數【A${item}】<br>製令不能為空!!<br>`;
+                    }
+
+                    let processNo = spreadsheet@(itemName).getValue("B" + item);
+                    let processAlias = "";
+                    if (processNo == null) {
+                        errorMessages += `行數【B${item}】<br>製程不能為空!!<br>`;
+                    }
+                    else {
+                        if (processNo.indexOf(" ") == -1) {
+                            errorMessages += `行數【B${item}】<br>製程格式錯誤，請嘗試用系統下拉選項帶出!!<br>`;
+                        }
+                        else {
+                            processAlias = processNo.split(' ')[1];
+                            processNo = processNo.split(' ')[0];
+                        }
+                    }
+
+                    let departmentNo = spreadsheet@(itemName).getValue("C" + item);
+                    if (departmentNo == null) {
+                        errorMessages += `行數【C${item}】<br>委託部門不能為空!!<br>`;
+                    }
+                    else {
+                        if (departmentNo.indexOf(" ") == -1) {
+                            errorMessages += `行數【C${item}】<br>委託部門格式錯誤，請嘗試用系統下拉選項帶出!!<br>`;
+                        }
+                        else {
+                            departmentNo = departmentNo.split(' ')[0];
+                        }
+                    }
+
+                    let ospDate = spreadsheet@(itemName).getValue("D" + item);
+                    if (ospDate == null) {
+                        errorMessages += `行數【D${item}】<br>委外日期不能為空!!<br>`;
+                    }
+
+                    let quantity = spreadsheet@(itemName).getValue("H" + item);
+                    if (quantity == null) {
+                        errorMessages += `行數【H${item}】<br>數量不能為空!!<br>`;
+                    }
+
+                    let expectedDate = spreadsheet@(itemName).getValue("I" + item);
+                    if (expectedDate == null) {
+                        errorMessages += `行數【I${item}】<br>預計回廠日期不能為空!!<br>`;
+                    }
+
+                    let remark = spreadsheet@(itemName).getValue("J" + item);
+
+                    let processCheckStatus = spreadsheet@(itemName).getValue("K" + item);
+                    if (processCheckStatus == null) {
+                        errorMessages += `行數【K${item}】<br>是否支援工程檢不能為空!!<br>`;
+                    }
+                    else {
+                        if (processCheckStatus != "Y" && processCheckStatus != "N") {
+                            errorMessages += `行數【K${item}】<br>是否支援工程檢只能輸入Y和N!!<br>`;
+                        }
+                    }
+
+                    let inputUploadInfo =
+                    {
+                        WoErpFullNo: woErpFullNo,
+                        ProcessNo: processNo,
+                        ProcessAlias: processAlias,
+                        DepartmentNo: departmentNo,
+                        OspDate: ospDate,
+                        Quantity: quantity,
+                        ExpectedDate: expectedDate,
+                        Remark: remark != null ? remark : "",
+                        ProcessCheckStatus: processCheckStatus,
+                    };
+                    uploadJson.push(inputUploadInfo);
+                });
+
+                if (errorMessages.length > 0) {
+                    alert(errorMessages, "alert");
+                    return false;
+                }
+
+                if (uploadJson.length > 0) {
+                    $.ajax({
+                        url: "@Url.Action("AddOspList", "Production")",
+                        method: "POST",
+                        dataType: "json",
+                        data: {
+                            "UploadJson": uploadJson,
+                            "TransferFlag": transferFlag
+                        },
+                        async: true,
+                        beforeSend: function () {
+                            $('#loading').css("display", "block");
+                            $("body").css("overflow", "hidden");
+                        },
+                        success: function (response) {
+                            if (response.status == "success") {
+                                if (transferFlag == "Y") {
+                                    Swal.fire({
+                                        title: "新增成功!!",
+                                        html: `
+                                                建立單據:<br>
+                                                <ul style="text-align: left; display: inline-block; margin: 10px 0;">
+                                                    ${response.ospNo.split(',').map(no => `<li>【${no.trim()}】</li>`).join('')}
+                                                </ul>
+                                              `,
+                                        icon: "info"
+                                    });
+                                }
+                                else {
+                                    Swal.fire({
+                                        title: "新增成功!!",
+                                        html: ``,
+                                        icon: "info"
+                                    });
+                                }
+
+                                ReturnOspListManagement()
+                                $("#modal@(itemName)").modal("hide");
+                            }
+                            else {
+                                alert(response.msg);
+                            }
+                        },
+                        error: function (error) {
+                            alert(result.msg);
+                            return false;
+                        },
+                        complete: function () {
+                            $('#loading').css("display", "none");
+                            $("body").css("overflow", "auto");
+                        }
+                    });
+                }
+            }
+        }
+
+        function PopSupplierModal@(itemName)(cell, supplierNo) {
+            if (supplierNo == null) {
+                supplierNo = "";
+            }
+
+            $("#txtSupplierCell@(itemName)").val(cell);
+            $("#modalSupplier@(itemName)").modal("show");
+            $("#cboSupplierNo@(itemName)").val(supplierNo).change();
+
+            $("#cboSupplierNo@(itemName)").on("change", function () {
+                let cell = $("#txtSupplierCell@(itemName)").val();
+                let $this = $(this);
+                $this.blur().focus();
+                spreadsheet@(itemName).setValue(cell, $(this).val());
+                $("#modalSupplier@(itemName)").modal("hide");
+
+                let row = parseInt(cell.replace(/^\D+/, ''));
+                spreadsheet@(itemName).setValue(`F${row}`, "");
+
+                let supplierNo = spreadsheet@(itemName).getValue(`E${row}`).split(' ')[0];
+                GetProcessCode@(itemName)(supplierNo, row)
+            });
+        }
+    </script>
+        )

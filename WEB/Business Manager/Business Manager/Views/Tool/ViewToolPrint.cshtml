@@ -1,0 +1,318 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewToolPrint";
+    string itemNameText = "工具列印管理";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)" onsubmit="return false;">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <label class="col-form-label">印表機</label>
+                                    </div>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <select class="form-control" id="cboPrint@(itemName)" name="cboToolTemporary@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <label class="col-form-label">條碼類型</label>
+                                    </div>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <select class="form-control" id="cboPrintType@(itemName)" name="cboPrintType@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-info" onclick="PrintToolList@(itemName)()"><i class="fal fa-print"></i>列印</a>
+                                    </div>
+                                </div>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto" style="width: 20%;">
+                                        <input type="text" class="form-control" id="txtToolNoQ@(itemName)" name="txtToolNoQ@(itemName)" placeholder="請輸入工具編號" />
+                                    </div>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <select class="form-control" id="cboStatusQ@(itemName)" name="cboStatusQ@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>查詢</a>
+                                    </div>
+                                    <div class="col-auto">
+                                        @*<a class="btn btn-success" onclick="Save@(itemName)()"><i class="fal fa-save"></i>暫存</a>*@
+                                    </div>
+                                </div>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <label class="col-form-label">工具暫存列表 - 數量：<span id="ToolListNum" name="ToolListNum">0</span></label>
+                                    </div>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <select class="form-control" id="cboToolTemporary@(itemName)" name="cboToolTemporary@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-danger" onclick="DeleteOption@(itemName)(cboToolTemporary@(itemName))"><i class="fal fa-trash-alt"></i>移除</a>
+                                        <a class="btn btn-danger" onclick="ClearBarcodeList@(itemName)()"><i class="fal fa-trash-alt"></i>清空</a>
+                                        <a class="btn btn-success" onclick="Save@(itemName)()"><i class="fal fa-save"></i>暫存</a>
+
+                                        <a class="btn btn-info" onclick="PrintToolTemporary@(itemName)()"><i class="fal fa-print"></i>暫存列表列印</a>
+                                    </div>
+                                </div>
+
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">刀具編號</th>
+                                        <th scope="col" style="min-width: 100px;">列印狀態</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        $(document).ready(function () {
+            $("#cbxSelectAll@(itemName)").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").prop("checked")) {
+                    $("input[type='checkbox'][name='cbxTool@(itemName)']").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][name='cbxTool@(itemName)']").prop("checked", false);
+                }
+            });
+
+            $("#cboStatusQ@(itemName)").change(function () {
+                Query@(itemName)()
+            })
+
+            $("#txtToolNoQ@(itemName)").change(function () {
+                Query@(itemName)()
+            })
+        })
+
+        function Pop@(itemName)() {
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            ComboBoxs.Default("#cboPrint@(itemName)", "@Url.Action("GetLabelPrintMachine", "Tool")", {}, "", "請選擇標籤機", "", "LabelPrintName", "LabelPrintNo"); 
+            ComboBoxs.Default("#cboStatusQ@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "Status" }, "S", "CHOOSE", "全部", "StatusName", "StatusNo");
+            ComboBoxs.Default("#cboPrintType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "PrintType" }, "1D", "NA", "", "TypeName", "TypeNo");
+
+            if (!isMobile) {
+                $("#cboPrint@(itemName), #cboStatusQ@(itemName), #cboToolTemporary@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 10;
+
+            let targetUrl = "@Url.Action("GetTool", "Tool")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ToolNo": $("#txtToolNoQ@(itemName)").val(),
+                "Status": $("#cboStatusQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td style="max-width: 100px;">${item.ToolNo}</td>
+                                        <td style="max-width: 100px;">${item.Status == `A` ? `已列印` : `未列印`}</td>
+                                        <td class="text-center"><input type="checkbox" id="cbxTool@(itemName)${item.ToolId}" name="cbxTool@(itemName)" value="${item.ToolNo}" data-tool-id="${item.ToolId}"/></td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        var toolTemporaryList = [];
+
+        function Save@(itemName)() {
+            $.each($("input[name='cbxTool@(itemName)']"), function () {
+                if ($(this).is(":checked")) {
+                    if (toolTemporaryList.indexOf($(this).val()) == -1) {
+                        toolTemporaryList.push($(this).val())
+                        AddOption(cboToolTemporary@(itemName), $(this).val())
+                    }
+                }
+            })
+            $("#ToolListNum").text(toolTemporaryList.length)
+            console.log(toolTemporaryList)
+        }
+
+        function AddOption(list, text) {
+            var index = list.options.length;
+            list.options[index] = new Option(text);
+            list.selectedIndex = index;
+        }
+        function ClearBarcodeList@(itemName)() {
+            $("#cboToolTemporary@(itemName)").empty();
+            toolTemporaryList = [];
+            $("#ToolListNum").text(toolTemporaryList.length)
+        }
+        function DeleteOption@(itemName)(list) {
+            var index = list.selectedIndex;
+            if (index >= 0) {
+                list.options[index] = null;
+                toolTemporaryList.splice(index, 1);
+                $("#ToolListNum").text(toolTemporaryList.length)
+
+            }
+            else {
+                alert("無反白選項！");
+            }
+        }
+
+        function PrintToolList@(itemName)() {
+            var PrintMacthineId = $("#cboPrint@(itemName)").val()
+
+            if (PrintMacthineId <= 0) {
+                alert("請選擇標籤機才能列印");
+                return
+            }
+
+            var toolList = [];
+            $.each($("input[name='cbxTool@(itemName)']"), function () {
+                if ($(this).is(":checked")) {
+                    if (toolList.indexOf($(this).val()) == -1) {
+                        toolList.push($(this).val())
+                    }
+                }
+            })
+            if (toolList.length > 0) {
+                let targetUrl = "@Url.Action("PrintToolList", "Tool")";
+                let postData = {
+                    "ToolList": toolList.join(","),
+                    "PrintMachine": PrintMacthineId,
+                    "PrintType": $("#cboPrintType@(itemName)").val()
+                };
+
+                let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                if (data) {
+                    Query@(itemName)();
+                    QueryToolManagment();
+                    alert("列印成功!!!!")
+
+                }
+            }
+            else {
+                alert("請勾選欲印製標籤的工具");
+                return
+            }
+        }
+
+        function PrintToolTemporary@(itemName)() {
+            var PrintMacthineId = $("#cboPrint@(itemName)").val()
+
+            if (PrintMacthineId <= 0) {
+                alert("請選擇標籤機才能列印");
+                return
+            }
+            if (toolTemporaryList.length > 0) {
+                let targetUrl = "@Url.Action("PrintToolTemporary", "Tool")";
+                let postData = {
+                    "ToolTemporaryList": toolTemporaryList.join(","),
+                    "PrintMachine": PrintMacthineId,
+                    "PrintType": $("#cboPrintType@(itemName)").val()
+                };
+
+                let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                if (data) {
+                    alert("列印成功!!!!")
+
+                    Query@(itemName)();
+                    QueryToolManagment();
+                }
+            }
+            else {
+                alert("工具暫存列表為空，不能列印");
+                return
+            }
+        }
+        
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

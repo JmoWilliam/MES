@@ -1,0 +1,353 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMwePrint";
+    string itemNameText = "入庫單條碼管理";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">目前製令 <span class="sub-text" id="desMachine@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtBarcodePrefix@(itemName)" name="txtBarcodePrefix@(itemName)"
+                                               placeholder="請輸入批量條碼前綴"
+                                               data-msg-maxlength="必須少於 20 個字元" maxlength="20" 
+                                               onkeyup="this.value=check((this.value.toUpperCase()))" 
+                                               />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtBarcodePostfix@(itemName)" name="txtBarcodePostfix@(itemName)"
+                                               placeholder="請輸入批量條碼後綴"
+                                               data-msg-maxlength="必須少於 20 個字元" maxlength="20"
+                                               onkeyup="this.value=check((this.value.toUpperCase()))" 
+                                               />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="number" class="form-control" id="txtSequenceLen@(itemName)" name="txtSequenceLen@(itemName)"
+                                               placeholder="請輸入流水碼長度"
+                                               value="" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="number" class="form-control" id="txtLotQty@(itemName)" name="txtLotQty@(itemName)"
+                                               placeholder="請輸入批量條碼數量" data-rule-required="true" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-primary" onclick="AddBarcode@(itemName)()">送出</a>
+                                    </div>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <select class="form-control" id="cboPrint@(itemName)" name="cboPrint@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-success" onclick="PrintMweBarcodeAll@(itemName)()"><i class="fas fa-print"></i>全部列印</a>
+                                        <a class="btn btn-info" onclick="PopViewBarcodeQtyRevision()"><i class="fas fa-edit"></i>條碼數量調整</a>
+                                        <a class="btn btn-info btn-danger" onclick="DeleteBarcodeAll@(itemName)()"><i class="fas fa-trash-alt"></i>條碼清空</a>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 150px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th scope="col" style="min-width: 200px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">條碼</th>
+                                        <th scope="col" style="min-width: 200px;">批量數量</th>
+                                        <th scope="col" style="min-width: 200px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewBarcodeQtyRevision")
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function (){
+            $("#txtLotQty@(itemName)").on("keydown", function (e) {
+                if (e.which == 13) {
+                    AddBarcode@(itemName)()
+                }
+            });
+
+            ComboBoxs.Default("#cboPrint@(itemName)", "@Url.Action("GetLabelPrintMachine", "PrintLabel")", {}, "", "CHOOSE", "請選擇標籤機", "LabelPrintName", "LabelPrintNo"); 
+            if (!isMobile) {
+                $("#cboPrint@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            //全選按鈕去消勾選
+            let cbxSelectAll = document.getElementById("cbxSelectAll@(itemName)");
+            cbxSelectAll.checked = true;
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][name='cbxBarcodePrint@(itemName)']").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][name='cbxBarcodePrint@(itemName)']").not(":disabled").prop("checked", false);
+                }
+            })
+
+        })
+
+        function Pop@(itemName)(MweId, MweDetailId) {
+            $("#MweDetailId").val(MweDetailId);
+            $("#MweId").val(MweId)
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            $("#txtLotQty@(itemName)").val("")
+            $("#txtBarcodePrefix@(itemName)").val("")
+            $("#txtBarcodePostfix@(itemName)").val("")
+            $("#txtSequenceLen@(itemName)").val("")
+
+            let targetUrl = "@Url.Action("GetMweBarcode", "Inventory")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MweId": $("#MweId").val(),
+                "MweDetailId": $("#MweDetailId").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td class="text-center active-content" scope="col" style="min-width: 50px;">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-type="BarcodePrint" id="cbxBarcodePrint@(itemName)${item.MweBarcodeId}" name="cbxBarcodePrint@(itemName)" value="${item.MweBarcodeId}" checked>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                        <td>${_row}</td>
+                                        <td>${item.BarcodeNo}</td>
+                                        <td>${item.BarcodeQty}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link" href="javascript:PrintMweBarcode@(itemName)(\'${item.MweBarcodeId}\');"><i class="fas fa-print"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+        }
+
+        function AddBarcode@(itemName)() {
+
+            let targetUrl = "@Url.Action("AddMweBarcodePrint", "Inventory")";
+            let postData = {
+                "MweDetailId": $("#MweDetailId").val(),
+                "BarcodeQty": $("#txtLotQty@(itemName)").val(),
+                "BarcodePrefix": $("#txtBarcodePrefix@(itemName)").val(),
+                "BarcodePostfix": $("#txtBarcodePostfix@(itemName)").val(),
+                "SequenceLen": $("#txtSequenceLen@(itemName)").val(),
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, false);
+
+            if (result) {
+                Query@(itemName)();
+                QueryMweDetail();
+
+            }
+        }
+
+        function DeleteBarcodeAll@(itemName)() {
+            swal.fire({
+                title: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMweBarcodePrintAll", "Inventory")";
+                    let postData = {
+                        "MweDetailId": $("#MweDetailId").val(),
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                        QueryMweDetail();
+
+                    }
+                }
+            });
+        }
+
+        function DeleteBarcode@(itemName)(MweBarcodeId) {
+            swal.fire({
+                title: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMweBarcodePrint", "Inventory")";
+                    let postData = {
+                        "MweBarcodeId": MweBarcodeId,
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+
+            Query@(itemName)();
+        }
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+
+        function PrintMweBarcode@(itemName)(MweBarcodeId) {
+            var PrintMacthineId = $("#cboPrint@(itemName)").val()
+
+            if (PrintMacthineId <= 0) {
+                alert("請選擇標籤機才能列印");
+                return
+            }
+
+            let targetUrl = "@Url.Action("PrintMweBarcode", "Inventory")";
+            let postData = {
+                "MweId": $("#MweId").val(),
+                "MweDetailId": $("#MweDetailId").val(),
+                "MweBarcodeId": MweBarcodeId,
+                "PrintMachine": PrintMacthineId
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                alert("列印成功!!!!")
+            }
+        }
+        
+        function PrintMweBarcodeAll@(itemName)() {
+            var PrintMacthineId = $("#cboPrint@(itemName)").val()
+
+            if (PrintMacthineId <= 0) {
+                alert("請選擇標籤機才能列印");
+                return
+            }
+
+            let targetUrl = "@Url.Action("PrintMweBarcodeAll", "Inventory")";
+            let postData = {
+                "MweId": $("#MweId").val(),
+                "MweDetailId": $("#MweDetailId").val(),
+                "PrintMachine": PrintMacthineId
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                alert("列印成功!!!!")
+            }
+        }
+
+        function check(str) {
+            console.log("aAS")
+            var temp = "";
+            for (var i = 0; i < str.length; i++) {
+                if (str.charCodeAt(i) > 0 && str.charCodeAt(i) < 255) {
+                    temp += str.charAt(i)
+                }
+            }
+            return temp
+
+        }
+
+    </script>
+                )

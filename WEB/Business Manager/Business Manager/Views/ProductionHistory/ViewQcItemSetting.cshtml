@@ -1,0 +1,508 @@
+﻿@{
+    string itemName = "ViewQcItemSetting";
+}
+
+<style>
+    .query-btn {
+        padding: 12px;
+        background: #d7d7d7;
+        border-radius: 12px;
+        font-weight: 600;
+    }
+        .query-btn:hover {
+            background: #efefef;
+        }
+</style>
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    設定檢驗項目
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; margin-bottom: 15px; align-items: center; gap: 15px;">
+                    <a class="query-btn" href="javascript: PopViewQcItem();" id=""><i class="fas fa-search"></i> 查詢</a>
+                    <a class="query-btn" href="javascript: ImportRoutingSetting@(itemName)();" id=""><i class="fas fa-arrow-circle-down"></i> 匯入</a>
+                    <a class="query-btn" href="javascript: PopViewModalEdit@(itemName)();" id=""><i class="fas fa-edit"></i> 修改</a>
+                    <a class="query-btn" href="javascript: Delete@(itemName)();" id=""><i class="fas fa-trash-alt"></i> 刪除</a>
+                    <select id="cboTemplateId@(itemName)" class="form-control"></select>
+                </div>
+                <div>
+                    <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col">
+                                    <label class="col-form-label">
+                                        # 全選 <input type="checkbox" style="width: 15px; height: 15px;" id="cbxSelectAll@(itemName)" />
+                                    </label>
+                                </th>
+                                <th scope="col">量測名稱</th>
+                                <th scope="col">備註</th>
+                                <th scope="col">量測設備</th>
+                                <th scope="col">設計值</th>
+                                <th scope="col">上限</th>
+                                <th scope="col">下限</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--修改項目-->
+<div class="modal fade" id="modalEdit@(itemName)">
+    <div class="modal-dialog" style="padding-top:7%;">
+        <div class="modal-content working-content">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    修改檢驗項目
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 ">
+                        <div class="form-group row">
+                            <label class="form-label col-12" for="cboQmmDetailId@(itemName)">量測機台</label>
+                            <div class="col-12">
+                                <select id="cboQmmDetailId@(itemName)" class="form-control" required></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-4 col-md-12 ">
+                        <div class="form-group row">
+                            <label class="form-label col-12" for="txtDesignValue@(itemName)">設計值</label>
+                            <div class="col-12">
+                                <input type="number" class="form-control" id="txtDesignValue@(itemName)" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-12 ">
+                        <div class="form-group row">
+                            <label class="form-label col-12" for="txtUpperTolerance@(itemName)">上限</label>
+                            <div class="col-12">
+                                <input type="number" class="form-control" id="txtUpperTolerance@(itemName)" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-12 ">
+                        <div class="form-group row">
+                            <label class="form-label col-12" for="txtLowerTolerance@(itemName)">下限</label>
+                            <div class="col-12">
+                                <input type="number" class="form-control" id="txtLowerTolerance@(itemName)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewQcItem")
+
+<script>
+    function Pop@(itemName)() {
+        ReloadQcItemSetting();
+
+        InitRoutingSetting@(itemName)();
+
+        $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+        $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+            const isChecked = $(this).is(":checked");
+            const $checkboxes = $("input[type='checkbox'][data-type='setting'][data-qc-item-id]").not(":disabled");
+
+            $checkboxes.prop("checked", isChecked);
+        });
+
+        $("#cboQmmDetailId@(itemName)").select2({
+            width: "100%"
+        });
+
+        ComboBoxs.Default("#cboTemplateId@(itemName)", "@Url.Action("GetQcReceiptTemplate", "ProductionHistory")", {}, "", "NA", "", "TemplateName", "TemplateId");
+
+        $("#cboTemplateId@(itemName)").select2({
+            width: "45%"
+        });
+
+        $("#cboTemplateId@(itemName)").change(function () {
+            let templateId = $(this).val();
+            if (templateId == "") {
+                return false;
+            }
+
+            swal.fire({
+                titleText: "確定要匯入樣板嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("GetQcReceiptTemplateDetail", "ProductionHistory")";
+                    let postData = {
+                        "TemplateId": templateId
+                    };
+
+                    let data = DataAccess.Get(targetUrl, postData, false);
+                    if (data.status == "success") {
+                        if (data.result.length > 0) {
+                            $.each(data.result, function (i, item) {
+                                qcItemIds = [];
+                                qcItemJson = [];
+                                $.each(data.result, function (i, item) {
+                                    qcItemIds.push(item.QcItemId);
+                                    let inputJson = {
+                                        "QcItemId": item.QcItemId,
+                                        "QcItemNo": item.QcItemNo,
+                                        "QcItemName": item.QcGroupName,
+                                        "QcItemDesc": item.QcItemDesc,
+                                        "QcGroupName": item.QcGroupName,
+                                        "QcClassName": item.QcClassName,
+                                        "QcMachineName": item.QcMachineName != null ? item.QcMachineName : "",
+                                        "QcMachineNumber": item.QcMachineNumber != null ? item.QcMachineNumber : "",
+                                        "DesignValue": item.DesignValue != null ? item.DesignValue : 0,
+                                        "UpperTolerance": item.UpperTolerance != null ? item.UpperTolerance : 0,
+                                        "LowerTolerance": item.LowerTolerance != null ? item.LowerTolerance : 0,
+                                    }
+                                    qcItemJson.push(inputJson);
+                                });
+                            });
+                        }
+                    }
+                    ReloadQcItemSetting();
+                }
+                else {
+                    $("#cboTemplateId@(itemName)").val("").trigger("change");
+                }
+            });
+        });
+
+        let lastTapTime = 0;
+        $('#tblData@(itemName)').on('touchend', 'td', function (e) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+            lastTapTime = currentTime;
+
+            if (tapLength < 300 && tapLength > 0) {
+                $(this).trigger('dblclick'); // 模擬雙擊
+                e.preventDefault();
+            }
+        });
+
+        $('#tblData@(itemName)').on('dblclick', 'td', function () {
+            var $td = $(this);
+            let dataType = $td.data("type");
+            let qcItemId = $td.data("qc-item-id");
+
+            let item = qcItemJson.find(x => x.QcItemId === qcItemId);
+
+            // 已經是編輯中，直接 return
+            if ($td.find('input').length > 0) return;
+
+            var $input = "";
+            switch (dataType) {
+                case "machine_number":
+                    $input = $(`<select id="cboQmmDetailIdM@(itemName)" class="form-control" required></select>`);
+                    $td.empty().append($input);
+                    ComboBoxs.Default("#cboQmmDetailIdM@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": -1 }, "", "NA", "", "FullMachineName", "MachineNumber");
+                    $("#cboQmmDetailIdM@(itemName)").select2({
+                        width: "100%"
+                    });
+
+                    let qcMachineNumber = $td.data("qc-machine-number");
+                    $("#cboQmmDetailIdM@(itemName)").val(qcMachineNumber).trigger("change");
+
+                    $input.on('select2:select', function () {
+                        saveSelect();
+                    });
+
+                    setTimeout(() => {
+                        $(document).on("click.closeEditor", function (e) {
+                            if (!$(e.target).closest($td).length && !$(e.target).closest(".select2-container").length) {
+                                saveSelect();
+                            }
+                        });
+                    }, 0);
+
+                    function saveSelect() {
+                        let machineNumber = $input.val();
+                        let machineName = $input.val() != "" ? $("#cboQmmDetailIdM@(itemName) option:selected").text() : "";
+                        if (item) {
+                            item.QcMachineNumber = machineNumber;
+                            item.QcMachineName = machineName;
+                        }
+
+                        ReloadQcItemSetting();
+
+                        $(document).off("click.closeEditor"); // 停止監聽
+                    }
+                    break;
+                case "design_value":
+                    let oriDesignValue = $td.data("design-value");
+                    $input = $(`<input class="form-control" id="txtDesignValue@(itemName)" />`);
+                    $td.empty().append($input);
+                    $input.val(oriDesignValue);
+                    $input.focus();
+
+                    $input.on('blur', function () {
+                        let designValue = $input.val();
+                        if (item) {
+                            item.DesignValue = designValue;
+                        }
+                        ReloadQcItemSetting();
+                    });
+
+                    $input.on('keydown', function (e) {
+                        if (e.key === 'Enter') $input.blur();
+                    });
+                    break;
+                case "upper_to_lerance":
+                    let oriUpperToLerance = $td.data("upper-to-lerance");
+                    $input = $(`<input class="form-control" id="txtUpperToleranceM@(itemName)" />`);
+                    $td.empty().append($input);
+                    $input.val(oriUpperToLerance);
+                    $input.focus();
+
+                    $input.on('blur', function () {
+                        let upperToLerance = $input.val();
+                        if (item) {
+                            item.UpperTolerance = upperToLerance;
+                        }
+                        ReloadQcItemSetting();
+                    });
+
+                    $input.on('keydown', function (e) {
+                        if (e.key === 'Enter') $input.blur();
+                    });
+                    break;
+                case "lower_to_lerance":
+                    let oriLowerToLerance = $td.data("lower-to-lerance");
+                    $input = $(`<input class="form-control" id="txtOriLowerToLerance@(itemName)" />`);
+                    $td.empty().append($input);
+                    $input.val(oriLowerToLerance);
+                    $input.focus();
+
+                    $input.on('blur', function () {
+                        let lowerToLerance = $input.val();
+                        if (item) {
+                            item.LowerTolerance = lowerToLerance;
+                        }
+                        ReloadQcItemSetting();
+                    });
+
+                    $input.on('keydown', function (e) {
+                        if (e.key === 'Enter') $input.blur();
+                    });
+                    break;
+            }
+
+            //$input.on('keydown', function (e) {
+            //    if (e.key === 'Enter') save();
+            //    if (e.key === 'Escape') $td.text(originalText);
+            //});
+        });
+
+        $("#modal@(itemName)").modal({
+            backdrop: "static",
+            keyboard: false,
+            show: true
+        });
+    }
+
+    function ReloadQcItemSetting() {
+        let innerHtml = ``;
+
+        if (qcItemJson.length <= 0) {
+            innerHtml = `<tr>
+                            <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                            </td>
+                         </tr>`;
+        }
+
+        $.each(qcItemJson, function (i, item) {
+            innerHtml += `<tr>
+                            <td class="text-center col-sticky" style="max-width: 75px; font-size: 18px;">
+                                <input type="checkbox" id="qcItem_${item.QcItemId}" data-type="setting" data-qc-item-id="${item.QcItemId}" style="width: 15px; height: 15px;" value="${item.QcItemId}"} /> <label for="qcItem_${item.QcItemId}">${i + 1}.</label>
+                            </td>
+                            <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemName}">${item.QcItemName}</td>
+                            <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemDesc}">${item.QcItemDesc}</td>
+                            <td data-qc-item-id="${item.QcItemId}" data-type="machine_number" data-qc-machine-number="${item.QcMachineNumber}" class="ellipsis" data-toggle="tooltip" title="${item.QcMachineName}">${item.QcMachineName}</td>
+                            <td data-qc-item-id="${item.QcItemId}" data-type="design_value" data-design-value="${item.DesignValue}" class="ellipsis" data-toggle="tooltip" title="${item.DesignValue}">${item.DesignValue}</td>
+                            <td data-qc-item-id="${item.QcItemId}" data-type="upper_to_lerance" data-upper-to-lerance="${item.UpperTolerance}" class="ellipsis" data-toggle="tooltip" title="${item.UpperTolerance}">${item.UpperTolerance}</td>
+                            <td data-qc-item-id="${item.QcItemId}" data-type="lower_to_lerance" data-lower-to-lerance="${item.LowerTolerance}" class="ellipsis" data-toggle="tooltip" title="${item.LowerTolerance}">${item.LowerTolerance}</td>
+                          </tr>`;
+        });
+
+        $("#tblData@(itemName) tbody").html(innerHtml);
+    }
+
+    function PopViewModalEdit@(itemName)() {
+        ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": -1 }, "", "NA", "", "FullMachineName", "MachineNumber");
+        $("#txtDesignValue@(itemName)").val(0);
+        $("#txtUpperTolerance@(itemName)").val(0);
+        $("#txtLowerTolerance@(itemName)").val(0);
+        $("#modalEdit@(itemName)").modal("show");
+    }
+
+    function Save@(itemName)() {
+        const $checkboxes = $("input[type='checkbox'][data-type='setting'][data-qc-item-id]:checked");
+        $checkboxes.each(function () {
+            const qcItemId = $(this).data("qc-item-id");
+            let item = qcItemJson.find(x => x.QcItemId === qcItemId);
+            if (item) {
+                let machineNumber = $("#cboQmmDetailId@(itemName)").val();
+                let machineName = $("#cboQmmDetailId@(itemName)").val() != "" ? $("#cboQmmDetailId@(itemName) option:selected").text() : "";
+                let designValue = $("#txtDesignValue@(itemName)").val();
+                let upperTolerance = $("#txtUpperTolerance@(itemName)").val();
+                let lowerTolerance = $("#txtLowerTolerance@(itemName)").val();
+
+                item.QcMachineNumber = machineNumber;
+                item.QcMachineName = machineName;
+                item.DesignValue = designValue;
+                item.UpperTolerance = upperTolerance;
+                item.LowerTolerance = lowerTolerance;
+            }
+        });
+
+        ReloadQcItemSetting();
+        $("#modalEdit@(itemName)").modal("hide");
+    }
+
+    function Delete@(itemName)() {
+        swal.fire({
+            titleText: "確認要刪除嗎?",
+            text: "此動作無法復原，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const $checkboxes = $("input[type='checkbox'][data-type='setting'][data-qc-item-id]:checked");
+                $checkboxes.each(function () {
+                    const qcItemId = $(this).data("qc-item-id");
+                    qcItemJson = qcItemJson.filter(item => item.QcItemId !== qcItemId);
+                    qcItemIds = qcItemIds.filter(id => id !== qcItemId);
+                });
+                ReloadQcItemSetting();
+            }
+        });
+    }
+
+    function ImportRoutingSetting@(itemName)() {
+        swal.fire({
+            titleText: "確認要匯入嗎?",
+            text: "此動作會將原本的設定覆蓋，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let targetUrl = "@Url.Action("GetRoutingItemQcItem", "ProductionHistory")";
+                let postData = {
+                    "MoProcessId": moProcessId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data) {
+                    if (data.status == "success") {
+                        if (data.result.length > 0) {
+                            qcItemIds = [];
+                            qcItemJson = [];
+                            $.each(data.result, function (i, item) {
+                                qcItemIds.push(item.QcItemId);
+                                let inputJson = {
+                                    "QcItemId": item.QcItemId,
+                                    "QcItemNo": item.QcItemNo,
+                                    "QcItemName": item.QcGroupName,
+                                    "QcItemDesc": item.QcItemDesc,
+                                    "QcGroupName": item.QcGroupName,
+                                    "QcClassName": item.QcClassName,
+                                    "QcMachineName": item.QcMachineName != null ? item.QcMachineName : "",
+                                    "QcMachineNumber": item.QcMachineNumber != null ? item.QcMachineNumber : "",
+                                    "DesignValue": item.DesignValue != null ? item.DesignValue : 0,
+                                    "UpperTolerance": item.UpperTolerance != null ? item.UpperTolerance : 0,
+                                    "LowerTolerance": item.LowerTolerance != null ? item.LowerTolerance : 0,
+                                }
+                                qcItemJson.push(inputJson);
+                            });
+                        }
+                        else {
+                            alert("此製令下的途程查無量測設定資料!!");
+                        }
+                    }
+                }
+                ReloadQcItemSetting();
+            }
+        });
+    }
+
+    function InitRoutingSetting@(itemName)() {
+        let targetUrl = "@Url.Action("GetRoutingItemQcItem", "ProductionHistory")";
+        let postData = {
+            "MoProcessId": moProcessId
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data) {
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    qcItemIds = [];
+                    qcItemJson = [];
+                    $.each(data.result, function (i, item) {
+                        qcItemIds.push(item.QcItemId);
+                        let inputJson = {
+                            "QcItemId": item.QcItemId,
+                            "QcItemNo": item.QcItemNo,
+                            "QcItemName": item.QcGroupName,
+                            "QcItemDesc": item.QcItemDesc,
+                            "QcGroupName": item.QcGroupName,
+                            "QcClassName": item.QcClassName,
+                            "QcMachineName": item.QcMachineName != null ? item.QcMachineName : "",
+                            "QcMachineNumber": item.QcMachineNumber != null ? item.QcMachineNumber : "",
+                            "DesignValue": item.DesignValue != null ? item.DesignValue : 0,
+                            "UpperTolerance": item.UpperTolerance != null ? item.UpperTolerance : 0,
+                            "LowerTolerance": item.LowerTolerance != null ? item.LowerTolerance : 0,
+                        }
+                        qcItemJson.push(inputJson);
+                    });
+                }
+                else {
+                    alert("此製令下的途程查無量測設定資料!!");
+                }
+            }
+        }
+        ReloadQcItemSetting();
+    }
+</script>

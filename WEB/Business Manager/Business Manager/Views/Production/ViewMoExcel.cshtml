@@ -1,0 +1,269 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMoExcel";
+    string itemNameText = "MES製令報表管理";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)" onsubmit="return false;">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto" style="width: 20%;">
+                                        <input type="text" class="form-control" id="txtMoNoQ@(itemName)" name="txtMoNoQ@(itemName)" placeholder="請輸入ERP工單編號" />
+                                    </div>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <input type="text" class="form-control" id="txtProjectNoQ@(itemName)" name="txtProjectNoQ@(itemName)" placeholder="請輸入專案代號" />
+                                    </div>
+                                    @*<label class="col-12 col-form-label">單據日期<input type="checkbox" id="cbxDocDateQ@(itemName)" /></label>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)" placeholder="請輸入開始日"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                               readonly />
+                                    </div>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)" placeholder="請輸入截止日"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                               readonly />
+                                    </div>*@
+                                    <div class="col-auto">
+                                        <a class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>查詢</a>
+                                    </div>
+                                </div>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <label class="col-form-label">工具暫存列表 - 數量：<span id="MesNoListNum" name="MesNoListNum">0</span></label>
+                                    </div>
+                                    <div class="col-auto" style="width: 20%;">
+                                        <select class="form-control" id="cboMoNoTemporary@(itemName)" name="cboMoNoTemporary@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-danger" onclick="DeleteOption@(itemName)(cboMoNoTemporary@(itemName))"><i class="fal fa-trash-alt"></i>移除</a>
+                                        <a class="btn btn-danger" onclick="ClearMoList@(itemName)()"><i class="fal fa-trash-alt"></i>清空</a>
+                                        <a class="btn btn-success" onclick="Save@(itemName)()"><i class="fal fa-save"></i>暫存</a>
+
+                                        <a class="btn btn-info" href="javascript:void(0);"  onclick="ExcelMoTemporary@(itemName)()"><i class="fal fa-print"></i>Excel匯出</a>
+                                    </div>
+                                </div>
+
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">MES工單編號</th>
+                                        <th scope="col" style="min-width: 100px;">專案代碼</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        $(document).ready(function () {
+            $("#cbxSelectAll@(itemName)").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").prop("checked")) {
+                    $("input[type='checkbox'][name='cbxMesMo@(itemName)']").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][name='cbxMesMo@(itemName)']").prop("checked", false);
+                }
+            });
+
+            $("#cboStatusQ@(itemName)").change(function () {
+                Query@(itemName)()
+            })
+
+            $("#txtMoNoQ@(itemName)").change(function () {
+                Query@(itemName)()
+            })
+
+            $("#txtProjectNoQ@(itemName)").change(function () {
+                Query@(itemName)()
+            })
+        })
+
+        function Pop@(itemName)() {
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+
+            if (!isMobile) {
+                $("#cboMoNoTemporary@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 10;
+
+            let targetUrl = "@Url.Action("GetManufactureOrder", "Production")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "Status": "N,I,A,W,F,A,A,A",
+                "WoErpFullNo": $("#txtMoNoQ@(itemName)").val().trim(),
+                "ProjectNo": $("#txtProjectNoQ@(itemName)").val().trim(),
+                
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td style="max-width: 100px;">${item.WoErpPrefix + `-` + item.WoErpNo + `(` + item.WoSeq+ `)`}</td>
+                                        <td>${item.ProjectNo}</td>
+                                        <td class="text-center"><input type="checkbox" id="cbxMesMo@(itemName)${item.MoId}" name="cbxMesMo@(itemName)" value="${item.WoErpPrefix + `-` + item.WoErpNo + `(` + item.WoSeq + `)`}" data-mesmo-id="${item.MoId}"/></td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="3" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        var mesMoTemporaryList = [];
+
+        function Save@(itemName)() {
+            $.each($("input[name='cbxMesMo@(itemName)']"), function () {
+                if ($(this).is(":checked")) {
+                    if (mesMoTemporaryList.indexOf($(this).data("mesmo-id")) == -1) {
+                        mesMoTemporaryList.push($(this).data("mesmo-id"))
+                        AddOption(cboMoNoTemporary@(itemName), $(this).val())
+                    }
+                }
+            })
+            $("#MesNoListNum").text(mesMoTemporaryList.length)
+            console.log(mesMoTemporaryList)
+        }
+
+        function AddOption(list, text) {
+            var index = list.options.length;
+            list.options[index] = new Option(text);
+            list.selectedIndex = index;
+        }
+        function ClearMoList@(itemName)() {
+            $("#cboMoNoTemporary@(itemName)").empty();
+            mesMoTemporaryList = [];
+            $("#MesNoListNum").text(mesMoTemporaryList.length)
+        }
+        function DeleteOption@(itemName)(list) {
+            var index = list.selectedIndex;
+            if (index >= 0) {
+                list.options[index] = null;
+                mesMoTemporaryList.splice(index, 1);
+                $("#MesNoListNum").text(mesMoTemporaryList.length)
+
+            }
+            else {
+                alert("無反白選項！");
+            }
+        }
+
+        function ExcelMoTemporary@(itemName)() {
+            let num=0
+            if (mesMoTemporaryList.length > 0) {
+                let targetUrl = "@Url.Action("ExcelMoTemporary", "Production")";
+                let postData = {
+                    "MesMoTemporaryList": mesMoTemporaryList.join(",")
+                };
+
+                let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                if (data) {
+                    alert("匯出成功!!!!")
+                    //Query@(itemName)();
+                    FileAccess.AjaxDownload(targetUrl, postData, false);
+                    num++
+                }
+
+
+            }
+            else {
+                alert("ERP工單暫存列表為空，不能列印");
+                return
+            }
+            console.log(num)
+        }
+        
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

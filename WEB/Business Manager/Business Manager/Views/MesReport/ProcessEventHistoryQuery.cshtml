@@ -1,0 +1,299 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProcessEventHistoryQuery";
+    string itemNameText = "加工事件歷程查詢";
+    string authority = ViewBag.authority;
+
+    string WoErpFullNo = Request["WoErpFullNo"] ?? "";
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        #scoreboard {
+            width: 400px;
+            margin-top: 20px;
+        }
+
+            #scoreboard td {
+                border: 1px solid gray;
+                padding: 4px;
+            }
+
+            #scoreboard thead {
+                text-align: center;
+                background-color: #ddd;
+            }
+
+            #scoreboard tbody {
+                text-align: center;
+            }
+
+        td.c-Score {
+            text-align: right;
+        }
+    </style>
+                                    )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtWoErpFullNoQ@(itemName)">製令</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)" placeholder="請輸入製令"
+                                       data-msg-required="請輸入設備識別碼" data-rule-required="true"
+                                       data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMtlItemNoQ@(itemName)">品號/品名</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入品號/品名"
+                                       data-msg-required="請輸入設備識別碼" data-rule-required="true"
+                                       data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtMachineEventItemNameQ@(itemName)">事件名稱</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtMachineEventItemNameQ@(itemName)" name="txtMachineEventItemNameQ@(itemName)" placeholder="請輸入事件名稱"
+                                       data-msg-required="請輸入設備識別碼" data-rule-required="true"
+                                       data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">條碼過站事件日期 <input type="checkbox" id="cbxUseDate@(itemName)" checked /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtFinishDateQ@(itemName)" name="txtFinishDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+                <button type="button" class="btn btn-success" onclick="Excel@(itemName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>匯出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row list-data" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                </div>
+                <fieldset>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="table-custom">
+                                <table class="table table-bordered table-striped table-sticky table-stack tbl-data" id="tblData@(itemName)">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" style="min-width: 75px;">#</th>
+                                            <th scope="col" style="min-width: 150px;">製令</th>
+                                            <th scope="col" style="min-width: 150px;">品號</th>
+                                            <th scope="col" style="min-width: 150px;">品名</th>
+                                            <th scope="col" style="min-width: 150px;">製程</th>
+                                            <th scope="col" style="min-width: 150px;">機台</th>
+                                            <th style="padding: 0; min-width: 1075px;">
+                                                <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 100px;">條碼</th>
+                                                            <th style="width: 100px;">加工類別</th>
+                                                            <th style="width: 100px;">事件</th>
+                                                            <th style="width: 100px;">開始時間</th>
+                                                            <th style="width: 100px;">結束時間</th>
+                                                            <th style="width: 100px;">人員</th>
+                                                        </tr>
+                                                    </thead>
+                                                </table>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="pagination" id="page@(itemName)"></div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            let woErpFullNo = "@WoErpFullNo";
+            let currentDate = new Date();
+
+            if (woErpFullNo) {
+                $("#txtWoErpFullNoQ@(itemName)").val(woErpFullNo);
+                $("#cbxUseDate@(itemName)").prop("checked", false);
+            }
+
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtFinishDateQ@(itemName)");
+            Suites.SetDateDropper("#txtFinishDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+            Query@(itemName)();
+
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            $("#txtWoErpFullNoQ@(itemName)").val("");
+            $("#txtMtlItemNoQ@(itemName)").val("");
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetProcessEventHistory", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "FinishDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtFinishDateQ@(itemName)").val() : "")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpFullNo}" style="max-width: 150px;"><span class="stack-title">製令</span>${item.WoErpFullNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 150px;"><span class="stack-title">品號</span>${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 150px;"><span class="stack-title">品名</span>${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessName}" style="max-width: 150px;"><span class="stack-title">製程</span>${item.ProcessName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineName}" style="max-width: 150px;"><span class="stack-title">機台</span>${item.MachineName}</td>
+                                        <td style="padding: 0;">
+                                          <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                            <tbody>
+                                              ${DetailData@(itemName)(item.ProcessEventDetail)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                       </tr>`;
+
+
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $(".list-data #tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function DetailData@(itemName)(source){
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<tr>
+                               <td style="width: 100px;">${json.data[x].BarcodeNo}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].TypeName}" style="width: 100px; max-width: 100px;">${json.data[x].TypeName}</td>
+                               <td style="width: 100px;">${json.data[x].ProcessEventName}</td>
+                               <td style="width: 100px;">${json.data[x].StartDate}</td>
+                               <td style="width: 100px;">${json.data[x].FinishDate}</td>
+                               <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].UserName}" style="width: 100px; max-width: 100px;">${json.data[x].UserName}</td>
+                             </tr>`;
+                }
+            }
+
+            return html;
+        }
+
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+        }
+
+        function Excel@(itemName)() {
+            let targetUrl = "@Url.Action("ExcelProcessEventHistory", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex":  -1,
+                "PageSize": -1,
+                "StartDate": ($("#cbxCreateDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""), //日期:如果被勾選，就給予值，否則無值
+                "FinishDate": ($("#cbxCreateDate@(itemName)").is(":checked") ? $("#txtFinishDateQ@(itemName)").val() : "")
+                
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                alert("匯出成功!!!!", "success")                
+                FileAccess.AjaxDownload(targetUrl, postData, false);
+            }
+        }
+</script>
+                        )
+

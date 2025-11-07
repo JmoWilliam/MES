@@ -1,0 +1,573 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "LotNumberManagement";
+    string itemNameText = "批號資料管理";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)();"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 60vh; overflow: scroll;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                       placeholder="請輸入品號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                       placeholder="請輸入品名">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">結案碼</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCloseStatusQ@(itemName)">
+                                    <option value="">全部</option>
+                                    <option value="N" selected>未結案</option>
+                                    <option value="Y">自動結案</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">建立日期</label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       placeholder="請輸入建立日期"
+                                       data-msg-required="請輸入建立日期" data-rule-required="true"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            +
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       placeholder="請輸入建立日期"
+                                       data-msg-required="請輸入建立日期" data-rule-required="true"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">建立人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-success auth-sync" href="javascript:PopLnSync@(itemName)();"><i class="fas fa-sync"></i>ERP資料同步</a>
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 200px;">品號</th>
+                                        <th scope="col" style="max-width: 200px;">品名</th>
+                                        <th scope="col" style="max-width: 200px;">批號</th>
+                                        <th scope="col" style="max-width: 200px;">建立時間</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 115px;">備註</th>
+                                        <th class="text-center" scope="col" style="max-width: 150px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增/編輯-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="txtLotNumberId" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtMtlItemId@(itemName)">綁定品號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtMtlItemId@(itemName)" />
+                                        <div class="btn-group">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);" onclick="MtlItemClear@(itemName)()"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>品號</dt>
+                                            <dd id="desMtlItemNo@(itemName)"></dd>
+                                            <dt>品名</dt>
+                                            <dd id="desMtlItemName@(itemName)"></dd>
+                                            <dt>規格</dt>
+                                            <dd id="desMtlItemSpec@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtLotNumberNo@(itemName)">批號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" id="txtLotNumberNo@(itemName)" class="form-control" 
+                                               placeholder="請輸入批號"
+                                               required />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                  placeholder="請輸入備註"
+                                                  data-msg-required="請輸入備註"
+                                                  data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--其他分頁-->
+<div class="advanced-block">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav flag-tabs nav-fill" role="tablist">
+                <li class="flag-item">
+                    <a id="aLotNumberDetail" class="flag-link  active" data-toggle="tab" href="#tabLotNumberDetail">
+                        <i class="fas fa-sliders-h"></i> 批號交易資料
+                    </a>
+                </li>
+                <li class="flag-item">
+                    <a class="flag-link" data-toggle="tab" href="#tabLotNumberBarcode">
+                        <i class="fas fa-cogs"></i> 批號條碼資料
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane active" id="tabLotNumberDetail">
+            @Html.Partial("LotNumberDetail")
+        </div>
+        <div class="tab-pane" id="tabLotNumberBarcode">
+            @Html.Partial("LotNumberBarcode")
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSync@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)同步</h5>
+                <button class="close" type="button" onclick="CloseSync@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="syncForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSyncMtlItemNo@(itemName)">品號</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtSyncMtlItemNo@(itemName)" name="txtSyncMtlItemNo@(itemName)" placeholder="請輸入品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSyncLotNumberNo@(itemName)">批號</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtSyncLotNumberNo@(itemName)" name="txtSyncLotNumberNo@(itemName)" placeholder="請輸入批號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSyncStartDate@(itemName)">開始日期 <input type="checkbox" id="cbxSyncDate@(itemName)" checked /></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtSyncStartDate@(itemName)" name="txtSyncStartDate@(itemName)" placeholder="請輸入開始日期" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSyncEndDate@(itemName)">結束日期</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtSyncEndDate@(itemName)" name="txtSyncEndDate@(itemName)" placeholder="請輸入結束日期" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label">同步模式</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="row">
+                                    <div class="col">
+                                        <label class="control control-solid control-solid-info control--checkbox">
+                                            正常同步
+                                            <input type="checkbox" id="cbxNormalSync@(itemName)" name="cbxNormalSync@(itemName)" checked />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col">
+                                        <label class="control control-solid control-solid-info control--checkbox">
+                                            異動同步
+                                            <input type="checkbox" id="cbxTranSync@(itemName)" name="cbxTranSync@(itemName)" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer text-center">
+                <button type="button" class="btn btn-success" onclick="Sync@(itemName)()"><i class="fas fa-sync"></i>同步</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewMtlItem")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 90);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+            if (!isMobile) {
+                $("#cboUserIdQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboUserIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": "@Session["CompanyId"]", "Status": "A" }, "", "ALL", "", "UserWithNo", "UserId");
+
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetLotNumber", "LotNumber")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "CloseStatus": $("#cboCloseStatusQ@(itemName)").val(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val(),
+                "UserId": $("#cboUserIdQ@(itemName)").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        defaultFileId@(itemName) = item.DefaultFileId;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px; min-width: 135px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 200px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LotNumberNo}" style="max-width: 200px;">${item.LotNumberNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 200px;">${item.CreateDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="max-width: 200px;">${item.Remark}</td>
+                                        <td class="text-center active-content" style="min-width: 150px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.LotNumberId}');"><i class="fas fa-edit"></i></a>
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.LotNumberId}');"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(lotNumberId) {
+            $("#txtLotNumberId").val(lotNumberId ? lotNumberId : 0);
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            $("#txtMtlItemId@(itemName)").val("");
+            $("#txtMtlItemId@(itemName)").siblings(".help-block").hide();
+
+            $(".advanced-block").hide();
+
+            $(".btn-group").show();
+
+            $("#aLotNumberDetail").click();
+
+            ResetForm(objForm@(itemName));
+
+            if (lotNumberId > 0) {
+                $(".btn-group").hide();
+
+                let targetUrl = "@Url.Action("GetLotNumber", "LotNumber")";
+                let postData = {
+                    "LotNumberId": lotNumberId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtMtlItemId@(itemName)").val(item.MtlItemId);
+                        $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                        $("#desMtlItemName@(itemName)").html(item.MtlItemName);
+                        $("#desMtlItemSpec@(itemName)").html(item.MtlItemSpec);
+                        $("#txtMtlItemId@(itemName)").siblings(".help-block").show();
+                        $("#txtLotNumberNo@(itemName)").val(item.LotNumberNo);
+                        $("#txtRemark@(itemName)").val(item.Remark);
+
+                        ExpandLotNumberDetail(item.LotNumberId);
+                        ExpandLotNumberBarcode(item.LotNumberId, item.MtlItemId);
+                    });
+                }
+                else {
+                    alert(data.msg);
+                }
+            }
+
+            let popConfig = {
+                targetSelector: "#txtMtlItemId@(itemName)",
+                popFunction: "PopViewMtlItem",
+                objectMtlItemId: "#txtMtlItemId@(itemName)",
+                objectMtlItemNo: "#desMtlItemNo@(itemName)",
+                objectMtlItemName: "#desMtlItemName@(itemName)",
+                objectMtlItemSpec: "#desMtlItemSpec@(itemName)",
+                objectCheckMtlDate: "@DateTime.Now.ToString("yyyy-MM-dd")",
+                objectLotManagement: "T",
+            };
+            InitPopView(popConfig);
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let LotNumberId = parseInt($("#txtLotNumberId").val());
+
+                if (LotNumberId <= 0) {
+                    let targetUrl = "@Url.Action("AddLotNumber", "LotNumber")";
+                    let postData = {
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "LotNumberNo": $("#txtLotNumberNo@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+                    if (data) {
+                        let lotNumberId;
+                        $.each(data.result, function (i, item) {
+                            lotNumberId = item.LotNumberId;
+                        });
+                        $("#txtLotNumberId").val(lotNumberId);
+                        ExpandLotNumberDetail(lotNumberId);
+                    }
+                }
+                else {
+                    let targetUrl = "@Url.Action("UpdateLotNumber", "LotNumber")";
+                    let postData = {
+                        "LotNumberId": LotNumberId,
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "LotNumberNo": $("#txtLotNumberNo@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        ExpandLotNumberDetail(LotNumberId);
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(LotNumberId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteLotNumber", "LotNumber")";
+                    let postData = {
+                        "LotNumberId": LotNumberId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function PopLnSync@(itemName)() {
+            $("#modalSync@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtSyncEndDate@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.DatePicker("txtSyncStartDate@(itemName)", currentDate);
+        }
+
+        function Sync@(itemName)() {
+            swal.fire({
+                titleText: "確認執行ERP資料同步嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateLotNumberManualSynchronize", "LotNumber")";
+                    let postData = {
+                        "MtlItemNo": $("#txtSyncMtlItemNo@(itemName)").val(),
+                        "LotNumberNo": $("#txtSyncLotNumberNo@(itemName)").val(),
+                        "SyncStartDate": ($("#cbxSyncDate@(itemName)").is(":checked") ? $("#txtSyncStartDate@(itemName)").val() : ""),
+                        "SyncEndDate": ($("#cbxSyncDate@(itemName)").is(":checked") ? $("#txtSyncEndDate@(itemName)").val() : ""),
+                        "NormalSync": $("#cbxNormalSync@(itemName)").is(":checked") ? "Y" : "N",
+                        "TranSync": $("#cbxTranSync@(itemName)").is(":checked") ? "Y" : "N"
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        alert(data.result, "success", 5000);
+                    }
+
+                    CloseSync@(itemName)();
+                }
+            });
+        }
+
+        function CloseSync@(itemName)() {
+            ResetForm("#syncForm@(itemName)");
+
+            $("#modalSync@(itemName)").modal("hide");
+
+            Query@(itemName)();
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            ResetForm(objForm@(itemName));
+            InitData@(itemName)(objPage@(itemName));
+        }
+    </script>
+          )

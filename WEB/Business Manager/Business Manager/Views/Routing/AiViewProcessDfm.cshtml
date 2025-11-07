@@ -1,0 +1,518 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewProcessDfm";
+    string itemNameText = "AI查看製程資訊";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                                                                                                                                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    @*<div class="col-auto">
+                                            <input type="text" class="form-control" id="txtProcessNoQ@(itemName)" name="txtContactQ@(itemName)"
+                                                   placeholder="請輸入製程代碼" />
+                                        </div>
+                                        <div class="col-auto">
+                                            <input type="text" class="form-control" id="txtProcessNameQ@(itemName)" name="txtContactQ@(itemName)"
+                                                   placeholder="請輸入製程名稱" />
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        </div>*@
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="AiAdd@(itemName)()"><i class="fal fa-plus"></i>新增</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">製程編號</th>
+                                        <th scope="col" style="min-width: 100px;">製程別名</th>
+                                        <th scope="col" style="min-width: 100px;">製程順序</th>
+                                        <th scope="col" style="min-width: 100px;">支援工程檢</th>
+                                        <th scope="col" style="min-width: 100px;">工程檢頻率</th>
+                                        <th scope="col" style="min-width: 100px;">是否支援包裝條碼</th>
+                                        <th scope="col" style="min-width: 100px;">是否顯示在流程卡</th>
+                                        <th scope="col" style="min-width: 100px;">必要過站</th>
+
+
+
+
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 110px;">
+                                            @*<label class="col-12 col-form-label">
+                                                    全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                                </label>*@
+                                        </th>
+                                        @*<th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                            <th scope="col" style="min-width: 100px;">建立次數</th>*@
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success checkbox-mode" onclick="AiSave@(itemName)()"><i class="fas fa-check"></i>確定</button>
+                <button type="button" class="btn btn-secondary checkbox-mode" onclick="AiCancel@(itemName)()"><i class="fas fa-times"></i>取消</button>
+
+            </div>
+        </div>
+    </div>
+</div>
+@* 08/31 安宏指導:使用 Routing/RoutingManagement 右下新增 *@
+@Html.Partial("AiViewProcess")
+
+@Html.Resource("js",
+    @<script>
+        //AiViewProcessDfm.cshtml
+        var dfmqpMaxId = 0; // AiRoutingManagement:1602  Uncaught ReferenceError: dfmqpMaxId is not defined
+        var dfmqpMaxIdBase = 0;
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+        let parameterId@(itemName);
+        let process@(itemName);
+        let tempNumber@(itemName) = 1;
+        let modeId@(itemName) = -1;
+        let NowMaxNum = -1;
+
+        let processJson =
+        {
+            processInfo: []
+        };
+
+
+        function PopViewAiProcessDfmV2(data) {
+            //console.log('=== PopViewAiProcessDfmV2 of ViewAiProcessDfm.cshtml === 要避開預設的 ');
+            //console.log(data);
+            //console.log('=== PopViewAiProcessDfmV2 of ViewAiProcessDfm.cshtml === 要避開預設的 ');
+            if (data.Input.FileId == 0) {
+                Swal.fire(
+                    '沒有 FileId',
+                    '目前沒有  FileId 無法進行調用 AI API 解析',
+                    'warning');
+                return;
+            }
+
+            // 如果不是
+            if (data.Input.FileId == 0) {
+                Swal.fire(
+                    '沒有 FileId',
+                    '目前沒有  FileId 無法進行調用 AI API 解析',
+                    'warning');
+                return;
+            }
+            @*parameterId@(itemName) = config.objectProcessId;
+            process@(itemName) = config.objectProcess;
+            modeId@(itemName) = config.objectModeId;*@
+
+            AiQuery@(itemName)(data);
+//Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+
+        function Pop@(itemName)(config) {
+        //function PopViewAiProcessDfm(data) {
+            //console.log('=== PopViewProcessDfm of ViewAiProcessDfm.cshtml ===');
+            //console.log(data);
+            //console.log('以上是帶過來的 data');
+
+
+            @*parameterId@(itemName) = config.objectProcessId;
+            process@(itemName) = config.objectProcess;
+            modeId@(itemName) = config.objectModeId;*@
+
+            //AiQuery@(itemName)(data);
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+
+        function AiAdd@(itemName)() {
+              //Swal.fire(
+              //  '...DEBUG',
+              //  '要能夠動態加一筆。安宏指導:套用/Routing/RoutingManagement右下的新增並限制為模仁.',
+              //  'warning');
+
+            // do it in V2, file: AiViewProcess.cshtml,  function Pop@(itemName)V2()
+            // NOTE by Mark, 08/31, F12
+            PopAiViewProcessV2();
+
+            return;
+
+            // Your new item object
+            const newItem = {
+                ProcessNo: "NewProcessNo",
+                ProcessName: "NewProcessName",
+                ProcessCheckStatus: "NewCheckStatus",
+                ProcessId: "NewProcessId",
+                ParameterId: "NewParameterId"
+            };
+
+            // Generate the HTML for the new row
+            let newRowHtml = `<tr>
+                      <td>New Row</td>
+                      <td class="ellipsis" id="row-id-'${newItem.ProcessNo}'" data-toggle="tooltip" title="${newItem.ProcessNo}" style="max-width: 100px;">${newItem.ProcessNo}</td>
+                      <td class="ellipsis" data-toggle="tooltip" title="${newItem.ProcessName}" style="max-width: 150px;">
+                        <input type="text" class="form-control" value="${newItem.ProcessName}" data-process-id="${newItem.ProcessId}" />
+                      </td>
+                      <td class="ellipsis" data-toggle="tooltip" title="${newItem.ProcessCheckStatus}" style="max-width: 100px;">${newItem.ProcessCheckStatus}</td>
+                      <td class="text-center">
+                        <label class="control control-solid control-solid-info control--checkbox">
+                          <input type="checkbox" data-process-no="${newItem.ProcessNo}" data-process-name="${newItem.ProcessName}" value="${newItem.ParameterId}" />
+                          <span class="control__indicator"></span>
+                        </label>
+                      </td>
+                      <td class="text-center active-content">
+                        <a class="active-link" href="javascript:AiRemoveDfmqp(${newItem.ProcessNo});"><i class="fas fa-trash-alt"></i></a>
+                      </td>
+                   </tr>`;
+
+            // Find the table element where you want to add the new row
+            var tableId = 'tblData' +'ViewProcessDfm';
+            let tableElement = document.getElementById(tableId); // Replace 'yourTableId' with the actual table ID
+
+            // Append the new row to the table
+            //tableElement.insertAdjacentHTML('beforeend', newRowHtml);
+
+
+
+        }
+
+
+        function AiQuery@(itemName)(data) {
+            objPage@(itemName).pageIndex = 0;
+            AiInitData@(itemName)(objPage@(itemName), data);
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+
+        @*function RemoveDfmqp(MaxId) {
+            $(`#detailDfmqp${MaxId}`).remove()
+            if ($(".newItem@(itemName)").html() == "") {
+                $(".noData@(itemName)").show()
+            }
+
+
+
+
+        }*@
+
+        // NOTE by Mark, 09/01, 有可能 重覆的 ProcessNo, 要換 PK
+        function AiRemoveDfmqp(ProcessNo, ProcessAlias, event) {
+            var intputProcessAlias = ProcessAlias;
+            var tdElement = document.getElementById('row-id-' + ProcessNo);
+
+            //console.log(tdElement);
+            // Check if the TD element exists
+            if (tdElement) {
+                // Find the parent TR element
+                var trElement = tdElement.closest('tr');
+                //console.log(trElement);
+                // Remove the TR element from the DOM
+                if (trElement) {
+                    //trElement.remove();
+                    var inputElement = trElement.querySelector('.input-ProcessAlias');
+                    if (inputElement) {
+                        // Get the value of the input element
+                        intputProcessAlias = inputElement.value;
+                     //   console.log(value);  // Output will be whatever the value is for that specific row
+                    }
+                }
+            }
+
+
+
+            Swal.fire({
+                title: '是否要刪除這行?',
+                text: '製程編號:' + ProcessNo + ' 製程別名:' + intputProcessAlias,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, 刪除!',
+                cancelButtonText: 'No, 取消!',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Find the TD element by its ID
+                    var tdElement = document.getElementById('row-id-' + ProcessNo);
+                    //console.log(tdElement);
+                    // Check if the TD element exists
+                    if (tdElement) {
+                        // Find the parent TR element
+                        var trElement = tdElement.closest('tr');
+                        //console.log(trElement);
+                        // Remove the TR element from the DOM
+                        if (trElement) {
+                            trElement.remove();
+                        }
+                    }
+                    //Swal.fire(
+                    //    'Deleted!',
+                    //    'Your selected row has been deleted.',
+                    //    'success'
+                    //)
+                } else if (
+                    result.dismiss === Swal.DismissReason.cancel
+                ) {
+                    //Swal.fire(
+                    //    'Cancelled',
+                    //    'Your row is safe :)',
+                    //    'error'
+                    //)
+                }
+            });
+
+
+        }
+
+        function InitData@(itemName)(objPage, dataPython) {
+        }
+        function AiInitData@(itemName)(objPage,dataPython) {
+            //console.log('=== AiInitData of ViewAiProcessDfm.cshtml  dataPython ===');
+            //console.log(dataPython);
+            //console.log('=== AiInitData of ViewAiProcessDfm.cshtml dataPython ===');
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let data = dataPython.Step2.Python_Ret;
+            const generatedInnerHtml = generateInnerHtmlByAiJson(data);
+            innerHtml = generatedInnerHtml
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $(".radio-mode").hide();
+            $(".checkbox-mode").show();
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-process-no][data-process-name]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-process-no][data-process-name]").not(":disabled").prop("checked", false);
+                }
+            });
+        }
+        function AiCancel@(itemName)() {
+            //Swal.fire(
+            //    'TODO ... ',
+            //    'To close current Pop Windows',
+            //    'success'
+            //)
+            $('#modalViewProcessDfm').modal('hide');
+        }
+    
+        function AiSave@(itemName)() {
+
+            let processJson = { processInfo: [] };
+            processJson = collectProcessInfo();
+
+            @*console.log("processJson of AiViewProcessDfm");
+            console.log(processJson);
+            //Close@(itemName)();
+            Swal.fire(
+                'DEBUG ... ',
+                '按照 09/01 部門會議經理指示, 以目前UI和功能,[確定]後直接生成整套途程即可。不再處理製程順序或新增製程後的刪掉等功能。',
+                'error'
+            )*@
+
+            // Show loading message or spinner
+            document.getElementById('loading').style.display = 'block';
+
+            // URL for the API call
+            let url = `/Routing/ApiAiAutoRoutingV2Step2`;
+            //console.log(url);
+            let processJsonString = JSON.stringify(processJson);
+            // Parameters to be sent in the request body
+            let params = {
+                MtlItemId: X_MtlItemId,
+                ControlId: Y_ControlId,
+                ProcessJsonString: processJsonString
+            };
+            let options = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(params)
+            };
+            // Make the API call
+            fetch(url, options)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading message or spinner
+                    document.getElementById('loading').style.display = 'none';
+                    try {
+                        //console.log("data: response => response.json" );
+                        //console.log(data);//Status
+                        //console.log(data.Status);//Status
+                        //console.log(data.Debug);//Debug
+                        var success = 'success';
+                        if (data.Status != "成功!") {
+                            success = 'warning';
+
+                            Swal.fire(
+                                data.Status,
+                                data.Debug,
+                                success
+                            )
+                           
+                        } else {
+                            Swal.fire(
+                                data.Status,
+                                data.Debug,
+                                success
+                            )
+                            $('#modalViewProcessDfm').modal('hide');
+                        }
+
+                    } catch (e) {
+                         //console.log("Raw response:", data);
+                    }
+                })
+                .catch(error => {
+                    // Hide loading message or spinner
+                    document.getElementById('loading').style.display = 'none';
+
+                    // Notify user of the error
+                    //console.log(error);
+                    //alert(error);
+                });
+
+        }
+
+
+
+        function Close@(itemName)() {
+            //ResetForm(objForm@(itemName));
+            //$("#modal@(itemName)").modal('hide');
+               Close@(itemName)();
+        }
+
+        function Resetprocess@(itemName)() {
+            $(".noDataViewDfmQiProcess").hide()
+
+            var DfmqpMaxIdList = [];
+            let innerHtml = '';
+            try {
+
+                $.each(processJson.processInfo, function (i, item) {
+                    if (NowMaxNum == -1) {
+                        NowMaxNum = dfmqpMaxId
+                    }
+                    else {
+                        NowMaxNum++
+                    }
+                    DfmqpMaxIdList.push(NowMaxNum)
+                    innerHtml += `<tr id="detailDfmqp${NowMaxNum}" data-process-id=${item.ParameterId} data-database-action="Create">
+                                <td class="dfmqpItem" data-dfmqp-id="${NowMaxNum}">${item.TempNumber}</td>
+                                <td class="ellipsis" data-toggle="tooltip" title="Process" style="max-width: 150px;"><input class="form-control" type="text" id="cboProcessDfmqp${NowMaxNum}" class="inputStyle" name="inputStyle" value="${item.ProcessName}" data-dfmqm-id="${NowMaxNum}" style="width: 100%;" disabled/> </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="AllocationType" style="max-width: 300px;"><select class="form-control" id="cboAllocationType${NowMaxNum}" name="inputStyle" value="" data-dfmdetail-id="${NowMaxNum}" data-msg-required="請選擇項目" data-rule-required="true" onchange="AllocationTypeChamge(${NowMaxNum})"></select></td>
+                                <td class="ellipsis" data-toggle="tooltip" title="AllocationQty" style="max-width: 150px;"><input type="number" class="form-control text-right" id="txtAllocationQtyDfmqp${NowMaxNum}" name="inputStyle@(itemName)" value="" data-dfmqm-id="${NowMaxNum}" style="width: 100%;"  disabled/> </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="ManHours" style="max-width: 150px;"><input type="number" class="form-control text-right" id="txtManHoursDfmqp${NowMaxNum}" name="inputStyle@(itemName)" value="" data-dfmqm-id="${NowMaxNum}" style="width: 100%;"  /> </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="MachineHours" style="max-width: 150px;"><input type="number" class="form-control text-right" id="txtMachineHoursDfmqp${NowMaxNum}" name="inputStyle@(itemName)" value="" data-dfmqm-id="${NowMaxNum}" style="width: 100%;"  /> </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="YieldRate" style="max-width: 150px;"><input type="number" class="form-control text-right" id="txtYieldRateDfmqp${NowMaxNum}" name="inputStyle@(itemName)" value="100" data-dfmqm-id="${NowMaxNum}" style="width: 100%;"  /> </td>
+                                <td class="text-center active-content">
+                                    <a class="active-link" href="javascript:RemoveDfmqp(${NowMaxNum});"><i class="fas fa-trash-alt"></i></a>
+                                </td>
+                            </tr>`;
+                });
+            } catch (error) {
+                console.log("might be old code of Resetprocess...");
+            }
+
+            $(".newItemViewDfmQiProcess").append(innerHtml);
+            dfmqpMaxId = dfmqpMaxIdBase
+
+            DfmqpMaxIdList.forEach(function (v) {
+                ComboBoxs.Default(`#cboAllocationType${v}`, "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DfmQiProcess.AllocationType" }, 1, "NA", "", "TypeName", "TypeNo");
+                if (!isMobile) {
+                    $(`#cboAllocationType${v}`).select2({
+                        width: "100%"
+                    });
+                }
+            })
+        }
+          function ResetprocessAi@(itemName)() {
+            $(".noDataViewDfmQiProcess").hide()
+
+            var DfmqpMaxIdList = [];
+            let innerHtml = '';
+            $.each(processJson.processInfo, function (i, item) {
+                if (NowMaxNum == -1) {
+                    NowMaxNum = dfmqpMaxId
+                }
+                else {
+                    NowMaxNum++
+                }
+                DfmqpMaxIdList.push(NowMaxNum)
+                innerHtml += `<tr id="detailDfmqp${NowMaxNum}" data-process-id=${item.ParameterId} data-database-action="Create">
+                                <td class="dfmqpItem" data-dfmqp-id="${NowMaxNum}">${item.TempNumber}</td>
+                                <td class="ellipsis" data-toggle="tooltip" title="Process" style="max-width: 150px;"><input class="form-control" type="text" id="cboProcessDfmqp${NowMaxNum}" class="inputStyle" name="inputStyle" value="${item.ProcessName}" data-dfmqm-id="${NowMaxNum}" style="width: 100%;" disabled/> </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="AllocationType" style="max-width: 300px;"><select class="form-control" id="cboAllocationType${NowMaxNum}" name="inputStyle" value="" data-dfmdetail-id="${NowMaxNum}" data-msg-required="請選擇項目" data-rule-required="true" onchange="AllocationTypeChamge(${NowMaxNum})"></select></td>
+                                <td class="ellipsis" data-toggle="tooltip" title="AllocationQty" style="max-width: 150px;"><input type="number" class="form-control text-right" id="txtAllocationQtyDfmqp${NowMaxNum}" name="inputStyle@(itemName)" value="" data-dfmqm-id="${NowMaxNum}" style="width: 100%;"  disabled/> </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="ManHours" style="max-width: 150px;"><input type="number" class="form-control text-right" id="txtManHoursDfmqp${NowMaxNum}" name="inputStyle@(itemName)" value="" data-dfmqm-id="${NowMaxNum}" style="width: 100%;"  /> </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="MachineHours" style="max-width: 150px;"><input type="number" class="form-control text-right" id="txtMachineHoursDfmqp${NowMaxNum}" name="inputStyle@(itemName)" value="" data-dfmqm-id="${NowMaxNum}" style="width: 100%;"  /> </td>
+                                <td class="ellipsis" data-toggle="tooltip" title="YieldRate" style="max-width: 150px;"><input type="number" class="form-control text-right" id="txtYieldRateDfmqp${NowMaxNum}" name="inputStyle@(itemName)" value="100" data-dfmqm-id="${NowMaxNum}" style="width: 100%;"  /> </td>
+                                <td class="text-center active-content">
+                                    <a class="active-link" href="javascript:RemoveDfmqp(${NowMaxNum});"><i class="fas fa-trash-alt"></i></a>
+                                </td>
+                            </tr>`;
+            });
+
+            $(".newItemViewDfmQiProcess").append(innerHtml);
+            dfmqpMaxId = dfmqpMaxIdBase
+
+            DfmqpMaxIdList.forEach(function (v) {
+                ComboBoxs.Default(`#cboAllocationType${v}`, "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DfmQiProcess.AllocationType" }, 1, "NA", "", "TypeName", "TypeNo");
+                if (!isMobile) {
+                    $(`#cboAllocationType${v}`).select2({
+                        width: "100%"
+                    });
+                }
+            })
+        }
+</script>
+                                                                                                                                        )

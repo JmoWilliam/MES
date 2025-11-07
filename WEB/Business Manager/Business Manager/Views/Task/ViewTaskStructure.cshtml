@@ -1,0 +1,85 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewTaskStructure";
+    string itemNameText = "任務結構資料";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="tree-container" style="margin: 0;">
+                    <div id="tree@(itemName)"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let tree@(itemName);
+        let projectTaskId@(itemName);
+
+        function Pop@(itemName)(projectTaskId) {
+            projectTaskId@(itemName) = projectTaskId;
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            if (tree@(itemName)) tree@(itemName).destructor();
+
+            let targetUrl = "@Url.Action("GetTaskStructure", "Task")";
+            let postData = {
+                "ProjectTaskId": projectTaskId@(itemName),
+                "OpenedLevel": 5
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let userTask = JSON.parse(item.ProjectTask);
+
+                        tree@(itemName) = new dhx.Tree("tree@(itemName)", {
+                            editable: false,
+                            checkbox: false,
+                            template: ({ value, id }, isFolder) => {
+                                let template = ``;
+
+                                template = `<div class="tree-list" data-tree-index="${id}">
+                                              <span class="tree-text ${getObjects(userTask, `ProjectTaskId`, id).length > 0 ? `user-task` : `other-task`}">${value}</span>
+                                            </div>`;
+
+                                return template;
+                            }
+                        });
+
+                        tree@(itemName).data.parse([item.TaskTree]);
+                    });
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+    </script>
+)

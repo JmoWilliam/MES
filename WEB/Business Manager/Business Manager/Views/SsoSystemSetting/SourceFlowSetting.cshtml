@@ -1,0 +1,513 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "SourceFlowSetting";
+    string itemNameText = "需求來源流程設定";
+    string itemRoleUser = "SourceFlowUser";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+}
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/dhtmlx/diagram.commercial/5.0.0/diagramWithEditor.min.css")" rel="stylesheet" />
+)
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/demand.min.css")?@dateCache" rel="stylesheet" />
+)
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-12 col-md-auto col-lg-auto mb-2 mb-md-0 mb-lg-0">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                               placeholder="請輸入代碼/名稱" />
+                                    </div>
+                                    <div class="col-12 col-md-auto col-lg-auto text-right text-md-left text-lg-left">
+                                        <a class="btn btn-primary" href="javascript:Query@(itemName)();"><i class="fal fa-search"></i>搜尋</a>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">來源代碼</th>
+                                        <th scope="col" style="min-width: 150px;">來源名稱</th>
+                                        <th scope="col" style="min-width: 200px;">來源描述</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-2" style="max-height:calc(100vh - 190px); overflow: auto;">
+            <div class="card-body" style="padding-top: 0;">
+                <div class="row">
+                    <div class="col-12">
+                        <section class="demand-chart-container editor">
+                            <div class="demand-flow" id="editor"></div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                            <input type="hidden" id="SourceId" name="SourceId" value="-1" />
+                            <div class="form-group row" style="margin-bottom: .625rem;">
+                                <div class="col-12">
+                                    <div class="input-group">
+                                        <span class="input-group-addon"><i class="fas fa-project-diagram mr-3"></i>流程</span>
+                                        <select class="form-control" id="cboFlowId@(itemName)" name="cboFlowId@(itemName)"></select>
+                                        <div class="input-group-append">
+                                            <a class="btn btn-success" href="javascript:Datas@(itemName).AddSourceFlowSetting@(itemName)();"><i class="fas fa-plus"></i></a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="flow-container" id="data@(itemName)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewUser")
+@Html.Partial("ViewSourceFlowUser")
+
+@Html.Resource("js",
+    @<script src="@Url.Content("~/Scripts/dhtmlx/diagram.commercial/5.0.0/diagramWithEditor.min.js")"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let settingDiagram@(itemName);
+        let diagramData@(itemName);
+
+        $(document).ready(function () {
+            Query@(itemName)();
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetDemandSource", "SsoBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val(),
+                "Status": "A"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">來源代碼</span>${item.SourceNo}</td>
+                                        <td><span class="stack-title">來源名稱</span>${item.SourceName}</td>
+                                        <td><span class="stack-title">來源描述</span>${item.SourceDesc}</td>
+                                        <td class="text-center active-content">
+                                         <span class="stack-title">操作</span>
+                                          <a class="active-link auth-flow-setting" href="javascript:Edit@(itemName)(${item.SourceId});"><i class="fas fa-chart-network"></i><span>流程設定</span></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(SourceId) {
+            $("#SourceId").val(SourceId);
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            Reset@(itemName)();
+
+            $([document.documentElement, document.body]).animate({
+                scrollTop: $("#editData@(itemName)").offset().top
+            }, 500);
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block");
+            Query@(itemName)();
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetSourceFlowSetting@(itemName)", function () {
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetSourceFlowSetting", "SsoSystemSetting")";
+                let postData = {
+                    "SourceId": $("#SourceId").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<div class="flow-block">
+                                            <h3 class="flow-name">${item.FlowName}<a class="flow-delete" href="javascript:Datas@(itemName).DeleteSourceFlowSetting@(itemName)(${item.SettingId});"><i class="fas fa-trash"></i></a></h3>
+                                            <div class="flow-input-content">
+                                              <div class="flow-input-title">前置流程</div>
+                                              <div class="flow-input">
+                                                <div class="input-group">
+                                                  <select data-setting-id="${item.SettingId}" data-selected="${item.SourceSettings}" name="cboSourceSettingId@(itemName)" multiple></select>
+                                                  <div class="input-group-append">
+                                                    <a class="btn btn-success" href="javascript:Datas@(itemName).AddSourceFlowLink@(itemName)(${item.SettingId});"><i class="fas fa-save"></i></a>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div class="user-content">
+                                              <div class="user-header">
+                                                <div class="list-header">使用者/角色<a href="javascript:PopViewSourceFlowUser(${item.SettingId}, '${item.FlowName}');"><i class="fas fa-edit"></i></a></div>
+                                                <div class="list-header">信件<i class="fas fa-bell-on"></i></div>
+                                                <div class="list-header">推播<i class="fas fa-bell-on"></i></div>
+                                                <div class="list-header">企業微信<i class="fas fa-bell-on"></i></div>
+                                              </div>
+                                              ${UserList(item.SettingId, item.SourceFlowUser)}
+                                            </div>
+                                          </div>`;
+                        });
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#data@(itemName)").html(innerHtml);
+
+                function UserList(settingId, source) {
+                    let html = '';
+
+                    if (source) {
+                        let json = JSON.parse(source);
+
+                        for (let x = 0; x < json.data.length; x++) {
+                            html += `<div class="user-list">
+                                       <div class="list-title">${json.data[x].RoleUserName}${json.data[x].RoleStatus == `Y` ? `<a class="role-link" href="javascript:void(0);"><i class="fas fa-users"></i></a>` : ``}</div>
+                                       <div class="list-checkbox">
+                                         <label class="control control-solid control-solid-info control--checkbox">
+                                           <input type="checkbox" class="source-flow-user"
+                                                  data-setting-id="${settingId}" data-role-id="${json.data[x].RoleId}" data-user-id="${json.data[x].UserId}" 
+                                                  name="cbxMailAdviceStatus@(itemName)" ${json.data[x].MailAdviceStatus == `Y` ? `checked` : ``} />
+                                           <span class="control__indicator"></span>
+                                         </label>
+                                       </div>
+                                       <div class="list-checkbox">
+                                         <label class="control control-solid control-solid-info control--checkbox">
+                                           <input type="checkbox" class="source-flow-user"
+                                                  data-setting-id="${settingId}" data-role-id="${json.data[x].RoleId}" data-user-id="${json.data[x].UserId}" 
+                                                  name="cbxPushAdviceStatus@(itemName)" ${json.data[x].PushAdviceStatus == `Y` ? `checked` : ``} />
+                                           <span class="control__indicator"></span>
+                                         </label>
+                                       </div>
+                                       <div class="list-checkbox">
+                                         <label class="control control-solid control-solid-info control--checkbox">
+                                           <input type="checkbox" class="source-flow-user"
+                                                  data-setting-id="${settingId}" data-role-id="${json.data[x].RoleId}" data-user-id="${json.data[x].UserId}" 
+                                                  name="cbxWorkWeixinStatus@(itemName)" ${json.data[x].WorkWeixinStatus == `Y` ? `checked` : ``} />
+                                           <span class="control__indicator"></span>
+                                         </label>
+                                       </div>
+                                       ${RoleUserList(json.data[x].RoleUser)}
+                                     </div>`;
+                        }
+                    }
+
+                    return html;
+                }
+
+                function RoleUserList(json) {
+                    let html = ``;
+
+                    if (json) {
+                        for (var x = 0; x < json.data.length; x++) {
+                            html += `<div class="sub-list-title">${json.data[x].UserNo} ${json.data[x].UserName}</div>`;
+                        }
+
+                        html = `<div class="sub-list">` + html + `</div>`;
+                    }
+
+                    return html;
+                }
+            });
+
+            addMethod(this, "GetSourceFlowSettingDiagram@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetSourceFlowSettingDiagram", "SsoSystemSetting")";
+                let postData = {
+                    "SourceId": $("#SourceId").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    diagramData@(itemName) = data.dataShapes.concat(data.dataLines);
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "AddSourceFlowSetting@(itemName)", function () {
+                let targetUrl = "@Url.Action("AddSourceFlowSetting", "SsoSystemSetting")";
+                let postData = {
+                    "SourceId": $("#SourceId").val(),
+                    "FlowId": $("#cboFlowId@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Reset@(itemName)();
+
+                    $(".flow-container").animate({
+                        scrollTop: $(".flow-block:last-child").offset().top
+                    }, 500);
+                }
+            });
+
+            addMethod(this, "AddSourceFlowLink@(itemName)", function (SettingId) {
+                let targetUrl = "@Url.Action("AddSourceFlowLink", "SsoSystemSetting")";
+                let postData = {
+                    "SourceSettings": $(`select[name='cboSourceSettingId@(itemName)'][data-setting-id='${SettingId}'] option:selected`).toArray().map(item => item.value).join(),
+                    "TargetSettingId": SettingId
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Reset@(itemName)();
+                }
+            });
+
+            addMethod(this, "DeleteSourceFlowSetting@(itemName)", function (SettingId) {
+                swal.fire({
+                    titleText: "確認要刪除嗎?",
+                    text: "此動作無法復原，請確認是否要執行!",
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let targetUrl = "@Url.Action("DeleteSourceFlowSetting", "SsoSystemSetting")";
+                        let postData = {
+                            "SettingId": SettingId
+                        };
+
+                        let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                        if (result) {
+                            Reset@(itemName)();
+                        }
+                    }
+                });
+            });
+        }
+
+        function Reset@(itemName)() {
+            ComboBoxs.Default("#cboFlowId@(itemName)", "@Url.Action("GetDemandFlow", "SsoBasicInformation")", { "Status": "A" }, "", "NA", "", "FlowName", "FlowId");
+
+            Datas@(itemName).GetSourceFlowSettingDiagram@(itemName)();
+            Datas@(itemName).GetSourceFlowSetting@(itemName)();
+
+            if (diagramData@(itemName)) LoadDiagram@(itemName)();
+
+            $("select[name=cboSourceSettingId@(itemName)]").each(function (i) {
+                let settingId = $(this).data("setting-id");
+                let selected = $(this).data("selected").toString().split(',');
+
+                ComboBoxs.Default(`select[name='cboSourceSettingId@(itemName)'][data-setting-id='${settingId}']`, "@Url.Action("GetSourceFlowSetting", "SsoSystemSetting")", { "SourceId": $("#SourceId").val(), "ExcludeSettingId": settingId }, selected, "CHOOSE", "", "FlowName", "SettingId");
+            });
+
+            $("#cboFlowId@(itemName), select[name=cboSourceSettingId@(itemName)]").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $(".role-link").off("click").on("click", function () {
+                if ($(this).parent().siblings(".sub-list").hasClass("show")) {
+                    $(this).parent().siblings(".sub-list").removeClass("show");
+                } else {
+                    $(this).parent().siblings(".sub-list").addClass("show");
+                }
+            });
+
+            $(".source-flow-user").off("click").on("click", function () {
+                let settingId = $(this).data("setting-id");
+                let roleId = $(this).data("role-id");
+                let userId = $(this).data("user-id");
+
+                let targetUrl = "@Url.Action("UpdateSourceFlowUserStatus", "SsoSystemSetting")";
+                let postData = {
+                    "SettingId": settingId,
+                    "RoleId": roleId,
+                    "UserId": userId,
+                    "MailAdviceStatus": ($(`input[name='cbxMailAdviceStatus@(itemName)'][data-setting-id='${settingId}'][data-role-id='${roleId}'][data-user-id='${userId}']`).is(":checked") ? "Y" : "N"),
+                    "PushAdviceStatus": ($(`input[name='cbxPushAdviceStatus@(itemName)'][data-setting-id='${settingId}'][data-role-id='${roleId}'][data-user-id='${userId}']`).is(":checked") ? "Y" : "N"),
+                    "WorkWeixinStatus": ($(`input[name='cbxWorkWeixinStatus@(itemName)'][data-setting-id='${settingId}'][data-role-id='${roleId}'][data-user-id='${userId}']`).is(":checked") ? "Y" : "N")
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    Reset@(itemName)();
+                }
+            });
+        }
+
+        function LoadDiagram@(itemName)() {
+            dhx.i18n.setLocale("diagram", diagramLocales);
+
+            let flowTemplate = ({ flowName, flowImage, flowUser }) => (`
+                <section class="flow-card">
+                    <img src="${flowImage}" />
+                    <span class="flow-name">${flowName}</span>
+                    <span class="flow-user">${flowUser}</span>
+                </section>
+            `);
+
+            if (!settingDiagram@(itemName)) {
+                settingDiagram@(itemName) = new dhx.DiagramEditor("editor", {
+                    shapeType: "template",
+                    controls: {
+                        reset: false,
+                        export: false,
+                        import: false,
+                        autoLayout: false,
+                        historyManager: false,
+                        editManager: false,
+                        scale: false,
+                        gridStep: false
+                    },
+                    shapeSections: {},
+                    shapeBarWidth: 0,
+                    scale: 1,
+                    lineConfig: {
+                        lineGap: 25
+                    },
+                });
+
+                settingDiagram@(itemName).diagram.addShape("template", {
+                    template: flowTemplate,
+                    defaults: {
+                        height: 130,
+                        width: 130
+                    },
+                    shapeToolbar: false,
+                    properties: [
+                        { type: "position", label: "座標" },
+                    ]
+                });
+
+                settingDiagram@(itemName).events.on("ApplyButton", function () {
+                    let tempJson = JSON.parse('{ "data" : []}');
+                    tempJson.data = settingDiagram@(itemName).serialize();
+
+                    let targetUrl = "@Url.Action("UpdateSourceFlowSettingCoordinates", "SsoSystemSetting")";
+                    let postData = {
+                        "SourceId": $("#SourceId").val(),
+                        "DiagramData": JSON.stringify(tempJson)
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Reset@(itemName)();
+                    }
+                });
+            }
+
+            if (diagramData@(itemName)) settingDiagram@(itemName).parse(diagramData@(itemName));
+        }
+    </script>
+)

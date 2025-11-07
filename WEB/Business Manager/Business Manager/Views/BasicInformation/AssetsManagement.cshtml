@@ -1,0 +1,253 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "AssetsManagement";
+    string itemNameText = "資產資料管理";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+    </style>
+                        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">資產人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboUserNoQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">資產編號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMB001Q@(itemName)" name="txtMB001Q@(itemName)"
+                                       placeholder="請輸入資產編號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">資產類別</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMB006Q@(itemName)" name="txtMB006Q@(itemName)"
+                                       placeholder="請輸入資產類別" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">資產名稱</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMB002Q@(itemName)" name="txtMB002Q@(itemName)"
+                                       placeholder="請輸入資產名稱" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn file-excel auth-excel" href="javascript:Excel@(itemName)();"><i class="fas fa-file-excel"></i>匯出</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 100px;">部門代號</th>
+                                        <th scope="col" style="min-width: 110px;">部門名稱</th>
+                                        <th scope="col" style="max-width: 200px;">資產類別</th>
+                                        <th scope="col" style="max-width: 200px;">資產編號</th>
+                                        <th scope="col" style="max-width: 200px;">資產名稱</th>
+                                        <th scope="col" style="max-width: 200px;">資產規格</th>
+                                        <th scope="col" style="max-width: 200px;">保管人姓名</th>
+                                        <th scope="col" style="max-width: 150px;">數量</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 115px;">取得日期</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 115px;">取得成本</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 90);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+            Query@(itemName)();
+
+            if (!isMobile) {
+                $("#cboUserNoQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboUserNoQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": "@Session["CompanyId"]"}, "", "NA", "", "UserWithNo", "UserNo");
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        })
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetAssetsData", "BasicInformation")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "UserNo": $("#cboUserNoQ@(itemName)").val(),
+                "MB001": $("#txtMB001Q@(itemName)").val(),
+                "MB002": $("#txtMB002Q@(itemName)").val(),
+                "MB006": $("#txtMB006Q@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        defaultFileId@(itemName) = item.DefaultFileId;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.部門代號}" style="min-width: 100px;">${item.部門代號}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.部門名稱}" style="max-width: 200px; min-width: 135px;">${item.部門名稱}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.資產類別}" style="max-width: 200px; min-width: 135px;">${item.資產類別}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MB001}" style="max-width: 200px;">${item.MB001}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.資產名稱}" style="max-width: 200px; min-width: 100px;">${item.資產名稱}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.資產規格}" style="max-width: 200px; min-width: 135px;">${item.資產規格}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.保管人代號}${item.保管人姓名}" style="min-width: 150px;"><i class="fas fa-user"></i>&nbsp;<code>${item.保管人代號}</code>&nbsp;${item.保管人姓名}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.數量}" style="max-width: 150px;">${item.數量}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.取得日期}" style="max-width: 200px;">${item.取得日期}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.取得成本}" style="max-width: 200px;">${item.取得成本}</td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Excel@(itemName)() {
+            let targetUrl = "@Url.Action("AssetsDataExcelDownload", "BasicInformation")";
+            let postData = {
+                "UserNo": $("#cboUserNoQ@(itemName)").val(),
+                "MB001Q": $("#txtMB001Q@(itemName)").val(),
+                "MB006Q": $("#txtMB006Q@(itemName)").val(),
+                "MB002Q": $("#txtMB002Q@(itemName)").val()
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+    </script>
+        )

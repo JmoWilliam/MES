@@ -1,0 +1,249 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "MpcRoutingProcess";
+    string itemNameText = "變更途程製程維護";
+}
+
+@Html.Resource("css",
+    @<style>
+         .add-process-icon {
+             margin-right: 15px;
+             margin-top: 10px;
+             cursor: pointer;
+             color: coral;
+         }
+
+         .process-info {
+             border: 1px solid rgba(0,0,0,.125);
+             border-radius: 0.25rem;
+             padding: 10px;
+             box-shadow: 0 0 4px rgb(139 110 110 / 60%);
+             margin-bottom: 10px;
+         }
+
+         .tag-group {
+             display: inline-block;
+             background-color: #ebebeb;
+             border-radius: 4px;
+             cursor: text;
+             line-height: 1;
+             padding: 0.35rem 0.5rem;
+             margin: 0.15rem 0.375rem 0.15rem 0;
+             white-space: nowrap;
+             color: #0580ff;
+             font-weight: 700;
+         }
+    </style>
+                         )
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-12 col-sm-12 col-md-12 text-right MpcStatusA">
+                        <a class="btn btn-info auth-add" href="javascript:AddProcessAll@(itemName)();">
+                            <i class="fas fa-plus"></i>套用原途程
+                        </a>
+                        <a class="btn btn-info auth-add" href="javascript:DeleteAll@(itemName)();">
+                            <i class="fas fa-plus"></i>途層清空
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th class="MpcStatusA" scope="col" style="min-width: 75px;">操作</th>
+                                        <th scope="col" style="min-width: 100px;">製程順序</th>
+                                        <th scope="col" style="min-width: 200px;">製程別名</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#listData@(itemName)";
+
+        let mpcId@(itemName);
+
+
+        $(function () {
+            if ($("#MpcStatus").val() == "A") {
+                $(".MpcStatusA").hide()
+            }
+        });
+
+        function Expand@(itemName)(MpcId) {
+            if (MpcId > 0) {
+                MpcId@(itemName) = MpcId;
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+            } else {
+                alert("途程製程資料錯誤，請重新操作!", "alert");
+            }
+        }
+
+        function Query@(itemName)(mpcId) {
+            if ($("#MpcStatus").val() == "A") {
+                console.log("=MpcStatusB")
+                $(".MpcStatusA").hide()
+            }
+            else if ($("#MpcStatus").val() == "S") {
+                $(".MpcStatusA").show()
+            }
+            mpcId@(itemName) = mpcId;
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetMpcRoutingProcess", "Production")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MpcId": $("#MpcId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr id="${item.SortNumber}">
+                                        ${item.Status == `S` ? `
+                                            <td scope="col"  style="min-width: 150px;" class="text-center active-content auth-detail">
+                                                <a class="active-link sort-handle" href="javascript:void(0);"><i class="fas fa-arrows-alt"></i><span>製程順序</span></a>
+                                            </td>
+                                        `: ``   }
+                                        <td class="ellipsis un-auth auth-sort" data-toggle="tooltip" title="${item.SortNumber}" style="min-width: 100px;">${item.SortNumber}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="min-width: 200px;">${item.ProcessAlias}</td>
+                                    </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+
+            ComboBoxs.Default("#cboProcess@(itemName)", "@Url.Action("GetProcess", "MesBasicInformation")", {}, "", "NA", "", "ProcessName", "ProcessId");
+            if (!isMobile) {
+                $("#cboProcess@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            $("#tblData@(itemName) tbody").sortable({
+                cancel: ".disabled-sort",
+                handle: ".sort-handle",
+                update: function (event, ui) {
+                    let targetUrl = "@Url.Action("UpdateMpcRoutingProcessSort", "Production")";
+                    let postData = {
+                        "MpcId": $("#MpcId").val(),
+                        "RoutingProcessSort": $(this).sortable("toArray", { attribute: 'id' }).join()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)(mpcId@(itemName));
+                    }
+                    else {
+                        return false;
+                    }
+                }
+            });
+        }
+
+        function AddProcessAll@(itemName)() {
+            if ($("#MoId").val() > 0) {
+                let targetUrl = "@Url.Action("AddMpcRoutingProcessAll", "Production")";
+                let postData = {
+                    "MpcId": $("#MpcId").val(),
+                    "MoId": $("#MoId").val(),
+                    };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                   Query@(itemName)(mpcId@(itemName));
+                }
+            }
+            else {
+                alert("MES製令有問題");
+            }
+        }
+
+        function DeleteAll@(itemName)() {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMpcRoutingProcessAll", "Production")";
+                    let postData = {
+                        "MpcId": $("#MpcId").val()
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)(mpcId@(itemName));
+                    }
+                }
+            });
+        }
+
+        
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName) , #editProcessData@(itemName)");
+            ResetForm(objForm@(itemName));
+            $(".process-info").empty();
+            Query@(itemName)(mpcId@(itemName));
+        }
+</script>
+                        )

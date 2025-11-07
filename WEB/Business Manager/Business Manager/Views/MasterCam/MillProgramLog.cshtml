@@ -1,0 +1,233 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MillProgramLog";
+    string itemNameText = "銑床編程資料管理";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+@<style>
+
+</style>
+)
+<input type="hidden" id="pageAuthority" value="@authority" />
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)"></div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">品號</th>
+                                        <th scope="col" style="min-width: 150px;">品名</th>
+                                        <th scope="col" style="min-width: 150px;">製令</th>
+                                        <th scope="col" style="min-width: 150px;">製程</th>
+                                        <th scope="col" style="min-width: 150px;">機台</th>
+                                        <th scope="col" style="min-width: 150px;">治具</th>
+                                        <th scope="col" style="min-width: 150px;">開始時間</th>
+                                        <th scope="col" style="min-width: 150px;">結束時間</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="DataName"></h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="CloseModal@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listDataModal@(itemName)">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblDataModal@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 100px;">連結</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="pageModal@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 10
+    };
+
+    $(document).ready(function () {
+        Query@(itemName)();
+    });
+
+    function Query@(itemName)() {
+        InitData@(itemName)(objPage@(itemName));
+    }
+
+    function InitData@(itemName)(objPage) {
+        let innerHtml = '';
+        let pageCount = 0;
+
+        let targetUrl = "@Url.Action("GetMillProgramWork", "MasterCam")";
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage.pageIndex + 1),
+            "PageSize": objPage.pageSize     
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+            if (pageCount > 0) {
+                objPage = PageCaculate(pageCount, objPage);
+
+                $.each(data.result, function (i, item) {
+                    let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                    innerHtml += `<tr>
+                                    <td>${_row}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px;">${item.MtlItemNo}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 200px;">${item.MtlItemName}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpFullNo}" style="max-width: 200px;">${item.WoErpFullNo}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="max-width: 200px;">${item.ProcessAlias}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MachineDesc}" style="max-width: 200px;">${item.MachineDesc}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.JigName}" style="max-width: 200px;">${item.JigName}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.StartWorkDate}" style="max-width: 200px;">${item.StartWorkDate}</td>      
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.EndWorkDate}" style="max-width: 200px;">${item.EndWorkDate}</td> 
+                                    <td class="text-center active-content">
+                                        <a class="active-link auth-read" href="javascript:viewData@(itemName)('Dwg',${item.MillProgramWorkId});"><i class="fas fa-edit">圖檔</i></a>
+                                        <a class="active-link auth-read" href="javascript:viewData@(itemName)('PrePrt',${item.MillProgramWorkId});"><i class="fas fa-edit">預編檔</i></a>
+                                        <a class="active-link auth-read" href="javascript:viewData@(itemName)('Prt',${item.MillProgramWorkId});"><i class="fas fa-edit">編程檔</i></a>
+                                        @*<a class="active-link auth-read" href="javascript:viewMillToolData@(itemName)(${item.MillProgramWorkId});"><i class="fas fa-edit">刀具參數</i></a>*@
+                                    </td>
+                                    </tr>`;
+                });
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                                </tr>`;
+            }
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+
+        $("#tblData@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+        Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+    }
+
+    function viewData@(itemName)(DataType, MillProgramWorkId) {
+        $("#modal@(itemName)").modal({ backdrop: 'static', keyboard: false }, 'show');
+        let innerHtml = '';
+        let pageCount = 0;
+        let targetUrl = "@Url.Action("GetMillData", "MasterCam")";
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": 1,
+            "PageSize": 10,
+            "DataType": DataType,
+            "MillProgramWorkId": MillProgramWorkId
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+            if (pageCount > 0) {
+                $.each(data.result, function (i, item) {
+                    let MillFile = item.Data;
+                    let fileFullNameList = MillFile.split('\\');
+                    let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                    fileFullName = ChangeASCII@(itemName)(fileFullName);
+                    innerHtml += `<tr>
+                                    <td class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 100px;">
+                                        <a class="active-link mr-1" href="/Drawing/GetCadFile?FilePath=${MillFile}&DownloadFlag=RD"><i class="fas fa-download"></i></a>
+                                        ${fileFullName}
+                                    </td>
+                                  </tr>`;                                   
+                });
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="1" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                                </tr>`;
+            }
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+        $("#tblDataModal@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+    }
+
+    function viewMillToolData@(itemName)(MillProgramWorkId) {
+    }
+
+    function Close@(itemName)() {
+        $("#modalViewQcItem").modal('hide');
+    }
+
+    function ChangeASCII@(itemName)(fileName) {
+        if (fileName.indexOf("%2B") != -1) fileName = fileName.replace("%2B", "+");
+        if (fileName.indexOf("%2F") != -1) fileName = fileName.replace("%2F", "/");
+        if (fileName.indexOf("%3F") != -1) fileName = fileName.replace("%3F", "?");
+        if (fileName.indexOf("%23") != -1) fileName = fileName.replace("%23", "#");
+        if (fileName.indexOf("%26") != -1) fileName = fileName.replace("%26", "&");
+        if (fileName.indexOf("%3D") != -1) fileName = fileName.replace("%3D", "=");
+        return fileName;
+    }
+ </script>
+)

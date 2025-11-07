@@ -1,0 +1,185 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "LotNumberBarcode";
+}
+
+@Html.Resource("css",
+    @<style>
+         .table-detail {
+             margin: 0;
+             padding: 0;
+             max-height: 30vh;
+             display: none;
+         }
+
+             .table-detail.active {
+                 display: block;
+                 margin-bottom: .75rem;
+             }
+
+             .table-detail th {
+                 background-color: #d7ecfa !important;
+             }
+
+             .table-detail th, .table-detail td {
+                 padding: 5px 0;
+                 text-align: center;
+             }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                        )
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6"></div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">綁定條碼</th>
+                                        <th scope="col" style="min-width: 175px;">條碼數量	</th>
+                                        <th scope="col" style="min-width: 200px;">綁定人員	</th>
+                                        <th scope="col" style="min-width: 150px;">綁定時間	</th>
+                                        
+                                        @*<th class="text-center col-sticky" scope="col" style="min-width: 150px;">操作</th>*@
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+
+        let lotNumberId@(itemName);
+        let mtlItemId@(itemName);
+
+
+        function Expand@(itemName)(lotNumberId, mtlItemId) {
+            if (lotNumberId > 0) {
+                lotNumberId@(itemName) = lotNumberId;
+                $(".advanced-block").slideDown("slow");
+
+                
+
+                if (!isMobile) {
+                    
+                }
+
+
+                Query@(itemName)();
+            }
+            else {
+                alert("請先儲存單頭資料後再查詢條碼!!");
+            }
+        }
+
+        
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetLnBarcode", "GoodsReceipt")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "LotNumberId": lotNumberId@(itemName),
+                "MtlItemId": mtlItemId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                         
+                                        <td class="text-left" data-toggle="tooltip" title="${item.BarcodeNo}" style="min-width: 115px;">${item.BarcodeNo}</td>
+                                        <td class="text-right" data-toggle="tooltip" title="${item.BarcodeQty}" style="min-width: 115px;">${item.BarcodeQty}</td>
+                                        <td class="text-left" data-toggle="tooltip" title="${item.UserName}" style="min-width: 115px;">${item.UserNo} - ${item.UserName}</td>
+                                        <td class="text-left" data-toggle="tooltip" title="${item.CreateDate}" style="min-width: 115px;">${item.CreateDate}</td>
+                                        
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="16" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+        }
+
+        function Edit@(itemName)(GrDetailId) {
+           
+        }
+
+        
+
+        
+       
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+
+        
+    </script>
+                        )

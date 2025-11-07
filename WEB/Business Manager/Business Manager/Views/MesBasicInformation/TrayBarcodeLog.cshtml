@@ -1,0 +1,162 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TrayBarcodeLog";
+    string itemNameText = "萃盤條碼綁定列表";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboBarcodeNoQ@(itemName)">條碼編號</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboBarcodeNoQ@(itemName)" name="cboBarcodeNoQ@(itemName)"
+                                        data-msg-required="請選擇條碼編號" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                        <i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">製令編號</th>
+                                        <th scope="col" style="min-width: 200px;">綁定條碼編號</th>
+                                        <th class="text-center" scope="col" style="min-width: 200px;">條碼數量</th>
+                                        <th class="text-center" scope="col" style="min-width: 200px;">綁定日期</th>
+                                        <th class="text-center" scope="col" style="min-width: 200px;">解除綁定日期</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            
+        });
+
+        function Expand@(itemName)() {
+            console.log("A")
+            if (parseInt($("#TrayId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+            } else {
+                alert("萃盤資料錯誤", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetTrayBarcodeLog", "MesBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "TrayId": $("#TrayId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis text-center"  data-toggle="tooltip" title="${item.MoNo}" style="max-width: 150px;">${item.MoNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}" style="max-width: 150px;">${item.BarcodeNo}</td>
+                                        <td class="ellipsis text-center"  data-toggle="tooltip" title="${item.BarcodeQty}" style="max-width: 150px;">${item.BarcodeQty}</td>
+                                        <td class="ellipsis text-center" data-toggle="tooltip" title="${item.BindDate}" style="max-width: 150px;">${item.BindDate}</td>
+                                        <td class="ellipsis text-center" data-toggle="tooltip" title="${item.ReMoveBindDate}" style="max-width: 150px;">${item.ReMoveBindDate}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Return@(itemName)() {
+            //ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+    </script>
+)

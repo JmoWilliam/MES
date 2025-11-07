@@ -1,0 +1,749 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QcRecordPlanning";
+    string itemNameText = "量測單據排程管理";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .basic-row {
+            display: flex;
+            width: 75vh;
+        }
+
+         .basic-container {
+             width: 100%;
+             padding: 18px;
+             background: #fff;
+             display: flex;
+             justify-content: center;
+         }
+
+         .spreadsheet-container {
+             height: 750px;
+             width: 450px;
+             padding: 12px;
+             background: #e5ecf1;
+             border-radius: 12px;
+         }
+
+        .spreadsheet-table-container {
+            /*height: 750px;*/
+            width: 35vw;
+            padding: 12px;
+            background: #e5ecf1;
+            border-radius: 12px;
+        }
+
+         .cell-customer01 {
+             background: #93cee5;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer02 {
+             background: #f5e4b1;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+         .cell-customer03 {
+             background: #e7c19f;
+             font-size: 18px;
+             font-weight: 600;
+         }
+
+        .next-css {
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            width: 100%;
+        }
+            .next-css a {
+                font-size: 25px;
+                padding: 0px 12px;
+                background: #cfdde9;
+                border-radius: 12px;
+                color: #21394f;
+                margin-bottom: 15px;
+            }
+                .next-css a:hover {
+                    background: #ccd7e1;
+                }
+
+        .sp-t-header {
+            display: flex;
+            flex-direction: column;
+            padding: 18px;
+            background: #fff;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .sp-t-h-span {
+
+        }
+
+        .sp-t-item {
+            border-radius: 12px;
+            box-shadow: 0 8px 24px -8px #e1e3e5, inset 0 0 0 1px rgba(31, 33, 35, .04);
+            overflow: hidden;
+            background: #fff;
+            margin-bottom: 15px;
+        }
+
+        .sp-t-item-header {
+            background: #f5f5f5;
+            color: #53505f;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .sp-t-item-info {
+            padding: 18px;
+        }
+            .sp-t-item-info span {
+                font-size: 16px;
+                font-weight: 600;
+            }
+
+        .sp-t-body {
+            overflow: scroll;
+            max-height: 540px;
+            min-height: 540px;
+            border-radius: 12px;
+        }
+
+        .sp-t-footer {
+            padding: 18px;
+            background: #f7f7f7;
+            display: flex;
+            justify-content: end;
+        }
+            .sp-t-footer a {
+                padding: 16px;
+                background: #d9d9d9;
+                border-radius: 12px;
+                font-size: 15px;
+                font-weight: 600;
+            }
+                .sp-t-footer a:hover {
+                    background: #ede7e7;
+                }
+
+        .non-data {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 35vw;
+        }
+            .non-data span {
+                font-size: 28px;
+                font-weight: 600;
+                color: #626d87;
+            }
+    </style>
+                                                                                        )
+
+<div id="step1" class="col-lg-6 col-12" style="margin: 0 auto;">
+    <div class="basic-row">
+        <div class="basic-container">
+            <div class="spreadsheet-container">
+                <div>
+                    <select id="cboSystemType@(itemName)" class="form-control">
+                        <option value="system-mode">系統選擇模式</option>
+                        <option value="persion-mode">完全自定義模式</option>
+                    </select>
+                </div>
+                <div style="height: 700px;" id="spreadsheet@(itemName)"></div>
+            </div>
+        </div>
+
+        <div class="next-css">
+            <a href="javascript: ResetQcItem@(itemName)();"><i class="fas fa-sync-alt"> 重置資料</i></a>
+            <a href="javascript: Upload@(itemName)();"><i class="fas fa-file-upload"> 更新資料</i></a>
+            <a href="javascript: Next@(itemName)();"><i class="fas fa-arrow-alt-circle-right"> 下一步驟</i></a>
+        </div>
+    </div>
+</div>
+
+<div id="step2" class="col-lg-6 col-12" style="margin: 0 auto; display: none;">
+    <!--步驟二標題-->
+    <div class="title-measure" style="">
+        <div>
+            <span class="caption">量測單</span>
+            <span id="desQcRecordId@(itemName)" class="detail"></span>
+            <span class="caption">
+                (品名<span id="desMtlItemName@(itemName)" class="detail"></span>)
+            </span>
+        </div>
+
+    </div>
+
+    <!--步驟二內容-->
+    <div class="table-custom">
+        <table class="table table-bordered table-striped table-sticky table-stack table-color" id="tblData@(itemName)">
+            <thead>
+                <tr>
+                    <th scope="col" style="min-width: 80px;" class="text-center">序號</th>
+                    <th scope="col" style="min-width: 80px;" class="text-center">機型</th>
+                    <th scope="col" style="min-width: 110px;" class="text-center">總量測項目</th>
+                    <th scope="col" style="min-width:150px;" class="text-center">預估量測時間(分鐘)</th>
+                </tr>
+            </thead>
+            <tbody class="ui-sortable">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="button-container">
+        <div id="PrevBtn@(itemName)" class="btn btn-prev disabled">返回</div>
+        <div class="btn btn-next" onclick="UpdateEstimatedMeasurementTime@(itemName)();">更新資料</div>
+        <div class="btn btn-next" onclick="NextStep@(itemName)();">下一步</div>
+    </div>
+
+</div>
+
+<!--選擇機型-->
+<div class="modal fade" id="machineSelectModal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">選擇機型</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="txtCell@(itemName)"/>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">量測機台</label>
+                            <div class="col-12">
+                                <select id="cboQcMachineModeFullNo@(itemName)" class="form-control"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                @*<button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let spreadsheet@(itemName);
+
+        let defaultCell@(itemName) = [];
+
+        let defaultJson = { "sheets": [{ "name": "量測項目機型設定", "data": [{ "cell": "A1", "format": "text", "value": "量測編號", "css": "cell-customer01" }, { "cell": "B1", "format": "text", "value": "量測項目", "css": "cell-customer02" }, { "cell": "C1", "format": "common", "value": "量測機型", "css": "cell-customer03" }], "cols": [{ "width": 120 }, { "width": 120 }, { "width": 120 }], "rows": [{ "height": 32 }, { "height": 32 }] }], "styles": {}, "formats": [{ "name": "Common", "id": "common", "mask": "", "example": "1500.31" }, { "name": "Number", "id": "number", "mask": "#,##0.00", "example": "1500.31" }, { "name": "Percent", "id": "percent", "mask": "#,##0.00%", "example": "15.0031" }, { "name": "Currency", "id": "currency", "mask": "$#,##0.00", "example": "1500.31" }, { "name": "Date", "id": "date", "mask": "mm-dd-yy", "example": "44490", "dateFormat": "%d/%m/%Y" }, { "name": "Time", "id": "time", "mask": "h:mm:ss am/pm", "example": "0.5625", "timeFormat": 12 }, { "name": "Text", "id": "text", "mask": "", "example": "some text" }] };
+
+        let spreadsheetJson@(itemName);
+
+        let index = 2;
+
+        let qcRecordId;
+
+        let mtlItemName;
+
+        $(document).ready(function () {
+            for (let i = 0; i < 26; i++) {
+                defaultCell@(itemName).push(String.fromCharCode(65 + i) + "1");
+            }
+
+            $("#PrevBtn@(itemName)").click(function () {
+                PrevAction();
+                InitStep1();
+            });
+        });
+
+        function Pop@(itemName)(QcRecordId, MtlItemName) {
+            $("#desQcRecordId@(itemName)").html( QcRecordId);
+            $("#desMtlItemName@(itemName)").html(MtlItemName);
+
+            qcRecordId = QcRecordId;
+            mtlItemName = MtlItemName;
+            $("#spreadsheet@(itemName)").show();
+            ResetSpreadsheet@(itemName)();
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#spreadsheet@(itemName)").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("spreadsheet@(itemName)", {
+                menu: false,
+                //toolbarBlocks: ["undo", "redo", "Text color", "format", "clear"],
+                //rowsCount: 10,
+                colsCount: 2,
+                exportModulePath: "https://bm.zy-tech.com.tw/Scripts/json2excel-master/worker.js",
+                importModulePath: "https://bm.zy-tech.com.tw/Scripts/excel2json-master/worker.js",
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-download",
+                tooltip: "匯出EXCEL",
+                id: "Export"
+            });
+
+            spreadsheet@(itemName).parse(defaultJson);
+
+            spreadsheet@(itemName).setFormat("A1:Z99", "text");
+
+            spreadsheet@(itemName).lock("A1:C1");
+
+            GetQcRecordQcItem@(itemName)();
+
+            GetQcRecordPlanning@(itemName)();
+
+            spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                if (id == "Upload") {
+                    swal.fire({
+                        titleText: "確定要執行上傳嗎?",
+                        text: "此動作會批次建立請購單，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Upload@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Reload") {
+                    swal.fire({
+                        titleText: "確定要重整EXCEL嗎?\n這會導致目前資料遺失!!",
+                        text: "此動作無法復原，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            ResetSpreadsheet@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Export") {
+                    spreadsheet@(itemName).export.xlsx("batch-" + '@DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")');
+                }
+            });
+
+            spreadsheet@(itemName).events.on("beforeAction", (actionName, config) => {
+                if (actionName == "lockCell") {
+                    return false;
+                }
+                else if (actionName === "setCellFormat") {
+                    return false;
+                }
+            });
+
+            spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                let systemType = $("#cboSystemType@(itemName)").val();
+
+                if (cell.indexOf("C") != -1 && cell != "C1" && systemType == "system-mode") {
+                    PopMachineSelectModal@(itemName)(cell);
+                }
+            });
+        }
+
+        function GetQcRecordQcItem@(itemName)() {
+            let targetUrl = "@Url.Action("GetQcRecordQcItem", "QcDataManagement")";
+
+            let postData = {
+                "QcRecordId": qcRecordId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    let planningSpreadsheetDate;
+                    $.each(data.result, function (i, item) {
+                        planningSpreadsheetDate = item.PlanningSpreadsheetDate;
+                        spreadsheetJson@(itemName) = JSON.parse(item.SpreadsheetData);
+                    });
+
+                    if (planningSpreadsheetDate != null) {
+                        spreadsheet@(itemName).parse(JSON.parse(planningSpreadsheetDate));
+                        spreadsheet@(itemName).lock("A1:B99");
+                        return false;
+                    }
+
+                    if (spreadsheetJson@(itemName) == null) {
+                        spreadsheet@(itemName).lock("A1:B99");
+                        return false;
+                    }
+
+                    index = 2;
+                    $.each(spreadsheetJson@(itemName).sheets[0].data, function (i, item) {
+                        let cell = item.cell;
+                        let itemNo = item.value;
+                        if (cell.indexOf("A") != -1 && cell != "A1" && typeof (itemNo) != `undefined`) {
+                            if (itemNo.length == 7) {
+                                let rowStatus = GetQcItem@(itemName)(itemNo, index);
+                                if (rowStatus) {
+                                    index++;
+                                }
+                            }
+                            else if (itemNo.length == 10) {
+                                let matches = itemNo.match(/^([A-Z]\d{2})([A-Z]\d{2})([a-z]\d{3})$/);
+                                if (matches) {
+                                    itemNo = matches[1] + matches[3];
+                                    let machineNumber = matches[2];
+                                    let rowStatus = GetQcItem@(itemName)(itemNo, index);
+                                    let modeRowStatus = GetQcMachineMode@(itemName)(machineNumber, index);
+                                    if (rowStatus && modeRowStatus) {
+                                        index++;
+                                    }
+                                }
+                            }
+                            else {
+                                return false;
+                            }
+                        }
+                    });
+                }
+            }
+
+            spreadsheet@(itemName).lock("A1:B99");
+        }
+
+        function GetQcItem@(itemName)(QcItemNo, Index) {
+            let rowStatus = false;
+            let targetUrl = "@Url.Action("GetQcItem", "QcDataManagement")";
+
+            let postData = {
+                "QcItemNo": QcItemNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        spreadsheet@(itemName).setValue("A" + Index, item.QcItemNo);
+                        spreadsheet@(itemName).setValue("B" + Index, item.QcItemName);
+                        rowStatus = true;
+                    });
+                }
+            }
+
+            return rowStatus;
+        }
+
+        function GetQcMachineMode@(itemName)(MachineNumber, Index) {
+            let rowStatus = false;
+            let targetUrl = "@Url.Action("GetQcMachineMode", "QcDataManagement")";
+
+            let postData = {
+                "MachineNumber": MachineNumber
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        spreadsheet@(itemName).setValue("C" + Index, item.QcMachineModeId + ":" + item.QcMachineModeName);
+                        rowStatus = true;
+                    });
+                }
+            }
+
+            return rowStatus;
+        }
+
+        function GetQcRecordPlanning@(itemName)() {
+            let targetUrl = "@Url.Action("GetQcRecordPlanning", "QcDataManagement")";
+
+            let postData = {
+                "QcRecordId": qcRecordId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.EstimatedMeasurementTime <= 0) {
+                            alert("有部分量測預估時間未設定!", "warning", 100);
+                        }
+                        innerHtml += `<tr>
+                                        <td title="1" style="max-width: 50px;" class="text-center active-content auth-update">
+                                            <span>${i+1}.</span>
+                                        </td>
+                                        <td title="H001A" class="text-center">
+                                            <span class="stack-title">機型</span>
+                                            ${item.QcMachineModeName}
+                                        </td>
+                                        <td style="max-width: 100px;" class="text-center">
+                                            <span class="stack-title">總量測項目</span>
+                                            ${item.TotalQcItemCount}
+                                        </td>
+                                        <td title="" style="max-width: 100px;">
+                                            <span class="stack-title">預估量測時間(分鐘)</span>
+                                            <input type="text" class="form-control" name="txtEstimatedMeasurementTime" data-qrp-id="${item.QrpId}" placeholder="預估量測時間(分鐘)" maxlength="50" value="${item.EstimatedMeasurementTime}">
+                                        </td>
+                                    </tr>`;
+                    });
+                }
+            }
+
+            if (innerHtml == "") {
+                innerHtml = `<tr>
+                                <td class="text-center" colspan="4" style="background-color: #fbf7f6;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                             </tr>`;
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+        }
+
+        function PopMachineSelectModal@(itemName)(cell) {
+            $("#txtCell@(itemName)").val(cell);
+            let oriValue = spreadsheet@(itemName).getValue(cell);
+            $("#cboQcMachineModeFullNo@(itemName)").select2({
+                width: "100%"
+            });
+            ComboBoxs.Default("#cboQcMachineModeFullNo@(itemName)", "@Url.Action("GetAllQcMachineMode", "QcDataManagement")", {}, oriValue, "NA", "", "QcMachineModeFullNo", "QcMachineModeFullNo");
+            $("#machineSelectModal@(itemName)").modal("show");
+
+            $("#cboQcMachineModeFullNo@(itemName)").change(function () {
+                let cell = $("#txtCell@(itemName)").val();
+                let qcMachineMode = $(this).val();
+                spreadsheet@(itemName).setValue(cell, qcMachineMode);
+                $("#machineSelectModal@(itemName)").modal("hide");
+                spreadsheet@(itemName).lock("A1:B99");
+            });
+        }
+
+        function Upload@(itemName)() {
+            swal.fire({
+                titleText: "確認要上傳此次量測機型資料嗎?",
+                text: "此動作將覆蓋原本資料，會造成預估量測時間需要重新維護!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let data = spreadsheet@(itemName).serialize().sheets[0].data;
+                    let initIndex;
+                    let tempIndex = 2;
+
+                    let uploadJson =
+                    {
+                        uploadInfo: []
+                    };
+
+                    let qcItemNo
+                    let qcMachineMode;
+
+                    let errorMessages = "";
+                    $.each(data, function (i, item) {
+                        if (defaultCell@(itemName).indexOf(item.cell) == -1) {
+                            initIndex = item.cell.substring(1);
+                            if (initIndex != tempIndex) {
+                                if (typeof (qcItemNo) != "undefined" && qcMachineMode != null) {
+                                    tempIndex++;
+                                    let inputUploadInfo =
+                                    {
+                                        QcItemNo: qcItemNo,
+                                        QcMachineMode: qcMachineMode,
+                                    };
+                                    uploadJson.uploadInfo.push(inputUploadInfo);
+                                }
+                            }
+
+                            qcItemNo = spreadsheet@(itemName).getValue("A" + initIndex.toString());
+                            qcMachineMode = spreadsheet@(itemName).getValue("C" + initIndex.toString());
+                            //if (item.cell == "A" + initIndex.toString()) {
+                            //    qcItemNo = item.value;
+                            //}
+                            //else if (item.cell == "C" + initIndex.toString()) {
+                            //    qcMachineMode = item.value;
+                            //}
+                        }
+                    });
+
+                    if (uploadJson.uploadInfo.length != tempIndex - 1 && qcMachineMode != null) {
+                        let inputUploadInfo =
+                        {
+                            QcItemNo: qcItemNo,
+                            QcMachineMode: qcMachineMode,
+                        };
+                        uploadJson.uploadInfo.push(inputUploadInfo);
+                    }
+
+                    console.log(uploadJson.uploadInfo);
+
+                    if (errorMessages.length > 0) {
+                        alert(errorMessages, "alert");
+                        return false;
+                    }
+
+                    if (uploadJson.uploadInfo.length > 0) {
+                        let targetUrl = "@Url.Action("AddQcRecordPlanning", "QcDataManagement")";
+                        let postData = {
+                            "QcRecordId": qcRecordId,
+                            "UploadJson": JSON.stringify(uploadJson),
+                            "Spreadsheet": JSON.stringify(spreadsheet@(itemName).serialize())
+                        };
+
+                        let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                        if (data) {
+                            Swal.fire(
+                                "新增量測單據機型資料成功", //標題
+                                "更新後請重新維護預估量測時間!!", //訊息內容(可省略)
+                                "success",
+                            );
+
+                            ResetSpreadsheet@(itemName)();
+
+                            NextAction();
+
+                            $("#step1").hide();
+                            $("#step2").show();
+                        }
+                    }
+                }
+            });
+        }
+
+        function Next@(itemName)() {
+            NextAction();
+            $("#step1").hide();
+            $("#step2").show();
+            GetQcRecordPlanning@(itemName)();
+        }
+
+        function UpdateEstimatedMeasurementTime@(itemName)() {
+            swal.fire({
+                titleText: "確認要上傳此次預估量測時間嗎?",
+                text: "此動作將覆蓋原本資料，請確認後再執行!!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let uploadJson =
+                    {
+                        uploadInfo: []
+                    };
+
+                    $.each($(`input[name="txtEstimatedMeasurementTime"][data-qrp-id]`), function (i, item) {
+                        let qrpId = $(item).data("qrp-id");
+                        let estimatedMeasurementTime = $(item).val();
+
+                        let inputUploadInfo =
+                        {
+                            "QrpId": qrpId,
+                            "EstimatedMeasurementTime": estimatedMeasurementTime
+                        }
+                        uploadJson.uploadInfo.push(inputUploadInfo);
+                    });
+
+                    if (uploadJson.uploadInfo.length <= 0) {
+                        alert("排程資料不能為空!!", alert);
+                        return false;
+                    }
+
+                    let targetUrl = "@Url.Action("UpdateEstimatedMeasurementTime", "QcDataManagement")";
+                    let postData = {
+                        "UploadJson": JSON.stringify(uploadJson),
+                    };
+
+                    let data = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (data) {
+                        ResetSpreadsheet@(itemName)();
+                        NextAction();
+                        $("#step1").hide();
+                        $("#step2").hide();
+                        $("#step3").show();
+                        PopQcMachineModePlanning();
+                    }
+                }
+            });
+        }
+
+        function ResetQcItem@(itemName)() {
+            swal.fire({
+                titleText: "確定要重置量測項目資料嗎?",
+                text: "此動作將覆蓋原本資料，請確認後再執行!!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdatePlanningSpreadsheetDate", "QcDataManagement")";
+                    let postData = {
+                        "QcRecordId": qcRecordId
+                    };
+
+                    let data = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (data) {
+                        ResetSpreadsheet@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function InitStep1() {
+            $("#step1").show();
+            $("#step2").hide();
+            $("#step3").hide();
+            ResetSpreadsheet@(itemName)();
+            GetQcRecordPlanning@(itemName)();
+        }
+
+        function InitStep2() {
+            $("#step1").hide();
+            $("#step2").show();
+            $("#step3").hide();
+            GetQcRecordPlanning@(itemName)();
+        }
+
+        function NextStep@(itemName)() {
+            $("#step2").hide();
+            $("#step3").show();
+            NextAction();
+            PopQcMachineModePlanning();
+        }
+
+        function Back@(itemName)() {
+            $("#listDataQcDataManagement").show();
+            $("#qmPlanning").hide();
+        }
+    </script>
+   )

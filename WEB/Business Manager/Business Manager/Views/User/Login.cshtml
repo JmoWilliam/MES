@@ -1,0 +1,391 @@
+﻿@using Business_Manager.Helpers
+@using System.Web;
+@{
+    string Token = Request["Token"] ?? "";
+}
+
+@{
+    ViewBag.Title = "登入";
+
+    var preUrl = Url.Action("Gate", "Home");
+
+    if (Request["preUrl"] != null)
+    {
+        preUrl = Uri.UnescapeDataString(Request["preUrl"]);
+    }
+
+    HttpCookie Login = Request.Cookies.Get("Login");
+    if (Login != null && Token.Length <= 0)
+    {
+        var redirectUrl = "http://" + Request.Url.Authority + preUrl;
+        var uri = new Uri(redirectUrl);
+        var newQueryString = HttpUtility.ParseQueryString(uri.Query);
+
+        string pagePathWithoutQueryString = uri.GetLeftPart(UriPartial.Path).Replace("http://", "").Replace(Request.Url.Authority, "");
+        redirectUrl = newQueryString.Count > 0 ? String.Format("{0}?{1}", pagePathWithoutQueryString, newQueryString) : pagePathWithoutQueryString;
+
+        Response.Redirect(redirectUrl);
+    }
+}
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/login.min.css")" rel="stylesheet" />
+        )
+
+<div class="login-block">
+    <div class="sufee-login d-flex align-content-center flex-wrap">
+        <div class="container">
+            <div class="login-content">
+                <div class="logo">
+                    <img src="@Url.Content("~/Content/images/logo.png")" />
+                </div>
+                <div class="login-form">
+                    <form autocomplete="off" id="form" method="post">
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtUserNo">使用者編號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtUserNo" name="txtUserNo"
+                                       data-rule-required="true" data-msg-required="請輸入使用者編號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtPassword">密碼 <i class="fas fa-eye seePassword" onmouseover="showPassword()" onmouseout="closePassword()" "></i></label>
+                            <div class="col-12 inputPassword">
+                                <input type="password" class="form-control" id="txtPassword" name="txtPassword"
+                                       data-rule-required="true" data-msg-required="請輸入密碼" />
+                            </div>
+                            <div class="col-12 showPassword">
+                                <input type="text" class="form-control" id="txtShowPassword" name="txtShowPassword"
+                                       data-rule-required="true" data-msg-required="秀出密碼" />
+                            </div>
+                        </div>
+                        <button class="btn btn-success mt-3 mb-3" onclick="Login()" type="button">登入</button>
+                        <div style="text-align: end;"><a href="javascript: PopResetPassword()"><i class="fas fa-unlock-alt"></i> 忘記密碼</a></div>
+                    </form>
+
+                    <div class="row mt-5">
+                        <div class="col-12">
+                            <p class="text-center">COPYRIGHT © 2022 东莞晶彩光学有限公司 版权所有</p>
+                            <p class="text-center"><a href="https://beian.miit.gov.cn">粤ICP备2023151253号-1</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title password-title"></h5>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="editForm">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtNewPassword">新密碼 <span class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <input type="password" class="form-control" id="txtNewPassword" name="txtNewPassword" placeholder="請輸入新密碼"
+                                       data-msg-required="請輸入新密碼" data-rule-required="true" />
+                                <small class="form-text text-muted">8~15位數，至少包含一個大寫字母、一個小寫字母、一個數字</small>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtConfirmPassword">確認密碼</label>
+                            <div class="col-12">
+                                <input type="password" class="form-control" id="txtConfirmPassword" name="txtConfirmPassword" placeholder="請輸入確認密碼"
+                                       data-msg-equalTo="確認密碼不正確" data-rule-equalTo="#txtNewPassword" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="Save()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSettingNewPassword">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title password-title"></h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="editForm">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtNewPassword">新密碼 <span class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <input type="password" class="form-control" id="txtResetPassword" name="txtResetPassword" placeholder="請輸入新密碼"
+                                       data-msg-required="請輸入新密碼" data-rule-required="true" />
+                                <small class="form-text text-muted">8~15位數，至少包含一個大寫字母、一個小寫字母、一個數字</small>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtConfirmPassword">確認密碼</label>
+                            <div class="col-12">
+                                <input type="password" class="form-control" id="txtConfirmResetPassword" name="txtConfirmResetPassword" placeholder="請輸入確認密碼"
+                                       data-msg-equalTo="確認密碼不正確" data-rule-equalTo="#txtNewPassword" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="ResetPassword()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalResetPassword">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    忘記密碼
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="editForm">
+                    <fieldset>
+                        <div class="form-group row">
+                            <div class="col-12">
+                                <code>輸入工號送出後，系統會寄信於MAMO及私人信箱中，請查看信件後點選連結進行下一步重啟程序!</code>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtResetUserNo">工號 <span class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtResetUserNo" name="txtResetUserNo" placeholder="請輸入工號"
+                                       data-msg-required="請輸入工號" data-rule-required="true" />
+                                @*<small class="form-text text-muted">8~15位數，至少包含一個大寫字母、一個小寫字母、一個數字</small>*@
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="SendResetMail();"><i class="fas fa-paper-plane"></i>寄送至信箱</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(document).ready(function () {
+            $("#txtUserNo").focus();
+
+            if ('@Token') {
+                $("#modalSettingNewPassword").modal({
+                    backdrop: "static",
+                    keyboard: false,
+                    show: true
+                });
+            }
+        });
+
+        $("#txtUserNo").keydown(function (event) {
+            if (event.keyCode == 13) $("#txtPassword").focus();
+        });
+
+        $("#txtPassword").keydown(function (event) {
+            if (event.keyCode == 13) Login();
+        });
+
+        $(".inputPassword").show()
+        $(".showPassword").hide()
+
+        function showPassword() {
+            $(".showPassword").show()
+            $(".inputPassword").hide()
+            $("#txtShowPassword").val($("#txtPassword").val())
+        }
+        function closePassword() {
+            $(".showPassword").hide()
+            $(".inputPassword").show()
+            $("#txtShowPassword").val("")
+        }
+        function Login() {
+            if ($("#form").valid()) {
+                $.ajax({
+                    url: "@Url.Action("Login", "User")",
+                    type: "POST",
+                    async: false,
+                    dataType: "json",
+                    data: {
+                        "Account": $("#txtUserNo").val(),
+                        "Password": $("#txtPassword").val()
+                    },
+                    dataType: "json",
+                    beforeSend: function (XMLHttpRequest) {
+                        $("#loaderWrpper").show();
+                    },
+                    success: function (data) {
+                        switch (data.status) {
+                            case "success":
+                                location.reload();
+                                break;
+                            case "newPassword":
+                                $(".password-title").html("首次登入，請輸入新密碼");
+
+                                $("#modal").modal({
+                                    backdrop: "static",
+                                    keyboard: false,
+                                    show: true
+                                });
+                                break;
+                            case "expirePassword":
+                                $(".password-title").html("密碼過期，請輸入新密碼");
+
+                                $("#modal").modal({
+                                    backdrop: "static",
+                                    keyboard: false,
+                                    show: true
+                                });
+                                break;
+                            default:
+                                alert(data.msg);
+                                break;
+                        }
+                    },
+                    complete: function (XMLHttpRequest, textStatus) {
+                        if (textStatus == 'timeout') {
+                            var xmlhttp = window.XMLHttpRequest ? new window.XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHttp");
+                            xmlhttp.abort();
+                            alert("網路逾時!");
+                        }
+
+                        $("#loaderWrpper").hide();
+                    },
+                    error: function (XMLHttpRequest, textStatus) {
+                        alert(XMLHttpRequest.statusText, "error", 0);
+                    }
+                });
+            }
+        }
+
+        function Save() {
+            if ($("#editForm").valid()) {
+                $.ajax({
+                    url: "@Url.Action("NewLogin", "User")",
+                    type: "POST",
+                    async: false,
+                    dataType: "json",
+                    data: {
+                        "Account": $("#txtUserNo").val(),
+                        "NewPassword": $("#txtNewPassword").val(),
+                        "ConfirmPassword": $("#txtConfirmPassword").val()
+                    },
+                    dataType: "json",
+                    beforeSend: function (XMLHttpRequest) {
+                        $("#loaderWrpper").show();
+                    },
+                    success: function (data) {
+                        switch (data.status) {
+                            case "success":
+                                location.reload();
+                                break;
+                            default:
+                                alert(data.msg);
+                                break;
+                        }
+                    },
+                    complete: function (XMLHttpRequest, textStatus) {
+                        if (textStatus == 'timeout') {
+                            var xmlhttp = window.XMLHttpRequest ? new window.XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHttp");
+                            xmlhttp.abort();
+                            alert("網路逾時!");
+                        }
+
+                        $("#loaderWrpper").hide();
+                    },
+                    error: function (XMLHttpRequest, textStatus) {
+                        alert(XMLHttpRequest.statusText, "error", 0);
+                    }
+                });
+            }
+        }
+
+        function PopResetPassword() {
+            $("#modalResetPassword").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function SendResetMail() {
+            let targetUrl = "@Url.Action("SendResetMail", "User")";
+            let postData = {
+                "UserNo": $("#txtResetUserNo").val()
+            };
+
+            let data = DataAccess.Update(targetUrl, postData, false, true);
+            if (data) {
+                $("#modalResetPassword").modal("hide");
+            }
+        }
+
+        function ResetPassword() {
+            $.ajax({
+                url: "@Url.Action("ResetPassword", "User")",
+                type: "POST",
+                async: false,
+                dataType: "json",
+                data: {
+                    "Token": '@Token',
+                    "Password": $("#txtResetPassword").val(),
+                    "ConfirmPassword": $("#txtConfirmResetPassword").val(),
+                },
+                dataType: "json",
+                beforeSend: function (XMLHttpRequest) {
+                    $("#loaderWrpper").show();
+                },
+                success: function (data) {
+                    console.log(data.status);
+                    switch (data.status) {
+                        case "success":
+                            window.location.assign('@Url.Action("Index", "Home")');
+                            break;
+                        default:
+                            alert(data.msg);
+                            break;
+                    }
+                },
+                complete: function (XMLHttpRequest, textStatus) {
+                    if (textStatus == 'timeout') {
+                        var xmlhttp = window.XMLHttpRequest ? new window.XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHttp");
+                        xmlhttp.abort();
+                        alert("網路逾時!");
+                    }
+
+                    $("#loaderWrpper").hide();
+                },
+                error: function (XMLHttpRequest, textStatus) {
+                    alert(XMLHttpRequest.statusText, "error", 0);
+                }
+            });
+        }
+
+        function Logout() {
+            let targetUrl = "@Url.Action("Logout", "User")";
+            let postData = {
+            };
+
+            DataAccess.Update(targetUrl, postData, false, false);
+        }
+    </script>
+        )

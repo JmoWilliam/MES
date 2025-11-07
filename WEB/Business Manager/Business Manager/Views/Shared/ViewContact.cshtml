@@ -1,0 +1,309 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewContact";
+    string itemNameText = "聯絡人資料";
+}
+
+@Html.Resource("css",
+    @<style>
+        .source-user {
+            font-size: 1rem;
+            color: #4d80c4;
+        }
+
+        .source-contact {
+            font-size: 1rem;
+            color: #27b390;
+        }
+
+            .source-user i, .source-contact i {
+                margin-right: 5px;
+            }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboCompanyIdQ@(itemName)" name="cboCompanyIdQ@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboDepartmentIdQ@(itemName)" name="cboDepartmentIdQ@(itemName)"></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtContactQ@(itemName)" name="txtContactQ@(itemName)"
+                                               placeholder="請輸入使用者編號/姓名/信箱" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                    <div class="col text-right">
+                                        <div class="btn-group" data-toggle="buttons">
+                                            <label class="btn btn-outline-secondary mb-0 active">
+                                                <input type="radio" name="rdoMode@(itemName)" value="User" checked />
+                                                使用者
+                                            </label>
+                                            <label class="btn btn-outline-secondary mb-0">
+                                                <input type="radio" name="rdoMode@(itemName)" value="Contact" />
+                                                聯絡人
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">部門</th>
+                                        <th scope="col" style="min-width: 250px;">聯絡人</th>
+                                        <th scope="col" style="min-width: 250px;">信箱</th>
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let contact@(itemName);
+        let type@(itemName);
+        let contactList@(itemName) = [];
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        function Pop@(itemName)(config) {
+            contact@(itemName) = config.objectContact;
+            type@(itemName) = config.type;
+
+            if ($(contact@(itemName)).val()) contactList@(itemName) = $(contact@(itemName)).val().split(';');
+
+            ComboBoxs.Default("#cboCompanyIdQ@(itemName)", "@Url.Action("GetCompany", "BasicInformation")", { "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇公司", "CompanyWithNo", "CompanyId");
+            ComboBoxs.Default("#cboDepartmentIdQ@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇部門", "DepartmentWithNo", "DepartmentId");
+
+            $("#cboCompanyIdQ@(itemName), #cboDepartmentIdQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#cboCompanyIdQ@(itemName)").change(function () {
+                ComboBoxs.Default("#cboDepartmentIdQ@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "CompanyId": $("#cboCompanyIdQ@(itemName)").val(), "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇部門", "DepartmentWithNo", "DepartmentId");
+            });
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-source][data-user-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-source][data-user-id]").not(":disabled").prop("checked", false);
+                }
+            });
+
+            $("input[name='rdoMode@(itemName)']").change(function () {
+                Query@(itemName)();
+            });
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetContact", "SystemSetting")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "CompanyId": $("#cboCompanyIdQ@(itemName)").val(),
+                "DepartmentId": $("#cboDepartmentIdQ@(itemName)").val(),
+                "Contact": $("#txtContactQ@(itemName)").val(),
+                "Mode": $("input[name='rdoMode@(itemName)']:checked").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        switch (item.Source) {
+                            case "User":
+                                contactHtml = `<span class="source-user"><i class="fas fa-user"></i></span>`;
+                                break;
+                            case "Contact":
+                                contactHtml = `<span class="source-contact"><i class="fas fa-user-cog"></i></span>&nbsp;`;
+                                break;
+                        }
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.DepartmentName}</td>
+                                        <td>
+                                          ${contactHtml}
+                                          <code>${item.UserNo}</code>&nbsp;${item.UserName}
+                                        </td>
+                                        <td>${item.Email}</td>
+                                        <td class="text-center">
+                                          <label class="control control-solid control-solid-info control--${type@(itemName)}">
+                                            <input type="${type@(itemName)}" data-source="${item.Source}" data-user-id="${item.UserId}" value="${item.UserId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtUserName@(itemName)" data-source="${item.Source}" data-user-id="${item.UserId}" value="${item.UserName}" />
+                                          <input type="hidden" name="txtDepartment@(itemName)" data-source="${item.Source}" data-user-id="${item.UserId}" value="${item.DepartmentName}" />
+                                          <input type="hidden" name="txtJob@(itemName)" data-source="${item.Source}" data-user-id="${item.UserId}" value="${item.Job}" />
+                                          <input type="hidden" name="txtEmail@(itemName)" data-source="${item.Source}" data-user-id="${item.UserId}" value="${item.Email}" />
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            switch (type@(itemName)) {
+                case "radio":
+                    $(".radio-mode").show();
+                    $(".checkbox-mode").hide();
+
+                    $("input[type='radio'][data-source][data-user-id]").click(function () {
+                        let contactList = [];
+
+                        if ("[data-source][data-user-id]:checked") {
+                            let source = $(this).data("source");
+                            let userId = $(this).data("user-id");
+
+                            if (source && userId) {
+                                let userName = $(`input[name='txtUserName@(itemName)'][data-source='${source}'][data-user-id='${userId}']`).val();
+                                let department = $(`input[name='txtDepartment@(itemName)'][data-source='${source}'][data-user-id='${userId}']`).val();
+                                let job = $(`input[name='txtJob@(itemName)'][data-source='${source}'][data-user-id='${userId}']`).val();
+                                let email = $(`input[name='txtEmail@(itemName)'][data-source='${source}'][data-user-id='${userId}']`).val();
+
+                                let contactEmail = "";
+                                switch (source) {
+                                    case "User":
+                                        contactEmail = `${department}${job}-${userName}:${email}`;
+                                        break;
+                                    case "Contact":
+                                        contactEmail = `${userName}:${email}`;
+                                        break;
+                                }
+
+                                ElementSetValue(contact@(itemName), contactEmail, "change");
+                            }
+                        }
+
+                        Close@(itemName)();
+                    });
+                    break;
+                case "checkbox":
+                    $(".radio-mode").hide();
+                    $(".checkbox-mode").show();
+                    break;
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($("input[type='checkbox'][data-source][data-user-id]:checked").length > 0) {
+                contactList@(itemName) = [];
+
+                $.each($("input[type='checkbox'][data-source][data-user-id]:checked"), function (i) {
+                    let source = $(this).data("source");
+                    let userId = $(this).data("user-id");
+
+                    let userName = $(`input[name='txtUserName@(itemName)'][data-source='${source}'][data-user-id='${userId}']`).val();
+                    let department = $(`input[name='txtDepartment@(itemName)'][data-source='${source}'][data-user-id='${userId}']`).val();
+                    let job = $(`input[name='txtJob@(itemName)'][data-source='${source}'][data-user-id='${userId}']`).val();
+                    let email = $(`input[name='txtEmail@(itemName)'][data-source='${source}'][data-user-id='${userId}']`).val();
+
+                    let contactEmail = "";
+                    switch (source) {
+                        case "User":
+                            contactEmail = `${department}${job}-${userName}:${email}`;
+                            break;
+                        case "Contact":
+                            contactEmail = `${userName}:${email}`;
+                            break;
+                    }
+
+                    if (contactList@(itemName).indexOf(contactEmail) <= -1) contactList@(itemName).push(contactEmail);
+                });
+
+                if (contact@(itemName)) ElementSetValue(contact@(itemName), contactList@(itemName).join(";"), "change");
+            }
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

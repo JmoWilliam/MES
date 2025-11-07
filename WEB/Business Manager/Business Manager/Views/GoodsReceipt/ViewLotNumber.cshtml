@@ -1,0 +1,319 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewLotNumber";
+    string itemNameText = "查看批號資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入品號"
+                                               readonly />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtLotNumberNo@(itemName)" name="txtLotNumberNoQ@(itemName)"
+                                               placeholder="請輸入批號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fal fa-save"></i>儲存</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col">品號</th>
+                                        <th scope="col">批號</th>
+                                        <th scope="col">參考單號</th>
+                                        <th scope="col">備註</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let targetSelector@(itemName);
+        let lotNumber@(itemName);
+        let mtlItemNo@(itemName);
+        let grDetailId@(itemName);
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            lotNumber@(itemName) = config.objectLotNumber;
+            mtlItemNo@(itemName) = config.objectMtlItemNo;
+            grDetailId@(itemName) = -1;
+
+            let lotManagement = config.objectLotManagement;
+            if (lotManagement != "T") {
+                return false;
+            }
+
+            $("#txtMtlItemNoQ@(itemName)").val(mtlItemNo@(itemName));
+
+            if (!mtlItemNo@(itemName)) {
+                alert("品號錯誤!!");
+                Close@(itemName)();
+                return false;
+            }
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#txtMtlItemNoQ@(itemName)").off('keydown');
+            $("#txtMtlItemNoQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#queryForm@(itemName)").off('keydown');
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            $("#txtLotNumberNo@(itemName)").off('keydown');
+            $("#txtLotNumberNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Save@(itemName)();
+                    return false;
+                }
+            });
+
+            Query@(itemName)();
+
+            setTimeout(function () {
+                $("#txtLotNumberNo@(itemName)").focus();
+            }, 500);
+        }
+
+        function Pop2@(itemName)(grDetailId, mtlItemNo) {
+            grDetailId@(itemName) = grDetailId;
+            mtlItemNo@(itemName) = mtlItemNo;
+            $("#txtMtlItemNoQ@(itemName)").val(mtlItemNo);
+
+            if (!mtlItemNo@(itemName)) {
+                alert("請連結採購單後，再查詢批號資料!!");
+                Close@(itemName)();
+                return false;
+            }
+
+            $("#txtMtlItemNoQ@(itemName)").off('keydown');
+            $("#txtMtlItemNoQ@(itemName)@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#queryForm@(itemName)").off('keydown');
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            $("#txtLotNumberNo@(itemName)").off('keydown');
+            $("#txtLotNumberNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Save@(itemName)();
+                    return false;
+                }
+            });
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+            
+            setTimeout(function () {
+                $("#txtLotNumberNo@(itemName)").focus();
+            }, 500);
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetLotNumber", "LotNumber")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemNo": mtlItemNo@(itemName),
+                "LotNumberNo": $("#txtLotNumberNoQ@(itemName)").val(),
+                "CloseStatus": "N"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.MtlItemNo}</td>
+                                        <td>${item.LotNumberNo}</td>
+                                        <td>${item.FromErpPrefix}-${item.FromErpNo}</td>
+                                        <td>${item.Remark}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-lot-number-id="${item.LotNumberId}" value="${item.LotNumberId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" id="txtLotNumber@(itemName)" data-lot-number-id="${item.LotNumberId}" value="${item.LotNumberNo}"/>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-po-id]:checked") {
+                    let lotNumberId = $(this).data("lot-number-id");
+                    if (lotNumberId) {
+                        let lotNumber = $(`input[id="txtLotNumber@(itemName)"][data-lot-number-id="${lotNumberId}"]`).val();
+
+                        if (parseInt(grDetailId@(itemName)) < 0) {
+                            if (lotNumber@(itemName)) ElementSetValue(lotNumber@(itemName), lotNumber, "change");
+
+                            $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                            $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+
+                            Close@(itemName)();
+                        }
+                        else {
+                            UpdateGrLotNumber@(itemName)(lotNumber)
+                        }
+                    }
+                }
+            });
+        }
+
+        function UpdateGrLotNumber@(itemName)(lotNumber) {
+            if (lotNumber.length <= 0) {
+                alert("請輸入批號!!");
+                return false;
+            }
+            if (parseInt(grDetailId@(itemName)) > 0) {
+                let targetUrl = "@Url.Action("UpdateGrLotNumber", "GoodsReceipt")";
+                let postData = {
+                    "GrDetailId": grDetailId@(itemName),
+                    "LotNumber": lotNumber
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    Close@(itemName)();
+                    ReturnGrDetail();
+                }
+            }
+            else {
+                if (lotNumber@(itemName)) ElementSetValue(lotNumber@(itemName), lotNumber, "change");
+                $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                Close@(itemName)();
+            }
+        }
+
+        function Save@(itemName)() {
+            let lotNumber = $("#txtLotNumberNo@(itemName)").val();
+            UpdateGrLotNumber@(itemName)(lotNumber)
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+                )

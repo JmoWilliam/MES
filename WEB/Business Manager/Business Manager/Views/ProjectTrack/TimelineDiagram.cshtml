@@ -1,0 +1,593 @@
+﻿@using Business_Manager.Helpers
+@{
+    string parentName = "ProjectTrackManagement";
+    string itemName = "TimelineDiagram";
+    string itemNameText = "時間軸圖";
+}
+
+@Html.Resource("css",
+    @<style>
+        #listDataTimelineDiagram .projectBlock {
+            border: #A9CCE3 solid 2px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        #listDataTimelineDiagram .diagramBlock {
+        }
+
+        #listDataTimelineDiagram .diagramStyle1 {
+            height: 205px;
+        }
+
+        #listDataTimelineDiagram .diagramStyle2 {
+            height: 100%;
+        }
+
+        #listDataTimelineDiagram .schedule1 {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            display: inline-block;
+            overflow: hidden;
+            background-color: #FF003E;
+            border-radius: 50%;
+            border: 0;
+        }
+
+        #listDataTimelineDiagram .schedule2 {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            display: inline-block;
+            overflow: hidden;
+            background-color: #FF7800;
+            border-radius: 50%;
+            border: 0;
+        }
+
+        #listDataTimelineDiagram .schedule3 {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            display: inline-block;
+            overflow: hidden;
+            background-color: #FFCC00;
+            border-radius: 50%;
+            border: 0;
+        }
+
+        #listDataTimelineDiagram .schedule4 {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            display: inline-block;
+            overflow: hidden;
+            background-color: #3FD100;
+            border-radius: 50%;
+            border: 0;
+        }
+
+            #listDataTimelineDiagram .schedule1 span,
+            #listDataTimelineDiagram .schedule2 span, 
+            #listDataTimelineDiagram .schedule3 span,
+            #listDataTimelineDiagram .schedule4 span {
+                color: #fff;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                -webkit-transform: translate(-50%, -50%);
+                -moz-transform: translate(-50%, -50%);
+                -ms-transform: translate(-50%, -50%);
+                -o-transform: translate(-50%, -50%);
+            }
+
+        #listDataTimelineDiagram .diagramBlock ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        #listDataTimelineDiagram .dhx_diagram {
+            width: 100%;
+            height: 100%;
+            background: #f7f7f7;
+            overflow-x: auto;
+            overflow-y: hidden;
+            text-align: center;
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
+        #listDataTimelineDiagram .dhx_diagram_template_d {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: var(--dhx-border);
+            overflow: auto;
+            font-family: var(--dhx-font-family);
+            font-size: var(--dhx-font-size-normal);
+            font-weight: var(--dhx-font-weight-regular);
+            line-height: var(--dhx-line-height-normal);
+            color: var(--dhx-font-color-primary);
+            background-color: var(--dhx-shapebar-item-background);
+        }
+
+        #listDataTimelineDiagram .dhx_content_d {
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, .7);
+        }
+
+        #listDataTimelineDiagram .dhx_diagram_template_d_image {
+            /*width: 64px;
+            height: 64px;*/
+            pointer-events: none;
+            border-radius: 50%;
+            margin-bottom: 2px;
+        }
+
+        #listDataTimelineDiagram .dhx_diagram_template_d_title {
+            font-weight: var(--dhx-font-weight-bold);
+            color: #cb5d00;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: center;
+            margin-bottom: 2px;
+        }
+
+        #listDataTimelineDiagram .dhx_diagram_template_d_text {
+            width: 100%;
+            height: 45px;
+            color: #373737;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        #listDataTimelineDiagram .dhx_diagram_template_d_date {
+            width: 100%;
+            height: 45px;
+            color: #4100ff;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+</style>)
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="form-inline">
+                    <div class="form-group mx-sm-3 mb-2">
+                        <label class="col-form-label" for="cboDurationSplit@(itemName)">節點間隔單位</label>
+                        <select class="form-control" id="cboDurationSplit@(itemName)" name="cboDurationSplit@(itemName)">
+                            <option value="yyyy-MM-dd" selected>日</option>
+                            <option value="yyyy-MM-dd HH:00">時</option>
+                            <option value="yyyy-MM-dd HH:mm">分</option>
+                        </select>
+                    </div>
+                    <div class="form-group mx-sm-3 mb-2">
+                        <label class="col-form-label" for="chkAllRange@(itemName)">圖形選項</label>
+                        <input class="" type="checkbox" name="chkAllRange@(itemName)" />
+                        <input class="" type="checkbox" name="chkEditor@(itemName)" />
+                        <input class="" type="checkbox" name="chkShowYear@(itemName)" />
+                    </div>
+                </div>
+                <div id="diagramBlock@(itemName)"></div>
+            </div>
+            <div class="card-footer">
+                <div class="pagination" id="page@(itemName)"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let diagram@(itemName);
+        let Elements@(itemName) = new ElementControl@(itemName)();
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let data@(itemName) = [];
+        let postData@(itemName) = {};
+
+        //#region example
+            //{
+            //    "id": "u1692878359567",
+            //    "type": "circle",
+            //    "width": 20,
+            //    "height": 20,
+            //    "fill": "#039BE5",
+            //    "stroke": "#039BE5",
+            //    "fontStyle": "normal",
+            //    "fontColor": "#FFFFFF",
+            //    "x": 20,
+            //    "y": -50,
+            //},
+            //{
+            //    "id": "u1692878476100",
+            //    "type": "circle",
+            //    "width": 20,
+            //    "height": 20,
+            //    "fill": "#7091F5",
+            //    "stroke": "#7091F5",
+            //    "fontStyle": "normal",
+            //    "fontColor": "#FFFFFF",
+            //    "x": 160,
+            //    "y": -50,
+            //},
+            //{
+            //    "id": "u1692878476101",
+            //    "type": "circle",
+            //    "width": 20,
+            //    "height": 20,
+            //    "fill": "#11C169",
+            //    "stroke": "#11C169",
+            //    "fontStyle": "normal",
+            //    "fontColor": "#FFFFFF",
+            //    "x": 320,
+            //    "y": -50,
+            //},
+            //{
+            //    "id": "u1692946984831",
+            //    "type": "dash",
+            //    "text": "123",
+            //    "textAlign": "center",
+            //    "connectType": "straight",
+            //    "from": "u1692878359567",
+            //    "to": "u1692878476100",
+            //    "fromSide": "right",
+            //    //"toSide": "left"
+            //},
+            //{
+            //    "id": "u1692946984832",
+            //    "type": "dash",
+            //    "text": "123",
+            //    "textAlign": "center",
+            //    "connectType": "straight",
+            //    "from": "u1692878476100",
+            //    "to": "u1692878476101",
+            //    "fromSide": "right",
+            //    //"toSide": "left",
+            //},
+            //{
+            //    "id": 1,
+            //    "type": "task",
+            //    "x": -30,
+            //    "y": -125,
+            //    "TaskStatus": "https://snippet.dhtmlx.com/codebase/data/diagram/05/img/desktop.svg",
+            //    "Name": "-kick off meeting.",
+            //    "Text": "",
+            //    "TaskUser": "胡嘉原"
+            //},
+            //{
+            //    "id": 2,
+            //    "type": "task",
+            //    "x": 110,
+            //    "y": -125,
+            //    "TaskStatus": "https://snippet.dhtmlx.com/codebase/data/diagram/05/img/cloud.svg",
+            //    "Name": "裝修許可證",
+            //    "Text": "",
+            //    "TaskUser": "施博文"
+            //},
+            //{
+            //    "id": "duration-1",
+            //    "type": "duration",
+            //    "x": -30,
+            //    "y": -50,
+            //    "Text": "2024-07-15 10:00 ~ 2024-07-15 12:00"
+            //},
+            //{
+            //    "id": "u1692889888242",
+            //    "type": "rectangle",
+            //    "width": 120,
+            //    "height": 40,
+            //    "text": "-kick off meeting.",
+            //    "fontSize": 14,
+            //    "lineHeight": 16,
+            //    "fill": "#039DE5",
+            //    "stroke": "#039DE5",
+            //    "textAlign": "left",
+            //    "textVerticalAlign": "center",
+            //    "fontStyle": "normal",
+            //    "fontColor": "#FFFFFF",
+            //    "x": 40,
+            //    "y": -100,
+            //},
+            //{
+            //    "id": "u1692889888243",
+            //    "type": "rectangle",
+            //    "width": 120,
+            //    "height": 40,
+            //    "text": "2024-07-15 10:00\r\n~2024-07-15 12:00",
+            //    "fontSize": 12,
+            //    "lineHeight": 14,
+            //    "fill": "#039DE5",
+            //    "stroke": "#039DE5",
+            //    "textAlign": "left",
+            //    "textVerticalAlign": "center",
+            //    "fontStyle": "normal",
+            //    "fontColor": "#FFFFFF",
+            //    "x": 40,
+            //    "y": -25,
+            //}
+        //#endregion
+
+        function Expand@(itemName)(config) {
+            InitParameter@(itemName)(config);
+            Elements@(itemName).Initialize@(itemName)();
+            InitData@(itemName)();
+
+            $(".task-nav").removeClass("active");
+            $(".advanced-block").slideDown("slow");
+            $("a[href='#tab@(itemName)']").trigger("click");
+        }
+
+        function InitParameter@(itemName)(config) {
+            postData@(itemName) = config.postData;
+
+            $("input[name='chkShowYear@(itemName)']").prop("checked", true).trigger("change");
+        }
+
+        //#region 圖形初始化
+        function InitData@(itemName)() {
+            if (diagram@(itemName)) diagram@(itemName).destructor();
+            $("#diagramBlock@(itemName)").empty();            
+            Datas@(itemName).GetData@(itemName)();
+            TableComponentInit();
+        }
+        //#endregion
+
+        let diagramStyle@(itemName) = 'diagramStyle1';
+        let taskEditor@(itemName) = false;
+        let showYear@(itemName) = true;
+        function ElementControl@(itemName)() {
+            addMethod(this, "Initialize@(itemName)", function () {
+                $("input[name='chkAllRange@(itemName)']").bootstrapToggle({
+                    on: "展開",
+                    off: "收折",
+                    onstyle: "success",
+                    offstyle: "info",
+                    size: "mini",
+                    width: "100px",
+                    height: "20px",
+                    style: "auth-read"
+                });
+
+                $("input[name='chkAllRange@(itemName)']").off("change").on("change", function () {
+                    switch (this.checked) {
+                        case false:
+                            diagramStyle@(itemName) = 'diagramStyle1';
+                            $.each($("div[name='diagram@(itemName)']"), function (i, e) {
+                                $(e).removeClass('diagramStyle2').addClass(diagramStyle@(itemName));
+                            });
+                            break;
+                        case true:
+                            diagramStyle@(itemName) = 'diagramStyle2';
+                            $.each($("div[name='diagram@(itemName)']"), function (i, e) {
+                                $(e).removeClass('diagramStyle1').addClass(diagramStyle@(itemName));
+                            });
+                            break;
+                    }
+                });
+
+                $("input[name='chkEditor@(itemName)']").bootstrapToggle({
+                    on: "編輯模式",
+                    off: "檢視模式",
+                    onstyle: "success",
+                    offstyle: "info",
+                    size: "mini",
+                    width: "100px",
+                    height: "20px",
+                    style: "auth-update"
+                });
+
+                $("input[name='chkEditor@(itemName)']").off("change").on("change", function () {
+                    switch (this.checked) {
+                        case false:
+                            taskEditor@(itemName) = false;                            
+                            break;
+                        case true:
+                            taskEditor@(itemName) = true;
+                            break;
+                    }
+                });
+
+                $("input[name='chkShowYear@(itemName)']").bootstrapToggle({
+                    on: "顯示西元年",
+                    off: "不顯示西元年",
+                    onstyle: "success",
+                    offstyle: "info",
+                    size: "mini",
+                    width: "125px",
+                    height: "20px",
+                    style: "auth-read"
+                });
+
+                $("input[name='chkShowYear@(itemName)']").off("change").on("change", function () {
+                    
+                    //data-date-line="${DateLine}" name="DateLine@(itemName)"
+                    switch (this.checked) {
+                        case false:
+                            showYear@(itemName) = false;
+
+                            break;
+                        case true:
+                            showYear@(itemName) = true;
+
+                            break;
+                    }
+
+                    $.each($("span[name='DateLine@(itemName)']"), function (i, e) {
+                        let dateline = $(e).data("date-line");
+                        let formatStr = $("#cboDurationSplit@(itemName) :selected").val();
+
+
+                        if (dateline.indexOf("~") < 0) {
+                            let dt = new Date(dateline);
+
+                            if (showYear@(itemName)) {
+                                formatStr = formatStr.replace("HH", "hh");
+                                $(e).text(dt.Format(formatStr));
+                            }
+                            else {
+                                formatStr = formatStr.replace("yyyy-", "").replace("HH", "hh");
+                                $(e).text(dt.Format(formatStr));
+                            }
+                        }                        
+                    });
+                });
+                
+                $("#cboDurationSplit@(itemName)").off("change").on("change", function () {
+                    InitData@(itemName)();
+                });
+            });
+        }
+
+        function GenProjectInfoBlock(_row, d) {
+            let rateStyle = `${d.CompletionRate < 5 ? `bg-danger` : d.CompletionRate >= 5 && d.CompletionRate < 50 ? `bg-warning` : d.CompletionRate >= 50 && d.CompletionRate < 75 ? `` : d.CompletionRate >= 75 && d.CompletionRate < 90 ? `bg-info` : `bg-success`}`;
+            return `<div class="project-desc">
+                        <p class="desc-title" style="color:grey;">${d.ProjectNo}</p>
+                        <p class="desc-title">${d.ProjectName}</p>
+                        <div class="desc-block">
+                            <div>
+                                <p class="desc-date">
+                                    <i class="far fa-calendar-alt"></i>
+                                    ${d.StartDate}
+                                </p>
+                                <p class="desc-date">
+                                    <i class="far fa-calendar-check"></i>
+                                    ${d.EndDate}
+                                </p>
+                            </div>
+                        </div>
+                        <a href="javascript:InitDataViewProject(${d.ProjectId});">詳細資訊</a>
+                    ${d.CompletionRate == 0 ? `<div class="progress"><div class="progress-bar bg-danger" role="progressbar">${d.CompletionRate}%</div></div>` :
+                    `<div class="progress"><div class="progress-bar ${rateStyle}" role="progressbar" style="width: ${d.CompletionRate}%;" aria-valuenow="${d.CompletionRate}" aria-valuemin="0" aria-valuemax="100">${d.CompletionRate}%</div></div>`}
+                    </div>`;
+            //<div style="width:80px;">
+            //    <span class="${d.CompletionRate < 5 ? `schedule1` : d.CompletionRate >= 5 && d.CompletionRate < 25 ? `schedule2` : d.CompletionRate >= 25 && d.CompletionRate < 75 ? `schedule3` : `schedule4`}"><span>${d.CompletionRate}%</span></span>
+            //</div>
+
+            @*return `<div class="table-custom">
+                        <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                            <thead>
+                                <tr>
+                                    <th scope="col" style="min-width: 75px;">#</th>
+                                    <th scope="col" style="min-width: 150px;">專案代碼</th>
+                                    <th scope="col" style="min-width: 200px;">專案名稱</th>
+                                    <th scope="col" class="text-center" style="min-width: 100px;">專案狀態</th>
+                                    <th scope="col" style="min-width: 200px;">所屬公司/部門</th>
+                                    <th scope="col" class="text-center" style="min-width: 100px;">專案管理者</th>
+                                    <th scope="col" class="text-center" style="min-width: 100px;">工作天模式</th>
+                                    <th scope="col" class="text-center" style="min-width: 100px;">專案分類</th>
+                                    <th scope="col" style="min-width: 250px;">專案描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                <td rowspan="2" style="max-width: 75px;"><span class="stack-title">#</span>${_row}</td>
+                                <td><span class="stack-title">專案代碼</span><a class="btn btn-sm proj-status${d.ProjectStatus}" href="javascript:InitDataViewProject(${d.ProjectId});"><b>${d.ProjectNo}</b></a></td>
+                                <td class="ellipsis" data-toggle="tooltip" title="${d.ProjectName}" style="max-width: 200px;"><span class="stack-title">專案名稱</span>${d.ProjectName}</td>
+                                <td class="text-center"><span class="stack-title">專案狀態</span>${StatusIcon@(parentName)(d.ProjectStatus)}${d.ProjectStatusName}</td>
+                                <td><span class="stack-title">所屬公司/部門</span>${d.LogoIcon == -1 ? `` : `<img class="company-logo" src="/Web/GetFile?fileId=${d.LogoIcon}" />`}${d.CompanyName} ${d.DepartmentName}</td>
+                                <td class="text-center"><span class="stack-title">專案管理者</span>${d.Gender == `M` ? `<span class="gender-male"><i class="fas fa-male"></i></span>` : d.Gender == `F` ? `<span class="gender-female"><i class="fas fa-female"></i></span>` : ``}${d.ProjectMaster}</td>
+                                <td class="text-center"><span class="stack-title">工作天模式</span>${d.WorkTimeStatusName}</td>
+                                <td class="text-center"><span class="stack-title">專案分類</span>${d.ProjectTypeName}</td>
+                                <td class="ellipsis" data-toggle="tooltip" title="${d.ProjectDesc}" style="max-width: 300px;"><span class="stack-title">專案描述</span>${d.ProjectDesc}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>`;*@
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetData@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetProjectTaskTimeline", "ProjectTrack")";
+                Object.assign(postData@(itemName), { DurationSplit: $("#cboDurationSplit@(itemName) :selected").val() });
+                let data = DataAccess.Get(targetUrl, postData@(itemName), false);
+                if (data.status == "success") {
+                    $.each(data.dataGroupDiagram, function (i, d) {
+                        $("#diagramBlock@(itemName)").append(
+                            `<div class="row projectBlock">
+                                <div class="col-12 col-md-2 col-lg-2">${GenProjectInfoBlock(i + 1, d)}</div>
+                                <div class="col-12 col-md-10 col-lg-10 diagramBlock ${diagramStyle@(itemName)}" name="diagram@(itemName)" id="diagram@(itemName)-${d.ProjectId}"></div></div>`
+                        );
+                        let dataJson = d.dHXCircle.concat(d.dHXDiagramLines).concat(d.dHXShapes);
+                        Diagram@(itemName)(dataJson, d.ProjectId);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+        }
+
+        function Diagram@(itemName)(data, targetId) {
+            diagram@(itemName) = new dhx.Diagram(`diagram@(itemName)-${targetId}`, {
+                type: "default",
+                //defaults: {
+                //    line: {
+                //        lineType: "dash" // "dash" | "line"
+                //    }
+                //},
+                //lineConfig: {
+                //    lineType: "dash"
+                //}
+            });
+
+            diagram@(itemName).addShape("status", {
+                template: ({ id, text, IconPath, TaskStatus }) => {
+                    return `<section class="dhx_diagram_template_d" name="node@(itemName)" data-task-status="${TaskStatus}" data-toggle="tooltip" title="${text}">
+                                <img class="dhx_diagram_template_d_image" src="${IconPath}" alt="${text}"></img>
+                            </section>`;
+                },
+                defaults: {
+                    width: 64, height: 64,
+                    preview: { scale: 0.7 }
+                }
+            });
+
+            diagram@(itemName).addShape("task", {
+                template: ({ id, text, Name, TaskUser }) => {
+                    return `<section class="dhx_diagram_template_d">
+                                <span class="dhx_diagram_template_d_title dhx_content_d" name="task@(itemName)" data-task-id="${id}" data-toggle="tooltip" title="${Name}">${Name}</span>
+                                <div class="dhx_diagram_template_d_text dhx_content_d" data-toggle="tooltip" title="${text}"><span style="color:#006FC1;">${TaskUser}</span><div>${text}</div></div>
+                            </section>`;
+                },
+                defaults: {
+                    width: 64, height: 64,
+                    preview: { scale: 0.7 }
+                }
+            });
+
+            diagram@(itemName).addShape("duration", {
+                template: ({ DateLine }) => {
+                    return `
+                        <section class="dhx_diagram_template_d">
+                            <span class="dhx_diagram_template_d_date" data-date-line="${DateLine}" name="DateLine@(itemName)">${DateLine}</span>
+                        </section>`;
+                },
+                defaults: {
+                    width: 120, height: 45,
+                    preview: { scale: 0.7 }
+                }
+            });
+
+            diagram@(itemName).events.on("itemDblClick", function (id, e) {
+                switch ($(e.target).attr('name')) {
+                    case "node@(itemName)":
+                        ExpandViewTask({ taskId: id, taskType: "Project", taskStatus: $(e.target).data("task-status"), taskEditor: taskEditor@(itemName)});
+                        break;
+                    //$(e.target).data("task-id").replace(/[^0-9]/ig, "")
+                }
+            });
+
+            diagram@(itemName).data.parse(data);
+        }
+
+</script>
+     )

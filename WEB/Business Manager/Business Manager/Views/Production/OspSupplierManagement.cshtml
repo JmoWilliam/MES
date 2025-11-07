@@ -1,0 +1,460 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "OspSupplierManagement";
+    string itemNameText = "委外單供應商管理";
+    ViewBag.Title = itemNameText;
+
+    string OspId = Request["OspId"] ?? "";
+    string UserNo = Request["UserNo"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+        .document-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 25px;
+            background-color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            width: 100vh;
+        }
+
+        .document-header {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+
+        .document-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #337ab7;
+            margin-bottom: 5px;
+        }
+
+        .document-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .document-meta {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .supplier-section, .detail-section {
+            background-color: #f9f9f9;
+            padding: 25px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .no-supplier {
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            color: #a94442;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .supplier-select-group {
+            margin-bottom: 20px;
+        }
+
+            .supplier-select-group label {
+                font-weight: bold;
+                margin-bottom: 8px;
+                display: block;
+            }
+
+        .supplier-select {
+            height: 40px;
+            font-size: 16px;
+        }
+
+        .action-buttons {
+            text-align: center;
+            padding-top: 20px;
+        }
+
+            .action-buttons .btn {
+                margin: 0 5px;
+                padding: 10px 20px;
+                font-size: 16px;
+            }
+
+        .status-badge {
+            font-size: 14px;
+            padding: 5px 12px;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+
+        .status-pending {
+            background-color: #f0ad4e;
+            color: white;
+        }
+
+        .status-assigned {
+            background-color: #5cb85c;
+            color: white;
+        }
+
+        /* 單據明細表格樣式 */
+        .detail-table {
+            background-color: #fff;
+            border-radius: 4px;
+            max-width: 100vh;
+            overflow: auto;
+        }
+
+            .detail-table table {
+                margin-bottom: 0;
+            }
+
+            .detail-table th {
+                background-color: #337ab7;
+                color: white;
+                font-weight: bold;
+                text-align: center;
+                border: none;
+            }
+
+            .detail-table td {
+                text-align: center;
+                vertical-align: middle;
+                border-color: #ddd;
+            }
+
+            .detail-table tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+
+            .detail-table tr:hover {
+                background-color: #f0f8ff;
+            }
+
+        .process-select {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+            .process-select:focus {
+                border-color: #337ab7;
+                box-shadow: 0 0 5px rgba(51, 122, 183, 0.3);
+            }
+
+        .required {
+            color: #d9534f;
+        }
+
+        .item-code {
+            font-weight: bold;
+            color: #337ab7;
+        }
+
+        .item-name {
+            font-weight: bold;
+        }
+
+        .quantity {
+            font-weight: bold;
+            color: #d9534f;
+        }
+
+        .alert-warning {
+            background-color: #fcf8e3;
+            border-color: #faebcc;
+            color: #8a6d3b;
+        }
+
+        .process-info {
+            background-color: #d9edf7;
+            border: 1px solid #bce8f1;
+            color: #31708f;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 12px;
+        }
+
+        .form-control {
+            font-size: 14px;
+        }
+    </style>
+                                  )
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <!-- 單據資訊卡片 -->
+            <div class="document-card">
+                <div class="document-header">
+                    <div class="document-number">
+                        <span id="desOspNo"></span>
+                        <span class="status-badge status-pending" id="statusBadge">待指派供應商</span>
+                    </div>
+                    <div class="document-info">
+                        <div class="document-meta">
+                            單據日期：<span id="desOspDate"></span><br>
+                            委託部門：<span id="desDepartmentFullNo"></span><br>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 供應商指派區域 -->
+                <div class="supplier-section">
+                    <div class="section-title">
+                        <i class="fa fa-building"></i> 供應商指派
+                    </div>
+
+                    <!-- 目前供應商狀態 -->
+                    <div id="supplierStatus">
+                        <div class="no-supplier">
+                            <i class="fa fa-exclamation-triangle"></i> <span id="desSupplierStatus">此單據尚未指派供應商，請選擇合適的供應商進行指派</span>
+                        </div>
+                    </div>
+
+                    <!-- 供應商選擇 -->
+                    <div class="supplier-select-group">
+                        <label for="supplierSelect">
+                            <i class="fa fa-list"></i> 選擇供應商：
+                        </label>
+                        <select class="form-control supplier-select" id="cboSupplierId"></select>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="section-title">
+                            <i class="fa fa-list-alt"></i> 單據明細與製程指派
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fa fa-info-circle"></i>
+                            <strong>注意：</strong>所有項目都必須完成製程指派才能儲存。
+                        </div>
+
+                        <div class="detail-table">
+                            <table class="table table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 75px;" class="text-center">
+                                            <label for="cbxSelectAll">全選</label> <input type="checkbox" id="cbxSelectAll" />
+                                        </th>
+                                        <th style="min-width: 110px;">品號</th>
+                                        <th style="min-width: 110px;">品名</th>
+                                        <th style="min-width: 75px;">製程</th>
+                                        <th style="min-width: 75px;">數量</th>
+                                        <th style="min-width: 110px;">製程代碼 <span class="required">*</span></th>
+                                        <th style="min-width: 110px;">預計回廠日期 <span class="required">*</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detailTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 操作按鈕 -->
+                    <div class="action-buttons">
+                        <button class="btn btn-success btn-lg" id="assignBtn" onclick="save()">
+                            <i class="fa fa-check"></i> 確認指派供應商
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let ospId = -1;
+        let userNo = "";
+        let processCodeData = [];
+
+        $(document).ready(function () {
+            if ("@OspId" && "@UserNo") {
+                ospId = '@OspId';
+                userNo = '@UserNo';
+            }
+            else {
+                Swal.fire({
+                    title: "資料ID錯誤",
+                    text: "請確認資料是否正確。",
+                    icon: "error"
+                });
+            }
+
+            $("#cboSupplierId").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            ComboBoxs.Default("#cboSupplierId", "@Url.Action("GetSupplierAnonymous", "Production")", { "OspId": ospId }, "", "NA", "", "SupplierFullNo", "SupplierId");
+
+            init();
+
+            $("#cboSupplierId").change(function () {
+                initProcessCode();
+            });
+
+            $("#cbxSelectAll").prop("checked", false);
+
+            $("#cbxSelectAll").off("click").on("click", function () {
+                if ($("#cbxSelectAll").is(":checked")) {
+                    $("input[type='checkbox'][data-osp-detail-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-osp-detail-id]").not(":disabled").prop("checked", false);
+                }
+            });
+
+            $("select[name='cboProcessCode']").change(function () {
+                let processCode = $(this).val();
+                $("input[type='checkbox'][data-osp-detail-id]:checked").each(function () {
+                    let ospDetailId = $(this).val();
+                    $(`select[name="cboProcessCode"][data-osp-detail-id="${ospDetailId}"]`).val(processCode);
+                });
+            });
+
+            $("input[name='txtExpectedDate']").change(function () {
+                let expectedDate = $(this).val();
+                $("input[type='checkbox'][data-osp-detail-id]:checked").each(function () {
+                    let ospDetailId = $(this).val();
+                    $(`input[name="txtExpectedDate"][data-osp-detail-id="${ospDetailId}"]`).val(expectedDate);
+                });
+            });
+        });
+
+        function init() {
+            let innerHtml = '';
+            let targetUrl = "@Url.Action("GetOutsourcingProductionAnonymous", "Production")";
+            let postData = {
+                "OspId": ospId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (i == 0) {
+                            $("#desOspNo").html(item.OspNo);
+                            $("#statusBadge").html(item.SupplierId != null ? "已指派供應商" : "待指派供應商");
+                            $("#desOspDate").html(item.OspDate);
+                            $("#desDepartmentFullNo").html(item.DepartmentNo + " " + item.DepartmentName);
+                            $("#desSupplierStatus").html(item.SupplierId != null ? "此單據已指派供應商，請確認是否需要更改供應商" : "此單據尚未指派供應商，請選擇合適的供應商進行指派");
+                            $("#cboSupplierId").val(item.SupplierId != null ? item.SupplierId : "").change();
+                        }
+
+                        innerHtml += `<tr data-osp-detail-id="${item.OspDetailId}">
+                                        <td class="text-center col-sticky">
+                                           <input type="checkbox" data-osp-detail-id="${item.OspDetailId}" value="${item.OspDetailId}" />
+                                        </td>
+                                        <td class="item-code">${item.MtlItemNo}</td>
+                                        <td class="item-name">${item.MtlItemName}</td>
+                                        <td>${item.ProcessAlias}</td>
+                                        <td class="quantity">${item.OspQty}</td>
+                                        <td>
+                                            <select class="process-select" name="cboProcessCode" data-osp-detail-id="${item.OspDetailId}" data-row="1">
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="date" class="form-control" data-osp-detail-id="${item.OspDetailId}" name="txtExpectedDate" value="${item.ExpectedDate}" />
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+
+            $("#detailTableBody").html(innerHtml);
+
+            let supplierId = $("#cboSupplierId").val();
+            if (supplierId.length > 0) {
+                initProcessCode();
+            }
+        }
+
+        function initProcessCode() {
+            processCodeData = [];
+            $("select[name='cboProcessCode']").each(function () {
+                const $select = $(this);
+                $select.empty();
+            });
+
+            let targetUrl = "@Url.Action("GetProcessCodeAnonymous", "Production")";
+            let postData = {
+                "SupplierId": $("#cboSupplierId").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let inputData = {
+                            "id": item.ProcessCode,
+                            "text": item.ProcessCode + "-" + item.ProcessName
+                        }
+                        processCodeData.push(inputData);
+                    });
+
+                    $("select[name='cboProcessCode']").each(function () {
+                        const $select = $(this);
+
+                        processCodeData.forEach(function (item) {
+                            const option = new Option(item.text, item.id, false, false);
+                            $select.append(option);
+                        });
+                    });
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+
+        function save() {
+            let ospDetailData = [];
+            $("tr[data-osp-detail-id]").each(function () {
+                let ospDetailId = $(this).data("osp-detail-id");
+                let ospDetail =
+                {
+                    OspDetailId: ospDetailId,
+                    OspId: ospId,
+                    SupplierId: $("#cboSupplierId").val(),
+                    ProcessCode: $(`select[name="cboProcessCode"][data-osp-detail-id="${ospDetailId}"]`).val(),
+                    ExpectedDate: $(`input[name="txtExpectedDate"][data-osp-detail-id="${ospDetailId}"]`).val(),
+                    UserNo: userNo,
+                }
+                ospDetailData.push(ospDetail);
+            });
+
+            let targetUrl = "@Url.Action("UpdateOspSupplierAnonymous", "Production")";
+            let postData = {
+                "OspDetailData": ospDetailData,
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+            if (result) {
+                init();
+            }
+        }
+    </script>
+   )

@@ -1,0 +1,473 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewOspListGroup";
+    string itemNameText = "維護委外預排製程群組";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+<style>
+    #modalViewOspListGroup .modal-xl {
+        max-width: 1750px;
+    }
+
+    .confirm-item {
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 15px;
+    }
+
+    .confirm-btn {
+        width: 100%;
+        text-align: center;
+        padding: 65px;
+        background: #6d9b77;
+        font-size: 25px;
+        font-weight: 600;
+        color: aliceblue;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .confirm-btn:hover {
+            background: #9dc3a6;
+            color: aliceblue;
+        }
+
+    .reconfirm-btn {
+        width: 100%;
+        text-align: center;
+        padding: 65px;
+        background: #d5778c;
+        font-size: 25px;
+        font-weight: 600;
+        color: aliceblue;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .reconfirm-btn:hover {
+            background: #df98a8;
+            color: aliceblue;
+        }
+</style>
+
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@itemNameText</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="table-custom">
+                    <table class="table table-bordered table-striped table-sticky tiny-table" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th class="text-center col-sticky" scope="col" style="max-width: 75px;">
+                                    <label class="col-12 col-form-label ">
+                                        全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                    </label>
+                                </th>
+                                <th scope="col" style="min-width: 75px;">群組號碼</th>
+                                <th scope="col" style="max-width: 200px;">製令單號</th>
+                                <th scope="col" style="max-width: 200px;">製令製程</th>
+                                <th scope="col" style="max-width: 200px;">供應商</th>
+                                <th scope="col" style="max-width: 200px;">製程代碼</th>
+                                <th scope="col" style="max-width: 200px;">預計回廠日期</th>
+                                <th scope="col" style="max-width: 145px;">加工明細</th>
+                                <th scope="col" style="min-width: 75px;">數量</th>
+                                <th scope="col" style="max-width: 200px;">品號</th>
+                                <th scope="col" style="max-width: 200px;">品名</th>
+                                <th scope="col" style="max-width: 150px;">規格</th>
+                                <th scope="col" style="max-width: 145px;">委託部門</th>
+                                <th scope="col" style="max-width: 150px;">委外日期</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-danger" href="javascript: Transfer@(itemName)();"><i class="fas fa-share"></i>拋轉</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--採購確認Modal-->
+<div class="modal fade" data-backdrop="static" data-keyboard="false" id="modalPoCheck@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    採購確認
+                </h5>
+                <button class="close" @*data-dismiss="modal"*@ type="button" onclick="CloseModal@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="confirm-item">
+                    <a class="confirm-btn" href="javascript: PoCheck@(itemName)('P');">確認並開始指派供應商</a>
+                    <a class="reconfirm-btn" href="javascript: PoCheck@(itemName)('F');">駁回並通知生管修改</a>
+                </div>
+                <div class="confirm-remark">
+                    <textarea id="txtPoRejectionReason@(itemName)" class="form-control" placeholder="請輸入駁回原因..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                @*<button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let supplierArray@(itemName) = [];
+        let processCodeArray@(itemName) = [];
+        let isUpdatingSuppliers = false;
+        let isUpdatingProcessCode = false;
+        let isUpdatingExpectedDate = false;
+
+        function Pop@(itemName)() {
+            if (ospListIds.length <= 0) {
+                alert("請選擇要上傳的資料!!");
+                return false;
+            }
+            
+            $("#modalPoCheck@(itemName)").modal("show");
+
+            $("#txtPoRejectionReason@(itemName)").val();
+
+            Init@(itemName)();
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                const isChecked = $(this).is(":checked");
+                const $checkboxes = $("input[type='checkbox'][data-group-osp-list-id]").not(":disabled");
+
+                $checkboxes.prop("checked", isChecked);
+            });
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Init@(itemName)() {
+            let innerHtml = '';
+            let targetUrl = "@Url.Action("GetOspList", "Production")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": 1,
+                "PageSize": 999,
+                "OspListIds": ospListIds
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td style="min-width: 110px; text-align: center;">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                ${i + 1}.<input type="checkbox" data-group-osp-list-id="${item.OspListId}" value="${item.OspListId}" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>           
+                                        <td class="ellipsis" data-toggle="tooltip" style="min-width: 75px;">
+                                            <input type="text" class="form-control" data-osp-list-id="${item.OspListId}" name="txtGroupId" value="1" oninput="EditGroupId@(itemName)(this)" />
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})" style="max-width: 200px;">${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessNo}-${item.ProcessAlias}" style="max-width: 200px;">${item.ProcessNo}-${item.ProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" style="min-width: 200px;">
+                                            <select class="form-control" data-osp-list-id="${item.OspListId}" data-supplier-id="${item.SupplierId}" name="cboSupplierId@(itemName)"></select>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" style="min-width: 145px;">
+                                            <select class="form-control" data-osp-list-id="${item.OspListId}" name="cboProcessCode@(itemName)"></select>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" style="min-width: 145px;">
+                                            <input type="date" class="form-control" data-osp-list-id="${item.OspListId}" name="txtExpectedDate@(itemName)" value="${item.ExpectedDate}" />
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.RoutingItemProcessDesc}" style="max-width: 250px;">${item.RoutingItemProcessDesc}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Quantity}" style="max-width: 75px;">${item.Quantity}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 200px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 150px;">${item.MtlItemSpec}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DepartmentNo}-${item.DepartmentName}" style="max-width: 145px;">${item.DepartmentNo}-${item.DepartmentName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OspDate}" style="max-width: 150px;">${item.OspDate}</td>
+                                    </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="20" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+
+            GetSupplier@(itemName)();
+
+            $('select[name="cboSupplierId@(itemName)"][data-osp-list-id][data-supplier-id]').change(function () {
+                if (isUpdatingSuppliers) return;
+
+                isUpdatingSuppliers = true;
+
+                let ospListId = $(this).data("osp-list-id");
+                let supplierId = $(this).val();
+                let supplierNo = $(this).select2('data')[0].text.split(' ')[0];
+
+                GetProcessCode@(itemName)(supplierNo);
+
+                $(`select[name="cboProcessCode@(itemName)"][data-osp-list-id="${ospListId}"]`).empty();
+
+                $(`select[name="cboProcessCode@(itemName)"][data-osp-list-id="${ospListId}"]`).select2({
+                    data: processCodeArray@(itemName),
+                    placeholder: "請選擇製程代碼",
+                    width: "100%"
+                });
+
+                $.each($("input[type='checkbox'][data-group-osp-list-id]:checked"), function (i) {
+                    let ospListId = $(this).data("group-osp-list-id");
+                    $(`select[name="cboSupplierId@(itemName)"][data-osp-list-id="${ospListId}"][data-supplier-id]`).val(supplierId).change();
+
+                    $(`select[name="cboProcessCode@(itemName)"][data-osp-list-id="${ospListId}"]`).each(function () {
+                        $(this).empty();
+                        $(this).select2({
+                            data: processCodeArray@(itemName),
+                            placeholder: "請選擇製程代碼",
+                            width: "100%"
+                        });
+                    });
+                });
+
+                isUpdatingSuppliers = false;
+            });
+
+            $('select[name="cboProcessCode@(itemName)"][data-osp-list-id]').change(function () {
+                if (isUpdatingProcessCode) return;
+
+                isUpdatingProcessCode = true;
+
+                let processCode = $(this).val();
+
+                $.each($("input[type='checkbox'][data-group-osp-list-id]:checked"), function (i) {
+                    let ospListId = $(this).data("group-osp-list-id");
+                    $(`select[name="cboProcessCode@(itemName)"][data-osp-list-id="${ospListId}"]`).val(processCode).change();
+                });
+
+                isUpdatingProcessCode = false;
+            });
+
+            $('input[name="txtExpectedDate@(itemName)"][data-osp-list-id]').change(function () {
+                if (isUpdatingExpectedDate) return;
+
+                isUpdatingExpectedDate = true;
+
+                let expectedDate = $(this).val();
+
+                $.each($("input[type='checkbox'][data-group-osp-list-id]:checked"), function (i) {
+                    let ospListId = $(this).data("group-osp-list-id");
+                    $(`input[name="txtExpectedDate@(itemName)"][data-osp-list-id="${ospListId}"]`).val(expectedDate);
+                });
+
+                isUpdatingExpectedDate = false;
+            });
+        }
+
+        let timer;
+        function EditGroupId@(itemName)(e) {
+            clearTimeout(timer)
+            timer = setTimeout(function () {
+                $.each($("input[type='checkbox'][data-group-osp-list-id]:checked"), function (i) {
+                    let ospListId = $(this).data("group-osp-list-id");
+                    $(`input[name="txtGroupId"][data-osp-list-id="${ospListId}"]`).val($(e).val());
+                });
+            }, 500);
+        }
+
+        function Transfer@(itemName)() {
+            swal.fire({
+                titleText: "確定要執行拋轉嗎?",
+                text: "此動作會將勾選的委外項目批次建立委外單並拋轉BPM。",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let uploadData = [];
+                    $.each($("input[type='checkbox'][data-group-osp-list-id]"), function (i) {
+                        let ospListId = $(this).data("group-osp-list-id");
+                        let groupId = $(`input[name="txtGroupId"][data-osp-list-id="${ospListId}"]`).val();
+                        let supplierId = $(`select[name="cboSupplierId@(itemName)"][data-osp-list-id="${ospListId}"]`).val();
+                        let processCode = $(`select[name="cboProcessCode@(itemName)"][data-osp-list-id="${ospListId}"]`).val().split(' ')[0];
+                        let expectedDate = $(`input[name="txtExpectedDate@(itemName)"][data-osp-list-id="${ospListId}"]`).val();
+                        let inputData = {
+                            OspListId: ospListId,
+                            GroupId: groupId,
+                            SupplierId: supplierId,
+                            ProcessCode: processCode,
+                            ExpectedDate: expectedDate,
+                        };
+                        uploadData.push(inputData);
+                    });
+
+                    let targetUrl = "@Url.Action("UpdateTransferOspList", "Production")";
+                    let postData = {
+                        "UploadData": uploadData
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        $("#modal@(itemName)").modal("hide");
+                        Swal.fire({
+                            title: "新增成功!!",
+                            html: `
+                                    建立單據:<br>
+                                    <ul style="text-align: left; display: inline-block; margin: 10px 0;">
+                                        ${data.ospNo.split(',').map(no => `<li>【${no.trim()}】</li>`).join('')}
+                                    </ul>
+                                `,
+                            icon: "info"
+                        });
+                        ReturnOspListManagement();
+                    }
+                }
+            });
+        }
+
+        function GetSupplier@(itemName)() {
+            supplierArray@(itemName) = [];
+            let targetUrl = "@Url.Action("GetSupplier", "ScmBasicInformation")";
+
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (i == 0) {
+                            let inputJson =
+                            {
+                                id: "",
+                                text: "請選擇供應商"
+                            }
+                            supplierArray@(itemName).push(inputJson);
+                        }
+
+                        let inputJson =
+                        {
+                            id: item.SupplierId,
+                            text: item.SupplierNo + " " + item.SupplierShortName
+                        }
+                        supplierArray@(itemName).push(inputJson);
+                    });
+                }
+
+                $('select[name="cboSupplierId@(itemName)"][data-osp-list-id][data-supplier-id]').each(function () {
+                    $(this).empty();
+                    $(this).select2({
+                        data: supplierArray@(itemName),
+                        placeholder: "請選擇供應商",
+                        width: "100%"
+                    });
+
+                    let supplierId = $(this).data("data-supplier-id");
+                    if (supplierId) {
+                        $(this).val(supplierId).change();
+                    }
+                });
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function GetProcessCode@(itemName)(supplierNo) {
+            if (supplierNo.length <= 0) {
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+
+            let postData = {
+                "ColumnName": "ProcessCode",
+                "Condition": supplierNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            processCodeArray@(itemName) = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        processCodeArray@(itemName).push(item.MW001 + " " + item.MW002);
+                    });
+                }
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function PoCheck@(itemName)(checkType) {
+            if (checkType == "F") {
+                let poRejectionReason = $("#txtPoRejectionReason@(itemName)").val();
+                if (poRejectionReason.length <= 0) {
+                    alert("需要填寫備註!!");
+                    return false;
+                }
+            }
+
+            let targetUrl = "@Url.Action("UpdateOspListStatus", "Production")";
+            let postData = {
+                "OspListIds": ospListIds.toString(),
+                "Status": checkType,
+                "PoRejectionReason": $("#txtPoRejectionReason@(itemName)").val()
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                $("#modalPoCheck@(itemName)").modal("hide");
+                ReturnOspListManagement();
+
+                if (checkType == "F") {
+                    $("#modal@(itemName)").modal("hide");
+                }
+            }
+        }
+
+        function CloseModal@(itemName)() {
+            $("#modalPoCheck@(itemName)").modal("hide");
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+                )

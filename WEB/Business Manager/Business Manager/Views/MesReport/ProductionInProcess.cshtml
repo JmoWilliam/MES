@@ -1,0 +1,665 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProductionInProcess";
+    string itemNameText = "生產在製查詢";
+    string authority = ViewBag.authority;
+
+    string WoErpFullNo = Request["WoErpFullNo"] ?? "";
+    string ModeId = Request["ModeId"] ?? "";
+    string MtlItemInfo = Request["MtlItemInfo"] ?? "";
+    string CompanyNo = Request["CompanyNo"] ?? "";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         caption {
+             font-size: 16px;
+             font-weight: bold;
+             line-height: 2;
+             border: 1px solid #e5e9ec;
+             padding: 1rem;
+             caption-side: top;
+         }
+
+        .flex-column span {
+            color: #404040;
+        }
+
+        .table-head {
+            background-color: #ffeeba !important;
+            font-weight: bold;
+        }
+
+        .card-header .sub-title {
+            display: block;
+            font-size: 65%;
+            color: #969696;
+        }
+
+            .card-header .sub-title .sub-text {
+                color: #e06666;
+                font-weight: bold;
+            }
+
+        .anchor-text {
+            color: #337ab7;
+        }
+
+        iframe {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+        }
+
+        .query-item {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboModeIdQ@(itemName)">生產模式</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboModeIdQ@(itemName)" name="cboModeIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtWoErpFullNoQ@(itemName)">製令單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)" placeholder="請輸入製令單號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">品號/品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入品號/品名" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">製令日期 <input type="checkbox" id="cbxUseDate@(itemName)" /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <div class="query-item">
+                            <a class="btn btn-primary" style="width: 85px; margin-right: 15px;" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                                <i class="fal fa-search"></i>搜尋
+                            </a>
+                            @*<div class="page-reload">
+                                <label for="txtTimeout@(itemName)">頁面刷新時間(單位: 分鐘)</label>
+                                <input type="number" style="width: 100%;" class="form-control" id="txtTimeout@(itemName)" oninput="SetTimeout@(itemName)(this)" value="" placeholder="請輸入重整頻率(單位:分鐘)" />
+                            </div>*@
+                        </div>
+                    </div>
+                </div>
+                <div class="row" id="tblData@(itemName)"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modelProductionHistory@(itemName)" style="max-width: 1366px;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <iframe id="ProductionHistory@(itemName)" src="#"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalWipBarcode@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    在製條碼查詢
+                    <span class="sub-title">製令: <span class="sub-text" id="desWoErpFullNo@(itemName)"></span></span>
+                    <span class="sub-title">目前製程: <span class="sub-text" id="desProcessAlias@(itemName)"></span></span>
+                    <span class="sub-title">查詢狀態: <span class="sub-text" id="desWipStatus@(itemName)"></span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)"
+                                               placeholder="請輸入產品條碼搜尋"
+                                               onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblWipBarcodeData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" class="text-center" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 115px;">產品條碼</th>
+                                        <th scope="col" style="min-width: 115px;">當前數量</th>
+                                        <th scope="col" style="min-width: 115px;">當前站別</th>
+                                        <th scope="col" style="min-width: 115px;">下一站別</th>
+                                        <th scope="col" style="min-width: 115px;">條碼狀態</th>
+                                        <th scope="col" style="min-width: 115px;">在製狀態</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="pageWipBarcode@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objPage2@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+
+        let MoId = 0
+
+        let waitTimeInMilliseconds@(itemName) = 300000; // 預設5分鐘
+
+        let timer;
+
+        let MoProcessIdList = [];
+
+        $(document).ready(function () {
+            let woErpFullNo = "@WoErpFullNo";
+            let modeId = "@ModeId";
+            let mtlItemInfo = "@MtlItemInfo";
+            let currentDate = new Date();
+
+            if (woErpFullNo) {
+                $("#txtWoErpFullNoQ@(itemName)").val(woErpFullNo);
+                $("#cbxUseDate@(itemName)").prop("checked", false);
+            }
+
+            ComboBoxs.Default("#cboModeIdQ@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "NA", "", "txtProdModeWithText", "ModeId");
+
+            if (modeId) {
+                $("#cboModeIdQ@(itemName)").val(modeId);
+            }
+
+            if (mtlItemInfo) {
+                $("#txtMtlItemNoQ@(itemName)").val(mtlItemInfo);
+            }
+
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+            if (!isMobile) {
+                $("#cboModeIdQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+
+            $("#txtWoErpFullNoQ@(itemName), #txtMtlItemNoQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            @*setTimeout(function () {
+                let WoErpFullNo = $("#txtWoErpFullNoQ@(itemName)").val();
+                let ModeId = $("#cboModeIdQ@(itemName)").val();
+                let MtlItemInfo = $("#txtMtlItemNoQ@(itemName)").val();
+                location.assign(`/MesReport/ProductionInProcess?WoErpFullNo=${WoErpFullNo}&ModeId=${ModeId}&MtlItemInfo=${MtlItemInfo}`);
+            }, waitTimeInMilliseconds@(itemName));*@
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            MoProcessIdList = [];
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let ModeId = $("#cboModeIdQ@(itemName)").val();
+            let WoErpFullNo = $("#txtWoErpFullNoQ@(itemName)").val();
+            let MtlItemNo = $("#txtMtlItemNoQ@(itemName)").val();
+
+            if (ModeId == "" && WoErpFullNo == "" && MtlItemNo == "") {
+                alert("請至少使用一種條件搜尋!!");
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("GetProductionInProcess", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ModeId": $("#cboModeIdQ@(itemName)").val(),
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : ""),
+                "CompanyNo": '@CompanyNo'
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let ProcessDetail;
+                        if (item.ProcessDetail) {
+                            ProcessDetail = JSON.parse(item.ProcessDetail);
+                        }
+                        MoId = item.MoId
+                        innerHtml += `<div class="col-12">
+                                        <div class="table-custom">
+                                          <table class="table table-bordered table-striped table-sticky">
+                                            <caption>
+                                              <div style="display: flex; align-items: center;">
+                                                <div style="margin-right: 2rem;">
+                                                  <span style="color: #404040;">${item.WoErpFullNo}(${item.WoSeq})</span>
+                                                </div>
+                                                <div class="flex-column">
+                                                  <p>
+                                                    品號：<span> ${item.MtlItemNo}&nbsp;</span>
+                                                    品名：<span> ${item.MtlItemName}&nbsp;</span>
+                                                    規格：<span> ${item.MtlItemSpec}</span></br>
+                                                    計畫數：<span> ${item.Quantity}&nbsp;</span>
+                                                    已領數：<span> ${item.RequisitionSetQty}&nbsp;</span>
+                                                    投入數：<span> ${item.InputQty}</span>
+                                                    備註：<span> ${item.Remark}</span>
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            </caption>
+                                            <tbody>
+                                              <tr>
+                                                <td class="table-head" style="width: 200px;">製程</td>
+                                                ${Process(`process`, ProcessDetail)}
+                                              </tr>
+                                              <tr>
+                                                <td>良品 / 不良 / 報廢</td>
+                                                ${Process(`totalQty`, ProcessDetail)}
+                                              </tr>
+                                              <tr>
+                                                <td>良率</td>
+                                                ${Process(`passRate`, ProcessDetail)}
+                                              </tr>
+                                              <tr>
+                                                <td>未開工 / 開工中 / 已完工</td>
+                                                ${Process(`barcodeStatusInfo`, ProcessDetail)}
+                                              </tr>
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>`;
+                    });
+
+                    innerHtml += `<div class="pagination" id="page@(itemName)"></div>`
+                } else {
+                    innerHtml += `<div class="col-12">
+                                    <div class="table-custom">
+                                      <table class="table table-bordered table-striped table-sticky">
+                                        <tr>
+                                          <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                          </td>
+                                        </tr>
+                                      </table>
+                                    </div>
+                                  </div>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName)").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            GetWipBarcodeCountData@(itemName)();
+        }
+
+        function Process(type, json) {
+            let html = ``;
+
+            if (json) {
+                for (var x = 0; x < json.data.length; x++) {
+                    switch (type) {
+                        case "process":
+                            html += `<td class="table-head">
+                                         <a href="javascript:PopProcess@(itemName)('${json.data[x].WoErpFullNo}', '${json.data[x].WoSeq}', '${json.data[x].ProcessId}', '', '${MoId}', '${json.data[x].MoProcessId}');">
+                                             <span class="anchor-text">${json.data[x].ProcessAlias}</span>
+                                         </a>
+                                     </td>`;
+                            break;
+                        case "totalQty":
+                            html += `<td>
+                                         <a href="javascript:PopProcess@(itemName)('${json.data[x].WoErpFullNo}', '${json.data[x].WoSeq}', '${json.data[x].ProcessId}', 'P', '${MoId}', '${json.data[x].MoProcessId}');">
+                                             <span class="anchor-text">${json.data[x].TotalPassQty}</span>
+                                         </a>
+                                         /
+                                         <a href="javascript:PopProcess@(itemName)('${json.data[x].WoErpFullNo}', '${json.data[x].WoSeq}', '${json.data[x].ProcessId}', 'F', '${MoId}', '${json.data[x].MoProcessId}');">
+                                             <span class="anchor-text">${json.data[x].TotalNgQty}</span>
+                                         </a>
+                                         /
+                                         <a href="javascript:PopProcess@(itemName)('${json.data[x].WoErpFullNo}', '${json.data[x].WoSeq}', '${json.data[x].ProcessId}', 'S', '${MoId}', '${json.data[x].MoProcessId}');">
+                                             <span class="anchor-text">${json.data[x].TotalScrapQty}</span>
+                                         </a>
+                                     </td>`;
+                            break;
+                        case "passRate":
+                            html += `<td>${json.data[x].PassRate}</td>`;
+                            break;
+                        case "barcodeStatusInfo":
+                            MoProcessIdList.push(json.data[x].MoProcessId);
+                            html += `<td data-mo-process-id="${json.data[x].MoProcessId}"></td>`;
+                            //html += GetWipBarcodeCountData@(itemName)(`${json.data[x].MoProcessId}`, `${json.data[x].WoErpFullNo}`, `${json.data[x].WoSeq}`);
+                            break;
+                        case "wipQty":
+                            html += `<td>
+                                        <a href="javascript:PopWipBarcode@(itemName)('${json.data[x].MoProcessId}', '${json.data[x].WoErpFullNo}', '${json.data[x].WoSeq}', '${json.data[x].ProcessAlias}');">
+                                             <span class="anchor-text">${json.data[x].WipQty}</span>
+                                         </a>
+                                     </td>`;
+                            break;
+                        //case "wipQty":
+                        //    html += `<td>${json.data[x].WipQty}</td>`;
+                        //    break;
+                    }
+                }
+            }
+
+            return html;
+        }
+
+        function GetWipBarcodeCountData@(itemName)() {
+            let targetUrl = "@Url.Action("GetWipBarcodeCountData", "MesReport")";
+            let postData = {
+                "MoProcessIdListString": MoProcessIdList.toString()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data) {
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml = `<a href="javascript:PopWipBarcode@(itemName)('${item.MoProcessId}', '${item.WoErpFullNo}', '${item.WoSeq}', '${item.ProcessAlias}', '未開工');">
+                                            <span class="anchor-text">${item.NotStartQty}</span>
+                                          </a>
+                                          /
+                                          <a href="javascript:PopWipBarcode@(itemName)('${item.MoProcessId}', '${item.WoErpFullNo}', '${item.WoSeq}', '${item.ProcessAlias}', '開工中');">
+                                              <span class="anchor-text">${item.StartQty != null ? item.StartQty : `0`}</span>
+                                          </a>
+                                          /
+                                          <a href="javascript:PopWipBarcode@(itemName)('${item.MoProcessId}', '${item.WoErpFullNo}', '${item.WoSeq}', '${item.ProcessAlias}', '已完工');">
+                                              <span class="anchor-text">${item.WipQty}</span>
+                                          </a>`;
+                            $(`td[data-mo-process-id="${item.MoProcessId}"]`).append(innerHtml);
+                        });
+                    }
+                }
+            }
+        }
+
+        function PopProcess@(itemName)(WoErpFullNo, WoSeq, ProcessId, ProdStatus, MoId, MoProcessId) {
+
+            let targetUrl = `@Url.Action("IFrameProductionHistory", "MesReport")?WoErpFullNo=${WoErpFullNo}&WoSeq=${WoSeq}&ProcessId=${ProcessId}&Status=${ProdStatus}&MoId=${MoId}&Iframe=T&MoProcessId=${MoProcessId}`;
+
+            Swal.fire({
+                html: `<iframe id="ProductionHistory@(itemName)" src="${targetUrl}" frameborder="0" scrolling="no"></iframe>`,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: 1440,
+                background: '#eef1f5'
+            });
+        }
+
+        function InitWipBarcodeData@(itemName)(MoProcessId, WipStatus) {
+            let objPage = objPage2@(itemName);
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetWipBarcode", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MoProcessId": MoProcessId,
+                "WipStatus": WipStatus
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="min-width: 75px;">
+                                            ${_row}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}" style="min-width: 115px;">
+                                            ${item.BarcodeNo}
+                                            ${JudgeTrayNo@(itemName)(item.TrayNo)}
+                                            ${JudgeItemValue@(itemName)(item.ItemValue)}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeQty}" style="min-width: 115px;">${item.BarcodeQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CurrentProcessAlias}" style="min-width: 115px;">${item.CurrentProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.NextProcessAlias}" style="min-width: 115px;">${item.NextProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CurrentProdStatus} ${item.CurrentProdStatusName}" style="min-width: 115px;">${item.CurrentProdStatus} ${item.CurrentProdStatusName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeStatus}" style="min-width: 115px;">${item.BarcodeStatusName}</td>
+                                      </tr>`;
+
+                        @*function JudgeItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null" && itemValue != null) {
+                                let itemValueJson = JSON.parse(itemValue);
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<br><code>${item2.ItemValue}</code><br>`;
+                                });
+                            }
+
+                            return innerHtml;
+                        }*@
+
+                        function JudgeItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null" && itemValue != null) {
+                                let itemValueJson = JSON.parse(itemValue);
+                                let dateCode = "";
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<br><code>${item2.ItemValue}</code>`;
+
+                                    if (k == 0) {
+                                        dateCode = item2.DateCode;
+                                    }
+
+                                    if (k == itemValueJson["data"].length - 1 && dateCode != undefined) {
+                                        innerHtml += `<br><code>${dateCode}</code>`;
+                                    }
+                                });
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function JudgeTrayNo@(itemName)(trayNo) {
+                            let innerHtml = '';
+                            if (trayNo != null) {
+                                innerHtml += `<br><code>Tray:${trayNo}</code>`;
+                            }
+
+                            return innerHtml;
+                        }
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+                $("#tblWipBarcodeData@(itemName) tbody").html(innerHtml);
+
+                TableComponentInit();
+                Pager("#pageWipBarcode@(itemName)", pageCount, objPage, InitWipBarcodeData@(itemName));
+                $("#modalWipBarcode@(itemName)").modal("show");
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function GetTimeout@(itemName)() {
+            //先檢查是否有存在cookie，沒有才去取DB初始值
+            let reloadTimeCookie = GetCookie("ReloadTime");
+            if (reloadTimeCookie) {
+                $("#txtTimeout@(itemName)").val(reloadTimeCookie);
+                waitTimeInMilliseconds@(itemName) = parseInt(reloadTimeCookie) * 60 * 1000;
+            }
+            else {
+                let targetUrl = "@Url.Action("GetTimeout", "MesReport")";
+                let postData = {
+                    "TypeSchema": "ProductionInProcessReloadTime"
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data) {
+                    if (data.status == "success") {
+                        if (data.result.length > 0) {
+                            $.each(data.result, function (i, item) {
+                                $("#txtTimeout@(itemName)").val(item.TypeNo);
+                                waitTimeInMilliseconds@(itemName) = parseInt(item.TypeNo) * 60 * 1000;
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        function SetTimeout@(itemName)(e) {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                let min = $(e).val();
+                if (min < 1) {
+                    alert("頁面刷新時間不能小於1分鐘!!");
+                    return false;
+                }
+                document.cookie = "ReloadTime=" + min + '; max-age=' + (min * 60 * 1000) + '; path=/';
+
+                let WoErpFullNo = $("#txtWoErpFullNoQ@(itemName)").val();
+                let ModeId = $("#cboModeIdQ@(itemName)").val();
+                let MtlItemInfo = $("#txtMtlItemNoQ@(itemName)").val();
+                //location.assign(`/MesReport/ProductionInProcess?WoErpFullNo=${WoErpFullNo}&ModeId=${ModeId}&MtlItemInfo=${MtlItemInfo}`);
+            }, 1000);
+        }
+
+        function GetCookie(cookieName) {
+            var match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
+            if (match) {
+                return match[2];
+            }
+        }
+
+        function PopWipBarcode@(itemName)(MoProcessId, WoErpFullNo, WoSeq, ProcessAlias, WipStatus) {
+            $("#desWoErpFullNo@(itemName)").html(WoErpFullNo + "(" + WoSeq + ")");
+            $("#desProcessAlias@(itemName)").html(ProcessAlias);
+            $("#desWipStatus@(itemName)").html(WipStatus);
+            InitWipBarcodeData@(itemName)(MoProcessId, WipStatus);
+        }
+    </script>
+)

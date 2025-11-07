@@ -1,0 +1,608 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "DepSecondmentManagement";
+    string itemNameText = "部門借調管理";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .help-block {
+            display: none;
+            margin: 5px 0 0;
+            border: 3px dashed #b1b1b1;
+            border-radius: 5px;
+            padding: 5px 10px;
+        }
+
+        dt {
+            float: left;
+            clear: left;
+            width: 110px;
+        }
+
+            dt::after {
+                content: "：";
+            }
+
+        dd {
+            margin: 0 0 0 80px;
+            padding: 0;
+            color: #36a2f5;
+            font-weight: bold;
+        }
+    </style>
+                                                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">借調記錄單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtDsIdQ@(itemName)" name="txtDsIdQ@(itemName)"
+                                       placeholder="請輸入借調記錄單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">所屬部門</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cbxDepartmentIdQ@(itemName)" name="cbxDepartmentIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">借調人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cbxUserIdQ@(itemName)" name="cbxUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">啟用狀態</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cbxStatusQ@(itemName)" name="cbxStatusQ@(itemName)">
+                                    <option value="">請選擇</option>
+                                    <option value="A">啟用</option>
+                                    <option value="S">停止</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">借調日期</label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       placeholder="請輸入借調開始日期"
+                                       data-msg-required="請輸入借調開始日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       placeholder="請輸入借調結束日期"
+                                       data-msg-required="請輸入借調結束日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 100px;">記錄單號</th>
+                                        <th scope="col" style="max-width: 150px;">所屬部門</th>
+                                        <th scope="col" style="max-width: 100px;">借調人員</th>
+                                        <th scope="col" style="max-width: 150px;">借調部門</th>
+                                        <th scope="col" style="max-width: 200px;">借調開始時間</th>
+                                        <th scope="col" style="max-width: 200px;">借調結束時間</th>
+                                        <th scope="col" style="max-width: 200px;">備註</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">狀態</th>
+                                        <th class="text-center" scope="col" style="max-width: 450px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增/編輯-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="DsId" />
+                        <input type="hidden" id="BelongDepartment" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtBelongDepartment@(itemName)">所屬部門</label>
+                                    <div class="col-12">
+                                        <input class="form-control" type="text" readonly="readonly" id="txtBelongDepartment@(itemName)" name="txtBelongDepartment@(itemName)" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cbxUserId@(itemName)">借調人員<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cbxUserId@(itemName)" name="cbxUserId@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cbxSecondmentDepartment@(itemName)">借調部門<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cbxSecondmentDepartment@(itemName)" name="cbxSecondmentDepartment@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12">借調開始日期<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtStartDate@(itemName)" name="txtStartDate@(itemName)"
+                                               placeholder="請輸入借調開始日期"
+                                               data-msg-required="請輸入借調開始日期"
+                                               data-msg-extraRegex="請輸入正確的日期格式" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12">借調結束日期<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtEndDate@(itemName)" name="txtEndDate@(itemName)"
+                                               placeholder="請輸入借調結束日期"
+                                               data-msg-required="請輸入借調結束日期"
+                                               data-msg-extraRegex="請輸入正確的日期格式" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" id="labStatus@(itemName)" for="cbxStatus@(itemName)">啟用狀態<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cbxStatus@(itemName)" name="cbxStatus@(itemName)" required>
+                                            <option value="A" selected>啟用</option>
+                                            <option value="S">停止</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                  placeholder="請輸入描述"
+                                                  data-msg-required="請輸入描述"
+                                                  data-msg-maxlength="必須少於 100 個字元" maxlength="100"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let userId@(itemName) = -1;
+        let companyId@(itemName) = -1;
+
+        $(document).ready(function () {
+            GetLoginByKey@(itemName)();
+            if (!isMobile) {
+                $("#cbxDepartmentIdQ@(itemName), #cbxUserIdQ@(itemName), #cbxUserId@(itemName), #cbxSecondmentDepartment@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+            //部門資料
+            ComboBoxs.Default("#cbxDepartmentIdQ@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A", "CompanyId": companyId@(itemName) }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+            //使用者資料
+            ComboBoxs.Default("#cbxUserIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": companyId@(itemName), "Status": "A" }, "", "NA", "", "UserWithNo", "UserId");
+
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+
+            Query@(itemName)();
+        });
+
+        function GetLoginByKey@(itemName)(){
+            let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+            let postData = {
+                "UserNo": $.cookie("Login"),
+                "KeyText": $.cookie("LoginKey")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                userId@(itemName) = data.returnData.UserId;
+                companyId@(itemName) = data.returnData.CompanyId;
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetDepSecondmentRecord", "Production")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "DsId": $("#txtDsIdQ@(itemName)").val(),
+                "DepartmentId": $("#cbxDepartmentIdQ@(itemName)").val(),
+                "UserId": $("#cbxUserIdQ@(itemName)").val(),
+                "Status": $("#cbxStatusQ@(itemName)").val(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DsId}" style="min-width: 100px;">${item.DsId}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BelongDepartmentNo}${item.BelongDepartmentName}" style="min-width: 100px;">&nbsp;${item.BelongDepartmentNo}&nbsp;${item.BelongDepartmentName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserNo}${item.UserName}" style="min-width: 150px;"><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SecondmentDepartmentNo}${item.SecondmentDepartmentName}" style="min-width: 100px;">&nbsp;${item.SecondmentDepartmentNo}&nbsp;${item.SecondmentDepartmentName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StartDate}" style="max-width: 200px; min-width: 135px;">${item.StartDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.EndDate}" style="max-width: 200px; min-width: 135px;">${item.EndDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="max-width: 200px; min-width: 135px;">${item.Remark}</td>
+                                        <td class="text-center auth-status-switch" style="max-width: 125px;">
+                                            <input type="checkbox" name="chkStatus@(itemName)" data-dsid-id="${item.DsId},${item.Status},${item.UserId},${item.StartDate},${item.EndDate}" ${item.Status == `A` ? `checked` : ``} />
+                                        </td>
+                                        <td class="text-center un-auth auth-status-switch">${StatusName(`Status`, `${item.Status}`)}</td>
+                                        <td class="text-center active-content" style="min-width: 450px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.DsId}');"><i class="fas fa-edit"></i></a>
+                                            @*<a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.DsId}');"><i class="fas fa-trash-alt"></i></a>*@
+                                        </td>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="9" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "啟用",
+                off: "停用",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStatus@(itemName)'][data-dsid-id]").change(StatusSwitch@(itemName));
+        }
+
+        function dateTimeSuites(inputSite, setTime) {
+            //#region 時間套件
+
+            let dateInputPS@(itemName) = document.getElementById(inputSite);
+            let calendarPS@(itemName) = new dhx.Calendar(null, calendarSetting);
+            let popupPS@(itemName) = new dhx.Popup();
+            dhx.i18n.setLocale("calendar", calendarLocales);
+            dhx.i18n.setLocale("timepicker", timepickerLocales);
+
+            calendarPS@(itemName).destructor();
+            calendarPS@(itemName) = new dhx.Calendar(null, calendarSetting);
+
+            popupPS@(itemName).destructor();
+            popupPS@(itemName) = new dhx.Popup();
+            popupPS@(itemName).attach(calendarPS@(itemName));
+
+            calendarPS@(itemName).events.on("change", function () {
+                dateInputPS@(itemName).value = calendarPS@(itemName).getValue();
+                dateInputPS@(itemName).dispatchEvent(eventChange);
+                popupPS@(itemName).hide();
+            });
+            let functionPS = function () {
+                popupPS@(itemName).show(dateInputPS@(itemName));
+            };
+
+            if (setTime) {
+                calendarPS@(itemName).setValue(setTime); //日期選擇預設值
+            }
+            dateInputPS@(itemName).removeEventListener("click", functionPS, false);
+            dateInputPS@(itemName).addEventListener("click", functionPS, false);
+            //#endregion
+        }
+        function Edit@(itemName)(DsId) {
+            $("#DsId").val(DsId ? DsId : 0);
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+            @*Suites.DateDropper("#txtStartDate@(itemName), #txtEndDate@(itemName)");*@
+
+            dateTimeSuites(`txtStartDate@(itemName)`,);
+            dateTimeSuites(`txtEndDate@(itemName)`,);
+
+            if (DsId > 0) {
+                //編輯
+                let targetUrl = "@Url.Action("GetDepSecondmentRecord", "Production")";
+                let postData = {
+                    "DsId": DsId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+
+                        $("#DsId@(itemName)").val(item.DsId);
+
+                        //使用者資料
+                        ComboBoxs.Default("#cbxUserId@(itemName)", "@Url.Action("GetUser", "BasicInformation")", {
+                            "CompanyId": companyId@(itemName), "Status": "A", "UserNo": item.UserNo
+                        }, "", "A", "", "UserWithNo", "UserId");
+                        //借調部門資料
+                        ComboBoxs.Default("#cbxSecondmentDepartment@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", {
+                            "Status": "A", "CompanyId": companyId@(itemName)
+                        }, "", "A", "", "DepartmentWithNo", "DepartmentId");
+
+                        $("#txtBelongDepartment@(itemName)").val(item.BelongDepartmentNo + " " + item.BelongDepartmentName); //所屬部門資料
+                        $("#cbxSecondmentDepartment@(itemName)").val(item.SecondmentDepartmentId);
+                        $("#txtStartDate@(itemName)").val(item.StartDate);
+                        $("#txtEndDate@(itemName)").val(item.EndDate);
+                        dateTimeSuites(`txtStartDate@(itemName)`, item.StartDate); //日期選擇預設值
+                        dateTimeSuites(`txtEndDate@(itemName)`, item.EndDate); //日期選擇預設值
+                        $("#cbxStatus@(itemName)").val(item.Status);
+                        $("#txtRemark@(itemName)").val(item.Remark);
+
+                    });
+                } else {
+                    alert(data.msg, "alert", 5000);
+                }
+            }
+            else {
+                //新增
+                //使用者資料
+                ComboBoxs.Default("#cbxUserId@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": companyId@(itemName), "Status": "A" }, "", "NA", "", "UserWithNo", "UserId");
+                //部門資料
+                ComboBoxs.Default("#cbxSecondmentDepartment@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "CompanyId": companyId@(itemName), "Status": "A" }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+                $("#labStatus@(itemName)").hide();
+                $("#cbxStatus@(itemName)").hide();
+
+                $("#cbxUserId@(itemName)").change(function () {
+                    let targetUrl = "@Url.Action("GetUser", "BasicInformation")";
+                    let postData = {
+                        "UserId": $("#cbxUserId@(itemName)").val()
+                    };
+                    let depData = DataAccess.Get(targetUrl, postData, false);
+
+                    if (depData.status == "success") {
+                        $.each(depData.result, function (i, item) {
+                            //所屬部門資料
+                            $("#txtBelongDepartment@(itemName)").val(item.DepartmentName);
+                            $("#BelongDepartment").val(item.DepartmentId);
+                        });
+                    }
+                })
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let DsId = parseInt($("#DsId").val());
+                let StartDate = Date.parse($("#txtStartDate@(itemName)").val());
+                let EndDate = Date.parse($("#txtEndDate@(itemName)").val());
+
+                if ($("#cbxSecondmentDepartment@(itemName)").val() == $("#BelongDepartment").val()) {
+                    alert("借調部門不可選擇所屬部門！", 5000);
+                }
+                else if (StartDate > EndDate) {
+                    alert("結束時間不得早於開始時間！", 5000);
+                }
+                else {
+                    if (DsId <= 0) {
+                        let targetUrl = "@Url.Action("AddDepSecondmentRecord", "Production")";
+                        let postData = {
+                            "UserId": $("#cbxUserId@(itemName)").val(),
+                            "DepartmentId": $("#cbxSecondmentDepartment@(itemName)").val(),
+                            "StartDate": $("#txtStartDate@(itemName)").val(),
+                            "EndDate": $("#txtEndDate@(itemName)").val(),
+                            "Status": $("#cbxStatus@(itemName)").val(),
+                            "Remark": $("#txtRemark@(itemName)").val()
+                        };
+                        let data = DataAccess.EditContinued(targetUrl, postData, false);
+                        if (data) {
+                            alert("新增成功！", "success");
+                            Return@(itemName)();
+                        }
+                        else {
+                            alert(data.msg, "alert", 5000);
+                        }
+                    }
+                    else {
+                        let targetUrl = "@Url.Action("UpdateDepSecondmentRecord", "Production")";
+                        let postData = {
+                            "DsId": DsId,
+                            "UserId": $("#cbxUserId@(itemName)").val(),
+                            "DepartmentId": $("#cbxSecondmentDepartment@(itemName)").val(),
+                            "StartDate": $("#txtStartDate@(itemName)").val(),
+                            "EndDate": $("#txtEndDate@(itemName)").val(),
+                            "Status": $("#cbxStatus@(itemName)").val(),
+                            "Remark": $("#txtRemark@(itemName)").val()
+                        };
+
+                        let result = DataAccess.Update(targetUrl, postData, false, true);
+                    }
+                }
+
+            }
+        }
+
+        function StatusSwitch@(itemName)() {
+            var str = $(this).data("dsid-id").split(',');
+            var DsId = parseInt(str[0]);
+            var Status = str[1] == "A" ? "S" : "A";
+            var UserId = parseInt(str[2]);
+            var StartDate = str[3];
+            var EndDate = str[4];
+
+            let targetUrl = "@Url.Action("UpdateDepSecondmentRecordStatus", "Production")";
+            let postData = {
+                "DsId": DsId,
+                "UserId": UserId,
+                "StartDate": StartDate,
+                "EndDate": EndDate,
+                "Status": Status
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            Query@(itemName)();
+        }
+
+        function Delete@(itemName)(DsId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDepSecondmentRecord", "Production")";
+                    let postData = {
+                        "DsId": DsId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                    else {
+                        alert(result.msg, "alert", 5000);
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            ResetForm(objForm@(itemName));
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+</script>
+)

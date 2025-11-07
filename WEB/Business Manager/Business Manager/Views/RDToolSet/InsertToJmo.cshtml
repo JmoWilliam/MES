@@ -1,0 +1,733 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "InsertToJmo";
+    string itemNameText = "入子JMO";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+@<style>
+     .card-body {
+         position: relative;
+         padding: 1.5rem;
+     }
+
+     .history-btn {
+         position: absolute;
+         top: 1rem;
+         right: 1rem;
+     }
+
+     .background-color-set {
+         background-color: #c3e1f6;
+         padding: 1rem;
+         margin: 1rem 0;
+         border-radius: 0.5rem;
+     }
+
+     .file-upload-zone {
+         border: 3px dashed #ccc;
+         background-color: #ffffff;
+         padding: 3rem;
+         margin: 2rem 0;
+         border-radius: 0.5rem;
+         display: inline-block;
+         position: relative;
+         left: 50%;
+         transform: translateX(-50%);
+         width: 80%;
+         transition: border-color 0.3s;
+     }
+
+         .file-upload-zone.drag-over {
+             border-color: #007bff;
+             background-color: rgba(0, 123, 255, 0.1);
+         }
+
+     .file-input-group {
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         gap: 1rem;
+         margin-top: 1rem;
+         margin-bottom: 1rem;
+     }
+
+     .file-name-input {
+         width: 250px;
+     }
+
+     .download-buttons {
+         display: flex;
+         justify-content: center;
+         padding: 1rem;
+         margin: 1rem 0;
+         gap: 1rem;
+     }
+
+     .selected-file-buttons {
+         display: flex;
+         justify-content: center;
+         padding: 1rem;
+         margin: 1rem 0;
+         gap: 1rem;
+     }
+
+     /* 新增拖放提示樣式 */
+     .drop-zone-text {
+         text-align: center;
+         color: #666;
+         margin-bottom: 1rem;
+         padding: 1rem;
+     }
+
+     .upload-title {
+         font-size: 2rem;
+         font-weight: bold;
+         border-bottom-width: 3px !important;
+         padding-bottom: 0.5rem !important;
+         margin-bottom: 1rem !important;
+     }
+
+     .upload-text {
+         font-size: 1.3rem;
+         color: #808080;
+         margin-bottom: 1rem;
+     }
+
+     .selected-file-text {
+         font-size: 1.3rem;
+         color: #808080;
+         margin-bottom: 1rem;
+         word-break: break-all;
+     }
+
+     .custom-label {
+         font-size: 1.2rem;
+         font-weight: bold;
+         color: #767676;
+     }
+
+     /* 新增大型按鈕樣式 */
+     .btn-xl {
+         padding: 1rem 1rem;
+         font-size: 1.5rem;
+         border-radius: 0.5rem;
+         min-width: 200px;
+     }
+
+     /* 新增檔案類型說明樣式 */
+     .file-type-info {
+         background-color: #f8f9fa;
+         padding: 1rem;
+         border-radius: 0.5rem;
+         margin: 0.5rem auto;
+         max-width: 80%;
+     }
+
+     .file-type-text {
+         font-size: 1.2rem;
+         color: #495057;
+         margin-bottom: 0.5rem;
+     }
+
+     .file-type-note {
+         font-size: 1rem;
+         color: #0d6efd;
+         margin-top: 0.5rem;
+         margin-bottom: 0;
+     }
+
+     /* 上傳後的文件顯示 */
+     .file-info {
+         display: none;
+         text-align: center;
+         margin-bottom: 1rem;
+     }
+
+     .file-info.show {
+         display: block;
+     }
+
+    /* Loading indicator 樣式 */
+    .loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+    }
+
+    .loading-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: white;
+    }
+
+    .loading-spinner i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        animation: spin 1s linear infinite;
+    }
+
+    .loading-text {
+        font-size: 1.2rem;
+        margin-top: 1rem;
+    }
+
+</style>
+        )
+
+<!-- 主頁面內容 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-end mb-3">
+                    <button type="button" class="btn btn-success btn-lg auth-read" onclick="ShowHistory@(itemName)()">
+                        <i class="fas fa-history me-2"></i> 歷史紀錄
+                    </button>
+                </div>
+
+                <div class="background-color-set">
+                    <div class="file-upload-zone">
+                        <form id="uploadForm@(itemName)" enctype="multipart/form-data">
+                            <!-- 初始上傳介面 -->
+                            <div id="initialUpload@(itemName)">
+                                <!-- 標題區塊 -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5 class="upload-title border-bottom pb-2 mb-2 text-center">
+                                            <strong>請上傳入子DXF檔案</strong>
+                                        </h5>
+                                    </div>
+                                </div>
+
+                                <!-- 拖拉文件區塊 -->
+                                <div class="drop-zone-text">
+                                    <i class="fas fa-cloud-upload-alt fa-9x mb-4"></i>
+                                    <p class="upload-text">拖放文件至此處或點擊下方按鈕選擇檔案</p>
+                                    <div class="file-type-info">
+                                        <p class="file-type-text">支援的檔案類型：DXF檔(.dxf)</p>
+                                        <p class="file-type-note">※ 請確保檔案為入子DXF檔格式</p>
+                                    </div>
+                                </div>
+
+                                <!-- 按鈕區塊 -->
+                                <div class="file-input-group">
+                                    <input type="file" class="d-none" id="fileInput@(itemName)" name="file" accept=".dxf">
+                                    <button type="button" class="btn btn-info btn-xl" onclick="$('#fileInput@(itemName)').click()">
+                                        <i class="fas fa-file-upload me-2 fa-lg"></i>選擇檔案
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 文件選擇後的介面 -->
+                            <div id="fileSelected@(itemName)" style="display: none;">
+                                <!-- 檔案資訊區塊 -->
+                                <div class="file-info show">
+                                    <i class="fas fa-file-alt fa-7x mb-4"></i>
+                                    <p id="selectedFileName@(itemName)" class="selected-file-text"></p>
+                                </div>
+
+                                <!-- 參數輸入區塊 -->
+                                <div class="row justify-content-center mb-4">
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label custom-label">部番</label>
+                                            <input type="text" class="form-control" id="txtMtlItemName@(itemName)" placeholder="請輸入部番">
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="form-label custom-label">版次</label>
+                                            <input type="text" class="form-control" id="txtVersion@(itemName)" placeholder="請輸入版次">
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="form-label custom-label">處理區域</label>
+                                            <select class="form-control" id="cboProcess@(itemName)">
+                                                <option value="">請選擇</option>
+                                                <option value="rough">粗胚</option>
+                                                <option value="finish">粗胚+粗車</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 按鈕區塊 -->
+                                <div class="text-center selected-file-buttons">
+                                    <button type="button" class="btn btn-primary me-2 btn-lg auth-file-add" onclick="Upload@(itemName)()">
+                                        <i class="fas fa-upload me-2"></i>送出檔案
+                                    </button>
+                                    <button type="button" class="btn btn-info me-2 btn-lg" onclick="resetFileSelection@(itemName)()">
+                                        <i class="fas fa-redo me-2"></i>重新選擇
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 下載按鈕區域 -->
+                            <div class="download-section" id="downloadSection@(itemName)" style="display: none;">
+                                <!-- 標題區塊 -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5 class="upload-title border-bottom pb-2 mb-2 text-center"><strong>結果解析</strong></h5>
+                                    </div>
+                                </div>
+
+                                <!-- 按鈕區塊 -->
+                                <div class="download-buttons">
+                                    <button type="button" class="btn btn-success btn-lg auth-file-read" onclick="DownloadJMO@(itemName)()">
+                                        <i class="fas fa-file-download me-2"></i>下載 JMO
+                                    </button>
+                                    <button type="button" class="btn btn-warning btn-lg auth-file-read" onclick="DownloadExcel@(itemName)()">
+                                        <i class="fas fa-file-excel me-2"></i>拋轉 PDM 圖面管理
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 歷史紀錄視窗 -->
+<div class="modal fade" id="modalQuery@(itemName)" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- 標題區塊 -->
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-search me-2"></i>搜尋歷史紀錄
+                </h5>
+                <button class="close" type="button" data-dismiss="modal">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+
+            <!-- 歷史紀錄區塊 -->
+            <div class="modal-body">
+                <!-- 搜尋條件區塊 -->
+                <form id="queryForm@(itemName)">
+                    <div class="mb-3">
+                        <label class="form-label">檔案名稱</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-file-alt"></i>
+                            </span>
+                            <input type="text" class="form-control" id="txtFileNameQ@(itemName)" placeholder="請輸入檔案名稱">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">處理日期範圍</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-calendar-alt"></i>
+                            </span>
+                            <input type="date" class="form-control" id="txtStartDateQ@(itemName)">
+                            <span class="input-group-text">至</span>
+                            <input type="date" class="form-control" id="txtEndDateQ@(itemName)">
+                        </div>
+                    </div>
+                </form>
+
+                <!-- 歷史紀錄列表 -->
+                <table class="table table-bordered table-striped table-sticky">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>檔案名稱</th>
+                            <th class="text-center">上傳時間</th>
+                            <th class="text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableData@(itemName)"></tbody>
+                </table>
+                <div class="pagination justify-content-center" id="page@(itemName)"></div>
+            </div>
+
+            <!-- 操作區塊 -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>關閉
+                </button>
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()">
+                    <i class="fas fa-search me-2"></i>搜尋
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Indicator -->
+<div class="loading-overlay" id="loadingIndicator@(itemName)">
+    <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin fa-4x"></i>
+        <div class="loading-text">處理中，請稍候...</div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let outputFileDir@(itemName) = '';
+
+        let fileUploader@(itemName) = {
+            dropZone: null,
+            fileInput: null,
+            selectedFile: null,
+
+            init: function() {
+                this.dropZone = document.querySelector('.file-upload-zone');
+                this.fileInput = document.getElementById('fileInput@(itemName)');
+
+                if (this.dropZone && this.fileInput) {
+                    this.bindEvents();
+                }
+            },
+
+            bindEvents: function() {
+                // Prevent default drag behaviors
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    this.dropZone.addEventListener(eventName, this.preventDefaults.bind(this), false);
+                    document.body.addEventListener(eventName, this.preventDefaults.bind(this), false);
+                });
+
+                // Highlight drop zone when dragging over it
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    this.dropZone.addEventListener(eventName, this.highlight.bind(this), false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    this.dropZone.addEventListener(eventName, this.unhighlight.bind(this), false);
+                });
+
+                // Handle dropped files
+                this.dropZone.addEventListener('drop', this.handleDrop.bind(this), false);
+                this.fileInput.addEventListener('change', this.handleFileSelect.bind(this), false);
+            },
+
+            preventDefaults: function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            },
+
+            highlight: function(e) {
+                this.dropZone.classList.add('drag-over');
+            },
+
+            unhighlight: function(e) {
+                this.dropZone.classList.remove('drag-over');
+            },
+
+            handleDrop: function(e) {
+                const dt = e.dataTransfer;
+                const file = dt.files[0];
+                this.handleFile(file);
+            },
+
+            handleFileSelect: function(e) {
+                const file = e.target.files[0];
+                this.handleFile(file);
+            },
+
+            handleFile: function(file) {
+                if (file) {
+                    if (file.name.toLowerCase().endsWith('.dxf')) {
+                        // 顯示選擇的文件名
+                        document.getElementById(`selectedFileName@(itemName)`).textContent = file.name;
+                        // 切換顯示介面
+                        document.getElementById(`initialUpload@(itemName)`).style.display = 'none';
+                        document.getElementById(`fileSelected@(itemName)`).style.display = 'block';
+                        // 儲存文件以供後續上傳
+                        this.selectedFile = file;
+                        outputFileDir@(itemName) = null;
+                        // 隱藏下載區塊
+                        document.getElementById('downloadSection@(itemName)').style.display = 'none';
+                    } else {
+                        alert('請上傳 .dxf 格式的檔案');
+                    }
+                }
+            }
+        };
+
+        $(document).ready(function () {
+             // Hide download section initially
+            $("#downloadSection@(itemName)").hide();
+
+            fileUploader@(itemName).init();
+
+            // Bind modal close button event
+            $("[data-dismiss='modal']").on("click", function() {
+                $("#modalQuery@(itemName)").modal("hide");
+            });
+
+            // Add enter key event listener for search
+            $("#queryForm@(itemName)").on("keypress", function(e) {
+                if (e.which === 13) { // Enter key code
+                    e.preventDefault();
+                    Query@(itemName)();
+                }
+            });
+        });
+
+        function resetFileSelection@(itemName)() {
+            // Clear file input and selected file
+            document.getElementById('fileInput@(itemName)').value = '';
+            fileUploader@(itemName).selectedFile = null;
+            outputFileDir@(itemName) = null;
+
+            // Reset file name displays
+            document.getElementById('selectedFileName@(itemName)').textContent = '';
+
+            // Hide download section if visible
+            document.getElementById('downloadSection@(itemName)').style.display = 'none';
+
+            // Switch back to initial upload interface
+            document.getElementById('initialUpload@(itemName)').style.display = 'block';
+            document.getElementById('fileSelected@(itemName)').style.display = 'none';
+        }
+
+        function Upload@(itemName)() {
+            try {
+                const uploader = fileUploader@(itemName);
+                const file = uploader.selectedFile;
+
+                if (!file) {
+                    alert('請選擇檔案');
+                    return;
+                }
+
+                const fileKeys = {
+                    "product_url": file.name
+                };
+
+                let formData = new FormData();
+                formData.append("txt_url", file)
+                formData.append("fileKeys", JSON.stringify(fileKeys));
+                formData.append("pointCount", pointCount);
+                formData.append("folderName", "jmo_check");
+                formData.append("programName", "core_jmo_check");
+
+                let targetUrl = "@Url.Action("ExecutePythonScript", "RDToolSet")";
+
+                $.ajax({
+                    url: targetUrl,
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    beforeSend: function () {
+                        // 顯示 loading indicator
+                        $("#loadingIndicator@(itemName)").fadeIn();
+                        // 禁用上傳按鈕
+                        $("button").prop("disabled", true);
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            // 儲存回傳的檔案路徑
+                            outputFileDir@(itemName) = response.data.output_file_dir;
+
+                            // 成功處理
+                            alert(response.message, "success", 1);
+                            $("#downloadSection@(itemName)").show();
+                        } else {
+                            // 失敗處理
+                            alert(response.message, "error", 0);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        // 錯誤處理
+                        alert("發生錯誤: " + error);
+                    },
+                    complete: function () {
+                        // 隱藏 loading indicator
+                        $("#loadingIndicator@(itemName)").fadeOut();
+                        // 啟用上傳按鈕
+                        $("button").prop("disabled", false);
+                    }
+                });
+            } catch (error) {
+                alert("發生錯誤: " + error.message);
+                // 隱藏 loading indicator
+                $("#loadingIndicator@(itemName)").fadeOut();
+                // 啟用上傳按鈕
+                $("button").prop("disabled", false);
+            }
+        }
+
+        function Return@(itemName)() {
+            window.history.back();
+        }
+
+        function ShowHistory@(itemName)() {
+            $("#modalQuery@(itemName)").modal("show");
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitHistoryData@(itemName)(objPage@(itemName));
+        }
+
+        function InitHistoryData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetZemaxToolSetHistory", "RDToolSet")";
+            let postData = {
+                "OrderBy": "request_time DESC",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "FileName": $("#txtFileNameQ@(itemName)").val().trim(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val().trim(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val().trim()
+            };
+
+            let response = DataAccess.Get(targetUrl, postData, false);
+
+            if (response.status == "success") {
+                const { total, rows } = response.data;
+                pageCount = total;
+
+                if (rows && rows.length > 0) {
+                    objPage = PageCaculate(total, objPage);
+
+                    rows.forEach((item, index) => {
+                        // 計算序號
+                        const rowNumber = (objPage.pageSize * objPage.pageIndex + (index + 1));
+
+                        // 處理參數
+                        const pointCount = item.parameter === "" || isNaN(Number(item.parameter)) ? 100 : parseInt(item.parameter, 10);
+
+                        // 格式化時間
+                        const uploadTime = new Date(item.uploadTime).toLocaleString('zh-TW', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+
+                        innerHtml += `
+                        <tr data-output-dir="${item.outputFileDir}">
+                            <td>${rowNumber}.</td>
+                            <td>${item.fileName}</td>
+                            <td class="text-center">${pointCount}</td>
+                            <td class="text-center">${uploadTime}</td>
+                            <td class="text-center">
+                                <a class="active-link auth-file-read" href="javascript:void(0);" 
+                                   onclick="DownloadHistory@(itemName)('${item.fileName}', '${encodeURIComponent(item.outputFileDir)}');">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </td>
+                        </tr>`;
+                    });
+                } else {
+                    innerHtml = `
+                    <tr>
+                        <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                        </td>
+                    </tr>`;
+                }
+            } else {
+                alert(response.msg, "alert", 0);
+            }
+
+            $("#historyTableData@(itemName)").html(innerHtml);
+            if (response.status === "success") {
+                Pager("#page@(itemName)", pageCount, objPage, InitHistoryData@(itemName));
+            }
+        }
+
+        function commonDownload@(itemName)(fileType, errorMessage, fileName = null) {
+            let originalFileName = '';
+            if (fileName) {
+                originalFileName = fileName.split('.').slice(0, -1).join('.');
+            } else {
+                originalFileName = fileUploader@(itemName).selectedFile.name.split('.').slice(0, -1).join('.');
+            }
+
+            let targetUrl = '@Url.Action("DownloadRDToolSet", "RDToolSet")';
+
+            // 建立 FormData
+            let formData = new FormData();
+            formData.append('programName', 'zemax_asp');
+            formData.append('fileType', fileType);
+            formData.append('originalFileName', originalFileName);
+            if (outputFileDir@(itemName)) {
+                formData.append('outputFileDir', outputFileDir@(itemName));
+            }
+
+            $.ajax({
+                url: targetUrl,
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                beforeSend: function() {
+                    $("#loadingIndicator@(itemName)").fadeIn();
+                },
+                success: function(data, status, xhr) {
+                    var blob = new Blob([data], { type: xhr.getResponseHeader('content-type') });
+                    var link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+
+                    // 根據檔案類型設定副檔名
+                    let downloadFileName;
+                    switch (fileType) {
+                        case 'all':
+                        case 'history':
+                            downloadFileName = `${originalFileName}.zip`;
+                            break;
+                        case 'excel':
+                            downloadFileName = `${originalFileName}.xlsx`;
+                            break;
+                        case 'dxf':
+                            downloadFileName = `${originalFileName}.dxf`;
+                            break;
+                    }
+                    link.download = downloadFileName;
+                    link.click();
+                },
+                error: function() {
+                    alert(errorMessage, "alert", 0);
+                },
+                complete: function() {
+                    $("#loadingIndicator@(itemName)").fadeOut();
+                }
+            });
+        }
+
+        function Download@(itemName)() {
+            commonDownload@(itemName)("all", "下載失敗");
+        }
+
+        function DownloadExcel@(itemName)() {
+            commonDownload@(itemName)("excel", "Excel檔案下載失敗");
+        }
+
+        function DownloadDXF@(itemName)() {
+            commonDownload@(itemName)("dxf", "DXF檔案下載失敗");
+        }
+
+        function DownloadHistory@(itemName)(fileName, outputFileDir) {
+            outputFileDir@(itemName) = decodeURIComponent(outputFileDir);
+            commonDownload@(itemName)("history", "歷史檔案下載失敗", fileName);
+        }
+    </script>
+        )

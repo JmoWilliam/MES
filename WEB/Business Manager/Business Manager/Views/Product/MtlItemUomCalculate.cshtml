@@ -1,0 +1,361 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MtlItemUomCalculate";
+    string itemNameText = "品號單位換算";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+        .button-row {
+            display: flex;
+        }
+
+        .transferOK {
+            color: #070;
+            font-weight: 600;
+        }
+
+        .transferNO {
+            color: #f34;
+            font-weight: 600;
+        }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+<input type="hidden" id="TransferStatusMT" value="" />
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="title-row">
+                    <h5 class="col-6 col-sm-6 col-md-6 fw-600">@(itemNameText)</h5>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        @*<a class="btn btn-success auth-data-transfer" href="javascript:Transfer@(itemName)();"><i class="fas fa-arrow-alt-square-up"></i>拋轉ERP</a>*@
+                        <a class="btn btn-info auth-calculate newUom" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">換算率分子</th>
+                                        <th scope="col" style="min-width: 150px;">換算單位</th>
+                                        <th class="text-center" scope="col" style="min-width: 50px;">等於</th>
+                                        <th scope="col" style="min-width: 150px;">換算率分母</th>
+                                        <th scope="col" style="min-width: 150px;">庫存單位</th>
+                                        <th scope="col" style="min-width: 150px; display: none;">是否拋轉</th>
+                                        <th scope="col" style="min-width: 100px;" class="noShow">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="MtlItemUomCalculateId" name="MtlItemUomCalculateId" value="-1" />
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtSwapNumerator@(itemName)">換算率分子 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtSwapNumerator@(itemName)" name="txtSwapNumerator@(itemName)"
+                                               data-msg-required="請輸入換算率分子" data-rule-required="true" placeholder="請輸入換算率分子" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="cboConvertUomId@(itemName)">換算單位 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboConvertUomId@(itemName)" name="cboConvertUomId@(itemName)"
+                                                data-msg-required="請選擇換算單位" data-rule-required="true"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtSwapDenominator@(itemName)">換算率分母 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtSwapDenominator@(itemName)" name="txtSwapDenominator@(itemName)" value="1"
+                                               data-msg-required="請輸入換算率分母" data-rule-required="true" placeholder="請輸入換算率分母" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="cboUomId@(itemName)">庫存單位 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboUomId@(itemName)" name="cboUomId@(itemName)"
+                                                data-msg-required="請選擇庫存單位" data-rule-required="true"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Expand@(itemName)() {
+            if (parseInt($("#MtlItemId").val()) > 0) {
+                if ($("#MtlItemTransferStatus").val() == "Y") {
+                    $(".newUom").hide()
+                    $(".noShow").hide()
+
+                }
+                else {
+                    $(".newUom").show()
+                    $(".noShow").show()
+                }
+                Return@(itemName)();
+            } else {
+                alert("請先儲存品號", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            var MtlItemTransferStatus = $("#MtlItemTransferStatus").val()
+            console.log(MtlItemTransferStatus)
+
+            let targetUrl = "@Url.Action("GetMtlItemUomCalculate", "Product")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemId": $("#MtlItemId").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    if (data.result.filter(f => f.TransferStatus == `N`).length > 0) { $(`.auth-data-transfer`).show(); }
+                    else $(`.auth-data-transfer`).hide();
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SwapNumerator}" style="max-width: 170px;">${item.SwapNumerator}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ConvertUomNo}" style="max-width: 170px;">${item.ConvertUomNo}</td>
+                                        <td class="text-center ellipsis" data-toggle="tooltip" title="等於" style="max-width: 50px;">=</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SwapDenominator}" style="max-width: 170px;">${item.SwapDenominator}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UomNo}" style="max-width: 170px;">${item.UomNo}</td>
+                                        <td class="ellipsis ${item.TransferStatus == `N` ? `transferNO` : `transferOK`}" data-toggle="tooltip" title="${item.TransferStatus}" style="max-width: 170px; display: none;">${TransferStatusName(item.TransferStatus)}</td>
+                                        <td class="text-center active-content ${MtlItemTransferStatus == `Y` ? `noShow` : `` }">
+                                          ${item.TransferStatus == `N` ? `<a class="active-link auth-calculate" href="javascript:Edit@(itemName)(${item.MtlItemUomCalculateId});"><i class="fas fa-edit"></i></a>` : ``}
+                                          ${item.TransferStatus == `N` ? `<a class="active-link auth-calculate" href="javascript:Delete@(itemName)(${item.MtlItemUomCalculateId});"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(MtlItemUomCalculateId) {
+            $("#MtlItemUomCalculateId").val(MtlItemUomCalculateId ? MtlItemUomCalculateId : 0);
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            ComboBoxs.Default("#cboConvertUomId@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", { "Status": "A"}, "", "NA", "", "UomWithNo", "UomId");
+            ComboBoxs.Default("#cboUomId@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", { "UomId": $("#InventoryUomId").val(), "Status": "A"}, $("#InventoryUomId").val(), "NA", "", "UomWithNo", "UomId");
+
+            if (MtlItemUomCalculateId > 0) {
+                let targetUrl = "@Url.Action("GetMtlItemUomCalculate", "Product")";
+                let postData = {
+                    "MtlItemUomCalculateId": $("#MtlItemUomCalculateId").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#cboConvertUomId@(itemName)").val(item.ConvertUomId);
+                        $("#txtSwapDenominator@(itemName)").val(item.SwapDenominator);
+                        $("#cboUomId@(itemName)").val(item.UomId);
+                        $("#txtSwapNumerator@(itemName)").val(item.SwapNumerator);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            if (!isMobile) {
+                $("#cboConvertUomId@(itemName), #cboUomId@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+        }
+
+        function Save@(itemName)() {
+            //alert("品號單位功能功能還沒開放!!請慢心等待")
+            //return
+            if ($(objForm@(itemName)).valid()) {
+                let MtlItemUomCalculateId = parseInt($("#MtlItemUomCalculateId").val());
+                if (MtlItemUomCalculateId <= 0) {
+                    let targetUrl = "@Url.Action("AddMtlItemUomCalculate", "Product")";
+                    let postData = {
+                        "MtlItemId": $("#MtlItemId").val(),
+                        "ConvertUomId": $("#cboConvertUomId@(itemName)").val(),
+                        "SwapDenominator": $("#txtSwapDenominator@(itemName)").val(),
+                        "UomId": $("#cboUomId@(itemName)").val(),
+                        "SwapNumerator": $("#txtSwapNumerator@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                    if (result) {
+                        //EditMtlItem($("#MtlItemId").val())
+                        Return@(itemName)();
+                        //ComboBoxs.Default("#cboPurchaseUomIdMtlItem", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", { "UomId": $("#cboInventoryUomIdMtlItemId)").val() }, $("##cboPurchaseUomIdMtlItemId").val(), "NA", "", "UomWithNo", "UomId");
+                        //ComboBoxs.Default("#cboSaleUomIdMtlItem", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", { "UomId": $("#cboSaleUomIdMtlItemId").val() }, $("##cboPurchaseUomIdMtlItemId").val(), "NA", "", "UomWithNo", "UomId");
+
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateMtlItemUomCalculate", "Product")";
+                    let postData = {
+                        "MtlItemUomCalculateId": MtlItemUomCalculateId,
+                        "MtlItemId": $("#MtlItemId").val(),
+                        "ConvertUomId": $("#cboConvertUomId@(itemName)").val(),
+                        "SwapDenominator": $("#txtSwapDenominator@(itemName)").val(),
+                        "SwapNumerator": $("#txtSwapNumerator@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, false);
+
+                    if (result) {
+                        //EditMtlItem($("#MtlItemId").val())
+                        Return@(itemName)();
+                        //ComboBoxs.Default("#cboPurchaseUomIdMtlItem", "@Url.Action("GetMtlItemUomCalculateSimple", "Product")", { MtlItemId: $("#MtlItemId").val() }, $("#cboPurchaseUomIdMtlItemId").val(), "NA", "", "ConvertUomNo", "ConvertUomId");
+                        //ComboBoxs.Default("#cboSaleUomIdMtlItem", "@Url.Action("GetMtlItemUomCalculateSimple", "Product")", { MtlItemId: $("#MtlItemId").val() }, $("#cboPurchaseUomIdMtlItemId").val(), "NA", "", "ConvertUomNo", "ConvertUomId");
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(MtlItemUomCalculateId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMtlItemUomCalculate", "Product")";
+                    let postData = {
+                        "MtlItemUomCalculateId": MtlItemUomCalculateId
+                    };
+
+                    if (DataAccess.Delete(targetUrl, postData, false, false)) {
+                        alert('刪除成功', 'success', 0);
+                        Query@(itemName)();
+                    }
+                    else {
+                        alert('刪除失敗', 'error', 0);
+                    }
+                }
+            });
+        }
+
+        function Transfer@(itemName)() {
+            swal.fire({
+                titleText: "確認要拋轉ERP嗎?",
+                text: "拋轉前請確認資料是否有填寫正確!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateMtlItemUomCalculateToERP", "Product")";
+                    let postData = {
+                        "MtlItemId": $("#MtlItemId").val()
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, false);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+</script>
+)

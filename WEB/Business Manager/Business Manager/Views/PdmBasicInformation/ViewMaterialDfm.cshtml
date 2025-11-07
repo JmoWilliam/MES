@@ -1,0 +1,213 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMaterialDfm";
+    string itemNameText = "查看物料";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtDfmMaterialNoQ@(itemName)" name="txtContactQ@(itemName)"
+                                               placeholder="請輸入物料代碼" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtDfmMaterialNameQ@(itemName)" name="txtContactQ@(itemName)"
+                                               placeholder="請輸入物料名稱" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">製成項目</th>
+                                        <th scope="col" style="min-width: 250px;">名稱</th>
+                                        <th scope="col" style="min-width: 250px;">單價</th>
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+        let parameterId@(itemName);
+        let dfmmaterial@(itemName);
+        let modeId@(itemName) = -1;
+        let NowMaxMaterialNum = -1;
+
+        let dfmmaterialJson =
+        {
+            dfmmaterialInfo: []
+        };
+
+        function Pop@(itemName)(config) {
+            dfmMaterialId@(itemName) = config.objectDfmMaterialId;
+            dfmMaterialNo@(itemName) = config.objectDfmMaterialNo;
+            dfmItemCategoryId@(itemName) = config.objectDfmItemCategoryId;
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetDfmCategoryMaterial", "PdmBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "DfmMaterialNo": $("#txtDfmMaterialNoQ@(itemName)").val(),
+                "DfmMaterialName": $("#txtDfmMaterialNameQ@(itemName)").val(),
+                "DfmItemCategoryId": dfmItemCategoryId@(itemName),
+                "Status": "A"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        if (item.ParameterNo != null) return;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DfmMaterialNo}" style="max-width: 150px;">${item.DfmMaterialNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DfmMaterialName}" style="max-width: 150px;">${item.DfmMaterialName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DfmMaterialMoney}" style="max-width: 150px;">${item.DfmMaterialMoney}</td>
+                                        <td class="text-center">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" name="material-dfm" data-dfmmaterial-no="${item.DfmMaterialNo}" data-dfmmaterial-name="${item.DfmMaterialName}" data-dfmmaterial-money="${item.DfmMaterialMoney}" value="${item.DfmCategoryMaterialId}" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $(".radio-mode").hide();
+            $(".checkbox-mode").show();
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][name='material-dfm']").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][name='material-dfm']").not(":disabled").prop("checked", false);
+                }
+            });
+        }
+
+        function Save@(itemName)() {
+            dfmmaterialJson =
+                {
+                    dfmmaterialInfo: []
+                };
+            if ($("input[type='checkbox'][name='material-dfm']:checked").length > 0) {
+                $.each($("input[type='checkbox'][name='material-dfm']:checked"), function (i) {
+                    let dfmMaterialId = $(this).val();
+                    let dfmMaterialNo = $(this).data("dfmmaterial-no");
+                    let dfmMaterialName = $(this).data("dfmmaterial-name");
+                    let dfmMaterialMoney = $(this).data("dfmmaterial-money");
+
+                    let inputData =
+                    {
+                        "TempNumber": tempNumberMaterial,
+                        "DfmMaterialId": dfmMaterialId,
+                        "DfmMaterialNo": dfmMaterialNo,
+                        "DfmMaterialName": dfmMaterialName,
+                        "DfmMaterialMoney": dfmMaterialMoney,
+                    }
+                    dfmmaterialJson.dfmmaterialInfo.push(inputData);
+                    if (QiMaterialExcelList.indexOf(dfmMaterialNo) == -1) {
+                        tempNumberMaterial++;
+                        spreadsheetDfmMateriaTemporaryExcel.setValue("A" + tempNumberMaterial, dfmMaterialNo + ":" + dfmMaterialName)
+                        //spreadsheetDfmMateriaTemporaryExcel.setValidation("B" + tempNumberMaterial, ["1:考慮方案數量", "2:不考慮方案數量"])
+                        spreadsheetDfmMateriaTemporaryExcel.setValue("B" + tempNumberMaterial, dfmMaterialMoney)
+                        spreadsheetDfmMateriaTemporaryExcel.setStyle("B" + tempNumberMaterial, { "text-align": "right" })
+
+                        QiMaterialExcelList.push(dfmMaterialNo)
+                    }
+                });
+            }
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+        
+    </script>
+        )

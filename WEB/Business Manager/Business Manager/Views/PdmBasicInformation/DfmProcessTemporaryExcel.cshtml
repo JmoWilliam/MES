@@ -1,0 +1,388 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DfmProcessTemporaryExcel";
+    string itemNameText = "製程樣板資料管理";
+}
+
+@Html.Resource("css",
+    @<style>
+         .showStyle {
+             display: inline-block;
+             margin-top: -1px;
+         }
+
+         .AddNewItem {
+             margin: 2px 0;
+         }
+    </style>
+)
+
+<div style="height: 75%; width: 100%;" id="QiProccessTemporary"></div>
+
+@Html.Partial("ViewProcessDfm")
+
+@Html.Resource("js",
+    @<script>
+        let spreadsheet@(itemName);
+        let spreadsheetData@(itemName);
+
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfoQiMaterial: []
+        }
+
+        let QiProcessExcelList = []
+        let tempNumber = 1;
+        var QiProccessTemporaryDefault = "";
+
+
+        function Expand@(itemName)() {
+            if (parseInt($("#DfmItemCategoryId").val()) > 0) {
+                ModeId@(itemName) = $("#ModeId").val()
+                $("#modal@(itemName)").modal({
+                    backdrop: "static",
+                    keyboard: false,
+                    show: true
+                });
+
+                $(".advanced-block").slideDown("slow");
+
+                ResetSpreadsheet@(itemName)();
+
+                $("#QiProccessTemporary").css("height", "600px");
+
+                spreadsheet@(itemName).clear();
+
+                //轉移焦點後觸發
+                spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                    var rows = cell.substr(1);
+                    var MaterialNo = spreadsheet@(itemName).getValue("A" + rows)
+                    if (rows != 1) {
+                        if (MaterialNo != null ) {
+                            spreadsheet@(itemName).setValidation("B" + rows, ["1:單PCS工時", "2:By製程批量", "3:By報價數量"])
+                        }
+                        if (cell.indexOf("A") != -1 && cell != "A1") {
+                            ComboBoxs.Default("#cboDfmMaterialId@(itemName)", "@Url.Action("GetDfmMaterial", "DfmInformation")", {}, "", "ALL", "", "DfmMaterialFullItemNo", "DfmMaterialId");
+                            $("#modalDfmMaterial@(itemName)").modal("show");
+                        }
+                    }
+                });
+
+                //點擊觸發
+                spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                    if (id == "Save") {
+                        SaveExcelData@(itemName)();
+                    }
+                    else if (id == "Delete") {
+                        DeleteExcelData@(itemName)();
+                    }
+                    else if (id == "DownloadExcel") {
+                        DownloadExcel@(itemName)();
+                    }
+                    else if (id == "AddNewItem") {
+                        SaveExcelData@(itemName)();
+                        let popConfig = {
+                            targetSelector: "#txtProcessId@(itemName)",
+                            popFunction: "PopViewProcessDfm",
+                            objectProcessId: "#txtProcessId@(itemName)",
+                            objectProcess: "#txtProcess@(itemName)",
+                            objectModeId: ModeId@(itemName)
+                        };
+                        PopViewProcessDfm(popConfig)
+                    }
+                });
+
+                QiProccessTemporaryDefault = `
+                    {"sheets":[{"name":"sheet1","data":[{"cell":"A1","css":"dhx_generated_class_u1690959030028","format":"common","value":"製程名稱"}
+                    ,{"cell":"B1","css":"dhx_generated_class_u1690959030038","format":"common","value":"工時分配類別"}
+                    ,{"cell":"C1","css":"dhx_generated_class_u1690959030039","format":"common","value":"分配基數數量"}
+                    ,{"cell":"D1","css":"dhx_generated_class_u1690959030040","format":"common","value":"工時/時"}
+                    ,{"cell":"E1","css":"dhx_generated_class_u1690959030040","format":"common","value":"工時/分"}
+                    ,{"cell":"F1","css":"dhx_generated_class_u1690959030040","format":"common","value":"工時/秒"}
+                    ,{"cell":"G1","css":"dhx_generated_class_u1690959030041","format":"common","value":"機時/時"}
+                    ,{"cell":"H1","css":"dhx_generated_class_u1690959030041","format":"common","value":"機時/分"}
+                    ,{"cell":"I1","css":"dhx_generated_class_u1690959030041","format":"common","value":"機時/秒"}
+                    ,{"cell":"J1","css":"dhx_generated_class_u1690959030042","format":"common","value":"良率"}]
+                    ,"cols":[{"width":180},{"width":150},{"width":150},{"width":135},{"width":105},{"width":105},{"width":105},{"width":105},{"width":105},{"width":105}]
+                    ,"rows":[{"height":32}]}]
+                    ,"styles":{
+                    "dhx_generated_class_u1690959030028":{"background":"#BCE4CE","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030038":{"background":"#81D4FA","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030039":{"background":"#D6BDCC","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030040":{"background":"#FFCDD2","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030041":{"background":"#90D2AF","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030042":{"background":"#88A3F9","text-align":"center","justify-content":"center"}
+                    ,"dhx_generated_class_u1690959030043":{"background":"#D2C5C1","text-align":"center","justify-content":"center"}}
+                    ,"formats":[{"name":"Common","id":"common","mask":"","example":"1500.31"},{"name":"Number","id":"number","mask":"#,##0.00","example":"1500.31"}
+                    ,{"name":"Percent","id":"percent","mask":"#,##0.00%","example":"15.0031"},{"name":"Currency","id":"currency","mask":"$#,##0.00","example":"1500.31"}
+                    ,{"name":"Date","id":"date","mask":"mm-dd-yy","example":"44490","dateFormat":"%d/%m/%Y"}
+                    ,{"name":"Time","id":"time","mask":"h:mm:ss am/pm","example":"0.5625","timeFormat":12}
+                    ,{"name":"Text","id":"text","mask":"@@","example":"some text"}]}
+                `
+
+                Return@(itemName)();
+
+            }
+            else {
+                alert("DFM種類項目資料有誤，無法展開單身!!", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)(objPage) {
+            var maxPlace = 0
+            tempNumber = 0;
+            QiProcessExcelList = [];
+
+            let targetUrl = "@Url.Action("GetDfmCategoryTemplate", "PdmBasicInformation")";
+            let postData = {
+                "DfmItemCategoryId": $("#DfmItemCategoryId").val(),
+                "DataType": "DfmQiProcess"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#DfmCtId").val(item.DfmCtId)
+                        if (item.QiProcessTemplate != null) {
+                            let dataset = JSON.parse(item.QiProcessTemplate);
+                            dataset.sheets[0].data.forEach(function (v) {
+                                if (v.cell.indexOf('A') != -1) {
+                                    maxPlace = v.cell.split('A')[1]
+                                    if (typeof v.value !== "undefined") {
+                                        QiProcessExcelList.push(v.value.split(':')[0])
+                                    }
+                                }
+                            })
+                            spreadsheet@(itemName).parse(dataset);
+                            spreadsheetData@(itemName) = dataset;
+                        }
+                        else {
+                            let dataset = JSON.parse(QiProccessTemporaryDefault);
+                            spreadsheet@(itemName).parse(dataset);
+                            spreadsheetData@(itemName) = dataset;
+                        }
+                    });
+                }
+                else {
+                    let dataset = JSON.parse(QiProccessTemporaryDefault);
+                    spreadsheet@(itemName).parse(dataset);
+                    spreadsheetData@(itemName) = dataset;
+                }
+                    spreadsheet@(itemName).lock("A1:J1");
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            tempNumber = parseInt(maxPlace);
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#QiProccessTemporary").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("QiProccessTemporary", {
+                menu: true
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-search",
+                tooltip: "新增製程",
+                id: "AddNewItem",
+                class:"pop-view"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-save",
+                tooltip: "儲存數據",
+                id: "Save"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-trash-alt",
+                tooltip: "刪除暫存數據",
+                id: "Delete"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-download",
+                tooltip: "下載當前EXCEL",
+                id: "DownloadExcel"
+            });
+        }
+
+        function ReLoadSpreadsheetData@(itemName)() {
+            spreadsheetJson@(itemName).spreadsheetInfo = [];
+            spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+            $.each(spreadsheetData@(itemName).sheets[0].data, function (i, item) {
+                let cell = item.cell;
+
+                if (cell.length == 2 && cell.split('')[1] == "1") {
+                    return;
+                }
+
+                //製程名稱(代碼)
+                if (cell.split('')[0] == "A") {
+                    let inputSpreadsheetInfo =
+                    {
+                        "ParameterNo": item.value,
+                        "Row": cell.split('A')[1]
+                    };
+                    spreadsheetJson@(itemName).spreadsheetInfo.push(inputSpreadsheetInfo);
+                }
+
+                //工時分配類別
+                if (cell.split('')[0] == "B") {
+                    let row = cell.split('B')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["AllocationType"] = item.value;
+                        }
+                    });
+                }
+
+                //分配基數數量
+                if (cell.split('')[0] == "C") {
+                    let row = cell.split('C')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["AllocationQty"] = item.value;
+                        }
+                    });
+                }
+                //工時/時
+                if (cell.split('')[0] == "D") {
+                    let row = cell.split('D')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["ManTimeH"] = item.value;
+                        }
+                    });
+                }
+                //工時/分
+                if (cell.split('')[0] == "E") {
+                    let row = cell.split('E')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["ManTimeM"] = item.value;
+                        }
+                    });
+                }
+                //工時/秒
+                if (cell.split('')[0] == "F") {
+                    let row = cell.split('F')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["ManTimeS"] = item.value;
+                        }
+                    });
+                }
+                //機時/時
+                if (cell.split('')[0] == "G") {
+                    let row = cell.split('G')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["MachineTimeH"] = item.value;
+                        }
+                    });
+                }
+                //機時/分
+                if (cell.split('')[0] == "H") {
+                    let row = cell.split('H')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["MachineTimeM"] = item.value;
+                        }
+                    });
+                }
+                //機時/秒
+                if (cell.split('')[0] == "I") {
+                    let row = cell.split('I')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["MachineTimeS"] = item.value;
+                        }
+                    });
+                }
+                //良率
+                if (cell.split('')[0] == "J") {
+                    let row = cell.split('J')[1];
+                    $.each(spreadsheetJson@(itemName).spreadsheetInfo, function (j, item2) {
+                        if (item2.Row == row) {
+                            spreadsheetJson@(itemName).spreadsheetInfo[j]["YieldRate"] = item.value;
+                        }
+                    });
+                }
+
+            });
+        }
+
+        function SaveExcelData@(itemName)() {
+            spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+            let targetUrl = "@Url.Action("UpdateDfmCategoryTemplate", "PdmBasicInformation")";
+            let postData = {
+                "DfmCtId": $("#DfmCtId").val(),
+                "DfmItemCategoryId": $("#DfmItemCategoryId").val(),
+                "DataType": "DfmQiProcess",
+                "SpreadsheetData": JSON.stringify(spreadsheetData@(itemName))
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function DeleteExcelData@(itemName)() {
+            swal.fire({
+                titleText: "確認要刪除暫存數據嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDfmCategoryTemplate", "PdmBasicInformation")";
+                    let postData = {
+                        "DfmCtId": $("#DfmCtId").val(),
+                        "DfmItemCategoryId": $("#DfmItemCategoryId").val(),
+                        "DataType": "DfmQiProcess"
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function DownloadExcel@(itemName)() {
+            spreadsheet@(itemName).export.xlsx();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+            ReturnDfmQuotationItem()
+            QiProcessExcelList = [];
+            tempNumber = 1;
+        }
+
+        function Return@(itemName)() {
+            InitData@(itemName)();
+
+        }
+    </script>
+                                                )

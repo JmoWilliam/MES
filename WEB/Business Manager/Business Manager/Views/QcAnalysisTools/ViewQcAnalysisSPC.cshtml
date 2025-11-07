@@ -1,0 +1,1182 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewQcAnalysisSPC";
+    string itemNameText = "SPC (統計製程管制)";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+
+    string QcItemId = Request["QcItemId"] ?? "";
+    string MtlItemNo = Request["MtlItemNo"] ?? "";
+    string MtlItemName = Request["MtlItemName"] ?? "";
+    string StartDate = Request["StartDate"] ?? "";
+    string EndDate = Request["EndDate"] ?? "";
+    string CustMtlItemNo = Request["CustMtlItemNo"] ?? "";
+    string CustMtlItemName = Request["CustMtlItemName"] ?? "";
+    string QcType = Request["QcType"] ?? "";
+    string DesignValue = Request["DesignValue"] ?? "";
+    
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                                                                                                                                                                                                                                                                                                )
+<script src="~/Scripts/chart.js"></script>
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                @*<div class="row mb-3">
+                    <div class="col-6">
+                        <label class="container">組數</label>
+                            <input type="text" style="max-width: 80px;" class="form-control" id="txtGroupCount@(itemName)" name="txtGroupCount@(itemName)"
+                                   data-msg-extraRegex="請輸入組數" placeholder="請輸入組數" />
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                            <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                                <i class="fal fa-adjust"></i>判定標準
+                            </a>
+                        </div>
+                </div>*@
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblTitle1@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 120px;">品號</th>
+                                        <th scope="col" style="min-width: 200px;">品名</th>
+                                        <th scope="col" style="min-width: 100px;">項目編號</th>
+                                        <th scope="col" style="min-width: 50px;">球標</th>
+                                        <th scope="col" style="min-width: 200px;">項目別稱</th>
+                                        <th scope="col" style="min-width: 100px;">設計值</th>
+                                        <th scope="col" style="min-width: 100px;">上公差</th>
+                                        <th scope="col" style="min-width: 100px;">下公差</th>
+                                        <th scope="col" style="min-width: 80px;">單位</th>
+                                        <th scope="col" style="min-width: 200px;">量測儀器</th>
+                                        <th scope="col" style="min-width: 200px;">時間區間</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <table class="table table-bordered table-striped table-sticky" id="tblTitle2@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">組數</th>
+                                        <th scope="col" style="min-width: 50px;">N</th>
+                                        <th scope="col" style="min-width: 80px;">s</th>
+                                        <th scope="col" style="min-width: 80px;">管制中心(XBar)</th>
+                                        <th scope="col" style="min-width: 80px;">管制上限(XBar)</th>
+                                        <th scope="col" style="min-width: 80px;">管制下限(XBar)</th>
+                                        <th scope="col" style="min-width: 80px;">管制中心(R)</th>
+                                        <th scope="col" style="min-width: 80px;">管制上限(R)</th>
+                                        <th scope="col" style="min-width: 80px;">管制下限(R)</th>
+                                        <th scope="col" style="min-width: 80px;">Ca</th>
+                                        <th scope="col" style="min-width: 80px;">Cp</th>
+                                        <th scope="col" style="min-width: 80px;">Cpk</th>
+                                        <th scope="col" style="min-width: 80px;">Pp</th>
+                                        <th scope="col" style="min-width: 80px;">Ppk</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="table-custom">
+                                    <table class="table table-bordered table-striped table-sticky table-warning" id="tblData@(itemName)">
+                                        <thead>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">管制圖8大判定標準</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <input type="checkbox" class="checkbox" id="ckbOneQ" @(itemName) name="txtOneQ@(itemName)" checked>
+                                <label class="container" style="font-size:18px">判定A：1 個點，距離中心線大於在 K 個標準差</label>
+                            </div>
+                            <div class="col-2">
+                                <input type="text" class="form-control" id="txtOneQ@(itemName)" name="txtOneQ@(itemName)"
+                                       data-msg-extraRegex="請輸入K值" placeholder="請輸入K值" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <label class="container" style="font-size:18px">判定B：連續 K 點，落在同一側</label>
+                            </div>
+                            <div class="col-2">
+                                <input type="text" class="form-control" id="txtTwoQ@(itemName)" name="txtTwoQ@(itemName)"
+                                       data-msg-extraRegex="請輸入K值" placeholder="請輸入K值" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <label class="container" style="font-size:18px">判定C：連續 K 點，遞增或遞減</label>
+                            </div>
+                            <div class="col-2">
+                                <input type="text" class="form-control" id="txtThreeQ@(itemName)" name="txtThreeQ@(itemName)"
+                                       data-msg-extraRegex="請輸入K值" placeholder="請輸入K值" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <label class="container" style="font-size:18px">判定D：連續 K 點，上下交錯</label>
+                            </div>
+                            <div class="col-2">
+                                <input type="text" class="form-control" id="txtFourQ@(itemName)" name="txtFourQ@(itemName)"
+                                       data-msg-extraRegex="請輸入K值" placeholder="請輸入K值" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <label class="container" style="font-size:18px">判定E：K+1 點中有 K 個點，落在距離中心(同一側)大於 2 個標準差</label>
+                            </div>
+                            <div class="col-2">
+                                <input type="text" class="form-control" id="txtFiveQ@(itemName)" name="txtFiveQ@(itemName)"
+                                       data-msg-extraRegex="請輸入K值" placeholder="請輸入K值" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <label class="container" style="font-size:18px">判定F：K+1 點中有 K 個點，落在距離中心(同一側)大於 1 個標準差</label>
+                            </div>
+                            <div class="col-2">
+                                <input type="text" class="form-control" id="txtSixQ@(itemName)" name="txtSixQ@(itemName)"
+                                       data-msg-extraRegex="請輸入K值" placeholder="請輸入K值" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <label class="container" style="font-size:18px">判定G：連續 K 個點，落在距離中心(任一側) 1 個標準差內</label>
+                            </div>
+                            <div class="col-2">
+                                <input type="text" class="form-control" id="txtSevenQ@(itemName)" name="txtSevenQ@(itemName)"
+                                       data-msg-extraRegex="請輸入K值" placeholder="請輸入K值" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <label class="container" style="font-size:18px">判定H：連續 K 個點，落在距離中心(任一側)大於 1 個標準差</label>
+                            </div>
+                            <div class="col-2">
+                                <input type="text" class="form-control" id="txtEightQ@(itemName)" name="txtEightQ@(itemName)"
+                                       data-msg-extraRegex="請輸入K值" placeholder="請輸入K值" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>開始判定</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Chart 分頁-->
+<div class="row" id="Charts@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="advanced-section">
+                    <div class="row">
+                        <div class="col-12">
+                            <ul class="nav flag-tabs nav-fill" role="tablist">
+                                <li class="flag-item">
+                                    <a id="aXBarChart@(itemName)" class="flag-link  active" data-toggle="tab" href="#tabXBarChart">
+                                        <i class="fas fa-chart-line"></i> X Bar 管制圖
+                                    </a>
+                                </li>
+                                <li class="flag-item">
+                                    <a id="aRChart@(itemName)" class="flag-link" data-toggle="tab" href="#tabRChart">
+                                        <i class="fas fa-chart-line"></i> R 管制圖
+                                    </a>
+                                </li>
+                                <li class="flag-item">
+                                    <a id="aPability@(itemName)" class="flag-link" data-toggle="tab" href="#tabPability">
+                                        <i class="fas fa-chart-bar"></i> 製程能力
+                                    </a>
+                                </li>
+                                <li class="flag-item">
+                                    <a id="aJudge@(itemName)" class="flag-link" data-toggle="tab" href="#tabJudge">
+                                        <i class="fas fa-table"></i> 管制判定標準
+                                    </a>
+                                </li>
+                                <li class="flag-item">
+                                    <a id="Excel@(itemName)" class="flag-link" href="javascript:Excel@(itemName)();">
+                                        <i class="fas fa-file-excel"></i> 匯出
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="tabXBarChart">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="table-custom">
+                                        <div class="chart-container" style="position: relative">
+                                            <canvas id="myChartXBar@(itemName)" style="min-width:300px; height:100px"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="tabRChart">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="table-custom">
+                                        <div class="chart-container" style="position: relative">
+                                            <canvas id="myChartR@(itemName)" style="min-width:300px; height:100px"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="tabPability">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="table-custom">
+                                        <div class="chart-container" style="position: relative">
+                                            <canvas id="myChartPability@(itemName)" style="min-width:300px; height:100px"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="tabJudge">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="form-group row">
+                                        <div class="col-6">
+                                            <div class="form-group row">
+                                                <table class="table table-bordered table-sticky" id="tblJudgeTitle@(itemName)">
+                                                        <tr>
+                                                            <th scope="col" style="min-width: 100px; text-align:center; font-size:18px;">判定項目</th>
+                                                            <th scope="col" style="min-width: 50px; max-width:100px; text-align:center; font-size:18px;">請輸入K值</th>
+                                                        </tr>
+                                                </table>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-10">
+                                                    <input type="checkbox" class="checkbox" id="ckbOne@(itemName)" name="ckbOne@(itemName)" checked>
+                                                    <label style="font-size:18px"> 判定A：1 個點，距離中心線大於在 K 個標準差</label>
+                                                </div>
+                                                <div class="col-2">
+                                                    <input type="text" class="form-control" id="txtOne@(itemName)" name="txtOne@(itemName)"
+                                                           data-msg-extraRegex="請輸入K值" placeholder="K值" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-10">
+                                                    <input type="checkbox" class="checkbox" id="ckbTwo@(itemName)" name="ckbTwo@(itemName)" checked>
+                                                    <label style="font-size:18px"> 判定B：連續 K 點，落在同一側</label>
+                                                </div>
+                                                <div class="col-2">
+                                                    <input type="text" class="form-control" id="txtTwo@(itemName)" name="txtTwo@(itemName)"
+                                                           data-msg-extraRegex="請輸入K值" placeholder="K值" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-10">
+                                                    <input type="checkbox" class="checkbox" id="ckbThree@(itemName)" name="ckbThree@(itemName)" checked>
+                                                    <label style="font-size:18px"> 判定C：連續 K 點，遞增或遞減</label>
+                                                </div>
+                                                <div class="col-2">
+                                                    <input type="text" class="form-control" id="txtThree@(itemName)" name="txtThree@(itemName)"
+                                                           data-msg-extraRegex="請輸入K值" placeholder="K值" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-10">
+                                                    <input type="checkbox" class="checkbox" id="ckbFour@(itemName)" name="ckbFour@(itemName)" checked>
+                                                    <label style="font-size:18px"> 判定D：連續 K 點，上下交錯</label>
+                                                </div>
+                                                <div class="col-2">
+                                                    <input type="text" class="form-control" id="txtFour@(itemName)" name="txtFour@(itemName)"
+                                                           data-msg-extraRegex="請輸入K值" placeholder="K值" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-10">
+                                                    <input type="checkbox" class="checkbox" id="ckbFive@(itemName)" name="ckbFive@(itemName)" checked>
+                                                    <label style="font-size:18px"> 判定E：K+1 點中有 K 個點，落在距離中心(同一側)大於 2 個標準差</label>
+                                                </div>
+                                                <div class="col-2">
+                                                    <input type="text" class="form-control" id="txtFive@(itemName)" name="txtFive@(itemName)"
+                                                           data-msg-extraRegex="請輸入K值" placeholder="K值" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-10">
+                                                    <input type="checkbox" class="checkbox" id="ckbSix@(itemName)" name="ckbSix@(itemName)" checked>
+                                                    <label style="font-size:18px"> 判定F：K+1 點中有 K 個點，落在距離中心(同一側)大於 1 個標準差</label>
+                                                </div>
+                                                <div class="col-2">
+                                                    <input type="text" class="form-control" id="txtSix@(itemName)" name="txtSix@(itemName)"
+                                                           data-msg-extraRegex="請輸入K值" placeholder="K值" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-10">
+                                                    <input type="checkbox" class="checkbox" id="ckbSeven@(itemName)" name="ckbSeven@(itemName)" checked>
+                                                    <label style="font-size:18px"> 判定G：連續 K 個點，落在距離中心(任一側) 1 個標準差內</label>
+                                                </div>
+                                                <div class="col-2">
+                                                    <input type="text" class="form-control" id="txtSeven@(itemName)" name="txtSeven@(itemName)"
+                                                           data-msg-extraRegex="請輸入K值" placeholder="K值" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-10">
+                                                    <input type="checkbox" class="checkbox" id="ckbEight@(itemName)" name="ckbEight@(itemName)" checked>
+                                                    <label style="font-size:18px"> 判定H：連續 K 個點，落在距離中心(任一側)大於 1 個標準差</label>
+                                                </div>
+                                                <div class="col-2">
+                                                    <input type="text" class="form-control" id="txtEight@(itemName)" name="txtEight@(itemName)"
+                                                           data-msg-extraRegex="請輸入K值" placeholder="K值" />
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-6"></div>
+                                                <div class="col-6 col-sm-6 col-md-6 text-right">
+                                                    <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>開始判定</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="table-custom">
+                                                <table class="table table-bordered table-striped table-sticky" id="tblJudge@(itemName)">
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col" style="min-width: 50px; text-align:center; font-size:18px;">標準編號</th>
+                                                            <th scope="col" style="min-width: 100px; text-align:center; font-size:18px;">異常日期</th>
+                                                            <th scope="col" style="min-width: 100px; text-align:center; font-size:18px;">異常數據</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+@<script>
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 999
+    };
+
+    let QcItemId@(itemName) = "@QcItemId";
+    let StartDate@(itemName) = "@StartDate";
+    let EndDate@(itemName) = "@EndDate";
+    let QcType@(itemName) = "@QcType";
+    let MtlItemNo@(itemName) = "@MtlItemNo";
+    let MtlItemName@(itemName) = "@MtlItemName";
+    let CustMtlItemNo@(itemName) = "@CustMtlItemNo";
+    let CustMtlItemName@(itemName) = "@CustMtlItemName";
+    let DesignValue@(itemName) = "@DesignValue";
+    let GroupCount@(itemName) = 0;
+    let myChartXBar;
+    let myChartR;
+    let myChartPability;
+    let Xaxis = [];
+    
+    let judge@(itemName) = {
+        "One": 3,
+        "Two": 9,
+        "Three": 6,
+        "Four": 14,
+        "Five": 2,
+        "Six": 4,
+        "Seven": 15,
+        "Eight": 8,
+    };
+
+    $(document).ready(function () {
+        InitData@(itemName)(judge@(itemName));
+        
+        $("#txtOne@(itemName)").val(3);
+        $("#txtTwo@(itemName)").val(9);
+        $("#txtThree@(itemName)").val(6);
+        $("#txtFour@(itemName)").val(14);
+        $("#txtFive@(itemName)").val(2);
+        $("#txtSix@(itemName)").val(4);
+        $("#txtSeven@(itemName)").val(15);
+        $("#txtEight@(itemName)").val(8);        
+    })
+
+    function InitData@(itemName)(judge) {
+        objPage@(itemName).pageIndex = 0;
+        let innerHtml1 = '';
+        let innerHtml2 = '';
+        let innerHtml3 = '';
+        let innerHtml4 = '';
+        let ChartXaxis = []; //put X date
+        let XbarValues = []; //put value
+        let RValues = []; //put value
+        let DynamicXBarCenter = '';
+        let DynamicXBarUsl = '';
+        let DynamicXBarLsl = '';
+        let XbarUpper = [];
+        let XbarLower = [];
+        let XbarCenter = [];
+        let DesignValue = '';
+        let DesignUsl = '';
+        let DesignLsl = '';
+        let DesignCenter = [];
+        let DesignUpper = [];
+        let DesignLower = [];
+        let DynamicRCenter = '';
+        let DynamicRUsl = '';
+        let DynamicRLsl = '';
+        let RCenter = [];
+        let RUpper = [];
+        let RLower = [];
+        let stdevS = '';
+        let colorsXBar = [];
+        let colorsR = [];
+
+        let targetUrl = "@Url.Action("GetQcMeasureDataforSPC", "QcAnalysisTools")";
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage@(itemName).pageIndex + 1),
+            "PageSize": objPage@(itemName).pageSize,
+            "QcItemId": QcItemId@(itemName),
+            "StartDate": StartDate@(itemName),
+            "EndDate": EndDate@(itemName),
+            "MtlItemNo": MtlItemNo@(itemName),
+            "MtlItemName": MtlItemName@(itemName),
+            "CustMtlItemNo": CustMtlItemNo@(itemName),
+            "CustMtlItemName": CustMtlItemName@(itemName),
+            "QcType": QcType@(itemName),
+            "DesignValue": DesignValue@(itemName),
+            "JudgeK": judge
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+        //console.log(data);
+
+        if (data.status == "success") {
+                if (data.result.result != "") {
+                    $.each(data.result.result, function (i, item) {
+                        if (i == 1) {
+                            MtlItemNo@(itemName) = item.MtlItemNo;
+                            MtlItemName@(itemName) = item.MtlItemName;
+                            DesignValue = item.DesignValue;
+                            DesignUsl = item.UpperTolerance;
+                            DesignLsl = item.LowerTolerance;
+                            innerHtml1 = `<tr>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${MtlItemNo@(itemName)}" style="min-width: 120px;">${MtlItemNo@(itemName)}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${MtlItemName@(itemName)}" style="min-width: 200px;">${MtlItemName@(itemName)}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemNo}" style="min-width: 80px;">${item.QcItemNo}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.BallMark}" style="max-width: 50px;">${item.BallMark}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemDesc}" style="min-width: 200px;">${item.QcItemDesc}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.DesignValue}" style="max-width: 80px;">${item.DesignValue}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.UpperTolerance}" style="max-width: 80px;">${item.UpperTolerance}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.LowerTolerance}" style="max-width: 80px;">${item.LowerTolerance}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.Unit}" style="max-width: 50px;">${item.Unit}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MachineName}(${item.MachineDesc})" style="max-width: 300px;">${item.MachineName}(${item.MachineDesc})</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${StartDate@(itemName)} - ${EndDate@(itemName)}" style="max-width: 150px;">${StartDate@(itemName)} - ${EndDate@(itemName)}</td>
+                                </tr>`;
+                        }
+                    });
+                    $.each(data.result.statistics, function (i, item) {
+                        let groupCount = Math.floor(item.dataCount / item.GroupCount * 10) / 10;
+                        GroupCount@(itemName) = item.GroupCount;
+                        DynamicXBarCenter = item.DynamicCenter;
+                        DynamicXBarUsl = item.DynamicUsl;
+                        DynamicXBarLsl = item.DynamicLsl;
+                        DynamicRCenter = item.RCenter;
+                        DynamicRUsl = item.RUsl;
+                        DynamicRLsl = item.RLsl;
+                        stdevS = Math.floor(item.StdevS * 1000000) / 1000000;
+                        $("#txtGroupCount@(itemName)").val(item.GroupCount);
+                        innerHtml2 = `<tr>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.GroupCount}" style="max-width: 80px;">${item.GroupCount}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.n}" style="max-width: 80px;">${item.n}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${stdevS}" style="max-width: 100px;">${stdevS}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.DynamicCenter}" style="max-width: 80px;">${item.DynamicCenter}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.DynamicUsl}" style="max-width: 80px;">${item.DynamicUsl}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.DynamicLsl}" style="max-width: 80px;">${item.DynamicLsl}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.RCenter}" style="max-width: 80px;">${item.RCenter}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.RUsl}" style="max-width: 80px;">${item.RUsl}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.RLsl}" style="max-width: 80px;">${item.RLsl}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.Ca}" style="max-width: 80px;">${item.Ca}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.Cp}" style="max-width: 80px;">${item.Cp}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.Cpk}" style="max-width: 80px;">${item.Cpk}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.Pp}" style="max-width: 80px;">${item.Pp}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.Ppk}" style="max-width: 80px;">${item.Ppk}</td>
+                                </tr>`;
+                    });
+                    $.each(data.result.tableDatas, function (i, item) {
+                        innerHtml3 += `<tr>`;
+                        for (var j = 0; j < item.length; j++) {
+                            if (j == 0) {
+                                innerHtml3 += `<td style="min-width: 100px; text-align: center;">${item[j]}</td>`;
+                            }
+                            else {
+                                if (i == 0) {
+                                    innerHtml3 += `<td style="max-width: 100px; text-align: center;">${item[j]}</td>`;
+                                }
+                                else {
+                                    var fontColor = data.result.tablefontColors[i - 1][j - 1];
+                                    innerHtml3 += `<td title="${item[j]}" style="max-width: 100px; text-align: center; color:${fontColor};">${item[j]}</td>`;
+                                }
+                                if (i == 0) {
+                                    var MeasureDate = item[j].split(" ")[0];
+                                    var measureOrder = item[j].split(" ")[1];
+                                    ChartXaxis.push([MeasureDate, measureOrder]);
+                                }
+                            }
+                            if (item[0] == "X Bar") {
+                                if (i == data.result.tableDatas.length - 2) {
+                                    if (j != 0) {
+                                        XbarValues.push(parseFloat(item[j]));
+                                        XbarUpper.push(parseFloat(DynamicXBarUsl));
+                                        XbarLower.push(parseFloat(DynamicXBarLsl));
+                                        XbarCenter.push(parseFloat(DynamicXBarCenter));
+                                        DesignCenter.push(parseFloat(DesignValue));
+                                        DesignUpper.push(parseFloat(DesignValue) + parseFloat(DesignUsl));
+                                        DesignLower.push(parseFloat(DesignValue) + parseFloat(DesignLsl));
+                                    }
+                                }
+                            }
+                            if (item[0] == "R") {
+                                if (i == data.result.tableDatas.length - 1) {
+                                    if (j != 0) {
+                                        RValues.push(parseFloat(item[j]));
+                                        RUpper.push(parseFloat(DynamicRUsl));
+                                        RLower.push(parseFloat(DynamicRLsl));
+                                        RCenter.push(parseFloat(DynamicRCenter));
+                                    }
+                                }
+                            }
+                        }
+                        innerHtml3 += `</tr>`;
+                    });
+
+                    if (data.result.judgeStandardXBars != "") {
+                        let Tof = 0;
+                        $.each(data.result.judgeStandardXBars, function (i, item) {                            
+                            if (item.JudgeToF == true) {
+                                Tof = 1;
+                                colorsXBar = [];
+                                innerHtml4 += `<tr>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.whitchJudge} (XBar)" style="max-width: 30px;">${item.whitchJudge} (XBar)</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.PointDate}" style="max-width: 100px;">${item.PointDate}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.PointValue}" style="max-width: 200px;">${item.PointValue}</td>
+                                    </tr>`;
+
+                                for (var j = 1; j <= GroupCount@(itemName); j++) {
+                                    let getPoint = 0;
+                                    for (var k = 0; k < item.Point.length; k++) {
+                                        if (item.Point[k] == j) {
+                                            getPoint = 1;
+                                        }
+                                    }
+                                    if (getPoint == 0) {
+                                        if (colorsXBar[j] != "rgba(255, 0, 0, 1)") colorsXBar.push("rgba(0,255,0,1)");
+                                    } else {
+                                        colorsXBar.push("rgba(255,0,0,1)");
+                                    }
+                                }
+                            }
+                        });
+                        if (Tof == 0) {
+                            for (var j = 1; j <= GroupCount@(itemName); j++) { colorsXBar.push("rgba(0,255,0,1)"); }
+                        }
+                    }
+
+                    if (data.result.judgeStandardRs != "") {
+                        let Tof = 0;
+                        $.each(data.result.judgeStandardRs, function (i, item) {
+                            if (item.JudgeToF == true) {
+                                Tof = 1;
+                                colorsR = [];
+                                innerHtml4 += `<tr>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.whitchJudge} (R)" style="max-width: 30px;">${item.whitchJudge} (R)</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PointDate}" style="max-width: 100px;">${item.PointDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PointValue}" style="max-width: 200px;">${item.PointValue}</td>
+                                        </tr>`;
+
+                                for (var j = 1; j <= GroupCount@(itemName); j++) {
+                                    let getPoint = 0;
+                                    for (var k = 0; k < item.Point.length; k++) {
+                                        if (item.Point[k] == j) {
+                                            getPoint = 1;
+                                        }
+                                    }
+                                    if (getPoint == 0) {
+                                        if (colorsR[j] != "rgba(255, 0, 0, 1)") colorsR.push("rgba(0,255,0,1)");
+                                    } else {
+                                        colorsR.push("rgba(255,0,0,1)");
+                                    }
+                                }
+                            }
+                        });
+                        if (Tof == 0) {
+                            for (var j = 1; j <= GroupCount@(itemName); j++) { colorsR.push("rgba(0,255,0,1)"); }
+                        }
+                    }
+                    
+                    //set Charts
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 6) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 5) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 4) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 3) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 2) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 1) * 10000) / 10000);
+                    Xaxis.push(DynamicXBarCenter);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 1) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 2) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 3) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 4) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 5) * 10000) / 10000);
+                    Xaxis.push(Math.floor((parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 6) * 10000) / 10000);
+                    
+                    let XBarConfig = {
+                        type: 'line',
+                        data: {
+                            labels: ChartXaxis, //put date
+                            datasets: [
+                                {
+                                    label: 'X Bar', //put itemNo
+                                    data: XbarValues,
+                                    backgroundColor: "rgba(1, 255, 132, 1)",
+                                    borderColor: "rgba(0,0,0,1)",
+                                    pointBackgroundColor: colorsXBar,
+                                    borderWidth: 2,
+                                    pointRadius: 5,
+                                    yAxisID: 'Values',
+                                },
+                                {
+                                    label: "管制中心", //put itemNo
+                                    data: XbarCenter,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(255,0,0,1)",
+                                    pointStrokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'Center'
+                                },
+                                {
+                                    label: "管制上限", //put itemNo
+                                    data: XbarUpper,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(255,0,0,1)",
+                                    pointStrokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'Upper'
+                                },
+                                {
+                                    label: "管制下限", //put itemNo
+                                    data: XbarLower,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(255,0,0,1)",
+                                    pointStrokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'Lower'
+                                },
+                                {
+                                    label: "設計規格", //put itemNo
+                                    data: DesignCenter,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(0,0,255,1)",
+                                    pointStrokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'DesignValue',
+                                    hidden: true
+                                },
+                                {
+                                    label: "設計上限", //put itemNo
+                                    data: DesignUpper,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(0,0,255,1)",
+                                    pointStrokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'DesignUpper'
+                                },
+                                {
+                                    label: "設計下限", //put itemNo
+                                    data: DesignLower,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(0,0,255,1)",
+                                    pointStrokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'DesignLower'
+                                }
+                            ]},
+                        options: {
+                            responsive: true,
+                            backgroundColor: 'rgba(0, 0, 0, 1)',
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'SPC X Bar 管制圖'
+                                },
+                                tooltip: {
+                                    enabled: true, // 启用提示
+                                    mode: 'index', // 使用索引模式，展示多个数据集时会特别有用
+                                    position: 'nearest', // 提示框始终显示在鼠标悬停的点上                            
+                                    callbacks: {
+                                        label: function (tooltipItem) {
+                                            var index = tooltipItem.dataIndex;
+                                            var value = tooltipItem.dataset.data[index];
+                                            var label = tooltipItem.dataset.label;
+                                            return label + " : " + value;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    display: true,
+                                    grid: {
+                                        display: false
+                                    },
+                                    ticks: {
+                                        color: 'black',
+                                        usePointStyle: true,
+                                    }
+                                },
+                                Values: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    min: parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.1)',
+                                    },
+                                },
+                                Center: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                                Lower: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                                Upper: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                                DesignValue: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                                DesignUpper: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                                DesignLower: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicXBarCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicXBarCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                            }
+                        }
+                    };
+                    let RConfig = {
+                        type: 'line',
+                        data: {
+                            labels: ChartXaxis, //put date
+                            datasets: [
+                                {
+                                    label: 'R', //put itemNo
+                                    data: RValues,
+                                    backgroundColor: "rgba(1, 255, 132, 1)",
+                                    borderColor: "rgba(0,0,0,1)",
+                                    pointBackgroundColor: colorsR,
+                                    borderWidth: 2,
+                                    pointRadius: 5,
+                                    yAxisID: 'Values'
+                                },
+                                {
+                                    label: "管制中心", //put itemNo
+                                    data: RCenter,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(255,0,0,1)",
+                                    pointStrokeColor: "#fff",
+                                    strokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'Center',
+                                    ticks: {
+                                        // forces step size to be 50 units
+                                        precision: 5,
+                                        stepSize: stdevS
+                                    },
+                                },
+                                {
+                                    label: "管制上限", //put itemNo
+                                    data: RUpper,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(255,0,0,1)",
+                                    pointStrokeColor: "#fff",
+                                    strokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'Upper'
+                                },
+                                {
+                                    label: "管制下限", //put itemNo
+                                    data: RLower,
+                                    backgroundColor: "#fff",
+                                    borderColor: "rgba(255,0,0,1)",
+                                    pointStrokeColor: "#fff",
+                                    strokeColor: "#fff",
+                                    borderWidth: 1,
+                                    pointRadius: 1,
+                                    yAxisID: 'Lower'
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'SPC R 管制圖'
+                                },
+                                tooltip: {
+                                    enabled: true, // 启用提示
+                                    mode: 'index', // 使用索引模式，展示多个数据集时会特别有用
+                                    position: 'nearest', // 提示框始终显示在鼠标悬停的点上                            
+                                    callbacks: {
+                                        label: function (tooltipItem) {
+                                            var index = tooltipItem.dataIndex;
+                                            var value = tooltipItem.dataset.data[index];
+                                            var label = tooltipItem.dataset.label;
+                                            return label + " : " + value;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    display: true,
+                                    grid: {
+                                        display: false
+                                    },
+                                    ticks: {
+                                        color: 'black',
+                                        usePointStyle: true,
+                                    }
+                                },
+                                Values: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    min: parseFloat(DynamicRCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicRCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.1)',
+                                    }
+                                },
+                                Center: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicRCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicRCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                                Lower: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicRCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicRCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                                Upper: {
+                                    type: 'linear',
+                                    display: false,
+                                    position: 'left',
+                                    min: parseFloat(DynamicRCenter) - parseFloat(stdevS) * 4,
+                                    max: parseFloat(DynamicRCenter) + parseFloat(stdevS) * 4,
+                                    ticks: {
+                                        precision: 5,
+                                        stepSize: stdevS,
+                                    },
+                                },
+                            },
+                        }
+                    };
+                    let PabilityConfig = {
+                        type: 'bar',
+                        data: {
+                            labels: Xaxis,
+                            datasets: [{
+                                label: 'Gaussian Histogram bar',
+                                data: gaussianCurve(DesignValue, Xaxis, stdevS, Xaxis.length),
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }, {
+                                type: 'line',
+                                label: 'Gaussian Histogram line',
+                                data: gaussianCurve(DesignValue, Xaxis, stdevS, Xaxis.length),
+                                backgroundColor: 'rgba(255, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1,
+                                tension: 0.5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: '正態分布圖'
+                                },
+                                tooltip: {
+                                    enabled: false, // 启用提示
+                                    mode: 'index', // 使用索引模式，展示多个数据集时会特别有用
+                                    position: 'nearest', // 提示框始终显示在鼠标悬停的点上                            
+                                    callbacks: {
+                                        label: function (tooltipItem) {
+                                            var index = tooltipItem.dataIndex;
+                                            var value = tooltipItem.dataset.data[index];
+                                            var label = tooltipItem.dataset.label;
+                                            return label + " : " + value;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true, // y轴从0开始
+                                    display: false,
+                                }
+                            }
+                        }
+                    };
+                    
+                    let ctxXBar = $("#myChartXBar@(itemName)");
+                    let ctxR = $("#myChartR@(itemName)");
+                    let ctxPability = $("#myChartPability@(itemName)");
+                    myChartXBar = new Chart(ctxXBar, XBarConfig);
+                    myChartR = new Chart(ctxR, RConfig);
+                    myChartPability = new Chart(ctxPability, PabilityConfig);
+
+                    myChartXBar.render();
+                    myChartR.render();
+                    myChartPability.render();
+                    
+                } else {
+                    innerHtml1 += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                    </tr>`;
+                    innerHtml2 += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                    </tr>`;
+                }
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+        $("#tblTitle1@(itemName) tbody").html(innerHtml1);
+        $("#tblTitle2@(itemName) tbody").html(innerHtml2);
+        $("#tblData@(itemName) tbody").html(innerHtml3);
+        $("#tblJudge@(itemName) tbody").html(innerHtml4);
+        TableComponentInit();
+        
+    }
+
+    // 计算高斯曲线数据
+    function gaussianCurve(mean, dataset, stdev, xaxisLen) {
+        let gaussianData = [];
+        for (let x = 0; x < xaxisLen; x++) {
+            let data = dataset[x];
+            let y = (1 / (stdev * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((data - mean) / stdev, 2));
+            gaussianData.push(y);
+        }
+        return gaussianData;
+    }
+
+    function Query@(itemName)() {
+        let judge = {
+            "One": $("#ckbOne@(itemName)").prop("checked") ? $("#txtOne@(itemName)").val() : 0,
+            "Two": $("#ckbTwo@(itemName)").prop("checked") ? $("#txtTwo@(itemName)").val() : 0,
+            "Three": $("#ckbThree@(itemName)").prop("checked") ? $("#txtThree@(itemName)").val() : 0,
+            "Four": $("#ckbFour@(itemName)").prop("checked") ? $("#txtFour@(itemName)").val() : 0,
+            "Five": $("#ckbFive@(itemName)").prop("checked") ? $("#txtFive@(itemName)").val() : 0,
+            "Six": $("#ckbSix@(itemName)").prop("checked") ? $("#txtSix@(itemName)").val() : 0,
+            "Seven": $("#ckbSeven@(itemName)").prop("checked") ? $("#txtSeven@(itemName)").val() : 0,
+            "Eight": $("#ckbEight@(itemName)").prop("checked") ? $("#txtEight@(itemName)").val() : 0,
+        };
+
+        if (myChartXBar instanceof Chart) {
+            myChartXBar.destroy();
+        }
+        if (myChartR instanceof Chart) {
+            myChartR.destroy();
+        }
+        if (myChartPability instanceof Chart) {
+            myChartPability.destroy();
+            Xaxis = [];
+        }
+        InitData@(itemName)(judge);
+    }
+    
+        @*$("#txtGroupCount@(itemName)").change(function () {
+            var table = document.getElementById('tblTitle2@(itemName)');
+            var GroupCount@(itemName) = $("#txtGroupCount@(itemName)").val();
+            var dataCountCell@(itemName) = table.rows[1].cells[1].textContent;
+            var calc = 0;
+            calc = parseInt(dataCountCell@(itemName)) / parseInt(GroupCount@(itemName));
+            table.rows[1].cells[0].textContent = calc;
+            table.rows[1].cells[0].title = calc;
+        });*@
+
+    function Excel@(itemName)(DoDetailId, DoDate, CustomerId, MtlItemNo, MtlItemName, DcId, TypeThree) {
+
+        let imageXBar = "";
+        let imageR = "";
+        let imagePability = "";
+        imageXBar = myChartXBar.toBase64Image().replace("data:image/png;base64,", "");
+        imageR = myChartR.toBase64Image().replace("data:image/png;base64,", "");
+        imagePability = myChartPability.toBase64Image().replace("data:image/png;base64,", "");
+        if (imageXBar.indexOf('data:,') != -1) imageXBar = "";
+        if (imageR.indexOf('data:,') != -1) imageR = "";
+        if (imagePability.indexOf('data:,') != -1) imagePability = "";
+
+        let targetUrl = "@Url.Action("SPCOutputForExcel", "QcAnalysisTools")";
+        let postData = {
+            "JudgeK": judge@(itemName),
+            "OrderBy": "",
+            "PageIndex": (objPage@(itemName).pageIndex + 1),
+            "PageSize": objPage@(itemName).pageSize,
+            "QcItemId": QcItemId@(itemName),
+            "StartDate": StartDate@(itemName),
+            "EndDate": EndDate@(itemName),
+            "MtlItemNo": MtlItemNo@(itemName),
+            "MtlItemName": MtlItemName@(itemName),
+            "CustMtlItemNo": CustMtlItemNo@(itemName),
+            "CustMtlItemName": CustMtlItemName@(itemName),
+            "QcType": QcType@(itemName),
+            "DesignValue": DesignValue@(itemName),
+            "XBarChart": imageXBar,
+            "RChart": imageR,
+            "Pability": imagePability
+        };
+
+        FileAccess.AjaxDownload(targetUrl, postData, false);
+    }
+</script>
+                                                                                                                                                                                                                                                                                                                                                                                                                         )
+

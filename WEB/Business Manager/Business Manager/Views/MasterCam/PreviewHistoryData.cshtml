@@ -1,0 +1,91 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "PreviewHistoryData";
+    string itemNameText = "預覽檔案歷史紀錄";
+    string authority = ViewBag.authority;
+}
+@Html.Resource("css",
+    @<style>
+        body {
+            margin: 0;
+        }
+    </style>
+        )
+     <div class="modal fade" id="modal@(itemName)">
+         <div class="modal-dialog modal-xl">
+             <input type="hidden" id="CncProgResponsestId@(itemName)" />
+             <input type="hidden" id="CncProgLogId@(itemName)" />
+             <div class="modal-content">
+                 <div class="modal-header">
+                     <h5 class="modal-title">@(itemNameText)</h5>
+                 </div>
+                 <div class="modal-body">
+                     <table class="table table-bordered table-striped table-sticky" id="PreviewData@(itemName)">
+                         <thead>
+                             <tr>
+                                 <th scope="col" style="max-width: 150px;">編程LogId</th>
+                                 <th scope="col" style="max-width: 150px;">上傳前</th>
+                                 <th scope="col" style="max-width: 150px;">上傳後</th>
+                                 <th scope="col" style="max-width: 150px;">異動日期</th>                                 
+                             </tr>
+                         </thead>
+                         <tbody></tbody>
+                     </table>
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>                    
+                 </div>
+             </div>
+         </div>
+     </div>
+
+@Html.Resource("js",
+@<script>
+    function InitWorkFiles@(itemName)(CncProgramWorkId) {
+        let innerHtml = '';
+        let pageCount = 0;
+        let targetUrl = "@Url.Action("GetCncProgramWorkFiles", "MasterCam")";
+        let postData = {
+            "CncProgramWorkId": CncProgramWorkId            
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {
+                innerHtml += `<tr>
+                                <td>${item.CncProgramWorkId}</td>
+                                <td>${item.FileName}</td>
+                                ${File@(itemName)(item.FileId, item.FileName)}
+                              </tr>
+                `;
+            });
+        } else {
+            innerHtml += `<tr>
+                            <td class="text-center" colspan="3" style="background-color: #fff3cd;">
+                                <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                            </td>
+                        </tr>`;
+        }
+
+        function File@(itemName)(FileId, FileName) {
+            let innerHtml = '';
+            if (FileName != null) {
+                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${FileName}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Drawing/GetPdmFile?fileId=${FileId}"><i class="fas fa-download"></i></a>
+                                                ${FileName}
+                                                </td>`;
+            }
+            else {
+                innerHtml += `<td class="text-center" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>`;
+            }
+            return innerHtml;
+        }
+        $("#PreviewData@(itemName) tbody").html(innerHtml);
+    }
+
+    function Close@(itemName)() {
+        $("#modal@(itemName)").modal("hide");
+    }
+</script>
+)

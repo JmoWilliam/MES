@@ -1,0 +1,331 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "InProcessGoodsDefectRateReport";
+    string itemNameText = "在製品不良率報表";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .form-group .select2-selection__rendered {
+             line-height: 29px !important;
+         }
+
+         .form-group .select2-container .select2-selection--single {
+             height: 39px !important;
+         }
+
+         .form-group .select2-selection__arrow {
+             height: 34px !important;
+         }
+
+         .table-deposit {
+             margin: 0;
+             padding: 0;
+             max-height: 30vh;
+             margin-bottom: .75rem;
+             display: none;
+         }
+
+             .table-deposit th {
+                 background-color: #d7ecfa !important;
+             }
+
+             .table-deposit th, .table-deposit td {
+                 padding: 5px 0;
+                 text-align: center;
+             }
+
+         .active-icon {
+             background-color: #d7ecfa;
+             color: black;
+         }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                                   )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<!--搜尋內容-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 450px;overflow-y: auto;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboModeIdQ@(itemName)">生產模式</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboModeIdQ@(itemName)" name="cboModeIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">品號/品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入品號/品名" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label"> 製令掃碼日 <input type="checkbox" id="cboStartDateQ@(itemName)" checked /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+                <button type="button" class="btn btn-success" onclick="Excel@(itemName)()" style="margin: auto;"><i class="fas fa-file-excel"></i>匯出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack tiny-table" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="width: 60px;">#</th>
+                                        <th scope="col" style="width: 450px;">產品品號</th>
+                                        <th scope="col" style="width: 450px;">產品品名</th>
+                                        <th scope="col" style="width: 350px;">總投入數</th>
+                                        <th scope="col" style="width: 350px;">總完工數</th>
+                                        <th scope="col" style="width: 350px;">總報廢數</th>
+                                        <th scope="col" style="width: 350px;">日期</th>
+                                        <th scope="col" style="width: 350px;">投入數</th>
+                                        <th scope="col" style="width: 350px;">良品數</th>
+                                        <th scope="col" style="width: 350px;">不良品數</th>
+                                        <th scope="col" style="width: 350px;">良率(%)</th>
+                                        <th style="padding: 0; min-width: 500px;">
+                                            <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 250px;">不良原因</th>
+                                                        <th style="width: 150px;">不良數</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="model@(itemName)" style="max-width: 1366px;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <iframe id="InProcessGoodsDefectRateReport@(itemName)" src="#"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+
+            let currentDate = new Date();
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+            ComboBoxs.Default("#cboModeIdQ@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "NA", "", "txtProdModeWithText", "ModeId");
+            if (!isMobile) {
+                $("#cboModeIdQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+            //搜尋動作
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let ModeId = $("#cboModeIdQ@(itemName)").val();
+            let MtlItemNo = $("#txtMtlItemNoQ@(itemName)").val();
+
+            if (ModeId == "" ) {
+                alert("請至少選擇'生產模式'條件進行搜尋!!");
+                return false;
+                
+            } else {
+                
+            }
+
+            let targetUrl = "@Url.Action("GetInProcessGoodsDefectRateReport", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ModeId": $("#cboModeIdQ@(itemName)").val(),
+                "StartDate": ($("#cboStartDateQ@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cboStartDateQ@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : ""),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "RedirectType": 1
+
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                //pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                pageCount = data.result.length > 0 ? parseInt(data.TotalCount) : 0;
+                
+                console.log(5278, data.result.length);
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title"></span>${item.MtlItemNo}</td>
+                                        <td><span class="stack-title"></span>${item.MtlItemName}</td>
+                                        <td><span class="stack-title"></span>${item.sumInputQty}</td>
+                                        <td><span class="stack-title"></span>${item.sumCompleteQty}</td>
+                                        <td><span class="stack-title"></span>${item.sumScrapQty}</td>
+                                        <td><span class="stack-title"></span>${item.FinishDate01}</td>
+                                        <td><span class="stack-title"></span>${item.sumStationQty}</td>
+                                        <td><span class="stack-title"></span>${item.sumPassQty}</td>
+                                        <td><span class="stack-title"></span>${item.sumNgQty}</td>
+                                        <td><span class="stack-title"></span>${item.PassRate}</td>
+
+
+                                        <td style="padding: 0;">
+                                          <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                            <tbody>
+                                              ${DetailData@(itemName)(item.InvalidData)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+
+
+        function DetailData@(itemName)(source) {
+            let html = '';
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<tr>
+                               <td style="width: 250px;">${json.data[x].CauseDesc}</td>
+                               <td style="width: 150px;">${json.data[x].sumNgQty}</td>
+                            </tr>`;
+                }
+            }
+            return html;
+        }
+
+        function Excel@(itemName)() {
+            let targetUrl = "@Url.Action("InProcessGoodsDefectRateReportExcel", "MesReport")";
+            let postData = {
+                "ModeId": $("#cboModeIdQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "StartDate": ($("#cboStartDateQ@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cboStartDateQ@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : ""),
+                "RedirectType": 2
+
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                alert("匯出成功!!!!", "success")
+                FileAccess.AjaxDownload(targetUrl, postData, false);
+            }
+        }
+    </script>
+ )

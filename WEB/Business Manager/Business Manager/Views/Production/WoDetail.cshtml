@@ -1,0 +1,693 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "WoDetail";
+    string itemNameText = "ERP製令單身";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">材料品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入材料品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">取替代件</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    是
+                                    <input type="checkbox" id="cbxSubstituteStatusQ@(itemName)Y" name="cbxSubstituteStatusQ@(itemName)" value="Y" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    否
+                                    <input type="checkbox" id="cbxSubstituteStatusQ@(itemName)N" name="cbxSubstituteStatusQ@(itemName)" value="N" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right read-wipOder">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                        <a class="btn btn-info auth-add" href="javascript:ApplyBom@(itemName)();"><i class="fas fa-plus"></i>套用BOM材料</a>
+                        <a class="btn btn-danger auth-woDetail" href="javascript:DeleteWoDetailAll();"><i class="fas fa-trash-alt"></i>單身清除</a>
+                        <a class="btn btn-success auth-woDetail" href="javascript:ConfirmWipOrderManagement('-1');"><i class="fas fa-check"></i>確認</a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="table-custom">
+                        <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                            <thead>
+                                <tr>
+                                    <th scope="col" style="min-width: 75px;">#</th>
+                                    <th scope="col" style="min-width: 150px;">材料品號</th>
+                                    <th scope="col" style="min-width: 150px;">材料品名</th>
+                                    <th scope="col" style="min-width: 150px;">庫別</th>
+                                    <th scope="col" style="min-width: 150px;">庫存數量</th>
+                                    <th scope="col" style="min-width: 200px;">需領用量</th>
+                                    <th scope="col" style="min-width: 200px;">已領用量</th>
+                                    <th scope="col" style="min-width: 100px;">取替代件</th>
+                                    <th scope="col" style="min-width: 200px;">被取替代件品號</th>
+                                    <th class="text-center" scope="col" style="min-width: 350px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="page@(itemName)"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="WoDetailId" name="WoDetailId" value="-1" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtMtlItemId@(itemName)">材料品號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtMtlItemId@(itemName)" />
+                                        <div class="btn-group choose-mtlItem">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>材料品號</dt>
+                                            <dd id="desMtlItemNo@(itemName)"></dd>
+                                            <dt>材料品名</dt>
+                                            <dd id="desMtlItemName@(itemName)"></dd>
+                                            <dt>材料規格</dt>
+                                            <dd id="desMtlItemSpec@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtExpectedRequisitionDate@(itemName)">預計領料日期</label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtExpectedRequisitionDate@(itemName)" name="txtExpectedRequisitionDate@(itemName)"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtDemandRequisitionQty@(itemName)">需領用量<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtDemandRequisitionQty@(itemName)" name="txtDemandRequisitionQty@(itemName)" placeholder="請輸入需領用量" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboUomId@(itemName)">單位<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboUomId@(itemName)" name="cboUomId@(itemName)">
+                                            <option value="">-- 請選擇單位 --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboInventoryId@(itemName)">庫別代號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboInventoryId@(itemName)" name="cboInventoryId@(itemName)">
+                                            <option value="">-- 請選擇庫別代號 --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboMaterialProperties@(itemName)">材料型態<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboMaterialProperties@(itemName)" name="cboMaterialProperties@(itemName)">
+                                            <option value="">-- 請選擇材料型態 --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="chkSubstituteStatus@(itemName)">替代料 <span class="text-danger">*</span></label>
+                                    <div class="col-6">
+                                        <div class="row">
+                                            <div class="col-lg-3 col-md-4 col-6">
+                                                <label class="control control-solid control-solid-info control--radio col-12">
+                                                    是
+                                                    <input type="radio" id="chkSubstituteStatus@(itemName)Y" name="chkSubstituteStatus@(itemName)" value="Y"
+                                                           data-msg-required="請選擇是否替代料" data-rule-required="true" />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </div>
+                                            <div class="col-lg-3 col-md-4 col-6">
+                                                <label class="control control-solid control-solid-info control--radio col-12">
+                                                    否
+                                                    <input type="radio" id="chkSubstituteStatus@(itemName)N" name="chkSubstituteStatus@(itemName)" value="N"
+                                                           data-msg-required="請選擇是否替代料" data-rule-required="true" checked />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row subShow">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtSubMtlItemId@(itemName)">被取替代材料<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtSubMtlItemId@(itemName)" />
+                                        <div class="btn-group choose-mtlItem">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>材料品號</dt>
+                                            <dd id="desSubMtlItemNo@(itemName)"></dd>
+                                            <dt>材料品名</dt>
+                                            <dd id="desSubMtlItemName@(itemName)"></dd>
+                                            <dt>材料規格</dt>
+                                            <dd id="desSubMtlItemSpec@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtWipDetailRemark@(itemName)">備註</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtWipDetailRemark@(itemName)" name="txtWipDetailRemark@(itemName)"
+                                                  data-msg-maxlength="必須少於 255 個字元" maxlength="255" rows="2" placeholder="請輸入備註"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success read-woDetil" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewStorehouseAvailableQty")
+@Html.Partial("ViewBomSubstitution")
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+
+        
+
+        function Expand@(itemName)() {
+            if (parseInt($("#WoId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+
+                $("#txtMtlItemId@(itemName)").change(function (e) {
+                    checkMtlItemId@(itemName)()
+                });
+
+            } else {
+                alert("ERP工單資料錯誤", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            //objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            var TransferStatus = $("#TransferStatus").val()
+            let SubstituteStatusList = [];
+            $.each($("input[name='cbxSubstituteStatusQ@(itemName)']:checked"), function () {
+                SubstituteStatusList.push($(this).val());
+            });
+
+            let targetUrl = "@Url.Action("GetWoDetail", "Production")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "WoId": $("#WoId").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val().trim(),
+                "SubstituteStatus": SubstituteStatusList.join(",")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 200px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryName}" style="max-width: 200px;">${item.InventoryName}</td>
+                                        <td>${GetStorehouseAvailableQty(item.MtlItemNo,item.InventoryNo)} </td>
+                                        <td>${item.DemandRequisitionQty}</td>
+                                        <td>${item.RequisitionQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SubstituteStatus}" style="max-width: 100px;">${StatusName(`Boolean`, item.SubstituteStatus)}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SubstituteMtlItemNo}" style="max-width: 200px;">${item.SubstituteMtlItemNo}</td>
+                                        <td class="text-center active-content">
+                                            <a class="active-link auth-read" href="javascript:Read@(itemName)(${item.WoId},${item.WoDetailId},'U');"><i class="fas fa-eye"></i></a>
+                                            ${item.ConfirmStatus == `N` && TransferStatus == `` ? `<a class="active-link auth-update" href="javascript:Edit@(itemName)(${item.WoId},${item.WoDetailId});"><i class="fas fa-edit"></i></a>` : `<a class="active-link auth-update active-disable" href="javascript:void(0);"><i class="fas fa-edit"></i></a>`}
+                                            ${item.ConfirmStatus == `N` && TransferStatus == `` ? `<a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.WoId},${item.WoDetailId});"><i class="fas fa-trash-alt"></i></a>` : `<a class="active-link auth-delete active-disable" href="javascript:void(0);"><i class="fas fa-trash-alt"></i></a>`}
+                                            ${item.Substitute == 1 ? `<a class="active-link auth-read" href="javascript:PopViewBomSubstitution(\'${item.MtlItemNo}\',${item.MainMtlItemId},${item.MtlItemId},${item.WoDetailId},${item.DemandRequisitionQty});"><i class="fas fa-book"></i><span>替代料查詢</span></a>` : `<a class="active-link auth-delete active-disable" href="javascript:void(0);"><i class="fas fa-book"></i><span>替代料查詢</span></a>`}
+                                            <a class="active-link auth-read" href="javascript:PopViewStorehouseAvailableQty(\'${item.MtlItemNo}\');"><i class="fas fa-book"></i><span>庫存查詢</span></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+        function Read@(itemName)(WoId, WoDetailId) {
+
+            $("#WoDetailId").val(WoDetailId ? WoDetailId : 0);
+            $("#txtDemandRequisitionQty@(itemName)").attr("readonly", true);
+            $("#cboUomId@(itemName)").attr("disabled", true);
+            $("#cboInventoryId@(itemName)").attr("disabled", true);
+            $("#txtWipDetailRemark@(itemName)").attr("readonly", true);
+            $("#chkSubstituteStatus@(itemName)Y").attr("disabled", true);
+            $("#chkSubstituteStatus@(itemName)N").attr("disabled", true);
+
+            $(".read-woDetil").hide()
+            $(".choose-mtlItem").hide()
+            $(".subShow").show()
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId"); //入庫庫別
+            ComboBoxs.Default("#cboUomId@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", { "Status": "A"}, "", "NA", "", "UomNo", "UomId"); //加工單位
+            ComboBoxs.Default("#cboMaterialProperties@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialProperties" }, "", "NA", "", "TypeName", "TypeNo"); 
+
+            if (WoDetailId > 0) {
+                let targetUrl = "@Url.Action("GetWoDetail", "Production")";
+                let postData = {
+                    "WoId": $("#WoId").val(),
+                    "WoDetailId": WoDetailId,
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#WoDetailId").val(item.WoDetailId),
+                        $("#txtMtlItemId@(itemName)").val(item.MtlItemId);
+                        if (item.MtlItemId > 0) {
+                            $("#txtMtlItemId@(itemName)").siblings(".help-block").show();
+                            $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                            $("#desMtlItemName@(itemName)").html(item.MtlItemName);
+                            $("#desMtlItemSpec@(itemName)").html(item.MtlItemSpec);
+
+                            $("#txtSubMtlItemId@(itemName)").val(item.SubstituteMtlItemId);
+                            $("#txtSubMtlItemId@(itemName)").siblings(".help-block").show();
+                            $("#desSubMtlItemNo@(itemName)").html(item.SubstituteMtlItemNo);
+                            $("#desSubMtlItemName@(itemName)").html(item.SubstituteMtlItemName);
+                            $("#desSubMtlItemSpec@(itemName)").html(item.SubstituteMtlSpec);
+                        }
+                        $("#txtDemandRequisitionQty@(itemName)").val(item.DemandRequisitionQty);
+                        $("#txtRequisitionQty@(itemName)").val(item.RequisitionQty);
+                        $("#cboInventoryId@(itemName)").val(item.InventoryId);
+                        $("#cboUomId@(itemName)").val(item.UomId);
+                        $("#txtSubstitute@(itemName)").val(item.Substitute);
+                        if (item.SubstituteStatus == "Y") $("#chkSubstituteStatus@(itemName)Y").prop("checked", true);
+                        if (item.SubstituteStatus == "N") $("#chkSubstituteStatus@(itemName)N").prop("checked", true);
+                        $("#txtExpectedRequisitionDate@(itemName)").val(item.ExpectedRequisitionDate);
+                        $("#txtActualRequisitionDate@(itemName)").val(item.ActualRequisitionDate);
+                        $("#cboMaterialProperties@(itemName)").val(item.MaterialProperties)
+                        $("#txtWipDetailRemark@(itemName)").val(item.WipDetailRemark);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+        }
+
+        function Edit@(itemName)(WoId, WoDetailId) {
+
+            $("#WoDetailId").val(WoDetailId ? WoDetailId : 0);
+            $("#txtDemandRequisitionQty@(itemName)").attr("readonly", false);
+            $("#cboUomId@(itemName)").attr("disabled", false);
+            $("#cboInventoryId@(itemName)").attr("disabled", false);
+            $("#txtWipDetailRemark@(itemName)").attr("readonly", false);
+            $("#chkSubstituteStatus@(itemName)Y").attr("disabled", false);
+            $("#chkSubstituteStatus@(itemName)N").attr("disabled", false);
+
+            $(".read-woDetil").show()
+            $(".choose-mtlItem").show()
+            $(".subShow").hide()
+
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId"); //入庫庫別
+            ComboBoxs.Default("#cboUomId@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", { "Status": "A"}, "", "NA", "", "UomNo", "UomId"); //加工單位
+            ComboBoxs.Default("#cboMaterialProperties@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialProperties" }, "", "NA", "", "TypeName", "TypeNo"); 
+            $("#cboMaterialProperties@(itemName)").val("1");//直接材料
+            //Suites.DateDropper("#txtExpectedRequisitionDate@(itemName)")
+            Suites.DatePicker("txtExpectedRequisitionDate@(itemName)","");
+
+            if (WoDetailId > 0) {
+                let targetUrl = "@Url.Action("GetWoDetail", "Production")";
+                let postData = {
+                    "WoId": $("#WoId").val(),
+                    "WoDetailId": WoDetailId,
+                };
+                $(".choose-mtlItem").hide()
+                $(".subShow").show()
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#WoDetailId").val(item.WoDetailId),
+                        $("#txtMtlItemId@(itemName)").val(item.MtlItemId);
+                        if (item.MtlItemId > 0) {
+                            $("#txtMtlItemId@(itemName)").siblings(".help-block").show();
+                            $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                            $("#desMtlItemName@(itemName)").html(item.MtlItemName);
+                            $("#desMtlItemSpec@(itemName)").html(item.MtlItemSpec);
+
+                            $("#txtSubMtlItemId@(itemName)").val(item.SubstituteMtlItemId);
+                            $("#txtSubMtlItemId@(itemName)").siblings(".help-block").show();
+                            $("#desSubMtlItemNo@(itemName)").html(item.SubstituteMtlItemNo);
+                            $("#desSubMtlItemName@(itemName)").html(item.SubstituteMtlItemName);
+                            $("#desSubMtlItemSpec@(itemName)").html(item.SubstituteMtlSpec);
+                        }
+                        $("#txtDemandRequisitionQty@(itemName)").val(item.DemandRequisitionQty);
+                        $("#txtRequisitionQty@(itemName)").val(item.RequisitionQty);
+                        $("#cboInventoryId@(itemName)").val(item.InventoryId);
+                        $("#cboUomId@(itemName)").val(item.UomId);
+                        $("#txtSubstitute@(itemName)").val(item.Substitute);
+                        if (item.SubstituteStatus == "Y") $("#chkSubstituteStatus@(itemName)Y").prop("checked", true);
+                        if (item.SubstituteStatus == "N") $("#chkSubstituteStatus@(itemName)N").prop("checked", true);
+                        if (item.ExpectedRequisitionDate != null) {
+                            Suites.DatePicker("txtExpectedRequisitionDate@(itemName)", new Date(item.ExpectedRequisitionDate));
+                        }
+                        $("#cboMaterialProperties@(itemName)").val(item.MaterialProperties)
+                        //Suites.SetDateDropper("#txtExpectedRequisitionDate@(itemName)", new Date(item.ExpectedRequisitionDate));
+                        $("#txtWipDetailRemark@(itemName)").val(item.WipDetailRemark);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+                
+            }
+            //材料品號彈跳視窗開啟相關
+            let popConfig = {
+                targetSelector: "#txtMtlItemId@(itemName)",
+                popFunction: "PopViewMtlItem",
+                objectMtlItemId: "#txtMtlItemId@(itemName)",
+                objectMtlItemNo: "#desMtlItemNo@(itemName)",
+                objectMtlItemName: "#desMtlItemName@(itemName)",
+                objectMtlItemSpec: "#desMtlItemSpec@(itemName)",
+                objectUomNo: "#desUomNo@(itemName)",
+                objectUomId: "#cboUomId@(itemName)",
+                objectInventoryId: "#cboInventoryId@(itemName)",
+            };
+            InitPopView(popConfig);
+
+
+            if (!isMobile) {
+                $(`#cboInventoryId@(itemName), #cboUomId@(itemName), #cboMaterialProperties@(itemName)`).select2({
+                width: "100%"
+                });
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let WoDetailId = parseInt($("#WoDetailId").val());
+
+                if (WoDetailId <= 0) {
+                    let targetUrl = "@Url.Action("AddWoDetail", "Production")";
+                    let postData = {
+                        "WoId": $("#WoId").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "UomId": $("#cboUomId@(itemName)").val(),
+                        "DemandRequisitionQty": $("#txtDemandRequisitionQty@(itemName)").val(),
+                        "SubstituteMtlItemId": $("#txtSubstituteMtlItemId@(itemName)").val(),
+                        "SubstituteStatus": $("input[name='chkSubstituteStatus@(itemName)']:checked").val(),
+                        "ExpectedRequisitionDate": $("#txtExpectedRequisitionDate@(itemName)").val(),
+                        "WipDetailRemark": $("#txtWipDetailRemark@(itemName)").val(),
+                        "MaterialProperties": $("#cboMaterialProperties@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateWoDetail", "Production")";
+                    let postData = {
+                        "WoDetailId": $("#WoDetailId").val(),
+                        "WoId": $("#WoId").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "UomId": $("#cboUomId@(itemName)").val(),
+                        "DemandRequisitionQty": $("#txtDemandRequisitionQty@(itemName)").val(),
+                        "SubstituteStatus": $("input[name='chkSubstituteStatus@(itemName)']:checked").val(),
+                        "ExpectedRequisitionDate": $("#txtExpectedRequisitionDate@(itemName)").val(),
+                        "WipDetailRemark": $("#txtWipDetailRemark@(itemName)").val(),
+                        "MaterialProperties": $("#cboMaterialProperties@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        $("#WoDetailId").val("")
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function ApplyBom@(itemName)() {
+            let targetUrl = "@Url.Action("AddBom", "Production")";
+            let postData = {
+                "WoId": $("#WoId").val(),
+                "MtlItemId": $("#txtMtlItemIdWipOrderManagement").val(),
+                "WoErpPrefix": $("#cboWoErpPrefixWipOrderManagement").val(),
+                "PlanQty": $("#txtPlanQtyWipOrderManagement").val()
+            };
+            let result = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function ApplySubstitute@(itemName)() {
+            let targetUrl = "@Url.Action("AddBomSubstitution", "Production")";
+            let postData = {
+                "WoId": $("#WoId").val(),
+                "MtlItemId": $("#txtMtlItemIdWipOrderManagement").val(),
+                "PlanQty": $("#txtPlanQtyWipOrderManagement").val()
+            };
+            let result = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function Delete@(itemName)(WoId, WoDetailId) {
+            swal.fire({
+                title: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteWoDetail", "Production")";
+                    let postData = {
+                        "WoId": WoId,
+                        "WoDetailId": WoDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function DeleteWoDetailAll() {
+            var WoId = $("#WoId").val()
+            if (WoId <= 0) {
+                alert("缺少ERP單據Id")
+                return
+            }
+            swal.fire({
+                title: "確認要清除全部單身嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteWoDetailAll", "Production")";
+                    let postData = {
+                        "WoId": WoId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+        
+
+
+        function GetStorehouseAvailableQty( MtlItemNo,InventoryNo) {
+            var StorehouseAvailableQty = 0;
+            let targetUrl = "@Url.Action("GetStorehouseAvailableQty", "Production")";
+            let postData = {
+                "MtlItemNo": MtlItemNo,
+                "InventoryNo": InventoryNo
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+
+                $.each(data.result, function (i, item) {
+                    if (InventoryNo == item.InventoryNo.trim()) {
+                        StorehouseAvailableQty = item.MC007
+                    }
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            return StorehouseAvailableQty
+        }
+
+
+        //檢查品號是否生效或失效
+        function checkMtlItemId@(itemName)(objPage) {
+            let targetUrl = "@Url.Action("GetCheckMtlItemDate", "Production")";
+            let postData = {
+                "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                "DocDate": $("#txtDocDateWipOrderManagement").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status != "success") {
+                setTimeout(() => {
+                    $("#txtMtlItemId@(itemName)").siblings().find(".pop-clear").trigger("click")
+                },500)
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            $("#txtMtlItemId@(itemName)").siblings().find(".pop-clear").trigger("click")
+            //$('#txtExpectedRequisitionDate@(itemName)').dateDropper('destroy');
+            Query@(itemName)();
+        }
+</script>
+        )

@@ -1,0 +1,518 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MachineEventManagement";
+    string itemNameText = "機台事件管理";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--搜尋彈窗-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 450px;overflow-y: auto;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12  col-form-label" for="cboWorkShopQ@(itemName)">車間名稱</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboWorkShopQ@(itemName)" name="cboWorkShopQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row machinedescinfo">
+                            <label class="col-12  col-form-label" for="cboMachineQ@(itemName)">機台名稱</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboMachineQ@(itemName)" name="cboMachineQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12  col-form-label" for="cboMachineEventItemIdQ@(itemName)">事件名稱</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboMachineEventItemIdQ@(itemName)" name="cboMachineEventItemIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboOperationUserQ@(itemName)">操作人員</label>
+                            <div class="col-12 ">
+                                <select class="form-control" id="cboOperationUserQ@(itemName)" name="cboOperationUserQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">事件開始日期 <input type="checkbox" id="cbxStartDate@(itemName)" /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateBeginQ@(itemName)" name="txtStartDateBeginQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateEndQ@(itemName)" name="txtStartDateEndQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 30px;">#</th>
+                                        <th scope="col" style="min-width: 80px;">車間</th>
+                                        <th scope="col" style="min-width: 120px;">機台</th>
+                                        <th scope="col" style="min-width: 100px;">機台描述</th>
+                                        <th scope="col" style="min-width: 100px;">事件</th>
+                                        <th scope="col" style="min-width: 50px;">操作員</th>
+                                        <th scope="col" style="min-width: 120px;">開始時間</th>
+                                        <th scope="col" style="min-width: 120px;">結束時間</th>
+                                        <th scope="col" style="min-width: 50px;">費時(秒)</th>
+                                        <th scope="col" style="min-width: 50px;">最後修改日</th>
+                                        <th scope="col" style="min-width: 50px;">最後修改人員</th>
+                                        <th scope="col" style="min-width: 55px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--編輯-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="MachineEventId" name="MachineEventId" value="-1" />
+                        <div class="form-group row">
+                            <div class="col-12 col-lg-6">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtMachineEventItemId@(itemName)">機台事件</label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtMachineEventItemId@(itemName)" />
+                                        <input type="hidden" id="txtShopId@(itemName)" />
+                                        <input type="hidden" id="txtMachineId@(itemName)" />
+                                        <div class="btn-group">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);" onclick="MachineEventItemIdClear@(itemName)()"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <!--點選完後的顯示框-->
+                                        <dl class="help-block">
+                                            <dt>車間</dt>
+                                            <dd id="desShopName@(itemName)"></dd>
+                                            <dt>機台</dt>
+                                            <dd id="desMachineName@(itemName)"></dd>
+                                            <dt>機台描述</dt>
+                                            <dd id="desMachineDesc@(itemName)"></dd>
+                                            <dt>事件名稱</dt>
+                                            <dd id="desMachineEventName@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboOperationUser@(itemName)">操作員<span class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboOperationUser@(itemName)" name="cboOperationUser@(itemName)"
+                                        data-msg-required="請選擇操作員" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">事件開始</label>
+
+                            <div class="col-12 col-md-6">
+                                <input type="text" class="form-control" id="txtStartYmd@(itemName)" name="txtStartYmd@(itemName)" placeholder="請輸入日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <input type="time" class="form-control" id="txtStartTime@(itemName)" name="txtStartTime@(itemName)" placeholder="請輸入時間" value="00:00"
+                                       data-rule-required="true" data-msg-maxlength="必須少於 50 個字元" maxlength="50" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">事件結束</label>
+                            <div class="col-12 col-md-6">
+                                <input type="text" class="form-control" id="txtFinishYmd@(itemName)" name="txtFinishYmd@(itemName)" placeholder="請輸入日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <input type="time" class="form-control" id="txtFinishTime@(itemName)" name="txtFinishTime@(itemName)" placeholder="請輸入時間" value="00:00"
+                                       data-rule-required="true" data-msg-maxlength="必須少於 50 個字元" maxlength="50" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewMachineEventItem")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            //日期套件-尋找開始日期(查詢) 
+            let currentDate = new Date();
+            currentDate.setDate(currentDate.getDate() + 1);
+            Suites.DatePicker("txtStartDateEndQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 8);
+            Suites.DatePicker("txtStartDateBeginQ@(itemName)", currentDate);
+
+            //操作員下拉(查詢)
+            ComboBoxs.Default("#cboOperationUserQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "ALL", "", "UserWithNo", "UserId");
+
+            //操作員-關鍵字搜尋(查詢)
+            $("#cboOperationUserQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            //日期套件(編輯.新增)
+            let startYmd = new Date();
+            Suites.DatePicker("txtStartYmd@(itemName)", startYmd);
+            let finishYmd = new Date();
+            Suites.DatePicker("txtFinishYmd@(itemName)", finishYmd);
+
+            Query@(itemName)();
+        });
+
+
+        //開窗查詢單項事件:車間+機台+事件
+        let popConfig = {
+            targetSelector: "#txtMachineEventItemId@(itemName)",
+            popFunction: "PopViewMachineEventItem",
+            objectMachineEventItemId: "#txtMachineEventItemId@(itemName)",
+            objectMachineEventName: "#desMachineEventName@(itemName)",
+            objectShopId: "#txtShopId@(itemName)",
+            objectShopName: "#desShopName@(itemName)",
+            objectMachineId: "#txtMachineId@(itemName)",
+            objectMachineName: "#desMachineName@(itemName)",
+            objectMachineDesc: "#desMachineDesc@(itemName)"
+        };
+        InitPopView(popConfig);
+
+
+         //設定車間條件，選擇機台+機台描述
+        $(document).ready(function (ShopId) {
+            $(".machinedescinfo").hide();//第二階段製程(查詢)隱藏
+            ComboBoxs.Default("#cboWorkShopQ@(itemName)", "@Url.Action("GetWorkShop", "MesBasicInformation")", {}, "", "NA", "", "ShopName", "ShopId");
+            $("#cboWorkShopQ@(itemName)").change(function () {
+                var ShopId = $("#cboWorkShopQ@(itemName)").val();
+                $(".machinedescinfo").show();//第二階段打開
+                ComboBoxs.Default("#cboMachineQ@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineNameDesc", "MachineId");
+            });
+
+            ComboBoxs.Default("#cboMachineQ@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineNameDesc", "MachineId");
+
+            $("#cboWorkShopQ@(itemName),#cboMachineQ@(itemName)").select2({
+                width: "100%"
+            });
+
+            Query@(itemName)();
+
+        });
+
+
+        //設定機台條件，事件搜尋
+        $(document).ready(function (MachineId) {
+            ComboBoxs.Default("#cboWorkShopQ@(itemName)", "@Url.Action("GetWorkShop", "MesBasicInformation")", {}, "", "NA", "", "ShopName", "ShopId");
+            //設定機台+機台描述
+            $("#cboMachineQ@(itemName)").change(function () {
+                var MachineId = $("#cboMachineQ@(itemName)").val();
+                ComboBoxs.Default("#cboMachineEventItemIdQ@(itemName)", "@Url.Action("GetMachineEventSetting", "MesBasicInformation")", { "MachineId": MachineId }, "", "NA", "", "MachineEventName", "MachineEventItemId");
+            });
+
+            ComboBoxs.Default("#cboMachineEventItemIdQ@(itemName)", "@Url.Action("GetMachineEventSetting", "MesBasicInformation")", { "MachineId": MachineId }, "", "NA", "", "MachineEventName", "MachineEventItemId");
+
+            $("#cboMachineEventItemIdQ@(itemName)").select2({
+                width: "100%"
+            });
+
+            Query@(itemName)();
+
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetMachineEvent", "Event")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ShopId": $("#cboWorkShopQ@(itemName)").val(),
+                "MachineId": $("#cboMachineQ@(itemName)").val(),
+                "MachineEventItemId": $("#cboMachineEventItemIdQ@(itemName)").val(),
+                "StartDateBegin": ($("#cbxStartDate@(itemName)").is(":checked") ? $("#txtStartDateBeginQ@(itemName)").val() : ""),
+                "StartDateEnd": ($("#cbxStartDate@(itemName)").is(":checked") ? $("#txtStartDateEndQ@(itemName)").val() : ""),
+                "Operator": $("#cboOperationUserQ@(itemName)").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ShopName}" style="max-width: 80px;">${item.ShopName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineName}" style="max-width: 120px;">${item.MachineName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineDesc}" style="max-width: 80px;">${item.MachineDesc}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineEventName}" style="max-width: 100px;">${item.MachineEventName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OperationUser}" style="max-width: 50px;">${item.OperationUser}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StartDate}" style="width:200px; max-width: 200px;">${item.StartDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.FinishDate}" style="width: 200px; max-width: 200px;">${item.FinishDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OperationTime}" style="max-width: 50px;">${item.OperationTime}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LastModifiedDate}" style="max-width: 50px;">${item.LastModifiedDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LastModifiedName}" style="max-width: 50px;">${item.LastModifiedName}</td>
+                                        <td class="text-center active-content">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)(${item.MachineEventId});"><i class="fas fa-edit"></i></a>
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.MachineEventId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(MachineEventId, ShopId, MachineId) {
+            $("#MachineEventId").val(MachineEventId ? MachineEventId : 0);
+
+            @*/*下拉選單-車間，機台，機台描述*/
+            ComboBoxs.Default("#cboWorkShop@(itemName)", "@Url.Action("GetWorkShop", "MesBasicInformation")", {}, "", "NA", "", "ShopName", "ShopId");
+            $("#cboWorkShop@(itemName)").change(function () {
+                var ShopId = $("#cboWorkShop@(itemName)").val();
+                ComboBoxs.Default("#cboMachine@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineNameDesc", "MachineId");
+            });
+            ComboBoxs.Default("#cboMachine@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineNameDesc", "MachineId");*@
+
+            //返回切換
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            //一進入編輯時先清空
+            @*$("#desShopName@(itemName)").html("");
+            $("#desMachineName@(itemName)").html("");
+            $("#desMachineDesc@(itemName)").html("");
+            $("#desMachineEventName@(itemName)").html("");*@
+
+           $("#txtMachineEventItemId@(itemName)").siblings(".help-block").hide();
+
+
+            ComboBoxs.Default("#cboMachineEventItemId@(itemName)", "@Url.Action("GetMachineEventSetting", "MesBasicInformation")", {}, "", "NA", "", "MachineEventName", "MachineEventItemId");
+            ComboBoxs.Default("#cboOperationUser@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "NA", "", "UserWithNo", "UserId");
+
+            //如果有值
+            if (MachineEventId > 0) {
+                let targetUrl = "@Url.Action("GetMachineEvent", "Event")";
+                let postData = {
+                    "MachineEventId": MachineEventId
+
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    console.log(data);
+                    $.each(data.result, function (i, item) {
+                        //事件ID串連
+                        $("#txtMachineEventItemId@(itemName)").val(item.MachineEventItemId);
+                        $("#txtShopId@(itemName)").val(item.ShopId);
+                        $("#txtMachineId@(itemName)").val(item.MachineId);
+                        $("#txtMachineEventItemId@(itemName)").siblings(".help-block").show();
+                        $("#desShopName@(itemName)").html(item.ShopName);
+                        $("#desMachineName@(itemName)").html(item.MachineName);
+                        $("#desMachineDesc@(itemName)").html(item.MachineDesc);
+                        $("#desMachineEventName@(itemName)").html(item.MachineEventName);
+                        $("#cboOperationUser@(itemName)").val(item.Operator);
+                        $("#txtStartYmd@(itemName)").val(item.StartYmd);
+                        $("#txtStartTime@(itemName)").val(item.StartTime);
+                        $("#txtFinishYmd@(itemName)").val(item.FinishYmd);
+                        $("#txtFinishTime@(itemName)").val(item.FinishTime);
+
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            $("#cboMachineEventItemId@(itemName),#cboOperationUser@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let MachineEventId = parseInt($("#MachineEventId").val());
+
+                if (MachineEventId <= 0) {
+                    let targetUrl = "@Url.Action("AddMachineEvent", "Event")";
+                    let postData = {
+                        "MachineEventItemId": $("#txtMachineEventItemId@(itemName)").val(),
+                        "ShopId": $("#cboWorkShop@(itemName)").val(),
+                        "MachineId": $("#cboMachine@(itemName)").val(),
+                        "Operator": $("#cboOperationUser@(itemName)").val(),
+                        "StartYmd": $("#txtStartYmd@(itemName)").val(),
+                        "StartTime": $("#txtStartTime@(itemName)").val(),
+                        "FinishYmd": $("#txtFinishYmd@(itemName)").val(),
+                        "FinishTime": $("#txtFinishTime@(itemName)").val()
+
+                   };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateMachineEvent", "Event")";
+                    let postData = {
+                        "MachineEventId": MachineEventId,
+                        "MachineEventItemId": $("#txtMachineEventItemId@(itemName)").val(),
+                        "MachineId": $("#cboMachine@(itemName)").val(),
+                        "Operator": $("#cboOperationUser@(itemName)").val(),
+                        "StartYmd": $("#txtStartYmd@(itemName)").val(),
+                        "StartTime": $("#txtStartTime@(itemName)").val(),
+                        "FinishYmd": $("#txtFinishYmd@(itemName)").val(),
+                        "FinishTime": $("#txtFinishTime@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(MachineEventId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMachineEvent", "Event")";
+                    let postData = {
+                        "MachineEventId": MachineEventId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block");
+            Query@(itemName)();
+        }
+
+       
+        function MachineEventItemIdClear@(itemName)() {
+            $("#txtMachineEventItemId@(itemName)").siblings(".help-block").hide();
+            $("#txtMachineEventItemId@(itemName)").val("");
+        }
+
+    </script>
+   )

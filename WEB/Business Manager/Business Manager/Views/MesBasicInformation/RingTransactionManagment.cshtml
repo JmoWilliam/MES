@@ -1,0 +1,629 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "RingTransactionManagment";
+    string itemNameText = "套環庫存異動管理";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+
+    string ModelName = Request["ModelName"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                                           )
+ 
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="form-label col-12" for="txtModelNameQ@(itemName)">機種名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtModelNameQ@(itemName)" name="txtModelNameQ@(itemName)" placeholder="請輸入機種名" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="form-label col-12" for="txtRingNameQ@(itemName)">套環命名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtRingNameQ@(itemName)" name="txtRingNameQ@(itemName)" placeholder="請輸入套環命名" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" style="text-align: left;">異動日期 <input type="checkbox" id="cbxTransDateQ@(itemName)" checked /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartTransDateQ@(itemName)" name="txtStartTransDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndTransDateQ@(itemName)" name="txtEndTransDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="form-label col-12">狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    啟用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)A" name="cbxStatusQ@(itemName)" value="A" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    作废
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)S" name="cbxStatusQ@(itemName)" value="S" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                        <a class="btn btn-danger auth-add" href="javascript:PopViewModalImportExcelRingTrans@(itemName)();"><i class="fas fa-file-excel"></i>庫存異動匯入</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 60px;">#</th>
+                                        <th class="text-center" scope="col" style="max-width: 125px;">操作</th>
+                                        <th scope="col" style="max-width: 100px;">機種名</th>
+                                        <th scope="col" style="max-width: 100px;">套環命名</th>
+                                        <th scope="col" style="max-width: 100px;">異動別</th>
+                                        <th scope="col" style="max-width: 100px;">數量</th>
+                                        <th scope="col" style="max-width: 100px;">異動日期</th>
+                                        <th scope="col" style="max-width: 100px;">新增日期</th>
+                                        <th scope="col" style="max-width: 100px;">新增人員</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="RingTransId" name="RingTransId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtTransDate@(itemName)">異動日期 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtTransDate@(itemName)" name="txtTransDate@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboRingId@(itemName)">機種名 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboRingId@(itemName)" name="cboRingId@(itemName)"
+                                        data-msg-required="請選擇機種名" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtRingName@(itemName)">套環命名 </label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtRingName@(itemName)" name="txtRingName@(itemName)" placeholder="請輸入套環命名" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboTransType@(itemName)">異動別 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboTransType@(itemName)" name="cboTransType@(itemName)"
+                                        data-msg-required="請選擇異動別" data-rule-required="true">
+                                    <option value="">請選擇</option>
+                                    <option value="OUT">出庫</option>
+                                    <option value="IN">入庫</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtQuantity@(itemName)">數量 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtQuantity@(itemName)" name="txtQuantity@(itemName)" data-msg-required="請輸入數量" data-rule-required="true" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--匯入EXCEL-->
+<div class="modal fade" id="modalImportExcelRingTrans@(itemName)" data-keyboard="false" data-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title expand-modal-title">匯入EXCEL</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form autocomplete="off" id="importFormTrans@(itemName)">
+                    <div class="expand-container bom-expand">
+                        <div class="form-item">
+                            <label>上傳EXCEL檔案</label>
+                            <input type="file" accept=".xlsx" id="fileExcelFileTrans@(itemName)" name="fileExcelFile@(itemName)" multiple />
+                            <input type="hidden" id="txtExcelFileTrans@(itemName)" name="txtExcelFile@(itemName)" />
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-success" style="font-weight: 600;" href="javascript: ImportExcelRingTrans@(itemName)();"><i class="fas fa-save"></i> 批次新增套環庫存異動資料</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="@Url.Content("~/Scripts/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.js")"></script>
+
+
+@Html.Resource("js",
+
+@<script>
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+         "pageSize": 10
+    };
+    let objForm@(itemName) = "#editForm@(itemName)";
+    let userId@(itemName);
+    let companyId@(itemName);
+    let userNo@(itemName);
+
+    $(document).ready(function () {
+
+        let currentDate = new Date();
+        Suites.DatePicker("#txtStartTransDateQ@(itemName), #txtEndTransDateQ@(itemName)");
+        Suites.DatePicker("txtEndTransDateQ@(itemName)", currentDate);
+        currentDate.setDate(currentDate.getDate() - 30);
+        Suites.DatePicker("txtStartTransDateQ@(itemName)", currentDate);
+
+        let modelName = "@ModelName";
+        if (modelName) {
+            $("#txtModelNameQ@(itemName)").val(modelName);
+        }
+
+        console.log(111, modelName);
+
+        Query@(itemName)();
+
+        $('.advanced-block a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+                    InitParameter@(itemName)($(this));
+        });
+
+        $("#txtModelNameQ@(itemName), #txtModelNameQ@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                Query@(itemName)();
+                return false;
+            }
+        });
+    });
+
+    function Query@(itemName)() {
+        objPage@(itemName).pageIndex = 0;
+        InitData@(itemName)(objPage@(itemName));
+
+        $("#modalQuery@(itemName)").modal("hide");
+    }
+
+    function InitData@(itemName)(objPage) {
+        let innerHtml = '';
+        let pageCount = 0;
+
+        let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+        let targetUrl = "@Url.Action("GetRingTransactionManagment", "MesBasicInformation")";
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage.pageIndex + 1),
+            "PageSize": objPage.pageSize,
+            "ModelName": $("#txtModelNameQ@(itemName)").val(),
+            "RingName": $("#txtRingNameQ@(itemName)").val(),
+            "StartTransDate": ($("#cbxTransDateQ@(itemName)").is(":checked") ? $("#txtStartTransDateQ@(itemName)").val() : ""),
+            "EndTransDate": ($("#cbxTransDateQ@(itemName)").is(":checked") ? $("#txtEndTransDateQ@(itemName)").val() : ""),
+            "Status": statusList.join(",")
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+            if (pageCount > 0) {
+                objPage = PageCaculate(pageCount, objPage);
+
+                $.each(data.result, function (i, item) {
+                    let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                    innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="text-center active-content" >
+                                            <div class="btn-group mb-4 show" style="margin-bottom: 0 !important; position: static;">
+                                                <button type="button" class="btn btn-primary dropdown-toggle" data-ring-id="${item.RingTransId}" style="padding-top: 0; padding-bottom: 0;">動作</button>
+                                                <div class="dropdown-menu btn-text-left-block" data-ring-id="${item.RingTransId}" style="overflow-y: auto; z-index: 999; max-height: 150px;">
+                                                    <a class="dropdown-item btn-text-left auth-update" href="javascript:Edit@(itemName)('${item.RingTransId}');"><i class="fas fa-edit"></i>修改</a>
+                                                    @*<a class="dropdown-item btn-text-left auth-delete" href="javascript:Delete@(itemName)('${item.RingTransId}');"><i class="fas fa-trash-alt"></i>刪除</a>*@
+                                                    <a class="dropdown-item btn-text-left auth-delete" href="javascript:Void@(itemName)('${item.RingTransId}');"><i class="fas fa-ban"></i>作廢</a>
+                                                 </div>
+                                            </div>
+                                         </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ModelName}" style="max-width: 200px;">${item.ModelName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.RingName}" style="max-width: 200px;">${item.RingName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TransTypeName}" style="max-width: 200px;">${item.TransTypeName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Quantity}" style="max-width: 200px;">${item.Quantity}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TransDate}" style="max-width: 200px;">${item.TransDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 200px;">${item.CreateDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateBy}" style="max-width: 200px;">${item.CreateBy}</td>
+
+                                      </tr>`;
+                });
+            } else {
+                innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+            }
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+
+        $("#tblData@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+        Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+        $(".dropdown-toggle").off("click").on("click", function () {
+            let ringId = $(this).data("ring-id");
+
+            if ($(`.dropdown-menu[data-ring-id='${ringId}']`).hasClass("show")) {
+                $(".dropdown-menu").removeClass("show");
+            } else {
+                $(".dropdown-menu").removeClass("show");
+
+                $(`.dropdown-menu[data-ring-id='${ringId}']`).addClass("show");
+                $(`.dropdown-menu[data-ring-id='${ringId}']`).css({
+                    top: `${$(this).position().top + $(this).height() + 5}px`,
+                    left: `${$(this).position().left - $(this).width() + 38}px`
+                });
+            }
+        });
+
+        $("body").off("click").on("click", function (e) {
+            if ($(".dropdown-menu").hasClass("show")) {
+                if (!$(e.target).hasClass("dropdown-toggle")
+                    && !$(e.target).parents().hasClass("dropdown-toggle")) {
+                    $(".dropdown-menu").removeClass("show");
+                }
+            }
+        });
+
+    }
+
+
+    function Edit@(itemName)(RingTransId) {
+            $("#RingTransId").val(RingTransId ? RingTransId : 0);
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtTransDate@(itemName)", currentDate);
+            // 初始化下拉框
+        ComboBoxs.Default("#cboRingId@(itemName)", "@Url.Action("GetLensCarrierRingManagment", "MesBasicInformation")", { "Status": "A" }, "", "NA", "", "ModelName", "RingId");
+        $("#cboRingId@(itemName)").after('<input type="hidden" id="txtModelName@(itemName)" />');
+            // 绑定下拉框变更事件
+            $("#cboRingId@(itemName)").on("change", function() {
+                let ringId = $(this).val();
+                if (ringId) {
+                    let targetUrl = "@Url.Action("GetLensCarrierRingManagment", "MesBasicInformation")";
+                    let postData = {
+                        "RingId": ringId
+                    };
+                    let data = DataAccess.Get(targetUrl, postData, false);
+                    if (data.status == "success") {
+                        let ModelName = data.result[0].ModelName;
+                        let RingName = data.result[0].RingName;
+                        $("#txtRingName@(itemName)").val(RingName);
+                        $("#txtModelName@(itemName)").val(ModelName);
+                    } else {
+                        alert("無法獲取套環資料", "alert", 0);
+                        $("#txtRingName@(itemName)").val("");
+                        $("#txtModelName@(itemName)").val("");
+                    }
+                } else {
+                    $("#txtRingName@(itemName)").val("");
+                    $("#txtModelName@(itemName)").val("");
+                }
+            });
+
+            if (RingTransId > 0) {
+
+                $("#txtTransDate@(itemName)").attr("disabled", true);
+                $("#txtTransDate@(itemName)").attr("readonly", true);
+                $("#cboRingId@(itemName)").attr("disabled", true);
+                $("#cboRingId@(itemName)").attr("readonly", true);
+                $("#txtRingName@(itemName)").attr("disabled", true);
+                $("#txtRingName@(itemName)").attr("readonly", true);
+                $("#SaveButton").attr("onclick", `Save@(itemName)()`);
+
+                $(".pop-view, .pop-clear").addClass("btn-disabled").attr("disabled", true);
+
+                let targetUrl = "@Url.Action("GetRingTransactionManagment", "MesBasicInformation")";
+                let postData = {
+                    "RingTransId": RingTransId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtTransDate@(itemName)").val(item.TransDate);
+                        $("#cboRingId@(itemName)").val(item.RingId);
+                        $("#txtRingName@(itemName)").val(item.RingName);
+                        $("#cboTransType@(itemName)").val(item.TransType);
+                        $("#txtQuantity@(itemName)").val(item.Quantity);
+                    });
+
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+            } else {
+                // 启用日期选择器
+                $("#txtTransDate@(itemName)").attr("readonly", false);
+                $("#txtTransDate@(itemName)").attr("disabled", false);
+                $("#cboRingId@(itemName)").attr("disabled", false);
+                $("#cboRingId@(itemName)").attr("readonly", false);
+                $("#txtRingName@(itemName)").attr("disabled", true);
+                $("#txtRingName@(itemName)").attr("readonly", true);
+                let currentDate = new Date();
+                Suites.DatePicker("txtTransDate@(itemName)", currentDate);
+
+
+            }
+
+            if (!isMobile) {
+                $("#cboRingId@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+        }
+    function Save@(itemName)() {
+                if ($(objForm@(itemName)).valid()) {
+                    let RingTransId = parseInt($("#RingTransId").val());
+                    console.log(5, $("#txtModelName@(itemName)").val())
+                    if (RingTransId <= 0) {
+                        let targetUrl = "@Url.Action("AddRingTransaction", "MesBasicInformation")";
+                        let postData = {
+                            "RingId": $("#cboRingId@(itemName)").val(),
+                            "ModelName": $("#txtModelName@(itemName)").val(),
+                            "RingName": $("#txtRingName@(itemName)").val(),
+                            "TransType": $("#cboTransType@(itemName)").val(),
+                            "TransDate": $("#txtTransDate@(itemName)").val(),
+                            "Quantity": $("#txtQuantity@(itemName)").val()
+                        };
+
+                        let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+
+                        if (data) {
+                            $.each(data.result, function (i, item) {
+                                $("#MatFeedRegId").val(item.MatFeedRegId);
+                                 Return@(itemName)();
+                            });
+                            alert("新增成功", "success", 1);
+
+                        } 
+
+                    } else {
+                        let targetUrl = "@Url.Action("UpdateRingTransaction", "MesBasicInformation")";
+                        let postData = {
+                            "RingTransId": RingTransId,
+                            "RingId": $("#cboRingId@(itemName)").val(),
+                            "TransType": $("#cboTransType@(itemName)").val(),
+                            "Quantity": $("#txtQuantity@(itemName)").val()
+                        };
+
+                        let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                        if (result) {
+                            Return@(itemName)();
+                        }
+                    }
+                }
+            }
+
+    function Delete@(itemName)(RingTransId) {
+        swal.fire({
+            titleText: "確認要刪除嗎?",
+            text: "此動作無法復原，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let targetUrl = "@Url.Action("DeleteRingTransaction", "MesBasicInformation")";
+                let postData = {
+                    "RingTransId": RingTransId,
+                };
+
+                let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                if (result) {
+                    alert("刪除成功", "success", 1500);
+                    Query@(itemName)();
+                }
+            }
+        });
+    }
+
+    function Void@(itemName)(RingTransId) {
+            if (!confirm("确定要作废这条投料记录吗？")) {
+                return;
+            }
+            let targetUrl = "@Url.Action("UpdateRingTransactionStatus", "MesBasicInformation")";
+            let postData = {
+                "RingTransId": RingTransId
+            };
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+            if (result) {
+                alert("作废成功", "success", 1500);
+                Query@(itemName)();
+            }
+
+
+    }
+
+    function Return@(itemName)() {
+        ResetForm(objForm@(itemName));
+        Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+        Query@(itemName)();
+    }
+
+    function PopViewModalImportExcelRingTrans@(itemName)() {
+        $("#txtExcelFileTrans@(itemName)").val("");
+
+        $('a[href="javascript: ImportExcelRingTrans@(itemName)();"]').attr('href', "javascript: ImportExcelRingTrans@(itemName)();");
+
+        let uploadConfig = {
+            fileSelector: "#fileExcelFileTrans@(itemName)",
+            targetSelector: "#txtExcelFileTrans@(itemName)",
+            required: false,
+            uploadPath: "/RingTransactionManagment/RingTransactionManagment",
+            allowedFileExtensions: ['xlsx'],
+            maxFileCount: 10,
+            defaultFile: $("#txtExcelFileTrans@(itemName)").val()
+        };
+        Suites.FileUpload(uploadConfig);
+
+        $("#modalImportExcelRingTrans@(itemName)").modal("show");
+    }
+
+    function ImportExcelRingTrans@(itemName)() {
+        $.ajax({
+            url: "@Url.Action("ImportExcelRingTrans", "MesBasicInformation")",
+            method: "POST",
+            dataType: "json",
+            data: {
+                "FileId": $("#txtExcelFileTrans@(itemName)").val()
+            },
+            async: true,  // 設置為非同步
+            beforeSend: function () {
+                $('#loading').css("display", "block");
+                $("body").css("overflow", "hidden");
+            },
+            success: function (data) {
+                if (data.status == "success") {
+                    Swal.fire(
+                        "新增成功!", //標題
+                        //"單號列表:" + data.qcRecordIds, //訊息內容(可省略)
+                        "success",
+                    );
+
+                    $("#modalImportExcelRingTrans@(itemName)").modal("hide");
+                    Return@(itemName)();
+                }
+                else {
+                    Swal.fire(
+                        "新增失敗!", //標題
+                        data.msg,
+                        "error",
+                    );
+
+                    $("#txtExcelFileTrans@(itemName)").val("");
+                    let uploadConfig = {
+                        fileSelector: "#fileExcelFileTrans@(itemName)",
+                        targetSelector: "#txtExcelFileTrans@(itemName)",
+                        required: false,
+                        uploadPath: "/RingTransactionManagment/RingTransactionManagment",
+                        allowedFileExtensions: ['xlsx'],
+                        maxFileCount: 10,
+                        defaultFile: $("#txtExcelFileTrans@(itemName)").val()
+                    };
+                    Suites.FileUpload(uploadConfig);
+                }
+            },
+            error: function (error) {
+                alert(result.msg);
+                return false;
+            },
+            complete: function () {
+                $('#loading').css("display", "none");
+                $("body").css("overflow", "auto");
+            }
+        });
+    }
+
+
+</script>
+                                                  )

@@ -1,0 +1,308 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "BingoManagement";
+    string itemNameText = "賓果管理";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtBingoNoQ@(itemName)">賓果代號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtBingoNoQ@(itemName)" name="txtBingoNoQ@(itemName)" placeholder="請輸入賓果代號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    啟用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)A" name="cbxStatusQ@(itemName)" value="A" checked />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    停用
+                                    <input type="checkbox" id="cbxStatusQ@(itemName)S" name="cbxStatusQ@(itemName)" value="S" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">中獎狀態</label>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    是
+                                    <input type="checkbox" id="cbxWinStatusQ@(itemName)Y" name="cbxWinStatusQ@(itemName)" value="Y" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                            <div class="col-lg-3 col-md-4 col-6">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    否
+                                    <input type="checkbox" id="cbxWinStatusQ@(itemName)N" name="cbxWinStatusQ@(itemName)" value="N" />
+                                    <span class="control__indicator"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3 justify-content-between">
+                    <div class="col-auto col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-auto col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Generate@(itemName)();"><i class="fas fa-random"></i>自動產生</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 125px;">#</th>
+                                        <th scope="col" style="min-width: 175px;">賓果代號</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">狀態</th>
+                                        <th scope="col" style="min-width: 300px;">賓果開局資訊</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script src="@Url.Content("~/Scripts/page/bingo.setting.js")"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        $(document).ready(function () {
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+            let winStatusList = [];
+            $.each($("input[name='cbxWinStatusQ@(itemName)']:checked"), function () {
+                winStatusList.push($(this).val());
+            });
+
+            let targetUrl = "@Url.Action("GetBingo", "Gaming")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "BingoNo": $("#txtBingoNoQ@(itemName)").val(),
+                "Status": statusList.join(","),
+                "WinStatus": winStatusList.join(",")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">賓果代號</span>${item.BingoNo}</td>
+                                        <td class="text-center auth-status-switch">
+                                          <span class="stack-title">狀態</span>
+                                          <input type="checkbox" name="chkStatus@(itemName)" data-bingo-id="${item.BingoId}" ${(item.Status == `A` ? `checked` : ``)} />
+                                        </td>
+                                        <td class="text-center un-auth auth-status-switch"><span class="stack-title">狀態</span>${StatusName(`Status`, item.Status)}</td>
+                                        <td>
+                                          <span class="stack-title">賓果開局資訊</span>
+                                          ${item.WinStatus == `Y` 
+                                          ? `<span class="blink text-danger"><i class="fas fa-siren-on"></i></span>
+                                            <span>
+                                              <span style="font-weight: bold;">開局名稱</span>
+                                              <span class="text-primary">${item.RoundName}</span>
+                                            </span>
+                                            <span>
+                                              <span style="font-weight: bold;">開局時間</span>
+                                              <span class="text-primary">${item.RoundDate}</span>
+                                            </span>` : ``}
+                                        </td>
+                                        <td class="text-center active-content">
+                                          <span class="stack-title">操作</span>
+                                          <a class="active-link" href="@Url.Action("Bingo", "Gaming")?BingoNo=${item.BingoNo}" target="_blank"><i class="fas fa-print"></i><span>列印</span></a>
+                                          <a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.BingoId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "啟用",
+                off: "停用",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStatus@(itemName)'][data-bingo-id]").change(StatusSwitch@(itemName));
+        }
+
+        function Delete@(itemName)(BingoId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteBingo", "Gaming")";
+                    let postData = {
+                        "BingoId": BingoId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block");
+            Query@(itemName)();
+        }
+
+        function StatusSwitch@(itemName)() {
+            var bingoId = $(this).data("bingo-id");
+
+            let targetUrl = "@Url.Action("UpdateBingoStatus", "Gaming")";
+            let postData = {
+                "BingoId": bingoId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Query@(itemName)();
+            }
+        }
+
+        function Generate@(itemName)() {
+            let bingoMap = [];
+            let tempElements = Array.from(elements);
+
+            for (var i = 1; i <= 24; i++) {
+                const random = Math.floor(Math.random() * tempElements.length);
+
+                bingoMap.push(tempElements[random].toString());
+
+                tempElements.splice(random, 1);
+            }
+
+            let targetUrl = "@Url.Action("AddBingo", "Gaming")";
+            let postData = {
+                "BingoMap": bingoMap.map(item => item).join(";")
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (result) {
+                Query@(itemName)();
+            }
+        }
+    </script>
+)

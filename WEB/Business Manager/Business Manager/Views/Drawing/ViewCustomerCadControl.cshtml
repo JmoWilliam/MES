@@ -1,0 +1,511 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewCustomerCadControl";
+    string itemNameText = "客戶設計圖版本控制";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .modal-body {
+             max-height: 75vh;
+             overflow-y: auto;
+         }
+
+        .help-block {
+            display: none;
+            margin: 5px 0 0;
+            border: 3px dashed #b1b1b1;
+            border-radius: 5px;
+            padding: 5px 10px;
+        }
+
+        dt {
+            float: left;
+            clear: left;
+            width: 110px;
+        }
+
+            dt::after {
+                content: "：";
+            }
+
+        dd {
+            margin: 0 0 0 80px;
+            padding: 0;
+            color: #36a2f5;
+            font-weight: bold;
+        }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">目前部番(客戶品號) <span class="sub-text" id="desCustomerMtlItmeNo@(itemName)"></span></span>
+                    <span class="sub-title">目前客戶圖號 <span class="sub-text" id="desCustomerDwgNo@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtEditionQ@(itemName)" name="txtEditionQ@(itemName)"
+                                               placeholder="請輸入圖面版次" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        <button type="button" class="btn btn-info auth-version" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">客戶版次<code>(系統版次)</code></th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">發行狀態</th>
+                                        <th scope="col" style="min-width: 200px;">變更原因</th>
+                                        <th scope="col" style="min-width: 175px;">變更日期</th>
+                                        <th scope="col" style="min-width: 175px;">變更人員</th>
+                                        <th scope="col" style="min-width: 250px;">客戶設計圖</th>
+                                        <th scope="col" style="min-width: 250px;">其他檔案</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container" autocomplete="off" id="editForm@(itemName)">
+                            <fieldset>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="cboEdition@(itemName)">圖面版次資訊</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboEdition@(itemName)" name="cboEdition@(itemName)"></select>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtEdition@(itemName)">圖面版次 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtEdition@(itemName)" name="txtEdition@(itemName)"
+                                               placeholder="請輸入圖面版次"
+                                               data-msg-required="請輸入圖面版次" data-rule-required="true"
+                                               data-msg-maxlength="必須少於 32 個字元" maxlength="32" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label">變更類型 <span class="text-danger">*</span></label>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio">
+                                            版次變更
+                                            <input type="radio" id="rdoChangeType@(itemName)E" name="rdoChangeType@(itemName)" value="E"
+                                                   data-msg-required="請選擇變更類型" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio">
+                                            修改變更
+                                            <input type="radio" id="rdoChangeType@(itemName)U" name="rdoChangeType@(itemName)" value="U"
+                                                   data-msg-required="請選擇變更類型" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtCause@(itemName)">變更原因 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtCause@(itemName)" name="txtCause@(itemName)" rows="2"
+                                                  placeholder="請輸入變更原因"
+                                                  data-msg-required="請輸入變更原因" data-rule-required="true"
+                                                  data-msg-maxlength="必須少於 100 個字元" maxlength="100"></textarea>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label">是否為發行版次 <span class="text-danger">*</span></label>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio">
+                                            發行版本
+                                            <input type="radio" id="rdoChangeReleasedStatus@(itemName)Y" name="rdoChangeReleasedStatus@(itemName)" value="Y"
+                                                   data-msg-required="請選擇版次類型" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio">
+                                            非發行版本
+                                            <input type="radio" id="rdoChangeReleasedStatus@(itemName)N" name="rdoChangeReleasedStatus@(itemName)" value="N"
+                                                   data-msg-required="請選擇版次類型" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboFolderPath@(itemName)">客戶設計圖<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div style="display: flex;" class="btn-group btn-group-inv@(itemName)">
+                                            <select id="cboFolderPath@(itemName)" name="cboFolderPath@(itemName)" class="form-control" required></select>
+                                            <a class="btn btn-success pop-view" href="javascript: SearchCadFile@(itemName)();"><i class="fal fa-search"></i></a>
+                                            <a class="btn pop-view" style="background-color: #ef3f5f !IMPORTANT;" href="javascript: RemoveCadFile@(itemName)();"><i style="color: white;" class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl id="cadFileHelp" class="help-block">
+                                            <dt>檔案預覽</dt>
+                                            <dd style="display: none;" id="desCadFileAbsolutePath@(itemName)"></dd>
+                                            <dd id="desPreview@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                @*<div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtCadFile@(itemName)">客戶設計圖</label>
+                                    <div class="col-12">
+                                        <input type="file" id="fileCadFile@(itemName)" name="fileCadFile@(itemName)" multiple />
+                                        <input type="hidden" id="txtCadFile@(itemName)" name="txtCadFile@(itemName)" />
+                                    </div>
+                                </div>*@
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtCauseFile@(itemName)">其他檔案</label>
+                                    <div class="col-12">
+                                        <input type="file" id="fileOtherFile@(itemName)" name="fileOtherFile@(itemName)" multiple />
+                                        <input type="hidden" id="txtOtherFile@(itemName)" name="txtOtherFile@(itemName)" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewLocalFile")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(CadId, CustomerMtlItemNo, CustomerDwgNo) {
+            $("#CadId").val(CadId);
+            $("#desCustomerMtlItmeNo@(itemName)").html(CustomerMtlItemNo);
+            $("#desCustomerDwgNo@(itemName)").html(CustomerDwgNo);
+
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+
+            let currentDate = new Date();
+
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 365);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+            Query@(itemName)();
+
+            $("#txtFolderPath@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    SearchCadFile@(itemName)();
+                    return false;
+                }
+            });
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetCustomerCadControl", "Drawing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "CadId": $("#CadId").val(),
+                "Edition": $("#txtEditionQ@(itemName)").val(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    let otherFileRow = 1;
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        if (item.OtherFile) {
+                            let otherFile = JSON.parse(item.OtherFile);
+                            otherFileRow = otherFile.data.length;
+                        }
+                        innerHtml += `<tr>
+                                        <td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``}>${_row}</td>
+                                        <td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``}>${item.Edition}<code>(${item.Version})</code></td>
+                                        <td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``} class="text-center auth-released-status">
+                                          <input type="checkbox" name="chkStatus@(itemName)" data-control-id="${item.ControlId}" ${item.ReleasedStatus == `Y` ? `checked` : ``} />
+                                        </td>
+                                        <td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``} class="text-center un-auth auth-released-status">${StatusName(`Boolean`, `${item.ReleasedStatus}`)}</td>
+                                        <td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``} class="ellipsis" data-toggle="tooltip" title="${item.Cause}" style="max-width: 200px;">${item.Cause}</td>
+                                        <td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``}>${item.ChangeDate}</td>
+                                        <td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``}><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                        ${JudgeCadViewMode@(itemName)(`${item.CadFileAbsolutePath}`, `${item.CadFile}`, `${item.FileName}`, `${item.FileExtension}`)}
+                                        ${JudgeOtherFile(`${item.OtherFile}`)}
+                                      </tr>
+                                      ${JudgeOtherFileLoop(`${item.OtherFile}`)}`;
+                    });
+
+                    function JudgeCadViewMode@(itemName)(cadFileAbsolutePath, cadFile, fileName, fileExtension) {
+                        let innerHtml = '';
+                        if (cadFileAbsolutePath != "null") {
+                            innerHtml += JudgeCadFileAbsolutePath(cadFileAbsolutePath);
+                        }
+                        else {
+                            innerHtml += JudgeCadFile(cadFile, fileName, fileExtension);
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeCadFile(cadFile, fileName, fileExtension) {
+                        let innerHtml = '';
+                        if (cadFile != "null") {
+                            innerHtml += `<td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``} class="active-content ellipsis" data-toggle="tooltip" title="${fileName}${fileExtension}" style="max-width: 250px;">
+                                            <a class="active-link auth-download mr-1" href="/Web/GetFile?fileId=${cadFile}"><i class="fas fa-download"></i></a>
+                                            ${fileName}${fileExtension}
+                                          </td>`;
+                        }
+                        else {
+                            innerHtml += `<td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``}></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeCadFileAbsolutePath(cadFileAbsolutePath) {
+                        let innerHtml = '';
+                        if (cadFileAbsolutePath != "null") {
+                            let fileFullNameList = cadFileAbsolutePath.split('\\');
+                            let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                            innerHtml += `<td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``} class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 250px;">
+                                            <a class="active-link auth-download mr-1" href="/Drawing/GetCadFile?FilePath=${cadFileAbsolutePath}"><i class="fas fa-download"></i></a>
+                                            ${fileFullName}
+                                          </td>`;
+                        }
+                        else {
+                            innerHtml += `<td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``}></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeOtherFile(OtherFile) {
+                        let innerHtml = '';
+                        if (OtherFile != "null") {
+                            let otherFile;
+                            otherFile = JSON.parse(OtherFile);
+                            otherFileRow = otherFile.data.length;
+
+                            innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${otherFile.data[0].FileName}${otherFile.data[0].FileExtension}" style="max-width: 250px;">
+                                            <a class="active-link auth-download mr-1" href="/Web/GetFile?fileId=${otherFile.data[0].FileId}"><i class="fas fa-download"></i></a>\
+                                            ${otherFile.data[0].FileName}${otherFile.data[0].FileExtension}
+                                          </td>`;
+                        }
+                        else {
+                            innerHtml += `<td ${otherFileRow > 1 ? `rowspan=${otherFileRow}` : ``}></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeOtherFileLoop(OtherFile) {
+                        let innerHtml = '';
+                        if (OtherFile != "null") {
+                            let otherFile;
+                            otherFile = JSON.parse(OtherFile);
+                            otherFileRow = otherFile.data.length;
+
+                            for (var x = 1; x < otherFileRow; x++) {
+                                innerHtml += `<tr>
+                                                <td class="active-content ellipsis" data-toggle="tooltip" title="${otherFile.data[x].FileName}${otherFile.data[x].FileExtension}" style="max-width: 250px;">
+                                                  <a class="active-link auth-download mr-1" href="/Web/GetFile?fileId=${otherFile.data[x].FileId}"><i class="fas fa-download"></i></a>
+                                                  ${otherFile.data[x].FileName}${otherFile.data[x].FileExtension}
+                                                </td>
+                                              </tr>`;
+                            }
+                        }
+                        return innerHtml;
+                    }
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            $('[data-toggle="tooltip"]').tooltip({ sanitize: false, placement: 'right' });
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "是",
+                off: "否",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStatus@(itemName)'][data-control-id]").change(StatusSwitch@(itemName));
+        }
+
+        function Edit@(itemName)(ControlId) {
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+            if (!isMobile) {
+                $("#cboEdition@(itemName), #cboFolderPath@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboEdition@(itemName)", "@Url.Action("GetCustomerCadEdition", "Drawing")", { "CadId": $("#CadId").val() }, "", "HIDDEN", "快速選擇", "Edition", "Edition");
+
+            ComboBoxs.Default("#cboFolderPath@(itemName)", "@Url.Action("GetRdWhitelist", "Drawing")", { "UserId": @Convert.ToInt32(Session["UserId"]) }, "", "NA", "", "FolderPath", "ListId");
+
+            $("#cadFileHelp").hide();
+            $("#desCadFileAbsolutePath@(itemName)").html("");
+            $("#desPreview@(itemName)").html("");
+
+            let uploadConfig2 = {
+                fileSelector: "#fileOtherFile@(itemName)",
+                targetSelector: "#txtOtherFile@(itemName)",
+                required: false,
+                uploadPath: "/Drawing/ViewCustomerCadControl",
+                allowedFileExtensions: ['txt', 'jpg', 'pdf'],
+                maxFileCount: 99,
+                defaultFile: $("#txtOtherFile@(itemName)").val()
+            };
+            Suites.FileUpload(uploadConfig2);
+
+            $("#cboEdition@(itemName)").off("change").on("change", function () {
+                $("#txtEdition@(itemName)").val($("#cboEdition@(itemName) option:selected").val()).focus();
+                $("#cboEdition@(itemName)").prop('selectedIndex', 0);
+            });
+
+            $("#cboFolderPath@(itemName)").change(function () {
+                SearchCadFile@(itemName)("Cad2D");
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("AddCustomerCadControl02", "Drawing")";
+                let postData = {
+                    "CadId": $("#CadId").val(),
+                    "Edition": $("#txtEdition@(itemName)").val(),
+                    "EditionType": $("input[name='rdoChangeType@(itemName)']:checked").val(),
+                    "ReleasedStatus": $("input[name='rdoChangeReleasedStatus@(itemName)']:checked").val(),
+                    "Cause": $("#txtCause@(itemName)").val(),
+                    "CadFilePath": $("#desCadFileAbsolutePath@(itemName)").text(),
+                    "OtherFile": $("#txtOtherFile@(itemName)").val(),
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+
+            $("#txtCadFile@(itemName)").val("");
+            $("#txtOtherFile@(itemName)").val("");
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+
+        function StatusSwitch@(itemName)() {
+            var controlId = $(this).data("control-id");
+            console.log(controlId);
+
+            let targetUrl = "@Url.Action("UpdateCustomerCadControlReleasedStatus", "Drawing")";
+            let postData = {
+                "ControlId": controlId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (result) {
+                Return@(itemName)();
+                Query@(itemName)();
+            }
+        }
+
+        function SearchCadFile@(itemName)() {
+            let listId = $("#cboFolderPath@(itemName)").val();
+            PopViewLocalFile(listId, "N", "#cboFolderPath@(itemName)", "#desCadFileAbsolutePath@(itemName)", "#desPreview@(itemName)", "#cadFileHelp");
+        }
+
+        function RemoveCadFile@(itemName)() {
+            ComboBoxs.Default("#cboFolderPath@(itemName)", "@Url.Action("GetRdWhitelist", "Drawing")", { "UserId": @Convert.ToInt32(Session["UserId"]) }, "", "NA", "", "FolderPath", "ListId");
+            $("#cboFolderPath@(itemName)").val("");
+            $("#cadFileHelp").hide();
+            $("#desCadFileAbsolutePath@(itemName)").html("");
+            $("#desPreview@(itemName)").html("");
+        }
+    </script>
+        )

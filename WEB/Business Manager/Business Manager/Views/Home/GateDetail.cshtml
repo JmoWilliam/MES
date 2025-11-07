@@ -1,0 +1,102 @@
+﻿@using Business_Manager.Helpers;
+@{ 
+    ViewBag.Title = "Business Manager 模組";
+
+    string System = Request["System"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="page_content gatedetail">
+    <div class="main_menu">
+        <div class="menu_title">現在位置</div>
+        <span class="custom-dropdown">
+            <select id="systemMenu"></select>
+        </span>
+    </div>
+    <ul class="accordion" id="moduleMenu"></ul>
+    <div class="log-out">
+        <a href="javascript:Logout();">登出</a>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let Accordion = function (el, multiple) {
+            this.el = el || {};
+            this.multiple = multiple || false;
+
+            var links = this.el.find('.link');
+            links.on('click', { el: this.el, multiple: this.multiple }, this.dropdown)
+        };
+
+        Accordion.prototype.dropdown = function (e) {
+            var $el = e.data.el;
+            $this = $(this), $next = $this.next();
+            $next.slideToggle();
+            $this.parent().toggleClass('open');
+
+            if (!e.data.multiple) {
+                $el.find('.submenu').not($next).slideUp().parent().removeClass('open');
+            }
+        };
+
+        $(document).ready(function () {
+            ComboBoxs.WithText("#systemMenu", "@Url.Action("GetSystemMenu", "BasicInformation")", {}, "@System", "CHOOSE", "", "SystemName", "SystemCode");
+
+            ModuleMenu();
+
+            $("#systemMenu").change(function () {
+                let system = $("#systemMenu").val() ? $("#systemMenu").val() : "SYS";
+                location.replace('/Home/GateDetail?System=' + system);
+            });
+        });
+
+        function ModuleMenu() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetModuleMenu", "BasicInformation")";
+            let postData = {
+                "SystemCode": "@System"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    innerHtml += `<li>
+                                    <div class="link">${decodeURI(item.ThemeIcon)}${item.ModuleName}<i class="fa fa-chevron-right aftertext"></i></div>
+                                    <ul class="submenu">
+                                      ${FunctionMenu(item.ModuleCode, item.FunctionData)}
+                                    </ul>
+                                  </li>`;
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#moduleMenu").html(innerHtml);
+
+            new Accordion($("#moduleMenu"), false);
+        }
+
+        function FunctionMenu(moduleCode, source) {
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<li>
+                               <a href="/${moduleCode}/${json.data[x].FunctionCode}" target="${json.data[x].UrlTarget}">${json.data[x].FunctionName}</a>
+                             </li>`;
+                }
+            }
+
+            return html;
+        }
+    </script>
+)

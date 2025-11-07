@@ -1,0 +1,206 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewWipOrder";
+    string itemNameText = "工單資料";
+}
+
+@Html.Resource("css",
+    @<style>
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)"
+                                               placeholder="請輸入工單單號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                               placeholder="請輸入品號/品名" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">工單單號</th>
+                                        <th scope="col" style="min-width: 175px;">品號</th>
+                                        <th scope="col" style="min-width: 175px;">品名</th>
+                                        <th scope="col" style="min-width: 150px;">規格</th>
+                                        <th class="text-right" scope="col" style="min-width: 100px;">預計產量</th>
+                                        <th scope="col" style="min-width: 150px;">預計開工</th>
+                                        <th scope="col" style="min-width: 150px;">預計完工</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let targetSelector@(itemName);
+        let woId@(itemName);
+        let woErpFullNo@(itemName);
+        let mtlItemNo@(itemName);
+        let mtlItemName@(itemName);
+        let mtlItemSpec@(itemName);
+        let planQty@(itemName);
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            woId@(itemName) = config.objectWoId;
+            woErpFullNo@(itemName) = config.objectWoErpFullNo;
+            mtlItemNo@(itemName) = config.objectMtlItemNo;
+            mtlItemName@(itemName) = config.objectMtlItemName;
+            mtlItemSpec@(itemName) = config.objectMtlItemSpec;
+            planQty@(itemName) = config.objectPlanQty;
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetWipOrder", "Production")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val(),
+                "TransferStatus": "Y"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.WoErpPrefix}-${item.WoErpNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 175px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 175px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 200px;">${item.MtlItemSpec}</td>
+                                        <td class="text-right">${item.PlanQty.toLocaleString(`en`)}</td>
+                                        <td>${item.ExpectedStart}</td>
+                                        <td>${item.ExpectedEnd}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-wo-id="${item.WoId}" value="${item.WoId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtWoErpPrefix@(itemName)" data-wo-id="${item.WoId}" value="${item.WoErpPrefix}" />
+                                          <input type="hidden" name="txtWoErpNo@(itemName)" data-wo-id="${item.WoId}" value="${item.WoErpNo}" />
+                                          <input type="hidden" name="txtMtlItemNo@(itemName)" data-wo-id="${item.WoId}" value="${item.MtlItemNo}" />
+                                          <input type="hidden" name="txtMtlItemName@(itemName)" data-wo-id="${item.WoId}" value="${item.MtlItemName}" />
+                                          <input type="hidden" name="txtMtlItemSpec@(itemName)" data-wo-id="${item.WoId}" value="${item.MtlItemSpec}" />
+                                          <input type="hidden" name="txtPlanQty@(itemName)" data-wo-id="${item.WoId}" value="${item.PlanQty}" />
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="9" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-wo-id]:checked") {
+                    let woId = $(this).data("wo-id");
+
+                    if (woId) {
+                        let woErpPrefix = $(`input[name="txtWoErpPrefix@(itemName)"][data-wo-id="${woId}"]`).val();
+                        let woErpNo = $(`input[name="txtWoErpNo@(itemName)"][data-wo-id="${woId}"]`).val();
+                        let mtlItemNo = $(`input[name="txtMtlItemNo@(itemName)"][data-wo-id="${woId}"]`).val();
+                        let mtlItemName = $(`input[name="txtMtlItemName@(itemName)"][data-wo-id="${woId}"]`).val();
+                        let mtlItemSpec = $(`input[name="txtMtlItemSpec@(itemName)"][data-wo-id="${woId}"]`).val();
+                        let planQty = $(`input[name="txtPlanQty@(itemName)"][data-wo-id="${woId}"]`).val();
+
+                        if (woId@(itemName)) ElementSetValue(woId@(itemName), woId, "change");
+                        if (woErpFullNo@(itemName)) ElementSetValue(woErpFullNo@(itemName), `${woErpPrefix}-${woErpNo}`, "change");
+                        if (mtlItemNo@(itemName)) ElementSetValue(mtlItemNo@(itemName), mtlItemNo, "change");
+                        if (mtlItemName@(itemName)) ElementSetValue(mtlItemName@(itemName), mtlItemName, "change");
+                        if (mtlItemSpec@(itemName)) ElementSetValue(mtlItemSpec@(itemName), mtlItemSpec, "change");
+                        if (planQty@(itemName)) ElementSetValue(planQty@(itemName), planQty, "change");
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

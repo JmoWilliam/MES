@@ -1,0 +1,683 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DesignDetail";
+    string parentItem = "DesignManagement";
+    string itemNameText = "新設計申請單身(RFI)";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         /*.form-group .select2-selection__rendered {
+             line-height: 25px !important;
+         }
+
+         .form-group .select2-container .select2-selection--single {
+             height: 39px !important;
+         }
+
+         .form-group .select2-selection__arrow {
+             line-height: 25px !important;
+         }*/
+
+        .control--radio .control__indicator:after {
+            top: 7px;
+            left: 7px;
+        }
+
+         .control--checkbox .control__indicator:after {
+             top: 4px;
+         }
+
+         .control--radio input:checked ~ .control__indicator {
+             background-color: #a768f3;
+         }
+
+         .control--checkbox input:checked ~ .control__indicator {
+             background-color: #0072ff;
+         }
+
+        /*.input-group .form-control {
+            width: 100px;
+        }*/
+
+        .iCard .control {
+            position: relative;
+            display: inline-block;
+            margin: 0 10px 15px 10px;
+            padding-left: 25px;
+            cursor: pointer;
+            line-height: normal;
+        }
+
+         .iCard {
+             margin-top: 0px;
+             position: relative;
+             border: 1px solid #e5e9ec;
+             background-color: transparent;
+             border-radius: 7px;
+             display: flex;
+             -ms-flex-direction: column;
+             flex-direction: column;
+             min-width: 0;
+             word-wrap: break-word;
+             background-clip: border-box;
+         }
+
+         .iCard-header {
+             padding: 0.3em;
+             border: none;
+             border-radius: 7px 7px 0 0;
+             background-color: #efefef;
+             font-weight: 600;
+             font-size: large;
+             color: #888;
+         }
+
+         input.txtOther {
+             padding-left: 5px;
+             outline: 0 !important;
+             /* width: 60%; */
+             height: 25px;
+             border-top: 0;
+             border-left: 0;
+             border-right: 0;
+             border-bottom: solid 1px #aaa;
+             border-radius: 0px;
+             background: #fff;
+         }
+
+             input.txtOther:focus {
+                 background-color: #eee;
+                 color: #00f;
+             }
+    </style>
+        )
+
+<!--編輯-->
+<div class="row" id="editData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-header text-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(parentItem)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success read-hide@(itemName)" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="col-12 mb-3 text-right"><button type="button" name="btnSetDefault@(itemName)" class="btn btn-sm btn-warning">帶入預設值</button></div>
+                        <div id="ProdSpecBox@(itemName)"></div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(parentItem)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success read-hide@(itemName)" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let pageAuthoritys@(itemName);
+
+        let Elements@(itemName) = new ElementControl@(itemName)();
+        let Datas@(itemName) = new DataControl@(itemName)();
+
+        function Expand@(itemName)() {
+            if (parseInt($("#DesignId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+
+                //權限資料
+                pageAuthoritys@(itemName) = JSON.parse($(`#pageAuthority`).val());
+                if (pageMode == "Read") Read@(itemName)();
+                else Edit@(itemName)();
+            }
+            //else alert("請先儲存設計申請單頭", "alert");
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            Edit@(itemName)();
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            //非列表頁面 無須載入
+        }
+
+        let prodSpec@(itemName) = [];
+        let prodSpecDetail@(itemName) = [];
+        let prodSpecJson = JSON.parse('{ "data" : []}');
+        let prodSpecDetailsJson = JSON.parse('{ "data" : []}');
+        let prodSpecIds@(itemName) = [];
+
+        function GetData@(itemName)() {
+            let designId = parseInt($("#DesignId").val());
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            prodSpec@(itemName) = [];
+            prodSpecDetail@(itemName) = [];
+            prodSpecIds@(itemName) = [];
+
+            if (designId > 0) {
+                let targetUrl = '@Url.Action("GetDemandDesignSpec", "RequestForInformation")';
+                let postData = {
+                    "DesignId": designId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success" && data.result.length > 0) {
+                    let innerHtml = "";
+
+                    prodSpecIds@(itemName) = data.result.map(m => m.DdSpecId);
+
+                    prodSpec@(itemName) = data.result.map(m => {
+                        let x = {
+                            TempSpId: m.DdSpecId,
+                            ParameterName: m.ParameterName,
+                            SortNumber: m.SortNumber,
+                            ControlType: m.ControlType,
+                            Required: m.Required
+                        };
+                        return x;
+                    });
+
+                    let demandDesignSpecDetail = data.result.map(m => JSON.parse(m.DemandDesignSpecDetail)).filter(f => f);
+
+                    if (demandDesignSpecDetail.length) {
+                        prodSpecDetail@(itemName) = demandDesignSpecDetail.map(m => m.data.map(m => {return {
+                            TempSpId: m.DdSpecId,
+                            TempSpDetailId: m.DdsDetailId,
+                            PmtDetailName: m.PmtDetailName, //參數名稱
+                            RequireFlag: m.RequireFlag, //不要求
+                            DesignInput: m.DesignInput, //設計輸入
+                            Description: m.Description, //備註
+                            SortNumber: m.SortNumber,
+                            DataType: m.DataType,
+                            Required: m.Required,
+                            Status: m.Status
+                        }})).reduce((x, y) => { return x.concat(y) });
+                    }
+
+                    $.each(prodSpec@(itemName), function (i, item) {
+                        innerHtml += `<div class="col-12 mb-3">
+                                        <div class="iCard" name="DesignSpec@(itemName)-${item.ParameterName}" data-controltype="${item.ControlType}">
+                                            <div class="iCard-header">
+                                                <div class="row">
+                                                    <div class="col-8">${item.ParameterName}</div>
+                                                    <div class="col-4 text-right">${item.Required ? `必填` : ``}</div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                ${SetProdSpecDetail@(itemName)(item, JSON.stringify(prodSpecDetail@(itemName).filter(f => f.TempSpId == item.TempSpId)))}
+                                            </div>
+                                        </div>
+                                    </div>`;
+                    });
+                    $(`${objForm@(itemName)} #ProdSpecBox@(itemName)`).html(innerHtml);
+
+                    $.each(data.result, function (i, prodSpec) {
+                        $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"]`).append(`<input type="hidden" id="DdSpecId-${prodSpec.ParameterName}" value="${prodSpec.DdSpecId}" />`);
+                        let html = `<div class="card-footer" style="color:#f34;">`;
+
+                        if (!!prodSpec.DemandDesignSpecDetail) {
+                            $.each(JSON.parse(prodSpec.DemandDesignSpecDetail).data, function (i, prodSpecDetail) {
+                                switch (prodSpec.ControlType) {
+                                    case 'C':
+                                    case 'R':
+                                        if (prodSpecDetail.Status == `A`) {
+                                            $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] #txtPmtDetailName@(itemName)-${prodSpecDetail.DdsDetailId}`).attr('checked', true);
+                                            $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] #txtDesignInput@(itemName)-${prodSpecDetail.DdsDetailId}`).val(prodSpecDetail.DesignInput);
+                                            $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] #txtDescription@(itemName)-${prodSpecDetail.DdsDetailId}`).val(prodSpecDetail.Description);
+                                        }
+                                        break;
+                                    case 'D':
+                                        if (prodSpecDetail.Status == `A`) {
+                                            $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] select[name="txtPmtDetailName@(itemName)-${prodSpec.DdSpecId}"]`).val(prodSpecDetail.PmtDetailName);
+                                        }
+                                        break;
+                                    case 'T':
+                                    case 'A':
+                                        if (prodSpecDetail.Status == `A`) {
+                                            if (prodSpecDetail.RequireFlag == '0') $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] #cbxRequireFlag@(itemName)-${prodSpecDetail.DdsDetailId}`).attr('checked', true);
+                                            $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] #txtPmtDetailName@(itemName)-${prodSpecDetail.DdsDetailId}`).val(prodSpecDetail.Description);
+                                            $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] #txtDesignInput@(itemName)-${prodSpecDetail.DdsDetailId}`).val(prodSpecDetail.DesignInput);
+                                            $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] #txtDescription@(itemName)-${prodSpecDetail.DdsDetailId}`).val(prodSpecDetail.Description);
+                                        }
+                                        break;
+                                }
+                                if (prodSpecDetail.DataType == `O`) {
+                                    $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"] input[type="text"][data-ddsdetail-name="其他"]`).val(prodSpecDetail.Description);
+                                }
+                            });
+                        }
+
+                        html += `</div>`
+                        $(`div[name="DesignSpec@(itemName)-${prodSpec.ParameterName}"]`).append(html);
+                    });
+
+                    $(`#modalQuery@(itemName), #listData@(itemName), #editData@(itemName), #modalSignInfo@(itemName)`).attr({ 'onCopy': 'return false', 'onCut': 'return false' });
+                }
+                else {
+                    //#region 取得樣板資料
+                    let innerHtml = "";
+                    let targetUrl = "@Url.Action("GetTemplateSpecParameter", "RequestForInformation")";
+                    let data = DataAccess.Get(targetUrl,
+                        {
+                            ProTypeGroupId: $("#ProTypeGroupId").val(),
+                            ProductUseId: $("#ProductUseId").val(),
+                            Status: "A"
+                        }, false);
+
+                    if (data.status == "success" && data.result.length > 0) {
+                        prodSpec@(itemName) = data.result;
+                        prodSpecDetail@(itemName) = data.result.map(x => JSON.parse(x.TempSpecParameterDetail)).reduce((x, y) => { return x.concat(y) });
+
+                        $.each(prodSpec@(itemName), function (i, item) {
+                            innerHtml += `<div class="col-12 mb-3">
+                                            <div class="iCard" name="DesignSpec@(itemName)-${item.ParameterName}" data-controltype="${item.ControlType}">
+                                                <div class="iCard-header">
+                                                    <div class="row">
+                                                        <div class="col-8">${item.ParameterName}</div>
+                                                        <div class="col-4 text-right">${item.Required ? `必填` : ``}</div>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body">
+                                                    ${SetProdSpecDetail@(itemName)(item, item.TempSpecParameterDetail)}
+                                                </div>
+                                            </div>
+                                        </div>`;
+                        });
+
+                        $(`${objForm@(itemName)} #ProdSpecBox@(itemName)`).html(innerHtml);
+                    }
+                    //#endregion
+                }
+
+                //add 快速選取 cbo監聽
+                Elements@(itemName).Initialize@(itemName)();
+
+                $.each(prodSpecDetail@(itemName), function (i, item) {
+                    $(`select[name="txtPmtDetailName@(itemName)-${item.TempSpId}"]`).select2({
+                        dropdownAutoWidth: false,
+                        //width: "100%"
+                    });
+                });
+            }
+        }
+
+        function SetProdSpecDetail@(itemName)(main , source) {
+            let html = ``;
+            if (source) {
+                let detail = JSON.parse(source);
+                let tempSpId = main.TempSpId;
+                let controlType = main.ControlType;
+                let required = main.Required;
+                let specName = main.ParameterName;
+
+                let htmlSelect = `<select class="form-control" name="txtPmtDetailName@(itemName)-${tempSpId}"
+                                    data-ddspec-id="${tempSpId}" ${required ? `data-msg-required="請選擇${specName}" data-rule-required="true"` : ``}>
+                                    ${!required ? `<option value="">-請選擇-</option>` : ``}`;
+
+                $.each(detail, function (i, item) {
+                    let tempSpDetailId = item.TempSpDetailId;
+
+                    switch (controlType) {
+                        case 'C':
+                            html += `<div class="form-group row">
+                                        <div class="col-12 col-md-3 col-lg-3">
+                                            <label class="control control--checkbox">${i + 1}. ${item.PmtDetailName}
+                                                <input type="checkbox" id="txtPmtDetailName@(itemName)-${tempSpDetailId}" name="txtPmtDetailName@(itemName)-${tempSpId}" class="form-control" value="${item.PmtDetailName}"
+                                                    data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}"
+                                                    ${required ? `data-msg-required="請選擇${item.PmtDetailName}" data-rule-required="true"` : ``} />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </div>
+                                        <div class="col-12 col-md-9 col-lg-9">
+                                            ${item.DataType == `O` ?
+                                                `<div class="input-group">
+                                                    <span class="input-group-addon">註明</span>
+                                                    <input type="text" class="form-control" id="txtDescription@(itemName)-${tempSpDetailId}" name="txtDescription@(itemName)-${tempSpDetailId}"
+                                                        data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" maxlength="2048" />
+                                                </div>` : ``}
+                                        </div>
+                                    </div>`;
+                            break;
+                        case 'R':
+                            html += `<div class="form-group row">
+                                        <div class="col-12 col-md-3 col-lg-3">
+                                            <label class="control control--radio">${i + 1}. ${item.PmtDetailName}
+                                                <input type="radio" id="txtPmtDetailName@(itemName)-${tempSpDetailId}" name="txtPmtDetailName@(itemName)-${tempSpId}" class="form-control" value="${item.PmtDetailName}"
+                                                    data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}"
+                                                    ${required ? `data-msg-required="請選擇${item.PmtDetailName}" data-rule-required="true"` : ``} />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </div>
+                                        <div class="col-12 col-md-9 col-lg-9">
+                                            ${item.DataType == `O` ?
+                                                `<div class="input-group">
+                                                    <span class="input-group-addon">註明</span>
+                                                    <input type="text" class="form-control" id="txtDescription@(itemName)-${tempSpDetailId}" name="txtDescription@(itemName)-${tempSpDetailId}"
+                                                        data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" maxlength="2048" />
+                                                </div>` : ``}
+                                        </div>
+                                    </div>`;
+                            break;
+                        case 'D':
+                            htmlSelect += `<option id="txtPmtDetailName@(itemName)-${tempSpDetailId}"
+                                            data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" value="${item.PmtDetailName}">${item.PmtDetailName}</option>`;
+                            break;
+                        case 'T':
+                            html += `<div class="form-group row">
+                                        <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtPmtDetailName@(itemName)-${tempSpId}">${i + 1}. ${item.PmtDetailName}</label>
+                                        <div class="col-12 col-md-9 col-lg-9">
+                                            <input type="hidden" id="txtPmtDetailName@(itemName)-${tempSpDetailId}" name="txtPmtDetailName@(itemName)-${tempSpId}" value="${item.PmtDetailName}"
+                                                data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" />
+                                            <div class="input-group">
+                                                <label class="control control--checkbox">不要求
+                                                    <input type="checkbox" id="cbxRequireFlag@(itemName)-${tempSpDetailId}" name="cbxRequireFlag@(itemName)-${tempSpId}"
+                                                        data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                                <span class="input-group-addon">設計輸入${required ? `<span class="text-danger">*</span>` : ``}</span>
+                                                <select class="form-control" id="cboDesignInput@(itemName)-${tempSpDetailId}" name="cboDesignInput@(itemName)"
+                                                    data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" data-ddspec-name="${specName}">
+                                                </select>
+                                                <input type="text" class="form-control" id="txtDesignInput@(itemName)-${tempSpDetailId}" name="txtDesignInput@(itemName)-${tempSpId}" placeholder="請填寫${item.PmtDetailName}"
+                                                    data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" maxlength="512"
+                                                    ${required ? `data-msg-required="請填寫${item.PmtDetailName}" data-rule-required="true"` : ``} />
+                                                <span class="input-group-addon">備註</span>
+                                                <input type="text" class="form-control" id="txtDescription@(itemName)-${tempSpDetailId}" name="txtDescription@(itemName)-${tempSpDetailId}"
+                                                    data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" maxlength="512" />
+                                            </div>
+                                        </div>
+                                    </div>`;
+                            break;
+                        case 'A':
+                            html += `<div class="form-group row">
+                                        <div class="col-12 col-md-3 col-lg-3 text-right">
+                                            <label class="control control--checkbox">不要求
+                                                <input type="checkbox" id="cbxRequireFlag@(itemName)-${tempSpDetailId}" name="cbxRequireFlag@(itemName)-${tempSpId}"
+                                                    data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </div>
+                                        <div class="col-12 col-md-9 col-lg-9">
+                                            <div class="input-group">
+                                                <span class="input-group-addon">設計輸入${required ? `<span class="text-danger">*</span>` : ``}</span>
+                                                <select class="form-control" id="cboDesignInput@(itemName)-${tempSpDetailId}" name="cboDesignInput@(itemName)"
+                                                    data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" data-ddspec-name="${specName}">
+                                                </select>
+                                                <span class="input-group-addon">備註</span>
+                                                <input type="text" class="form-control" id="txtDescription@(itemName)-${tempSpDetailId}" name="txtDescription@(itemName)-${tempSpDetailId}"
+                                                    data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" maxlength="512" />
+                                            </div>
+                                        </div>
+                                        <label class="col-12 col-md-3 col-lg-3 text-right" for="txtPmtDetailName@(itemName)-${tempSpId}">${i + 1}. ${item.PmtDetailName}</label>
+                                        <div class="col-12 col-md-9 col-lg-9">
+                                            <input type="hidden" id="txtPmtDetailName@(itemName)-${tempSpDetailId}" name="txtPmtDetailName@(itemName)-${tempSpId}" value="${item.PmtDetailName}"
+                                                data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" />
+                                            <textarea class="form-control sign-content" id="txtDesignInput@(itemName)-${tempSpDetailId}" name="txtDesignInput@(itemName)-${tempSpId}" placeholder="請填寫${item.PmtDetailName}"
+                                                onkeyup="auto_grow(this)"
+                                                data-ddspec-id="${tempSpId}" data-ddsdetail-id="${tempSpDetailId}" data-ddsdetail-name="${item.PmtDetailName}" maxlength="512"
+                                                ${required ? `data-msg-required="請填寫${item.PmtDetailName}" data-rule-required="true"` : ``}></textarea>
+                                        </div>
+                                    </div>`;
+                            break;
+                    }
+                });
+
+                if (controlType == 'D') {
+                    htmlSelect += `</select>`;
+                    html = htmlSelect;
+                }
+            }
+            return html;
+        }
+
+        let designHistory@(itemName) = [];
+
+        function ElementControl@(itemName)() {
+            addMethod(this, "Initialize@(itemName)", function () {
+                designHistory@(itemName) = [];
+                let designId = parseInt($("#DesignId").val());
+                let targetUrl = "@Url.Action("GetDesignHistory", "RequestForInformation")";
+                let data = DataAccess.Get(targetUrl,
+                    {
+                        DesignId: designId,
+                        SchemaSpecEName: "Terminal" //引數
+                    }, false);
+
+                if (data.status == "success" && data.result.length > 0) {
+                    $.each($(`select[name="cboDesignInput@(itemName)"]`), function () {
+                        let ddsDetailId = $(this).data(`ddsdetail-id`);
+                        let ddsDetailName = $(this).data(`ddsdetail-name`);
+                        let ddName = $(this).data(`ddspec-name`);
+
+                        designHistory@(itemName) = data.result;
+
+                        $(`#cboDesignInput@(itemName)-${ddsDetailId}`).html(`<option value="">-快速選取-</option>`);
+                        let mainHistory = designHistory@(itemName).filter(f => !!f[ddName]);
+                        if (mainHistory.length > 0) {
+                            //let d = [...new Set(designHistory@(itemName).map(m => m[ddName]))].filter(f => !!f);
+                            let d = mainHistory.map(m => JSON.parse(m[ddName])).filter(f => !!f).map(m => m.data).reduce((x, y) => { return x.concat(y) }).filter(f => f.PmtDetailName == ddsDetailName);
+                            $.each([...new Set(d.map(m => m.DesignInput))], function (k, dd) {
+                                $(`#cboDesignInput@(itemName)-${ddsDetailId}`).append(`<option value="${dd}" data-text="${dd}">${dd}</option>`)
+                            });
+                        }
+                    });
+                }
+
+                $("select[name='cboDesignInput@(itemName)']").off('change').on('change', function () {
+                    let ddsDetailId = $(this).data(`ddsdetail-id`);
+                    $(`#txtDesignInput@(itemName)-${ddsDetailId}`).val(this.value);
+                });
+
+                $(`button[name="btnSetDefault@(itemName)"]`).off('click').on('click', function () {
+                    $.each(prodSpec@(itemName), function (j, main) {
+                        switch (main.ControlType) {
+                            case "C":
+                            case "R":
+                                $(`input[name='txtPmtDetailName@(itemName)-${main.TempSpId}']`).prop("checked", false);
+                            case "T":
+                            case "A":
+                                $(`input[name='cbxRequireFlag@(itemName)-${main.TempSpId}']`).prop("checked", false);
+                                $(`[name='txtDesignInput@(itemName)-${main.TempSpId}']`).val("");
+                        }
+
+                        //let d = [...new Set(designHistory@(itemName).map(m => m[main.ParameterName]))].filter(f => !!f);
+                        let mainHistory = designHistory@(itemName).filter(f => !!f[main.ParameterName]);
+                        if (mainHistory.length > 0) {
+                            $.each(prodSpecDetail@(itemName).filter(f => f.Status == "A" && f.TempSpId == main.TempSpId), function (k, prodSpecDetail) {
+                                let dd = mainHistory.map(m => JSON.parse(m[main.ParameterName])).filter(f => !!f).map(m => m.data).reduce((x, y) => { return x.concat(y) }).find(f => f.PmtDetailName == prodSpecDetail.PmtDetailName);
+
+                                if (!!dd) {
+                                    switch (main.ControlType) {
+                                        case "C":
+                                        case "R":
+                                            $(`#txtPmtDetailName@(itemName)-${prodSpecDetail.TempSpDetailId}`).prop('checked', true);
+                                        case "D":
+                                            $(`select[name='txtPmtDetailName@(itemName)-${main.TempSpId}']`).val(dd.PmtDetailName).trigger("change");
+                                        case "T":
+                                        case "A":
+                                            if (!!dd.RequireFlag && dd.RequireFlag == "0") $(`#cbxRequireFlag@(itemName)-${prodSpecDetail.TempSpDetailId}`).prop('checked', true);
+                                            $(`#txtDesignInput@(itemName)-${prodSpecDetail.TempSpDetailId}`).val(dd.DesignInput);
+                                    }
+                                    if (prodSpecDetail.DataType === "O") $(`#txtDescription@(itemName)-${prodSpecDetail.TempSpDetailId}`).val(dd.Description);
+                                }
+                            });
+                        }
+                    });
+
+                    @*$.each(prodSpecDetail@(itemName), function (j, item) {
+                        let d = [...new Set(designHistory@(itemName).map(m => m[item.PmtDetailName]))];
+
+                        let tempData = d.filter(f => !!f);
+
+                        if (tempData.length > 0) {
+                            $(`#txtDesignInput@(itemName)-${item.TempSpDetailId}`).val(tempData[0]);
+                        }
+                    });*@
+                });
+            });
+
+            $(`select[name="cboDesignInput@(itemName)"], select[class="form-control"]`).select2({
+                width: 200,
+                dropdownAutoWidth: false,
+            });
+        }
+
+        function DataControl@(itemName)() {
+
+        }
+
+        function Save@(itemName)() {
+            swal.fire({
+                titleText: "確認是否儲存此新設計申請單?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "question",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#87adbd',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    SaveConfirm@(itemName)();
+                }
+            });
+        }
+
+        function SaveConfirm@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let designId = parseInt($("#DesignId").val());
+
+                prodSpecJson = JSON.parse('{ "data" : []}');
+                prodSpecDetailsJson = JSON.parse('{ "data" : []}');
+                prodSpecJson.data = prodSpec@(itemName);
+
+                @*$.each($(`#ProdSpecBox@(itemName) [class="form-control"]`), function (i, item) {*@
+                prodSpec@(itemName).forEach(f => $.each($(`#ProdSpecBox@(itemName) [name="txtPmtDetailName@(itemName)-${f.TempSpId}"]`), function (i, item) {
+                    let ddSpecId = $(this).data(`ddspec-id`);
+
+                    let isGet = `S`;
+                    switch (this.type) {
+                        case 'radio':
+                        case 'checkbox':
+                            isGet = this.checked ? `A` : `S`;
+                            GetFeatureValue@(itemName)(this, isGet, ddSpecId, $(this).data(`ddsdetail-id`));
+                            break;
+                        case 'select-one':
+                            $.each(this.options, function () {
+                                if (!!this.value) {
+                                    isGet = this.selected ? `A` : `S`;
+                                    GetFeatureValue@(itemName)(this, isGet, ddSpecId, $(this).data(`ddsdetail-id`));
+                                }
+                            });
+                            break;
+                        case 'hidden': //text、textarea
+                            isGet = !!($(`#txtDesignInput@(itemName)-${$(this).data(`ddsdetail-id`)}`).val()
+                                    || $(`#txtDescription@(itemName)-${$(this).data(`ddsdetail-id`)}`).val()
+                                    || $(`#cbxRequireFlag@(itemName)-${$(this).data(`ddsdetail-id`)}`).is(':checked')) ? `A` : `S`;
+                            GetFeatureValue@(itemName)(this, isGet, ddSpecId, $(this).data(`ddsdetail-id`));
+                            break;
+                    }
+                }));
+
+                console.log(prodSpecJson);
+                console.log(prodSpecDetailsJson);
+
+                if (prodSpecIds@(itemName).length <= 0) {
+                    let targetUrl = "@Url.Action("AddDemandDesignSpec", "RequestForInformation")";
+                    let postData = {
+                        "DesignId": designId,
+                        "ProdSpecs": JSON.stringify(prodSpecJson),
+                        "ProdSpecDetails": JSON.stringify(prodSpecDetailsJson)
+                    };
+
+                    if (!(pageAuthoritys@(itemName).find(f => f.DetailCode === `SignSS`) ||
+                        pageAuthoritys@(itemName).find(f => f.DetailCode === `SignMP`))) {
+                        //Object.assign(postData, { "SalesId": $("#userId").val() })
+                    }
+
+                    let data = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (data) {
+                        Query@(itemName)();
+                    }
+                }
+                else {
+                    let targetUrl = "@Url.Action("UpdateDemandDesignSpec", "RequestForInformation")";
+                    let postData = {
+                        "DesignId": designId,
+                        "ProdSpecs": JSON.stringify(prodSpecJson),
+                        "ProdSpecDetails": JSON.stringify(prodSpecDetailsJson)
+                    }
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            }
+            else {
+                $('html, body').animate({
+                    scrollTop: $(`#${$(objForm@(itemName)).validate().errorList[0].element.id}`).offset().top - 100
+                }, 500); // 1000毫秒
+            }
+        }
+
+        function GetFeatureValue@(itemName)(e, status, ddSpecId, ddsDetailId) {
+            let tempDdsDetail = prodSpecDetail@(itemName).find(f => f.TempSpDetailId == ddsDetailId);
+            //let columns = ['hidden', 'checkbox', 'radio'];
+            let columns = ['hidden']; //text、textarea
+
+            prodSpecDetailsJson.data.push({
+                TempSpId: ddSpecId,
+                TempSpDetailId: ddsDetailId,
+                PmtDetailName: columns.includes(e.type) ? $(`#txtPmtDetailName@(itemName)-${ddsDetailId}`).val().trim() : e.value.trim(),
+                SortNumber: tempDdsDetail.SortNumber,
+                DataType: tempDdsDetail.DataType,
+                RequireFlag: columns.includes(e.type) ? $(`#cbxRequireFlag@(itemName)-${ddsDetailId}`).is(':checked') ? '0' : '1' : '1',
+                DesignInput: columns.includes(e.type) ? $(`#txtDesignInput@(itemName)-${ddsDetailId}`).val().trim() : ``,
+                Description: columns.includes(e.type) ? $(`#txtDescription@(itemName)-${ddsDetailId}`).val().trim() : tempDdsDetail.DataType == 'O' && status == 'A' ? $(`#txtDescription@(itemName)-${ddsDetailId}`).val().trim() : ``,
+                Status: status
+            });
+        }
+
+        function Edit@(itemName)() {
+            $(objForm@(itemName) + " input").not(".read-item").prop({ "readonly": false, "disabled": false});
+            $(objForm@(itemName) + " textarea").not(".read-item").prop({ "readonly": false, "disabled": false });
+            $(objForm@(itemName) + " select").not(".read-item").prop({ "readonly": false, "disabled": false });
+
+            GetData@(itemName)();
+            $(".read-hide@(itemName)").show();
+        }
+
+        function Read@(itemName)() {
+            $(objForm@(itemName) + " input").not(".read-item").prop({ "readonly": true, "disabled": true});
+            $(objForm@(itemName) + " textarea").not(".read-item").prop({ "readonly": true, "disabled": true });
+            $(objForm@(itemName) + " select").not(".read-item").prop({ "readonly": true, "disabled": true });
+
+            GetData@(itemName)();
+            $(".read-hide@(itemName)").hide();
+        }
+
+        function ResetForm@(itemName)() {
+            ResetForm("#editData@(itemName)");
+            $(`${objForm@(itemName)} input, ${objForm@(itemName)} textarea, ${objForm@(itemName)} select`).val('');
+            $(`${objForm@(itemName)} input[type="radio"], ${objForm@(itemName)} input[type="checkbox"]`).removeAttr('checked');
+        }
+</script>    
+)

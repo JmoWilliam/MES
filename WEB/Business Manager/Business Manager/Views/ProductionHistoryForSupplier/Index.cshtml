@@ -1,0 +1,180 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "Index";
+    string itemNameText = "供應商產品生產歷程系統";
+
+    ViewBag.Title = itemNameText;
+}
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/mes_scan.min.css")?20220617v12" rel="stylesheet" />
+                                                                        )
+@Html.Resource("css",
+@<style>
+     .container_full {
+         margin-top: 0;
+     }
+</style>
+                                )
+
+<div class="container" id="MesLogin">
+    <div class="login-content">
+        <div class="login-form">
+            <div class="logo">
+                <a>
+                    <img src="@Url.Content("~/Content/images/logo.png")" />
+                </a>
+            </div>
+            <div class="input-group mb-1 mt-2" style="">
+                <input type="hidden" id="txtMoId@(itemName)" />
+                <label class="input-group-addon" for="basic-addon" style="">
+                    <i class="fa fa-id-card mr-1" style="width:22px;"></i>
+                    <span style="padding-left: 5px;">廠商登入碼</span>
+                </label>
+                <input type="text" class="form-control form-control-add" id="txtSupplierCode" placeholder="請輸入廠商登入碼">
+            </div>
+            <div id="divSecStep" class="input-group mb-1 mt-2" style="display: none;">
+                <label class="input-group-addon" for="basic-addon" style="">
+                    <i class="fas fa-hdd" style="width:22px;"></i>
+                    <span style="padding-left: 5px;">加工機台別&nbsp;</span>
+                </label>
+                <select class="form-control" id="cboMachineId@(itemName)"></select>
+            </div>
+            <button type="button" id="btnMesLogin" class="btn-sure btn btn-success btn-flat mb-2 mt-3 weight-600" style="font-size:1rem;">確認</button>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+
+    var UserId = "";
+    var Account = "";
+    var Password = "";
+    var MoId = -1;
+    var MoProcessId = -1;
+    var MachineId = -1;
+     $(document).ready(function () {
+
+
+         $("#btnMesLogin").click(function () {
+             let machineId = $("#cboMachineId@(itemName)").val();
+             if (!machineId) {
+                 GetOspDetailInfo@(itemName)()
+                 alert("請先選擇加工機台!!");
+             }
+             else {
+                 SentSupplierCode()
+             }
+         })
+
+         $("#txtSupplierCode").keydown(DelayTrigger(function (e) {
+             if ($("#txtSupplierCode").val()) {
+                 $("#txtAccount").focus();
+             }
+         }, 500));
+
+
+         $("#txtSupplierCode").keydown(function (event) {
+             if (event.keyCode == 13) {
+                 if ($("#txtSupplierCode").val() != "") {
+                     GetOspDetailInfo@(itemName)()
+                 }
+                 else {
+                     alert("請輸入廠商登入碼")
+                     return false;
+                 }
+             }
+         });
+
+         $("#cboMachineId@(itemName)").select2({
+            dropdownAutoWidth: true,
+            width: "100%"
+         });
+    });
+
+    function GetOspDetailInfo@(itemName)() {
+        OspDetailId = $("#txtSupplierCode").val()
+        let targetUrl = "@Url.Action("GetOspDetail2", "OutsourcingProduction")";
+        let postData = {
+            "OspDetailId": OspDetailId
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            if (data.result.length > 0) {
+                $.each(data.result, function (i, item) {
+                    $("#divSecStep").show();
+                    let supplerId = item.SupplierId;
+                    let processId = item.ProcessId;
+                    $("#txtMoId@(itemName)").val(item.MoId);
+                    ComboBoxs.Default("#cboMachineId@(itemName)", "@Url.Action("GetSupplierMachine", "OutsourcingProduction")", { "SupplierId": supplerId, "ProcessId": processId }, "", "NA", "", "MachineName", "MachineId");
+                });
+            }
+            else {
+                $("#txtMoId@(itemName)").val("");
+                $("#cboMachineId@(itemName)").val("");
+                $("#divSecStep").hide();
+                alert("查無託外供應商單據資料!!");
+            }
+        } else {
+            alert(data.msg, "alert", 0);
+            $("#txtMoId@(itemName)").val("");
+            $("#cboMachineId@(itemName)").val("");
+            $("#divSecStep").hide();
+            alert(data.msg);
+        }
+    }
+
+    function SentSupplierCode() {
+        OspDetailId = $("#txtSupplierCode").val()
+        let targetUrl = "@Url.Action("ProductionHistorySupplierLogin", "OutsourcingProduction")";
+        let postData = {
+            "SupplierCode": OspDetailId
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+
+            MoId = data['result']['MoId'];
+            MoProcessId = data['result']['MoProcessId'];
+            MachineId = $("#cboMachineId@(itemName)").val();
+            UserNo = "Z100";
+
+            window.location.href = "@Url.Action("MesScanningInterfaceSupplier", "ProductionHistoryForSupplier")?MoId=" + MoId + "&MoProcessId=" + MoProcessId
+                + "&MachineId=" + MachineId + "&UserNo=" + UserNo + "&OspDetailId=" + OspDetailId;
+            //Login();
+
+        } else {
+            $("#txtAccount").val("");
+            alert(data.msg, "alert", 0);
+        }
+    }
+
+    function Logout() {
+        $.ajax({
+            url: "@Url.Action("Logout", "User", new { Area = "" })",
+            type: "POST",
+            async: false,
+            dataType: "json",
+            data: {},
+            beforeSend: function (XMLHttpRequest) {
+            },
+            success: function (data, textStatus, jqXHR) {
+                if (data.status != "success") {
+                    //alert(data.msg);
+                } else {
+                    //location.reload();
+                }
+            },
+            complete: function (XMLHttpRequest, textStatus) {
+                if (textStatus == 'timeout') {
+                    var xmlhttp = window.XMLHttpRequest ? new window.XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHttp");
+                    xmlhttp.abort();
+                    alert("網路逾時!");
+                }
+            },
+            error: function (XMLHttpRequest, textStatus) {
+                alert(XMLHttpRequest.statusText);
+            }
+        });
+    }
+</script>
+                )

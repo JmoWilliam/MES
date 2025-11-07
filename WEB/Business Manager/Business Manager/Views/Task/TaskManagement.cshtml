@@ -1,0 +1,477 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TaskManagement";
+    string itemNameText = "專案任務進度管理";
+    string authority = ViewBag.authority;
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/project.min.css")?@dateCache" rel="stylesheet" />
+                                                                )
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/dhtmlx/gantt.commercial/7.1.12/dhtmlxgantt.css")" rel="stylesheet" />
+                                                                )
+
+@Html.Resource("css",
+    @<style>
+         .form-inline {
+             display: initial;
+         }
+
+         .view-content {
+             display: none;
+         }
+
+         .type-content {
+             display: none;
+         }
+
+         .table-custom .table.table-striped tbody tr:nth-of-type(odd) td:not(.col-sticky) {
+             background-color: transparent;
+         }
+    </style>)
+
+<input type="hidden" id="pageAuthority" value="@(authority)" />
+<input type="hidden" id="projectAuthority" value="" />
+@Html.Hidden("UserId", Session["UserId"])
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-12 col-sm-12 col-md-12 text-right">
+                        <div class="btn-group" data-toggle="buttons">
+                            <label class="btn btn-outline-warning">
+                                <input type="radio" name="viewType@(itemName)" value="project" />
+                                <i class="fas fa-user-alt"></i>專案任務
+                            </label>
+                            <label class="btn btn-outline-primary">
+                                <input type="radio" name="viewType@(itemName)" value="personal" />
+                                <i class="far fa-address-book"></i>個人任務
+                            </label>
+                            @{
+                                //if (Session["UserNo"] != null && ((string)Session["UserNo"] == "ZY01091" || (string)Session["UserNo"] == "ZY00593"))
+                                if (true)
+                                {
+                                    <label class="btn btn-outline-success">
+                                        <input type="radio" name="viewType@(itemName)" value="calendar" />
+                                        <i class="fas fa-calendar-alt"></i>任務行事曆
+                                    </label>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!--專案任務-->
+                <div class="row type-contentt type-project">
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <div class="btn-group" data-toggle="buttons">
+                            <label class="btn btn-outline-info">
+                                <input type="radio" name="viewMode@(itemName)" value="checklist" />
+                                <i class="fas fa-user-alt"></i>任務列表
+                            </label>
+                            <label class="btn btn-outline-info">
+                                <input type="radio" name="viewMode@(itemName)" value="structure" />
+                                <i class="fas fa-project-diagram"></i>任務結構
+                            </label>
+                            <label class="btn btn-outline-info">
+                                <input type="radio" name="viewMode@(itemName)" value="file" />
+                                <i class="fas fa-folder-tree"></i>任務檔案
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <div class="row view-content view-checklist">
+                            <div class="col-12">
+                                <div class="row">
+                                    <!--主要篩選列表-->
+                                    <div class="col-8 col-sm-8 col-md-8 mb-3">
+                                        <form autocomplete="off" id="queryForm@(itemName)">
+                                            <fieldset>
+                                                <div class="form-row align-items-center">
+                                                    <div class="col-auto">
+                                                        <input type="text" class="form-control" id="txtProjectQ@(itemName)" name="txtProjectQ@(itemName)" placeholder="請輸入專案代碼.名稱" />
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <input type="text" class="form-control" id="txtTaskNameQ@(itemName)" name="txtTaskNameQ@(itemName)" placeholder="請輸入任務名稱" />
+                                                    </div>
+                                                    <div class="col-6 input-group">
+                                                        <select class="form-control" id="cboTaskStatusQ@(itemName)" name="cboTaskStatusQ@(itemName)" multiple></select>
+                                                        <div class="input-group-append">
+                                                            <button type="button" class="btn btn-outline-danger" onclick="$('#cboTaskStatusQ@(itemName)').val('').trigger('change')" title="清除">
+                                                                <i class="fas fa-eraser"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <button type="button" class="btn btn-primary" onclick="InitData@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                                    </div>
+                                                </div>
+                                            </fieldset>
+                                        </form>
+                                    </div>
+
+                                    <!--次要篩選列表-->
+                                    <div class="col-4 col-sm-4 col-md-4 mb-3 text-right form-inline">
+                                        <select class="form-control" id="cboShowMaster@(itemName)" name="cboShowMaster@(itemName)" style="width:150px;">
+                                            <option value=0>隱藏主任務</option>
+                                            <option value=1>顯示主任務</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="data-checklist@(itemName)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row view-content view-structure">
+                            <div class="col-12">
+                                @Html.Partial("TaskStructure")
+                            </div>
+                        </div>
+                        <div class="row view-content view-file">
+                            <div class="col-12">
+                                @Html.Partial("TaskFile")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--個人任務-->
+                <div class="row type-content type-personal">
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <div class="btn-group" data-toggle="buttons">
+                            <label class="btn btn-outline-info">
+                                <input id="checklist2" type="radio" name="viewMode2@(itemName)" value="checklist2" />
+                                <i class="fas fa-user-alt"></i>任務列表
+                            </label>
+                            <label class="btn btn-outline-info">
+                                <input type="radio" name="viewMode2@(itemName)" value="file2" />
+                                <i class="fas fa-folder-tree"></i>任務檔案
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <div class="row view-content view-checklist2" style="display: block;">
+                            <div class="col-12">
+                                @Html.Partial("TaskPersonalList")
+                            </div>
+                        </div>
+                        <div class="row view-content view-file2">
+                            <div class="col-12">
+                                @Html.Partial("TaskPersonalFile")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--事件行事曆-->
+                <div class="row type-content type-calendar">
+                    <div class="col-12">
+                        @Html.Partial("TaskCalendar")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewTaskStructure")
+@Html.Partial("ViewTask")
+@Html.Partial("ViewPersonalTaskReply")
+@Html.Partial("ViewPersonalTask")
+@Html.Partial("ViewTaskUser")
+@Html.Partial("TaskGantt")
+@*@if (Session["UserNo"] != null && ((string)Session["UserNo"] == "ZY01091" || (string)Session["UserNo"] == "ZY00593")) { @Html.Partial("ViewProjectTask") }*@
+@Html.Partial("ViewProjectTask")
+
+@Html.Resource("js", @<script src="@Url.Content("~/Scripts/dhtmlx/gantt.commercial/7.1.12/dhtmlxgantt.js")"></script>)
+@Html.Resource("js", @<script src="@Url.Content("~/Scripts/dhtmlx/event.calendar.commercial/1.0.0.a/event-calendar.js")"></script>)
+
+@Html.Resource("js",
+    @<script>
+        let viewMode = "checklist"; //專案任務
+        let viewMode2 = "checklist2"; //個人任務
+        let viewType = "project";
+
+        $(document).ready(function () {
+            $("input[name=viewMode@(itemName)]").off('change').on('change', function () {
+                let target = this.value;
+
+                //$("[class*=view-]").hide();
+                //$(`[class*=view-${target}]`).show();
+
+                //switch (viewType) {
+                //    case "project":
+                //        break;
+                //}
+
+                switch (target) {
+                    case "checklist":
+                        //等同呼叫 Expand()
+                        ComboBoxs.WithText("#cboTaskStatusQ@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { StatusSchema: "ProjectTask.TaskStatus" }, "", "CHOOSE-NUMBER", "", "StatusName", "StatusNo");
+
+                        if (!isMobile) {
+                            $("#cboTaskStatusQ@(itemName)").select2({
+                                dropdownAutoWidth: true,
+                                width: "100%"
+                            });
+                        }
+
+                        $("#cboTaskStatusQ@(itemName)").val(["B", "I"]).trigger("change");
+
+                        Query@(itemName)();
+                        break;
+                    case "structure":
+                        ExpandTaskStructure();
+                        break;
+                    case "file":
+                        ExpandTaskFile();
+                        break;
+                }
+
+                console.log(`load ${viewType} ${target}`);
+                console.log(`.type-${viewType} .view-${viewMode} hide`);
+                console.log(`.type-${viewType} .view-${target} show`);
+                $(`.type-${viewType} .view-${viewMode}`).fadeOut(300, function () { $(`.type-${viewType} .view-${target}`).fadeIn(300); });
+                viewMode = target;
+            });
+
+            $("input[name=viewMode2@(itemName)]").off('change').on('change', function () {
+                let target = this.value;
+
+                //switch (viewType) {
+                //    case "personal":
+                //        break;
+                //}
+
+                switch (target) {
+                    case "checklist2":
+                        ExpandTaskPersonalList();
+                        break;
+                    case "file2":
+                        ExpandTaskPersonalFile();
+                        break;
+                }
+
+                console.log(`load ${viewType} ${target}`);
+                console.log(`.type-${viewType} .view-${viewMode2} hide`);
+                console.log(`.type-${viewType} .view-${target} show`);
+                $(`.type-${viewType} .view-${viewMode2}`).fadeOut(300, function () { $(`.type-${viewType} .view-${target}`).fadeIn(300); });
+                viewMode2 = target;
+            });
+
+            $(`#cboShowMaster@(itemName)`).off('change').on('change',function () {
+                ShowMaster@(itemName)();
+            });
+
+            $(`input[name=viewType@(itemName)]`).off('change').on('change', function () {
+                let target = this.value;
+
+                $(`.type-${viewType}`).slideUp(300, function () { $(`.type-${target}`).slideDown(300); });
+
+                switch (target) {
+                    case "project":
+                        console.log(`.type-${viewType} .view-${viewMode} hide`);
+                        console.log(`.type-${target} .view-${viewMode} show`);
+                        break;
+                    case "personal":
+                        //$(`#checklist2`).prop("checked", true);
+                        //$(`.view-${viewMode2}`).slideDown(300);
+                        console.log(`.type-${viewType} .view-${viewMode2} hide`);
+                        console.log(`.type-${target} .view-${viewMode2} show`);
+                        break;
+                    case "calendar":
+                        ExpandTaskCalendar();
+                        break;
+                }
+                viewType = target;
+            });
+
+            //load default event trigger
+            $(`input[name=viewType@(itemName)]:first`).prop("checked", true).trigger("change");
+            $(`.type-${viewType} input[name=viewMode@(itemName)]:first`).prop("checked", true).trigger("change");
+            $(`.type-personal input[name=viewMode2@(itemName)]:first`).prop("checked", true).trigger("change");
+        });
+
+        //#region 主任務顯示篩選
+        function ShowMaster@(itemName)(){
+            if ($(`#cboShowMaster@(itemName) :selected`).val() == `0`) $(`.master-task@(itemName)`).hide();
+            else $(`.master-task@(itemName)`).show();
+        }
+        //#endregion
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetTaskChecklist", "Task")";
+            let postData = {
+                Project: $("#txtProjectQ@(itemName)").val(),
+                TaskName: $("#txtTaskNameQ@(itemName)").val(),
+                TaskStatus: $("#cboTaskStatusQ@(itemName)").val().join()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<div class="row">
+                                        <div class="col-12">
+                                        <h3 class="text-muted mb-2" name="row-${item.ProjectId}">${item.ProjectName}<code>${item.ProjectNo}</code></h3>
+                                        <div class="table-custom">
+                                            <table class="table table-bordered table-striped table-sticky table-stack">
+                                            <thead>
+                                                <tr>
+                                                <th scope="col" style="min-width: 75px;">#</th>
+                                                <th scope="col" style="min-width: 150px;">任務名稱</th>
+                                                <th scope="col" style="min-width: 200px;">任務結構</th>
+                                                <th scope="col" class="text-center" style="min-width: 150px;">開始時間</th>
+                                                <th scope="col" class="text-center" style="min-width: 150px;">結束時間</th>
+                                                <th scope="col" class="text-center" style="min-width: 150px;">任務狀態</th>
+                                                <th scope="col" class="text-left" style="min-width: 125px;">操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            ${TaskList@(itemName)(item.ProjectTask)}
+                                            </tbody>
+                                            </table>
+                                        </div>
+                                        </div>
+                                      </div>`;
+                    });
+                } else {
+                    innerHtml += `<div class="row">
+                                    <div class="col-12">
+                                      <table class="table">
+                                        <tr>
+                                          <td class="text-center" style="background-color: #fff3cd;">
+                                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                          </td>
+                                        </tr>
+                                      </table>
+                                    </div>
+                                  </div>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $(`.data-checklist@(itemName)`).html(innerHtml);
+            TableComponentInit();
+            ShowMaster@(itemName)();
+
+            function TaskList@(itemName)(source) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    $.each(json.data, function (i, item) {
+                        html += `<tr ${item.SubTask > 0 ? `style="background-color:#dfd;" class="master-task@(itemName)"` : ``}>
+                                   <td><span class="stack-title">#</span>${i + 1}.</td>
+                                   <td class="ellipsis" data-toggle="tooltip" title="${item.TaskName}" style="max-width: 150px;"><span class="stack-title">任務名稱</span>${item.TaskName}</td>
+                                   <td class="ellipsis" style="max-width: 200px;">
+                                     <div style="display: flex;">
+                                       <span class="stack-title" style="flex: 0 0 25%;">任務結構</span>
+                                       <div class="ellipsis" data-toggle="tooltip" title="${item.TaskRouteName}">
+                                         <a href="javascript:PopViewTaskStructure(${item.ProjectTaskId});"><i class="fas fa-bars"></i></a>
+                                         ${item.TaskRouteName}
+                                       </div>
+                                     </div>
+                                   </td>
+                                   <td class="ellipsis text-center">
+                                     <span class="stack-title">開始時間</span>
+                                     ${item.ActualStart ? item.ActualStart : item.EstimateStart}
+                                   </td>
+                                   <td class="ellipsis text-center">
+                                     <span class="stack-title">結束時間</span>
+                                     ${item.ActualEnd ? item.ActualEnd : item.EstimateEnd}
+                                   </td>
+                                   <td class="ellipsis text-center">
+                                     <span class="stack-title">任務狀態</span>
+                                     ${StatusIcon@(itemName)(item.TaskStatus)}${item.TaskStatusName}
+                                   </td>
+                                   <td class="ellipsis text-left active-content">
+                                     <span class="stack-title">操作</span>
+                                     <a class="active-link" href="javascript:InitDataViewTask(${item.ProjectTaskId});"><i class="far fa-comment-dots"></i><span>任務回報</span></a>
+                                   </td>
+                                 </tr>`;
+                    });
+                } else {
+                    html += `<tr>
+                               <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                 <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                               </td>
+                             </tr>`;
+                }
+
+                return html;
+            }
+
+            function StatusIcon@(itemName)(taskStatus) {
+                let output = ``;
+
+                switch (taskStatus) {
+                    case "B":
+                        output = `<span style="text-align: center; font-size: 18px; color: #e0e0e0; line-height: 0;">
+                                    <i class="far fa-stop-circle"></i>
+                                  </span>`;
+                        break;
+                    case "I":
+                        output = `<span style="text-align: center; font-size: 18px; color: #ffa700; line-height: 0;">
+                                    <i class="far fa-play-circle"></i>
+                                  </span>`;
+                        break;
+                    case "T":
+                        break;
+                    case "C":
+                        output = `<span style="text-align: center; font-size: 18px; color: #228b22; line-height: 0;">
+                                    <i class="far fa-flag-checkered"></i>
+                                  </span>`;
+                        break;
+                    default:
+                        break;
+                }
+
+                return output;
+            }
+        }
+
+        function ToHalfChar(str) {
+            var result = ''; for (i = 0; i < str.length; i++) {
+                code = str.charCodeAt(i); //擷取當前字元的unicode編碼
+                if (code >= 65281 && code <= 65373) { //在這個unicode編碼範圍中的是所有的英文字母已經各種字元
+                    result += String.fromCharCode(str.charCodeAt(i) - 65248);//把全形字元的unicode編碼轉換為對應半形字元的unicode碼
+                }
+                else if (code == 12288) { //空格
+                    result += String.fromCharCode(str.charCodeAt(i) - 12288 + 32);
+                }
+                else {
+                    result += str.charAt(i);
+                }
+            } return result;
+        }
+</script>
+    )

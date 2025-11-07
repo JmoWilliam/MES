@@ -1,0 +1,539 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QcPlanningKanban";
+    string itemNameText = "量測機台排程看板";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="~/Content/mes_machine.min.css" rel="stylesheet" />
+
+<link href="~/Content/owl.carousel.2/2.3.4/owl.carousel.min.css" rel="stylesheet" />
+<link href="~/Content/owl.carousel.2/2.3.4/owl.theme.default.min.css" rel="stylesheet" />
+@*<script src="https://code.jquery.com/jquery-3.5.1.js"></script>*@
+<script src="~/Scripts/owl.carousel.2/2.3.4/owl.carousel.min.js"></script>
+<script src="~/assets/js/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+
+<link href="~/Content/multi-select-demo-styles.css" rel="stylesheet" />
+<link href="~/Content/multi-select-example-styles.css" rel="stylesheet" />
+
+
+<style>
+    .owl-item {
+        min-width: 800px;
+    }
+</style>
+
+<div class="machine_content" id="">
+    <div class="header">
+        <div class="header-title">
+            <form class="demo-example">
+                <div class="floating-label">
+                    <label class="demo-title">量測機型</label>
+                    <select class="floating-select" id="cboQcMachineModeIdQ@(itemName)" name="cboQcMachineModeIdQ" multiple></select>
+                </div>
+            </form>
+
+            <div class="floating-form">
+                <div class="floating-label">
+                    <input type="date" id="txtStartDateQ@(itemName)" class="floating-select" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                    <span class="highlight"></span>
+                    <label>排程時間</label>
+                </div>
+            </div>
+            <div class="floating-form">
+                <div class="floating-label">
+                    <input type="text" id="txtLoopTimeout@(itemName)" class="floating-select" value="10" />
+                    <span class="highlight"></span>
+                    <label>自動輪播時間(分鐘)</label>
+                </div>
+            </div>
+
+
+            <form class="demo-example">
+                <label for="categories">Show:</label>
+                <select id="categories" name="categories" multiple>
+                    <option value="a">Abandoned vehicles</option>
+                    <option value="b">Bus stops</option>
+                    <option value="c">Car parking</option>
+                    <option value="d">Dog fouling</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <div id="divData@(itemName)">
+    </div>
+
+    <!-- 詳細資料 -->
+    <div class="modal fade" id="modalDetailInfo@(itemName)" tabindex="-1" role="dialog" aria-labelledby="exampleModalLongTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" style="display: flex; flex-direction: column;" id="exampleModalLongTitle">
+                        量測機台排程詳細資料
+                        <code>目前機型:<span id="desQcMachineModeName@(itemName)"></span></code>
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="row" style="padding: 1rem;">
+                    <div class="col-4">
+                        <label for="exampleDataList2" class="form-label">狀態</label>
+                        <select id="cboStatusQ@(itemName)" class="form-control" multiple></select>
+                    </div>
+                </div>
+                <div class="modal-body" style="overflow: scroll; max-height: 65vh;">
+                    <div id="detailData@(itemName)" class="table">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script src="~/Scripts/jquery.multi-select.js"></script>
+                        )
+<script>
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 10
+    };
+
+    let datas@(itemName);
+
+    let qcMachineModeList = [];
+
+    let allClick = false;
+
+    $(document).ready(function () {
+        //ComboBoxs.Default("#cboQcMachineModeIdQ@(itemName)", "@Url.Action("GetQcMachineModeInfo", "QcDataManagement")", { }, "", "NA", "", "QcMachineModeName", "QcMachineModeId");
+
+        InitQcMachineMode@(itemName)();
+
+        $("#cboQcMachineModeIdQ@(itemName)").change(function (i, item) {
+            GetQcMachineModePlanning@(itemName)();
+            InitData@(itemName)();
+        });
+
+        $("#txtStartDateQ@(itemName)").change(function () {
+            GetQcMachineModePlanning@(itemName)();
+            InitData@(itemName)();
+        });
+
+        $("#txtLoopTimeout@(itemName)").change(function () {
+            GetQcMachineModePlanning@(itemName)();
+            InitData@(itemName)();
+        });
+    });
+
+    function InitQcMachineMode@(itemName)() {
+        qcMachineModeList = [];
+        let innerHtml = ''; 
+        let targetUrl = "@Url.Action("GetQcMachineModeInfo", "QcDataManagement")";
+        let postData = {
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            if (data.result.length > 0) {
+                $.each(data.result, function (i, item) {
+                    innerHtml += `<option value="${item.QcMachineModeId}">${item.QcMachineModeName}</option>`;
+                    qcMachineModeList.push(item.QcMachineModeId);
+                });
+            }
+        }
+        else {
+            alert(data.msg);
+        }
+
+        $("#cboQcMachineModeIdQ@(itemName)").html(innerHtml);
+
+        $("#cboQcMachineModeIdQ@(itemName)").multiSelect({
+            noneText: "請選擇機型",
+            presets: [
+                {
+                    name: '全選',
+                    options: qcMachineModeList
+                },
+                {
+                    name: '取消全選',
+                    options: []
+                },
+            ]
+        });
+    }
+
+    function GetQcMachineModePlanning@(itemName)() {
+        let qcMachineModeIdList = [];
+        $.each($(`input[type="checkbox"][id^="cboQcMachineModeIdQ"]:checked`), function (i, item) {
+            qcMachineModeIdList.push($(this).val());
+        });
+
+        let targetUrl = "@Url.Action("GetQcMachineModePlanningForKanban", "QcDataManagement")";
+        let postData = {
+            "QcMachineModeList": qcMachineModeIdList.toString(),
+            "StartDate": $("#txtStartDateQ@(itemName)").val()
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            if (data.result.length > 0) {
+                datas@(itemName) = data.result;
+            }
+            else {
+                alert("此區段查無排程資料!!");
+            }
+        }
+        else {
+            alert(data.msg);
+        }
+    }
+
+    function InitData@(itemName)() {
+        if (typeof (datas@(itemName)) == `undefined`) {
+            return false;
+        }
+
+        let qcMachineModeIdList = [];
+        $.each($(`input[type="checkbox"][id^="cboQcMachineModeIdQ"]:checked`), function (i, item) {
+            qcMachineModeIdList.push($(this).val());
+        });
+
+        let innerHtml = '';
+        let targetUrl = "@Url.Action("GetQmmDetail", "QcDataManagement")";
+        let postData = {
+            "QcMachineModeList": qcMachineModeIdList.toString()
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            if (data.result.length > 0) {
+                let count = 1;
+                innerHtml += `<div class="owl-carousel owl-theme">`;
+                $.each(data.result, function (i, item) {
+                    if (i == 0 || count > 2) {
+                        innerHtml += `<div class="item">
+                                        <div class="data-column">`;
+                    }
+
+                    innerHtml += `<div class="article-block">
+                                    <div class="title">
+                                        <div class="name">${item.MachineDesc}</div>
+                                    </div>
+                                    <div class="article">
+                                        <div class="detail-block">
+                                            <div class="detail-title">
+                                                量測排程清單
+                                                <a href="javascript: PopModalDetailInfo@(itemName)('${item.QmmDetailId}', '${item.QcMachineModeName}')">看更多</a>
+                                            </div>
+                                            <div class="detail-content">
+                                                <div class="table">
+                                                    <div class="table-row table-header">
+                                                        <div class="cell" style="max-width:150px;">
+                                                            品名
+                                                        </div>
+                                                        <div class="cell">
+                                                            狀態
+                                                        </div>
+                                                        <div class="cell">
+                                                            單號
+                                                        </div>
+                                                        <div class="cell">
+                                                            預計開始
+                                                        </div>
+                                                        <div class="cell">
+                                                            預計結束
+                                                        </div>
+                                                        <div class="cell">
+                                                            實際開始
+                                                        </div>
+                                                        <div class="cell">
+                                                            實際結束
+                                                        </div>
+                                                    </div>
+                                                    ${GetDataList@(itemName)(`${item.QmmDetailId}`)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>`;
+
+                    if (count == 2) {
+                        innerHtml += `  </div>
+                                      </div>`;
+                    }
+
+                    if (count > 2) count = 2;
+                    else count++;
+                });
+            }
+        }
+        else {
+            alert(data.msg);
+        }
+
+        $("#divData@(itemName)").html(innerHtml);
+        ResetOwlCarousel();
+    }
+
+    function GetDataList@(itemName)(qmmDetailId) {
+        let innerHtml = '';
+        let datas = datas@(itemName).filter(function (item) {
+            return parseInt(item.QmmDetailId) === parseInt(qmmDetailId)
+        });
+
+        if (datas.length > 0) {
+            datas = datas.sort(function (a, b) {
+                let dateA = new Date(a.FinishDate);
+                let dateB = new Date(b.FinishDate);
+                return dateB - dateA;
+            });
+
+            $.each(datas.slice(0, 10), function (i, item) {
+                innerHtml += `<div class="table-row">
+                                <div class="cell ellipsis" data-title="品名" style="max-width: 200px;">
+                                    ${item.MtlItemName}
+                                </div>
+                                ${JudgeStatus(`${item.Status}`, `${item.StatusName}`)}
+                                <div class="cell" data-title="單號">
+                                    ${item.QcRecordId}
+                                </div>
+                                <div class="cell" data-title="預計開始">
+                                    ${item.EstimatedStartDate}
+                                </div>
+                                <div class="cell" data-title="預計結束">
+                                    ${item.EstimatedEndDate}
+                                </div>
+                                <div class="cell" data-title="實際開始">
+                                    ${item.StartDate}
+                                </div>
+                                <div class="cell" data-title="實際結束">
+                                    ${item.EndDate}
+                                </div>
+                              </div>`;
+
+                if (i == 0 && i == datas.length - 1) {
+                    EmptyData();
+                }
+
+                function JudgeStatus(status, statusName) {
+                    let innerHtml = '';
+                    switch (status) {
+                        case "N":
+                            innerHtml += `<div style="color:red;" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                            break;
+                        case "A":
+                            innerHtml += `<div style="color:blue;" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                            break;
+                        case "F":
+                            innerHtml += `<div style="color:green;" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                            break;
+                        case "A":
+                            innerHtml += `<div style="color:yellow;" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                            break;
+                        default:
+                            innerHtml += `<div style="" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                            break;
+                    }
+
+                    return innerHtml;
+                }
+            });
+        }
+        else {
+            EmptyData();
+        }
+
+        function EmptyData() {
+            innerHtml += `<div class="table-row">
+                            <div class="cell ellipsis" data-title="品名" style="max-width: 150px;">
+                                無排程資料
+                            </div>
+                            <div class="cell" data-title="機台">
+
+                            </div>
+                            <div class="cell" data-title="狀態">
+
+                            </div>
+                            <div class="cell" data-title="預計開始">
+
+                            </div>
+                            <div class="cell" data-title="預計結束">
+
+                            </div>
+                            <div class="cell" data-title="實際開始">
+
+                            </div>
+                            <div class="cell" data-title="實際結束">
+
+                            </div>
+                          </div>`;
+        }
+
+        return innerHtml;
+    }
+
+    function ResetOwlCarousel() {
+        let loopTimeout = parseFloat($("#txtLoopTimeout@(itemName)").val());
+        loopTimeout = loopTimeout * 60 * 1000;
+        $(".owl-carousel").owlCarousel({
+            autoplay: true ,
+            autoplayTimeout: loopTimeout,
+            loop: false, // 循環播放
+            margin: 10, // 外距 10px
+            nav: true, // 顯示點點
+            responsive: {
+                0: {
+                    items: 1 // 螢幕大小為 0~1300 顯示 1 個項目
+                },
+                1300: {
+                    items: 2 // 螢幕大小為 1300~1900 顯示 2 個項目
+                },
+                1900: {
+                    items: 2 // 螢幕大小為 1900 以上 顯示 3 個項目
+                }
+            }
+        });
+    }
+
+    function PopModalDetailInfo@(itemName)(qmmDetailId, qcMachineModeName) {
+        $("#desQcMachineModeName@(itemName)").html(qcMachineModeName);
+
+        ComboBoxs.Default("#cboStatusQ@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "QcMachineModePlanning.Status" }, "", "CHOOSE", "", "StatusName", "StatusNo");
+
+        $("#cboStatusQ@(itemName)").select2({
+            width: "100%"
+        });
+
+        InitDetailData@(itemName)(qmmDetailId);
+
+        $("#modalDetailInfo@(itemName)").modal("show");
+
+        $("#cboStatusQ@(itemName)").change(function () {
+            InitDetailData@(itemName)(qmmDetailId);
+        });
+    }
+
+    function InitDetailData@(itemName)(qmmDetailId) {
+        let datas = datas@(itemName).filter(function (item) {
+            return parseInt(item.QmmDetailId) === parseInt(qmmDetailId)
+        });
+
+        let status = $("#cboStatusQ@(itemName)").val();
+
+        datas = datas.filter(function (item) {
+            if (status.length > 0) {
+                return status.indexOf(item.Status) !== -1;
+            }
+            else {
+                return item.QmmDetailId !== null;
+            }
+        });
+
+        let innerHtml = '';
+        innerHtml += `<div class="table-row table-header">
+                        <div class="cell" style="max-width:150px;">
+                            品名
+                        </div>
+                        <div class="cell">
+                            狀態
+                        </div>
+                        <div class="cell">
+                            單號
+                        </div>
+                        <div class="cell">
+                            預計開始
+                        </div>
+                        <div class="cell">
+                            預計結束
+                        </div>
+                        <div class="cell">
+                            實際開始
+                        </div>
+                        <div class="cell">
+                            實際結束
+                        </div>
+                      </div>`;
+
+        $.each(datas, function (i, item) {
+            innerHtml += `<div class="table-row">
+                            <div class="cell ellipsis" data-title="品名" style="max-width: 200px;">
+                                    ${item.MtlItemName}
+                                </div>
+                                ${JudgeStatus(`${item.Status}`, `${item.StatusName}`)}
+                                <div class="cell" data-title="單號">
+                                    ${item.QcRecordId}
+                                </div>
+                                <div class="cell" data-title="預計開始">
+                                    ${item.EstimatedStartDate}
+                                </div>
+                                <div class="cell" data-title="預計結束">
+                                    ${item.EstimatedEndDate}
+                                </div>
+                                <div class="cell" data-title="實際開始">
+                                    ${item.StartDate}
+                                </div>
+                                <div class="cell" data-title="實際結束">
+                                    ${item.EndDate}
+                            </div>
+                          </div>`;
+
+            function JudgeStatus(status, statusName) {
+                let innerHtml = '';
+                switch (status) {
+                    case "N":
+                        innerHtml += `<div style="color:red;" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                        break;
+                    case "A":
+                        innerHtml += `<div style="color:blue;" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                        break;
+                    case "F":
+                        innerHtml += `<div style="color:green;" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                        break;
+                    case "A":
+                        innerHtml += `<div style="color:yellow;" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                        break;
+                    default:
+                        innerHtml += `<div style="" class="cell" data-title="狀態">
+                                            ${item.StatusName}
+                                          </div>`;
+                        break;
+                }
+
+                return innerHtml;
+            }
+        });
+
+        $("#detailData@(itemName)").html(innerHtml);
+    }
+
+</script>
+

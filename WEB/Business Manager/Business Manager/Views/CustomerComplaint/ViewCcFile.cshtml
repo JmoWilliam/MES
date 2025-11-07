@@ -1,0 +1,229 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewCcFile";
+    string itemNameText = "檔案上傳管理";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">目前項目 <span class="sub-text" id="desQcItemName@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <a class="btn btn-info auth-file-add" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</a>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">原因佐證檔案</th>
+                                        <th scope="col" style="min-width: 75px;">檔案格式</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container" autocomplete="off" id="editForm@(itemName)">
+                            <fieldset>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtCcStageDataFileId@(itemName)">檔案照片</label>
+                                    <div class="col-12">
+                                        <input type="file" id="CcStageDataFileId@(itemName)" name="CcStageDataFileId@(itemName)" multiple />
+                                        <input type="hidden" id="txtCcStageDataFileId@(itemName)" name="txtCcStageDataFileId@(itemName)" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(stage, CcStageDataId) {
+            console.log("SE")
+            console.log(stage)
+            console.log("SER")
+
+            $("#CcStageDataId").val(CcStageDataId);
+            $("#desQcItemName@(itemName)").text(stage)
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetCcStageDataFile", "CustomerComplaint")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "CcStageDataId": $("#CcStageDataId").val(),
+                "WhereFrom": "List"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        console.log(item.QcMachineModeName)
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.FileName}" style="max-width: 200px;">${item.FileName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.FileExtension}" style="max-width: 75px;">${item.FileExtension}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link auth-file-delete" href="javascript:Delete@(itemName)(${item.CcStageDataFileId});"><i class="fas fa-trash-alt"></i></a>
+                                          <a class="active-link auth-download" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i><span>檔案下載</span></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)() {
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+            let uploadConfig = {
+                fileSelector: "#CcStageDataFileId@(itemName)",
+                targetSelector: "#txtCcStageDataFileId@(itemName)",
+                required: false,
+                uploadPath: "/CustomerComplaint/CustomerComplaintManagement",
+                maxFileCount: 10,
+                defaultFile: $("#txtCcStageDataFileId@(itemName)").val()
+            };
+            Suites.FileUpload(uploadConfig);
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("AddCcStageDataFile", "CustomerComplaint")";
+                let postData = {
+                    "CcStageDataId": $("#CcStageDataId").val(),
+                    "FileId": $("#txtCcStageDataFileId@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function Delete@(itemName)(CcStageDataFileId) {
+            swal.fire({
+                title: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteCcStageDataFile", "CustomerComplaint")";
+                    let postData = {
+                        "CcStageDataFileId": CcStageDataFileId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            $("#txtCcStageDataFileId@(itemName)").val("")
+
+            Query@(itemName)();
+        }
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+        )

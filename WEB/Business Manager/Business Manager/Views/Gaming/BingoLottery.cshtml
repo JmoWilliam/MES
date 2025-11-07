@@ -1,0 +1,378 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "BingoLottery";
+    string itemNameText = "賓果開獎";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .row-cols-5 {
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+        .col {
+            margin-bottom: 10px;
+        }
+
+        .square {
+            position: relative;
+            width: 100%;
+        }
+
+            .square:after {
+                content: "";
+                display: block;
+                padding-bottom: 100%;
+            }
+
+        .content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: 0.5s all ease;
+            box-shadow: 0px 0px 10px rgba(10,10,0.8);
+        }
+
+            .content.active {
+                transform: rotateY(180deg);
+            }
+
+        .card-back {
+            border-radius: 5px;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background: url("/Content/images/other/card-back.png") center top repeat;
+        }
+
+        .card-front {
+            border-radius: 5px;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            transform: rotateY(180deg);
+        }
+
+        .card-content {
+            display: flex;
+            flex-flow: column nowrap;
+            height: 192px;
+        }
+
+        .card-top {
+            height: 20%;
+            flex: 0 0 auto;
+            text-align: left;
+            padding-left: 10px;
+            padding-top: 10px;
+            font-size: 25px;
+            line-height: 20px;
+        }
+
+        .card-center {
+            height: 60%;
+            flex: 0 0 auto;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-flow: column wrap;
+        }
+
+            .card-center i {
+                font-size: 60px;
+            }
+
+        .card-bottom {
+            height: 20%;
+            flex: 0 0 auto;
+            text-align: right;
+            padding-right: 10px;
+            padding-bottom: 10px;
+            font-size: 25px;
+            line-height: 20px;
+        }
+
+        @@media screen and (max-width:1024px) {
+            .card-content {
+                height: 149px;
+            }
+
+            .card-top {
+                padding-left: 5px;
+                padding-top: 5px;
+                font-size: 20px;
+            }
+
+            .card-center i {
+                font-size: 40px;
+            }
+
+            .card-bottom {
+                padding-right: 5px;
+                padding-bottom: 5px;
+                font-size: 20px;
+            }
+        }
+
+        @@media screen and (max-width:768px) {
+            .row-cols-5 {
+                padding-top: 5px;
+                padding-bottom: 5px;
+            }
+
+            .col {
+                padding-right: 5px;
+                padding-left: 5px;
+            }
+
+            .card-content {
+                height: 121px;
+            }
+
+            .card-top {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 30%;
+                padding-left: 0;
+            }
+
+            .card-center {
+                height: 70%;
+            }
+
+            .card-bottom {
+                display: none;
+            }
+        }
+
+        @@media screen and (max-width:425px) {
+            .row-cols-5 {
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+
+            .col {
+                padding-right: 0;
+                padding-left: 0;
+            }
+
+            .square {
+                border: 1px solid #000;
+            }
+
+            .content {
+                box-shadow: none;
+            }
+
+            .card-content {
+                height: 71px;
+            }
+
+            .card-top {
+                margin-bottom: 5px;
+            }
+
+            .card-center i {
+                font-size: 28px;
+            }
+
+            .card-center span {
+                font-size: 12px;
+            }
+        }
+
+        .btn-lottery {
+            position: fixed;
+            right: 0;
+            bottom: 20%;
+            z-index: 999;
+            line-height: 2;
+            font-size: 20px;
+        }
+    </style>
+)
+
+<div class="row">
+    <div class="col-12 mt-3">
+        <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+            <fieldset>
+                <div class="form-group row">
+                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboRoundId@(itemName)">賓果開局</label>
+                    <div class="col-12 col-md-9 col-lg-9">
+                        <div class="input-group">
+                            <select class="form-control" id="cboRoundId@(itemName)" name="cboRoundId@(itemName)"></select>
+                            <div class="input-group-append">
+                                @*<a class="btn btn-success" href="javascript:Select@(itemName)();"><i class="fas fa-gifts"></i>&nbsp;抽</a>*@
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+    <div class="col-12">
+        <div class="row row-cols-5 text-center" id="plate@(itemName)"></div>
+    </div>
+</div>
+
+<a class="btn btn-success btn-lottery" href="javascript:Select@(itemName)();"><i class="fas fa-gifts"></i>&nbsp;抽牌</a>
+
+@Html.Resource("js",
+    @<script src="@Url.Content("~/Scripts/page/bingo.setting.js")"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        let bingoMap = [];
+        let tempElements = [];
+
+        $(document).ready(function () {
+            tempElements = Array.from(elements);
+
+            ComboBoxs.Default("#cboRoundId@(itemName)", "@Url.Action("GetBingoRound", "Gaming")", { "Status": "A" }, "", "CHOOSE-NUMBER", "", "RoundName", "RoundId");
+
+            InitData@(itemName)();
+
+            $("#cboRoundId@(itemName)").change(function () {
+                InitData@(itemName)();
+            });
+        });
+
+        function InitData@(itemName)() {
+            let innerHtml = ``;
+
+            let targetUrl = "@Url.Action("GetBingoLotteryRecord", "Gaming")";
+            let postData = {
+                "RoundId": $("#cboRoundId@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    let content = item.RecordContent.split(',');
+
+                    let elementIndex = tempElements.indexOf(item.RecordContent);
+                    tempElements.splice(elementIndex, 1);
+
+                    innerHtml += `<div class="col">
+                                    <div class="square">
+                                      <div class="content">
+                                        <div class="card-back"></div>
+                                        <div class="card-content card-front" style="color: ${Color(content[0])};">
+                                          <div class="card-top"><i class="${Suits(content[0])} ${content[0]}"></i></div>
+                                          <div class="card-center"><i class="${Suits(content[0])} ${content[1]}"></i><span>${content[2]}</span></div>
+                                          <div class="card-bottom"><i class="${Suits(content[0])} ${content[0]}"></i></div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>`;
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#plate@(itemName)").html(innerHtml);
+            $(".content").addClass("active");
+
+            function Color(type) {
+                switch (type) {
+                    case "fa-spade":
+                        return "#13a2f9";
+                    case "fa-club":
+                        return "#fb8c00";
+                    case "fa-heart":
+                        return "#e21919";
+                    case "fa-diamond":
+                        return "#43a047";
+                }
+            }
+
+            function Suits(type) {
+                switch (type) {
+                    case "fa-spade":
+                        return "fas";
+                    case "fa-club":
+                        return "fas";
+                    case "fa-heart":
+                        return "fas";
+                    case "fa-diamond":
+                        return "fas";
+                }
+            }
+        }
+
+        function Select@(itemName)() {
+            let innerHtml = ``;
+
+            const random = Math.floor(Math.random() * tempElements.length);
+
+            let record = tempElements[random].toString();
+            bingoMap.push(record);
+            let content = tempElements[random].toString().split(',');
+
+            innerHtml = `<div class="col">
+                           <div class="square">
+                             <div class="content">
+                               <div class="card-back"></div>
+                               <div class="card-content card-front" style="color: ${Color(content[0])};">
+                                 <div class="card-top"><i class="${Suits(content[0])} ${content[0]}"></i></div>
+                                 <div class="card-center"><i class="${Suits(content[0])} ${content[1]}"></i><span>${content[2]}</span></div>
+                                 <div class="card-bottom"><i class="${Suits(content[0])} ${content[0]}"></i></div>
+                               </div>
+                             </div>
+                           </div>
+                         </div>`;
+
+            tempElements.splice(random, 1);
+
+            $("#plate@(itemName)").append(innerHtml);
+
+            DelayFn(function () {
+                let targetUrl = "@Url.Action("AddBingoLotteryRecord", "Gaming")";
+                let postData = {
+                    "RoundId": $("#cboRoundId@(itemName)").val(),
+                    "RecordContent": record
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                $(".content").addClass("active");
+            }, 500);
+
+            function Color(type) {
+                switch (type) {
+                    case "fa-spade":
+                        return "#13a2f9";
+                    case "fa-club":
+                        return "#fb8c00";
+                    case "fa-heart":
+                        return "#e21919";
+                    case "fa-diamond":
+                        return "#43a047";
+                }
+            }
+
+            function Suits(type) {
+                switch (type) {
+                    case "fa-spade":
+                        return "fas";
+                    case "fa-club":
+                        return "fas";
+                    case "fa-heart":
+                        return "fas";
+                    case "fa-diamond":
+                        return "fas";
+                }
+            }
+        }
+    </script>
+)

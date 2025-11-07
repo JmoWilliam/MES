@@ -1,0 +1,734 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMrWipOrder";
+    string itemNameText = "設定領退料單";
+}
+
+@Html.Resource("css",
+    @<style>
+        /* 原有的樣式 */
+        .modal-body {
+            overflow-y: auto;
+        }
+
+        .help-block {
+            display: none;
+            margin: 5px 0 0;
+            border: 3px dashed #b1b1b1;
+            border-radius: 5px;
+            padding: 5px 10px;
+        }
+
+        dt {
+            float: left;
+            clear: left;
+            width: 110px;
+        }
+
+        dt::after {
+            content: "：";
+        }
+
+        dd {
+            margin: 0 0 0 80px;
+            padding: 0;
+            color: #36a2f5;
+            font-weight: bold;
+        }
+
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">MES領料單號: <span class="sub-text" id="desRequesitionNo@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-info auth-add" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                        <a id="aViewManufactureOrderBatch" style="background-color: #e57e97 !important; border-color: #e57e97 !important;" class="btn btn-primary auth-add" href="#"><i class="fas fa-plus"></i> 批量新增</a>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">製令</th>
+                                        <th scope="col" style="min-width: 175px;">領料方式</th>
+                                        <th scope="col" style="min-width: 150px;">領退料套數</th>
+                                        <th scope="col" style="min-width: 175px;">單位</th>
+                                        <th scope="col" style="min-width: 150px;">領料碼</th>
+                                        <th scope="col" style="min-width: 150px;">庫存不足照領</th>
+                                        <th scope="col" style="min-width: 200px;">備註</th>
+                                        <th scope="col" style="min-width: 175px;">材料型態</th>
+                                        <th scope="col" style="min-width: 175px;">庫別型態</th>
+                                        <th scope="col" style="min-width: 150px;">輸入序號</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 200px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container" autocomplete="off" id="editForm@(itemName)">
+                            <input type="hidden" id="MrId@(itemName)" />
+                            <input type="hidden" id="MoId@(itemName)" />
+                            <fieldset>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtMoId@(itemName)">綁定MES製令<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtMoId@(itemName)" value="" />
+                                        <div class="btn-group btn-group@(itemName)">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>製令</dt>
+                                            <dd id="desWoErpFullNo@(itemName)"></dd>
+                                            <dt>預計產量</dt>
+                                            <dd id="desMesQuantity@(itemName)"></dd>
+                                            <dt>已領套數</dt>
+                                            <dd id="desRequisitionSetQty@(itemName)"></dd>
+                                            <dt>已投入量</dt>
+                                            <dd id="desInputQty@(itemName)"></dd>
+                                            <dt>已生產量</dt>
+                                            <dd id="desProductionQty@(itemName)"></dd>
+                                            <dt>已報廢數</dt>
+                                            <dd id="desMoScrapQty@(itemName)"></dd>
+                                            <dt>品號</dt>
+                                            <dd id="desMtlItemNo@(itemName)"></dd>
+                                            <dt>品名</dt>
+                                            <dd id="desMtlItemName@(itemName)"></dd>
+                                            <dt>規格</dt>
+                                            <dd id="desMtlItemSpec@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtMrType@(itemName)">領料方式<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboMrType@(itemName)" name="cboMrType@(itemName)" required></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtQuantity@(itemName)">領退料套數</label>
+                                            <div class="col-12">
+                                                <input type="number" step="any" class="form-control" id="txtQuantity@(itemName)" name="txtQuantity@(itemName)"
+                                                       value=""
+                                                       placeholder="請輸入領退料數"
+                                                       data-msg-required="請輸入領退料數" data-rule-required="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: none;" class="row">
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtInventoryId@(itemName)">庫別<span class="text-danger">*</span></label>
+                                            <input type="hidden" id="txtInventoryId@(itemName)" value="" />
+                                            <div class="col-12">
+                                                <div style="display: flex;" class="btn-group btn-group-inv@(itemName)">
+                                                    <select class="form-control" id="cboInventoryId@(itemName)" name="cboInventoryId@(itemName)" required></select>
+                                                    <a id="aInventoryQty@(itemName)" class="btn btn-success pop-view" href="javascript:PopViewInventoryQty('', '', '#cboInventoryIdViewMrWipOrder');"><i class="fal fa-search"></i></a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboUomId@(itemName)">單位<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboUomId@(itemName)" name="cboUomId@(itemName)" required></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtMaterialCategory@(itemName)">材料型態</label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboMaterialCategory@(itemName)" name="cboMaterialCategory@(itemName)" required></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtSubinventoryType@(itemName)">庫別型態<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboSubinventoryType@(itemName)" name="cboSubinventoryType@(itemName)" required disabled></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row" style="display: none;">
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtRequisitionCode@(itemName)">領料碼</label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboRequisitionCode@(itemName)" name="cboRequisitionCode@(itemName)" required></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtNegativeStatus@(itemName)">庫存不足照領<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboNegativeStatus@(itemName)" name="cboNegativeStatus@(itemName)" required>
+                                                    <option value="Y">是</option>
+                                                    <option value="N" selected>否</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtLineSeq@(itemName)">輸入序號</label>
+                                            <div class="col-12">
+                                                <input type="text" class="form-control" id="txtLineSeq@(itemName)" name="txtLineSeq@(itemName)"
+                                                       value=""
+                                                       data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                          placeholder="請輸入備註"
+                                                          data-msg-required="請輸入備註"
+                                                          data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="CheckInventoryQty@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewManufactureOrder")
+@Html.Partial("ViewInventoryQty")
+@Html.Partial("ViewManufactureOrderBatch")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let mrId@(itemName);
+
+        function Pop@(itemName)(mrId) {
+            mrId@(itemName) = mrId;
+            let requesitionNo = $("#txtRequesitionNoMaterialRequisition").val();
+            $("#desRequesitionNo@(itemName)").html(requesitionNo);
+
+            $("#aViewManufactureOrderBatch").prop("href", `javascript: PopViewManufactureOrderBatch('${mrId}')`)
+
+            Query@(itemName)();
+
+            GetExcessFlagMaterialDetail();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetMrWipOrder", "Inventory")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MrId": mrId@(itemName),
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td scope="col" style="min-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})" style="min-width: 200px;">${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MrTypeNo}" style="min-width: 175px;">${item.MrTypeNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Quantity}" style="min-width: 150px;">${item.Quantity}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UomNo} ${item.UomName}" style="min-width: 175px;">${item.UomNo} ${item.UomName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.RequisitionCodeNo}" style="min-width: 150px;">${item.RequisitionCodeNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.NegativeStatus == `Y` ? `是` : `否`}" style="min-width: 150px;">${item.NegativeStatus == `Y` ? `是` : `否`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="min-width: 200px;">${item.Remark}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MaterialCategoryNo}" style="min-width: 175px;">${item.MaterialCategoryNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SubinventoryTypeNo}" style="min-width: 175px;">${item.SubinventoryTypeNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LineSeq}" style="min-width: 150px;">${item.LineSeq}</td>
+                                        <td class="text-center active-content col-sticky" scope="col" style="min-width: 125px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.MrId}', '${item.MoId}');">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <!--刪除-->
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.MrId}', '${item.MoId}');">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(mrId, moId) {
+            $("#MrId@(itemName)").val(mrId ? mrId : 0);
+            $("#MoId@(itemName)").val(moId ? moId : 0);
+            Switch("#editData@(itemName), .edit-mode, .btn-group@(itemName)", "#listData@(itemName), .list-mode");
+
+            $("#txtMoId@(itemName)").siblings(".help-block").hide();
+            $("#txtMoId@(itemName)").val("");
+
+            if (!isMobile) {
+                $("#cboMrType@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboInventoryId@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboRequisitionCode@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboMaterialCategory@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboSubinventoryType@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboUomId@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            //領退料方式
+            let docType = $("#cboDocTypeMaterialRequisition").val();
+            if (docType == "54" || docType == "55") {
+                ComboBoxs.Default("#cboMrType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MrWipOrder.MrType" }, "1", "NA", "", "TypeName", "TypeNo");
+                $("#cboMrType@(itemName) option[value='4']").remove();
+                $("#cboMrType@(itemName) option[value='5']").remove();
+            }
+            else {
+                ComboBoxs.Default("#cboMrType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MrWipOrder.MrType" }, "4", "NA", "", "TypeName", "TypeNo");
+                $("#cboMrType@(itemName) option[value='1']").remove();
+                $("#cboMrType@(itemName) option[value='2']").remove();
+                $("#cboMrType@(itemName) option[value='3']").remove();
+            }
+
+            //庫別
+            ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId");
+
+            //領料碼
+            ComboBoxs.Default("#cboRequisitionCode@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MrWipOrder.RequisitionCode" }, "1", "NA", "", "TypeName", "TypeNo");
+
+            //材料型態
+            ComboBoxs.Default("#cboMaterialCategory@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MrWipOrder.MaterialCategory" }, "*", "NA", "", "TypeName", "TypeNo");
+
+            //庫別型態
+            ComboBoxs.Default("#cboSubinventoryType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MrWipOrder.SubinventoryType" }, "1", "NA", "", "TypeName", "TypeNo");
+
+            //單位
+            ComboBoxs.Default("#cboUomId@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", {}, "", "NA", "", "UomWithNo", "UomId");
+
+            $("#cboMaterialCategory@(itemName)").prop("disabled", false);
+
+            if (mrId > 0 && moId > 0) {
+                let targetUrl = "@Url.Action("GetMrWipOrder", "Inventory")";
+                let postData = {
+                    "MrId": mrId,
+                    "MoId": moId
+                }
+                data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $("#txtMoId@(itemName)").siblings(".help-block").show();
+                    $(".btn-group@(itemName)").hide();
+                    $.each(data.result, function (i, item) {
+                        $("#txtMoId@(itemName)").val(moId);
+                        $("#cboMrType@(itemName)").val(item.MrType);
+                        $("#txtQuantity@(itemName)").val(item.Quantity);
+                        $("#cboInventoryId@(itemName)").val(item.InventoryId);
+                        $("#cboRequisitionCode@(itemName)").val(item.RequisitionCode);
+                        $("#cboNegativeStatus@(itemName)").val(item.NegativeStatus);
+                        $("#cboMaterialCategory@(itemName)").val(item.MaterialCategory);
+                        $("#cboSubinventoryType@(itemName)").val(item.SubinventoryType);
+                        $("#txtLineSeq@(itemName)").val(item.LineSeq);
+                        $("#cboUomId@(itemName)").val(item.UomId);
+
+                        $("#cboMaterialCategory@(itemName)").prop("disabled", true);
+                    });
+
+                    let mtlItemNo = $("#desMtlItemNo@(itemName)").text();
+                    let inventory = $("#cboInventoryId@(itemName)").val();
+                    $("#aInventoryQty@(itemName)").prop("href", `javascript: PopViewInventoryQty('${mtlItemNo}', '${inventory}', '#cboInventoryIdViewMrWipOrder')`);
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                targetUrl = "@Url.Action("GetManufactureOrder", "Production")";
+                postData = {
+                    "MoId": moId
+                }
+                data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#desWoErpFullNo@(itemName)").html(item.WoErpPrefix + "-" + item.WoErpNo + "(" + item.WoSeq + ")");
+                        $("#desMesQuantity@(itemName)").html(item.Quantity);
+                        $("#desRequisitionSetQty@(itemName)").html(item.RequisitionSetQty);
+                        $("#desInputQty@(itemName)").html(item.InputQty);
+                        $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                        $("#desMtlItemName@(itemName)").html(item.MtlItemName);
+                        $("#desMtlItemSpec@(itemName)").html(item.MtlItemSpec);
+                        $("#desProductionQty@(itemName)").html(item.ProductionQty);
+                        $("#desMoScrapQty@(itemName)").html(item.MoScrapQty);
+                    });
+                }
+                else {
+                    alert(data.msg);
+                }
+            }
+
+            let popConfig = {
+                targetSelector: "#txtMoId@(itemName)",
+                popFunction: "PopViewManufactureOrder",
+                objectMoId: "#txtMoId@(itemName)",
+                objectWoErpFullNo: "#desWoErpFullNo@(itemName)",
+                objectMtlItemNo: "#desMtlItemNo@(itemName)",
+                objectMtlItemName: "#desMtlItemName@(itemName)",
+                objectMtlItemSpec: "#desMtlItemSpec@(itemName)",
+                objectQuantity: "#txtQuantity@(itemName)",
+                objectInventoryId: "#cboInventoryId@(itemName)",
+                objectMesQuantity: "#desMesQuantity@(itemName)",
+                objectRequisitionSetQty: "#desRequisitionSetQty@(itemName)",
+                objectStockInQty: "#desStockInQty@(itemName)",
+                objectUomId: "#cboUomId@(itemName)",
+                objectInputQty: "#desInputQty@(itemName)",
+                objectProductionQty: "#desProductionQty@(itemName)",
+                objectMoScrapQty: "#desMoScrapQty@(itemName)",
+                docType
+            };
+            InitPopView(popConfig);
+
+            $("#txtMoId@(itemName)").change(function () {
+                setTimeout(function () {
+                    let moId = $("#txtMoId@(itemName)").val();
+                    let targetUrl = "@Url.Action("GetLineSeq", "Inventory")";
+                    let postData = {
+                        "MrId": mrId@(itemName)
+                    };
+
+                    let data = DataAccess.Get(targetUrl, postData, false);
+
+                    if (data.status == "success") {
+                        $.each(data.result, function (i, item) {
+                            let count = (item.Count + 1).toString().padStart(4, 0);
+                            $("#txtLineSeq@(itemName)").val(count);
+                        });
+                    }
+
+                    let mtlItemNo = $("#desMtlItemNo@(itemName)").text();
+                    let inventory = $("#cboInventoryId@(itemName)").val();
+                    $("#aInventoryQty@(itemName)").prop("href", `javascript: PopViewInventoryQty('${mtlItemNo}', '${inventory}', '#cboInventoryIdViewMrWipOrder')`);
+                },500);
+            });
+
+            $("#cboMrType@(itemName)").change(function () {
+                $("#txtQuantity@(itemName)").prop("readonly", false);
+                let mesQuanity = $("#desMesQuantity@(itemName)").text();
+                let requisitionSetQty = $("#desRequisitionSetQty@(itemName)").text();
+                let productionQty = $("#desProductionQty@(itemName)").text();
+                let moScrapQty = $("#desMoScrapQty@(itemName)").text();
+
+                if ($("#cboMrType@(itemName)").val() == "1") {
+                    $("#txtQuantity@(itemName)").val(mesQuanity - requisitionSetQty);
+                }
+                else if ($("#cboMrType@(itemName)").val() == "2") {
+                    $("#txtQuantity@(itemName)").val(mesQuanity - requisitionSetQty);
+                }
+                else if ($("#cboMrType@(itemName)").val() == "3") {
+                    $("#txtQuantity@(itemName)").val("0");
+                }
+                else if ($("#cboMrType@(itemName)").val() == "4") {
+                    let quantity = requisitionSetQty - productionQty - moScrapQty;
+                    if (quantity < 0) quantity = 0;
+                    $("#txtQuantity@(itemName)").val(quantity);
+                }
+                else if ($("#cboMrType@(itemName)").val() == "5") {
+                    let quantity = requisitionSetQty - productionQty - moScrapQty;
+                    if (quantity < 0) quantity = 0;
+                    $("#txtQuantity@(itemName)").val(quantity);
+                    //$("#txtQuantity@(itemName)").prop("readonly", true);
+                }
+            });
+
+            $("#cboInventoryId@(itemName)").change(function () {
+                let mtlItemNo = $("#desMtlItemNo@(itemName)").text();
+                let inventory = $("#cboInventoryId@(itemName)").val();
+                $("#aInventoryQty@(itemName)").prop("href", `javascript: PopViewInventoryQty('${mtlItemNo}', '${inventory}', '#cboInventoryIdViewMrWipOrder')`);
+            });
+        }
+
+        function CheckInventoryQty@(itemName)() {
+            let docType = $("#cboDocTypeMaterialRequisition").val();
+            if (docType == "56") {
+                Save@(itemName)();
+                return false;
+            }
+
+            let MoId = parseInt($("#txtMoId@(itemName)").val());
+            let targetUrl = "@Url.Action("GetCheckInventoryQty", "Inventory")";
+            let postData = {
+                "MoId": MoId,
+                "MrType": $("#cboMrType@(itemName)").val(),
+                "Quantity": parseInt($("#txtQuantity@(itemName)").val()),
+                "InventoryId": $("#cboInventoryId@(itemName)").val()
+            }
+            data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.MrDetailQty > item.InventoryQty) {
+                            swal.fire({
+                                titleText: "確認要建立領料單嗎?",
+                                text: "經查詢後，品號【" + item.MtlItemNo + "】在庫別【" + item.InventoryNo + "(" + item.InventoryName + ")】數量不足!",
+                                icon: "warning",
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                reverseButtons: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    Save@(itemName)();
+                                }
+                            });
+                        }
+                        else {
+                            Save@(itemName)();
+                            return false;
+                        }
+                    });
+                }
+            }
+            else {
+                swal.fire({
+                    titleText: "確認要建立領退料單嗎?",
+                    text: data.msg,
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Save@(itemName)();
+                    }
+                });
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let MrId = parseInt($("#MrId@(itemName)").val());
+                let MoId = parseInt($("#MoId@(itemName)").val());
+
+                if (MrId <= 0 && MoId <= 0) {
+                    let targetUrl = "@Url.Action("AddMrWipOrder", "Inventory")";
+                    let postData = {
+                        "MrId": mrId@(itemName),
+                        "MoId": $("#txtMoId@(itemName)").val(),
+                        "WoErpPrefix": $("#desWoErpFullNo@(itemName)").text().split('-')[0],
+                        "WoErpNo": $("#desWoErpFullNo@(itemName)").text().split('-')[1].split('(')[0],
+                        "MrType": $("#cboMrType@(itemName)").val(),
+                        "Quantity": parseFloat($("#txtQuantity@(itemName)").val()),
+                        "InventoryId": parseFloat($("#cboInventoryId@(itemName)").val()),
+                        "RequisitionCode": $("#cboRequisitionCode@(itemName)").val(),
+                        "NegativeStatus": $("#cboNegativeStatus@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                        "MaterialCategory": $("#cboMaterialCategory@(itemName)").val(),
+                        "SubinventoryType": $("#cboSubinventoryType@(itemName)").val(),
+                        "LineSeq": $("#txtLineSeq@(itemName)").val(),
+                        "UomId": $("#cboUomId@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                        ReturnMaterialDetail();
+                        Close@(itemName)();
+                    }
+                }
+                else {
+                    let targetUrl;
+                    swal.fire({
+                        titleText: "是否要重計單身?",
+                        text: "重計前請先確認單身無綁定之條碼!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            targetUrl = "@Url.Action("UpdateMrWipOrder", "Inventory")";
+                        }
+                        else {
+                            targetUrl = "@Url.Action("UpdateMrWipOrderNoRC", "Inventory")";
+                        }
+
+                        let postData = {
+                            "MrId": mrId@(itemName),
+                            "MoId": $("#txtMoId@(itemName)").val(),
+                            "WoErpPrefix": $("#desWoErpFullNo@(itemName)").text().split('-')[0],
+                            "WoErpNo": $("#desWoErpFullNo@(itemName)").text().split('-')[1].split('(')[0],
+                            "MrType": $("#cboMrType@(itemName)").val(),
+                            "Quantity": parseFloat($("#txtQuantity@(itemName)").val()),
+                            "InventoryId": parseFloat($("#cboInventoryId@(itemName)").val()),
+                            "RequisitionCode": $("#cboRequisitionCode@(itemName)").val(),
+                            "NegativeStatus": $("#cboNegativeStatus@(itemName)").val(),
+                            "Remark": $("#txtRemark@(itemName)").val(),
+                            "MaterialCategory": $("#cboMaterialCategory@(itemName)").val(),
+                            "SubinventoryType": $("#cboSubinventoryType@(itemName)").val(),
+                            "LineSeq": $("#txtLineSeq@(itemName)").val(),
+                            "UomId": $("#cboUomId@(itemName)").val()
+                        };
+
+                        let resultData = DataAccess.Update(targetUrl, postData, false, true);
+
+                        if (resultData) {
+                            Return@(itemName)();
+                            ReturnMaterialDetail();
+                            Close@(itemName)();
+                        }
+                    });
+                }
+            }
+        }
+
+        function Delete@(itemName)(mrId, moId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMrWipOrder", "Inventory")";
+                    let postData = {
+                        "MrId": mrId,
+                        "MoId": moId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                        QueryMaterialDetail();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+            ReturnMaterialDetail();
+        }
+    </script>
+)

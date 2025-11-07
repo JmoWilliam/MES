@@ -1,0 +1,682 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewDeliveryFinalize";
+    string itemNameText = "出貨定版";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+        .modal-xl {
+            max-width: 1680px;
+        }
+
+        .customization .table {
+            border-collapse: collapse !important;
+        }
+
+        .customer-border td {
+            border-top: 5px solid #6d94d9 !important;
+        }
+
+        .customization .table.table-striped tbody tr:nth-of-type(odd) td:not(.col-sticky) {
+            background-color: transparent;
+        }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtDoDateQ@(itemName)">出貨日期 <input type="checkbox" id="cbxUseDate@(itemName)" checked /></label>
+                                        <input type="text" class="form-control" id="txtDoDateQ@(itemName)" name="txtDoDateQ@(itemName)" placeholder="請輸入出貨日期"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                               readonly />
+                                    </div>
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtShipmentCustomerQ@(itemName)">出貨客戶</label>
+                                        <input type="text" class="form-control" id="txtShipmentCustomerQ@(itemName)" name="txtShipmentCustomerQ@(itemName)" placeholder="請輸入出貨客戶"
+                                               data-msg-extraRegex="請輸入出貨客戶" />
+                                    </div>
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtMtlItemNoQ@(itemName)">品號</label>
+                                        <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入品號"
+                                               data-msg-extraRegex="請輸入品號" />
+                                    </div>
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtMtlItemNameQ@(itemName)">品名</label>
+                                        <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)" placeholder="請輸入品名"
+                                               data-msg-extraRegex="請輸入品名" />
+                                    </div>
+                                    <div class="col-lg-2 col-3 mt-4">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>                                        
+                                        <a class="btn file-excel auth-excel" href="javascript:Excel@(itemName)();"><i class="fas fa-file-excel"></i>匯出</a>                                       
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom customization">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 190px;">出貨單號</th>
+                                        <th scope="col" style="min-width: 195px;">出貨時間</th>
+                                        <th scope="col" style="min-width: 100px;">出貨客戶</th>
+                                        <th scope="col" style="min-width: 200px;">品號</th>
+                                        <th scope="col" style="min-width: 300px;">品名</th>
+                                        <th scope="col" style="min-width: 140px;">正常品數量</th>
+                                        <th scope="col" style="min-width: 130px;">贈品數量</th>
+                                        <th scope="col" style="min-width: 130px;">備品數量</th>
+                                        <th scope="col" style="min-width: 100px;">訂單欠數</th>
+                                        <th scope="col" style="min-width: 150px;">出貨工程</th>
+                                        <th scope="col" style="min-width: 150px;">訂單狀況</th>
+                                        <th scope="col" style="min-width: 200px;">訂單單號</th>
+                                        <th scope="col" style="min-width: 150px;">寄送方式</th>
+                                        <th scope="col" style="min-width: 300px;">備註</th>
+                                        <th scope="col" style="min-width: 200px;">客戶採單</th>
+                                        <th class="text-center" scope="col" style="min-width: 100px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                        <div class="new-delivery">
+                            <hr style="border-top: 5px solid transparent;" />
+                            <h2 class="mt-4 mb-3">新增定版</h2>
+                            <div class="table-custom">
+                                <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)Add">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" style="min-width: 50px;">#</th>
+                                            <th scope="col" style="min-width: 125px;">出貨日期</th>
+                                            <th scope="col" style="min-width: 125px;">出貨時間</th>
+                                            <th scope="col" style="min-width: 150px;">客戶</th>
+                                            <th scope="col" style="min-width: 200px;">訂單單號</th>
+                                            <th scope="col" style="min-width: 300px;">品名</th>
+                                            <th scope="col" style="min-width: 120px;">正常品數量</th>
+                                            <th scope="col" style="min-width: 100px;">贈品數量</th>
+                                            <th scope="col" style="min-width: 100px;">備品數量</th>
+                                            <th scope="col" style="min-width: 150px;">出貨客戶</th>
+                                            <th scope="col" style="min-width: 150px;">出貨工程</th>
+                                            <th scope="col" style="min-width: 230px;">訂單狀況</th>
+                                            <th scope="col" style="min-width: 230px;">寄送方式</th>
+                                            <th scope="col" style="min-width: 300px;">備註</th>
+                                            <th class="text-center" scope="col" style="min-width: 100px;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let deliveryJson = JSON.parse('{ "data" : []}');
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)() {
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            deliveryJson = JSON.parse('{ "data" : []}');
+            
+            let currentDate = new Date();
+            Suites.DatePicker("txtDoDateQ@(itemName)", currentDate);
+
+            if ($("input[type='checkbox'][data-so-detail-id]:checked").length > 0) {
+                $(".new-delivery").show();
+
+                $.each($("input[type='checkbox'][data-so-detail-id]:checked"), function (i) {
+                    let soDetailId = $(this).data("so-detail-id");
+
+                    let json = {
+                        index: (i + 1),
+                        soDetailId: soDetailId,
+                        pcPromiseDate: $("input[name='txtPcPromiseDateDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        pcPromiseTime: $("input[name='txtPcPromiseTimeDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        customerId: $("input[name='txtCustomerIdDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        customerNo: $("input[name='txtCustomerNoDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        customerName: $("input[name='txtCustomerNameDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        soNo: $("input[name='txtSoNoDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        soSeq: $("input[name='txtSoSeqDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        mtlItemName: $("input[name='txtMtlItemNameDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        soQty: $("input[name='txtSoQtyDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        freebieQty: $("input[name='txtFreebieQtyDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        spareQty: $("input[name='txtSpareQtyDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val(),
+                        deliveryCustomer: "",
+                        deliveryProcess: -1,
+                        orderSituation: -1,
+                        deliveryMethod: -1,
+                        pcDoDetailRemark: $("input[name='txtSoDetailRemarkDeliverySchedule'][data-so-detail-id='" + soDetailId + "']").val()
+                    };
+
+                    deliveryJson.data.push(json);
+
+                    AddDelivery@(itemName)();
+
+                });
+
+            } else {
+                $(".new-delivery").hide();
+            }
+
+            Query@(itemName)();
+
+            $("input[type='checkbox'][data-so-detail-id]").prop("checked", false);
+
+            @*$("#txtDoDateQ@(itemName)").change(function () {
+                Query@(itemName)();
+            });*@
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            //let nextCustomer = "";
+            let currentCustomer = "";
+            let currentDateTime = "";
+            let styleIndex = 0;
+            //let bgColor = ["#F4C2C2", "#FFCC99", "#F7E98E", "#C9DC87", "#96C8A2", "#ADDFAD", "#ADD8E6", "#A2ADD0", "#C9A0DC", "#E7ACCF"];
+            let bgColor = ["#f5cdcd", "#ffe0c1", "#fff0a9", "#deebb1", "#c9dfce", "#d6edd6", "#c7e4ed", "#c7d1f3", "#e3c1f3", "#e1b9d1"];
+
+            let targetUrl = "@Url.Action("GetDeliveryFinalize", "Delivery")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtDoDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtDoDateQ@(itemName)").val() : ""),
+                "ShipmentCustomer": $("#txtShipmentCustomerQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        nextCustomer = item.CustomerShortName;
+
+                        nextDateTime = item.DoDate + ' ' + item.DoTime;
+
+                        console.log(nextDateTime);
+
+                        if ((nextCustomer != currentCustomer && currentCustomer != "") || (nextDateTime != currentDateTime && currentDateTime != "")) {
+                            styleIndex++;
+                            if (styleIndex > 9) styleIndex = 0;
+                        }
+
+                        innerHtml += `${(nextCustomer != currentCustomer && currentCustomer != "") || (nextDateTime != currentDateTime && currentDateTime != "") ? `<tr class="customer-border" style="background: ${bgColor[styleIndex]} !important;">` : `<tr style="background: ${bgColor[styleIndex]} !important;">`}
+                                        <td>${_row}</td>
+                                        <td>${item.DoErpFullNo}</td>
+                                        <td>
+                                            ${item.DoDate} ${item.DoTime}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CustomerName}" style="max-width: 120px;">${item.CustomerShortName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 250px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 300px;">${item.MtlItemName}</td>
+                                        <td>${item.PickRegularQty.toLocaleString('en')}/${item.RegularQty.toLocaleString('en')}</td>
+                                        <td>${item.PickFreebieQty.toLocaleString('en')}/${item.FreebieQty.toLocaleString('en')}</td>
+                                        <td>${item.PickSpareQty.toLocaleString('en')}/${item.SpareQty.toLocaleString('en')}</td>
+
+                                        <td>${(item.SoRegularQty - item.ExistPickQty).toLocaleString('en')}</td>
+                                        <td>${item.DeliveryProcessName}</td>
+                                        <td>${item.OrderSituation}</td>
+                                        <td>${item.SoErpFullNo} <code>(${item.SoSequence})</code></td>
+                                        <td>${item.DeliveryMethod}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PcDoDetailRemark}" style="max-width: 300px;">${item.PcDoDetailRemark}</td>
+                                        <td>${item.CustomerPurchaseOrder}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link auth-delivery-finalize" href="javascript:Delete@(itemName)(${item.DoDetailId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+
+                        currentCustomer = item.CustomerShortName;
+
+                        currentDateTime = item.DoDate + ' ' + item.DoTime;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="17" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+
+        function Delete@(itemName)(DoDetailId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDeliveryFinalize", "Delivery")";
+                    let postData = {
+                        "DoDetailId": DoDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+        
+        function AddDelivery@(itemName)() {
+            let innerHtml = '';
+
+            if (deliveryJson.data.length > 0) {
+
+                for (var i = 0; i < deliveryJson.data.length; i++) {
+                    innerHtml += `<tr>
+                                <td>${i + 1}.</td>
+                                <td>${deliveryJson.data[i].pcPromiseDate}</td>
+                                <td>
+                                  <input type="text" class="form-control timedropper" name="txtPcPromiseTime@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].pcPromiseTime}">
+                                </td>
+                                <td>${deliveryJson.data[i].customerNo} ${deliveryJson.data[i].customerName}</td>
+                                <td>${deliveryJson.data[i].soNo}<code>(${deliveryJson.data[i].soSeq})</code></td>
+                                <td class="ellipsis" data-toggle="tooltip" title = "${deliveryJson.data[i].mtlItemName}" style = "max-width: 300px;">${deliveryJson.data[i].mtlItemName}</td>
+                                <td>
+                                  <input type="text" class="form-control" name="txtSoQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].soQty}">
+                                </td>BB
+                                <td>
+                                  <input type="text" class="form-control" name="txtFreebieQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].freebieQty}">
+                                </td>
+                                <td>
+                                  <input type="text" class="form-control" name="txtSpareQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].spareQty}">
+                                </td>
+                                <td>
+                                  <select class="form-control" name="cboDeliveryCustomer@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                </td>
+                                <td>
+                                  <select class="form-control" name="cboDeliveryProcess@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                </td>
+                                <td>
+                                  <div class="input-group">
+                                    <select class="form-control" name="cboOrderSituation@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                    <input type="text" class="form-control" name="txtOrderSituation@(itemName)" data-index="${deliveryJson.data[i].index}"/>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div class="input-group">
+                                    <select class="form-control" name="cboDeliveryMethod@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                    <input type="text" class="form-control" name="txtDeliveryMethod@(itemName)" data-index="${deliveryJson.data[i].index}"/>
+                                  </div>
+                                </td>
+                                <td>
+                                  <textarea class="form-control" name="txtPcDoDetailRemark@(itemName)" data-index="${deliveryJson.data[i].index}" rows="1">${deliveryJson.data[i].pcDoDetailRemark}</textarea>
+                                </td>
+                                <td class="text-center active-content">
+                                  <a class="active-link auth-delivery-finalize" href="javascript:Delete@(itemName)Add(${deliveryJson.data[i].index});"><i class="fas fa-trash-alt"></i></a>
+                                </td>
+                              </tr>`;
+                }
+            } else {
+                innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+            }
+            $("#tblData@(itemName)Add tbody").html(innerHtml);
+            TableComponentInit();
+
+            Suites.TimeDropper("#txtPcPromiseTime@(itemName)");
+
+            $("input[name='txtPcPromiseTime@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].pcPromiseTime = $(this).val();
+            });
+
+            $("input[name='txtSoQty@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].soQty = $(this).val();
+            });
+
+            $("input[name='txtFreebieQty@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].freebieQty = $(this).val();
+            });
+
+            $("input[name='txtSpareQty@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].spareQty = $(this).val();
+            });
+
+            $("select[name='cboDeliveryCustomer@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].deliveryCustomer = $(this).val();
+                deliveryJson.data[index - 1].deliveryCustomerName = $(this).find("option:selected").text();
+            });
+
+            $("select[name='cboDeliveryProcess@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].deliveryProcess = $(this).val();
+                deliveryJson.data[index - 1].deliveryProcessName = $(this).find("option:selected").text();
+            });
+
+            $("select[name='cboOrderSituation@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                $("input[name='txtOrderSituation@(itemName)'][data-index='" + index + "']").val($(this).val()).trigger('change');
+            });
+
+            $("input[name='txtOrderSituation@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].orderSituation = $(this).val();
+            });
+
+            $("select[name='cboDeliveryMethod@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+                
+                $("input[name='txtDeliveryMethod@(itemName)'][data-index='" + index + "']").val($(this).val()).trigger('change');
+            });
+
+            $("input[name='txtDeliveryMethod@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].deliveryMethod = $(this).val();
+            });
+
+            $("textarea[name='txtPcDoDetailRemark@(itemName)'][data-index]").change(function () {
+                let index = $(this).data("index");
+
+                deliveryJson.data[index - 1].pcDoDetailRemark = $(this).val();
+            });
+
+            for (var i = 0; i < deliveryJson.data.length; i++) {
+
+                Suites.TimeDropper("#txtPcPromiseTime@(itemName)");
+
+                ComboBoxs.Default("select[name='cboDeliveryCustomer@(itemName)'][data-index='" + deliveryJson.data[i].index + "']", "@Url.Action("GetDeliveryCustomer", "ScmBasicInformation")", { "CustomerId": deliveryJson.data[i].customerId, "Status": "A" }, "", "NA", "", "DcShortName", "DcId");
+                ComboBoxs.Default("select[name='cboDeliveryProcess@(itemName)'][data-index='" + deliveryJson.data[i].index + "']", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DeliveryProcess" }, deliveryJson.data[i].deliveryProcess, "NA", "", "TypeName", "TypeNo");
+                ComboBoxs.Default("select[name='cboOrderSituation@(itemName)'][data-index='" + deliveryJson.data[i].index + "']", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "OrderSituation" }, "", "NA", "", "TypeName", "TypeName");
+                ComboBoxs.Default("select[name='cboDeliveryMethod@(itemName)'][data-index='" + deliveryJson.data[i].index + "']", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DeliveryMethod" }, "", "NA", "", "TypeName", "TypeName");
+            }
+
+            if (!isMobile) {
+                $("select[name=cboDeliveryCustomer@(itemName)], select[name=cboDeliveryProcess@(itemName)]").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+        }
+
+        function Save@(itemName)() {
+            if (deliveryJson.data.length > 0) {
+
+                let isValid = true;
+                let errorMsg = "";
+
+                for (var i = 0; i < deliveryJson.data.length; i++) {
+                    if (!isNaN(deliveryJson.data[i].soQty) || !isNaN(deliveryJson.data[i].freebieQty) || !isNaN(deliveryJson.data[i].spareQty)) {
+                        if ((parseInt(deliveryJson.data[i].soQty) +
+                            parseInt(deliveryJson.data[i].freebieQty) +
+                            parseInt(deliveryJson.data[i].spareQty)) <= 0) {
+                            $("input[type='hidden'][data-index='" + deliveryJson.data[i].index + "']").parents("tr").addClass("text-danger");
+                            isValid = false;
+                            errorMsg += "單號(序號):" + deliveryJson.data[i].soNo + "(" + deliveryJson.data[i].soSeq + ")" + "，出貨數量不能小於零!!<br />";
+                        }
+                    } else {
+                        $("input[type='hidden'][data-index='" + deliveryJson.data[i].index + "']").parents("tr").addClass("text-danger");
+                        isValid = false;
+                        errorMsg += "單號(序號):" + deliveryJson.data[i].soNo + "(" + deliveryJson.data[i].soSeq + ")" + "，出貨數量不正確!!<br />";
+                    }
+
+                    if (!deliveryJson.data[i].deliveryCustomer) {
+                        $("input[type='hidden'][data-index='" + deliveryJson.data[i].index + "']").parents("tr").addClass("text-danger");
+                        isValid = false;
+                        errorMsg += "單號(序號):" + deliveryJson.data[i].soNo + "(" + deliveryJson.data[i].soSeq + ")" + "，請選擇出貨客戶!!<br />";
+                    }
+
+                    if (!deliveryJson.data[i].deliveryProcess) {
+                        $("input[type='hidden'][data-index='" + deliveryJson.data[i].index + "']").parents("tr").addClass("text-danger");
+                        isValid = false;
+                        errorMsg += "單號(序號):" + deliveryJson.data[i].soNo + "(" + deliveryJson.data[i].soSeq + ")" + "，請選擇出貨工程!!<br />";
+                    }
+                }
+
+                if (isValid) {
+                    let targetUrl = "@Url.Action("AddDeliveryFinalize", "Delivery")";
+                    let postData = {
+                        "Delieverys": JSON.stringify(deliveryJson)
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Close@(itemName)();
+                    }
+                } else {
+                    alert(errorMsg);
+                }
+            }
+        }
+
+        function Delete@(itemName)Add(index) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    for (var i in deliveryJson.data) {
+                        if (deliveryJson.data[i]["index"] == index) {
+                            deliveryJson.data.splice(i, 1);
+                        }
+                    }
+                    
+                    AddDelivery@(itemName)();
+                }
+            });
+        }
+
+        function EditDate@(itemName)(SoDetailId, DoDetailId) {
+            Swal.fire({
+                html: `
+                    <div class="card card-shadow mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title" style="text-align: left;">修改排定交貨日</h2>
+                        </div>
+                        <div class="card-body">
+                            <form autocomplete="off" id="editForm@(itemName)">
+                                <fieldset>
+                                    <input type="hidden" id="SoDetailId" name="SoDetailId" value="-1" />
+                                    <input type="hidden" id="DoDetailId" name="DoDetailId" value="-1" />
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="txtPcPromiseDate@(itemName)">交貨時間 <span class="text-danger">*</span></label>
+                                                <div class="col-12">
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" id="txtPcPromiseDate@(itemName)" name="txtPcPromiseDate@(itemName)"
+                                                                readonly />
+                                                        <input type="text" class="form-control timedropper" id="txtPcPromiseTime@(itemName)" name="txtPcPromiseTime@(itemName)"
+                                                               data-msg-required="請輸入交貨時間" data-rule-required="true"
+                                                               data-msg-maxlength="必須少於 8 個字元" maxlength="8" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboCauseType@(itemName)">原因類別</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboCauseType@(itemName)" name="cboCauseType@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboDepartmentId@(itemName)">責任部門</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboDepartmentId@(itemName)" name="cboDepartmentId@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboSupervisorId@(itemName)">責任主管</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboSupervisorId@(itemName)" name="cboSupervisorId@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-12 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 form-label popover-label" for="txtCauseDescription@(itemName)">延遲原因</label>
+                                                <div class="col-12">
+                                                    <textarea class="form-control" id="txtCauseDescription@(itemName)" name="txtCauseDescription@(itemName)" placeholder="請輸入延遲原因"
+                                                              data-msg-maxlength="必須少於 255 個字元" maxlength="255" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-success text-right" onclick="SaveDate@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                                </fieldset>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: 900,
+            });
+            
+            $("#SoDetailId").val(SoDetailId ? SoDetailId : 0);
+            $("#DoDetailId").val(DoDetailId ? DoDetailId : 0);
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtPcPromiseDate@(itemName)", currentDate);
+            Suites.TimePicker("txtPcPromiseTime@(itemName)");
+
+            ComboBoxs.Default("#cboCauseType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "Delivery.CauseType" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.Default("#cboDepartmentId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A" }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+            ComboBoxs.Default("#cboSupervisorId@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "NA", "", "UserWithNo", "UserId"); 
+
+            @*if (!isMobile) {
+                $("#cboCauseType@(itemName),#cboDepartmentId@(itemName),#cboSupervisorId@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }*@
+        }
+
+        function SaveDate@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let DoDetailId = parseInt($("#DoDetailId").val());
+                let SoDetailId = parseInt($("#SoDetailId").val());
+
+                let targetUrl = "@Url.Action("AddDeliveryDateLog", "Delivery")";
+                let postData = {
+                    "DoDetailId": DoDetailId,
+                    "SoDetailId": SoDetailId,
+                    "PcPromiseDate": $("#txtPcPromiseDate@(itemName)").val(),
+                    "PcPromiseTime": $("#txtPcPromiseTime@(itemName)").val(),
+                    "CauseType": $("#cboCauseType@(itemName)").val(),
+                    "DepartmentId": $("#cboDepartmentId@(itemName)").val(),
+                    "SupervisorId": $("#cboSupervisorId@(itemName)").val(),
+                    "CauseDescription": $("#txtCauseDescription@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Query@(itemName)();
+                    QueryDeliverySchedule();
+                }
+            }
+        }
+
+        function Excel@(itemName)() {
+            let targetUrl = "@Url.Action("DeliveryFinalizeExcelDownload", "Delivery")";
+            let postData = {
+                "StartDate": $("#txtDoDateQ@(itemName)").val(),
+                "EndDate": $("#txtDoDateQ@(itemName)").val()
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+        
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

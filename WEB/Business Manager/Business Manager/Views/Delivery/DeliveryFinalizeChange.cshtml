@@ -1,0 +1,358 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DeliveryFinalizeChange";
+    string itemNameText = "出貨定版異動";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .customization .table {
+            border-collapse: collapse !important;
+        }
+
+        .customer-border td {
+            border-top: 5px solid #6d94d9 !important;
+        }
+
+        .customization .table.table-striped tbody tr:nth-of-type(odd) td:not(.col-sticky) {
+            background-color: transparent;
+        }
+
+        .popover-label {
+            font-size: 14px;
+            color: #53505F;
+            padding: 7px 15px;
+            text-align: left;
+        }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form autocomplete="off" id="queryForm">
+                    <fieldset>
+                        <div class="form-row align-items-center mb-2">
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtDoDateQ">出貨日期 <input type="checkbox" id="cbxUseDate" checked /></label>
+                                <input type="text" class="form-control" id="txtDoDateQ" name="txtDoDateQ" placeholder="請輸入出貨日期"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtShipmentCustomerQ">出貨客戶</label>
+                                <input type="text" class="form-control" id="txtShipmentCustomerQ" name="txtShipmentCustomerQ" placeholder="請輸入出貨客戶"
+                                       data-msg-extraRegex="請輸入出貨客戶" />
+                            </div>
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtMtlItemNoQ">品號</label>
+                                <input type="text" class="form-control" id="txtMtlItemNoQ" name="txtMtlItemNoQ" placeholder="請輸入品號"
+                                       data-msg-extraRegex="請輸入品號" />
+                            </div>
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtMtlItemNameQ">品名</label>
+                                <input type="text" class="form-control" id="txtMtlItemNameQ" name="txtMtlItemNameQ" placeholder="請輸入品名"
+                                       data-msg-extraRegex="請輸入品名" />
+                            </div>
+                            <div class="col-lg-2 col-3 mt-4">
+                                <button type="button" class="btn btn-primary" onclick="Query()"><i class="fas fa-search"></i>搜尋</button>
+                                <button type="button" class="btn btn-info" onclick="EditDate()"><i class="fas fa-clock"></i>交期異動</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+                <div class="table-custom customization">
+                    <table class="table table-bordered table-striped table-sticky" id="tblData">
+                        <thead>
+                            <tr>
+                                <th class="text-center checkbox-mode" scope="col" style="min-width: 100px;">
+                                    <label class="control control-solid control-solid-info control--checkbox" style="margin-bottom: 0px;">
+                                        全選 <input type="checkbox" id="cbxSelectAll" />
+                                        <span class="control__indicator"></span>
+                                    </label>
+                                </th>
+                                <th scope="col" style="min-width: 50px;">#</th>
+                                <th scope="col" style="min-width: 190px;">出貨單號</th>
+                                <th scope="col" style="min-width: 195px;">出貨時間</th>
+                                <th scope="col" style="min-width: 100px;">出貨客戶</th>
+                                <th scope="col" style="min-width: 200px;">品號</th>
+                                <th scope="col" style="min-width: 300px;">品名</th>
+                                <th scope="col" style="min-width: 140px;">正常品數量</th>
+                                <th scope="col" style="min-width: 130px;">贈品數量</th>
+                                <th scope="col" style="min-width: 130px;">備品數量</th>
+                                <th scope="col" style="min-width: 100px;">訂單欠數</th>
+                                <th scope="col" style="min-width: 150px;">出貨工程</th>
+                                <th scope="col" style="min-width: 150px;">訂單狀況</th>
+                                <th scope="col" style="min-width: 200px;">訂單單號</th>
+                                <th scope="col" style="min-width: 150px;">寄送方式</th>
+                                <th scope="col" style="min-width: 300px;">備註</th>
+                                <th class="text-center" scope="col" style="min-width: 100px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="page"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let apiPath = {
+            QueryType: "@Url.Action("GetType", "BasicInformation")",
+            QueryDepartment: "@Url.Action("GetDepartment", "BasicInformation")",
+            QueryUser: "@Url.Action("GetUser", "BasicInformation")",
+            Select: "@Url.Action("GetDeliveryFinalize", "Delivery")",
+            Update: "@Url.Action("UpdateLotDeliveryFinalize", "Delivery")",
+        };
+
+        $(document).ready(function () {
+            let currentDate = new Date();
+            Suites.DatePicker("txtDoDateQ", currentDate);
+
+            Query();
+
+            $("#queryForm").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query();
+                }
+            });
+
+            $("#cbxSelectAll").off("click").on("click", function () {
+                if ($("#cbxSelectAll").is(":checked")) {
+                    $("input[type='checkbox'][data-do-detail-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-do-detail-id]").not(":disabled").prop("checked", false);
+                }
+            });
+        });
+
+        function Query() {
+            objPage.pageIndex = 0;
+            InitData(objPage);
+
+            $("#cbxSelectAll").prop("checked", false);
+        }
+
+        function InitData(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let nextCustomer = "";
+            let currentCustomer = "";
+            let currentDateTime = "";
+            let styleIndex = 0;
+            let bgColor = ["#f5cdcd", "#ffe0c1", "#fff0a9", "#deebb1", "#c9dfce", "#d6edd6", "#c7e4ed", "#c7d1f3", "#e3c1f3", "#e1b9d1"];
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "StartDate": ($("#cbxUseDate").is(":checked") ? $("#txtDoDateQ").val() : ""),
+                "EndDate": ($("#cbxUseDate").is(":checked") ? $("#txtDoDateQ").val() : ""),
+                "ShipmentCustomer": $("#txtShipmentCustomerQ").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ").val(),
+                "MtlItemName": $("#txtMtlItemNameQ").val()
+            };
+            let data = DataAccess.Get(apiPath.Select, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        nextCustomer = item.CustomerShortName;
+
+                        nextDateTime = item.DoDate + ' ' + item.DoTime;
+
+                        if ((nextCustomer != currentCustomer && currentCustomer != "") || (nextDateTime != currentDateTime && currentDateTime != "")) {
+                            styleIndex++;
+                            if (styleIndex > 9) styleIndex = 0;
+                        }
+
+                        innerHtml += `${(nextCustomer != currentCustomer && currentCustomer != "") || (nextDateTime != currentDateTime && currentDateTime != "") ? `<tr class="customer-border" style="background: ${bgColor[styleIndex]} !important;">` : `<tr style="background: ${bgColor[styleIndex]} !important;">`}
+                                        <td class="text-center">
+                                          ${item.PickRegularQty == 0 && item.PickFreebieQty == 0 && item.PickSpareQty == 0 ?
+                                            `<label class="control control-solid control-solid-info control--checkbox">
+                                               <input type="checkbox" data-do-detail-id="${item.DoDetailId}" value="${item.DoDetailId}" />
+                                               <span class="control__indicator"></span>
+                                             </label>` : ``}
+                                        </td>
+                                        <td>${_row}</td>
+                                        <td>${item.DoErpFullNo}</td>
+                                        <td>
+                                            ${item.DoDate} ${item.DoTime} &nbsp
+                                            <a class="auth-date-log"href="javascript:EditDate(${item.SoDetailId}, ${item.DoDetailId});"><i class="fas fa-clock"></i>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CustomerName}" style="max-width: 120px;">${item.CustomerShortName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 250px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 300px;">${item.MtlItemName}</td>
+                                        <td>${item.PickRegularQty.toLocaleString('en')}/${item.RegularQty.toLocaleString('en')}</td>
+                                        <td>${item.PickFreebieQty.toLocaleString('en')}/${item.FreebieQty.toLocaleString('en')}</td>
+                                        <td>${item.PickSpareQty.toLocaleString('en')}/${item.SpareQty.toLocaleString('en')}</td>
+
+                                        <td>${(item.SoRegularQty - item.ExistPickQty).toLocaleString('en')}</td>
+                                        <td>${item.DeliveryProcessName}</td>
+                                        <td>${item.OrderSituation}</td>
+                                        <td>${item.SoErpFullNo} <code>(${item.SoSequence})</code></td>
+                                        <td>${item.DeliveryMethod}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PcDoDetailRemark}" style="max-width: 300px;">${item.PcDoDetailRemark}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link auth-delivery-finalize" href="javascript:Delete(${item.DoDetailId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+
+                        currentCustomer = item.CustomerShortName;
+
+                        currentDateTime = item.DoDate + ' ' + item.DoTime;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="17" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page", pageCount, objPage, InitData);
+        }
+
+        function EditDate() {
+            Swal.fire({
+                html: `
+                    <div class="card card-shadow">
+                        <div class="card-header">
+                            <h2 class="card-title" style="text-align: left;">修改排定交貨日</h2>
+                        </div>
+                        <div class="card-body">
+                            <form autocomplete="off" id="editForm">
+                                <fieldset>
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="txtPcPromiseDate">交貨時間 <span class="text-danger">*</span></label>
+                                                <div class="col-12">
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" id="txtPcPromiseDate" name="txtPcPromiseDate"
+                                                                readonly />
+                                                        <input type="text" class="form-control timedropper" id="txtPcPromiseTime" name="txtPcPromiseTime"
+                                                               data-msg-required="請輸入交貨時間" data-rule-required="true"
+                                                               data-msg-maxlength="必須少於 8 個字元" maxlength="8" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboCauseType">原因類別</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboCauseType" name="cboCauseType"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboDepartmentId">責任部門</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboDepartmentId" name="cboDepartmentId"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboSupervisorId">責任主管</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboSupervisorId" name="cboSupervisorId"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-12 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 form-label popover-label" for="txtCauseDescription">延遲原因</label>
+                                                <div class="col-12">
+                                                    <textarea class="form-control" id="txtCauseDescription" name="txtCauseDescription" placeholder="請輸入延遲原因"
+                                                              data-msg-maxlength="必須少於 255 個字元" maxlength="255" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-success text-right" onclick="SaveDate()"><i class="fas fa-save"></i>儲存</button>
+                                </fieldset>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: 900,
+            });
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtPcPromiseDate", currentDate);
+            Suites.TimePicker("txtPcPromiseTime", "00:00");
+
+            ComboBoxs.Default("#cboCauseType", apiPath.QueryType, { "TypeSchema": "Delivery.CauseType" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.Default("#cboDepartmentId", apiPath.QueryDepartment, { "Status": "A" }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+            ComboBoxs.Default("#cboSupervisorId", apiPath.QueryUser, { "Status": "A" }, "", "NA", "", "UserWithNo", "UserId");
+
+            $("#cboCauseType, #cboDepartmentId, #cboSupervisorId").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function SaveDate() {
+            if ($("#editForm").valid()) {
+                let postData = {
+                    DoDetails: $("input[type='checkbox'][data-do-detail-id]:checked").toArray().map(item => item.value).join(),
+                    PcPromiseDate: $("#txtPcPromiseDate").val(),
+                    PcPromiseTime: $("#txtPcPromiseTime").val(),
+                    CauseType: $("#cboCauseType").val(),
+                    DepartmentId: $("#cboDepartmentId").val(),
+                    SupervisorId: $("#cboSupervisorId").val(),
+                    CauseDescription: $("#txtCauseDescription").val()
+                };
+
+                let result = DataAccess.Update(apiPath.Update, postData, false, true);
+
+                if (result) {
+                    Swal.close();
+                    Query();
+                }
+            }
+        }
+    </script>
+)

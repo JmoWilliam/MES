@@ -1,0 +1,267 @@
+﻿
+
+@using Business_Manager.Helpers
+@{
+    string itemName = "InventoryAgingReport";
+    string itemNameText = "存貨庫齡分析表";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                       placeholder="請輸入品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">分析方式</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboChangeTypeQ@(itemName)">
+                                    <option value="Y">品號+庫存</option>
+                                    <option value="N">品號(不含轉撥)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">資料日期</label>
+                            <div class="col-12">
+                                <input type="date" class="form-control" id="txtDataDateQ@(itemName)" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn file-excel auth-read" href="javascript:Excel@(itemName)();"><i class="fas fa-file-excel"></i>匯出</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 45px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">舊品號</th>
+                                        <th scope="col" style="min-width: 150px;">舊品名</th>
+                                        <th scope="col" style="min-width: 100px;">舊規格</th>
+                                        <th scope="col" style="min-width: 150px;">新品號</th>
+                                        <th scope="col" style="min-width: 150px;">新品名</th>
+                                        <th scope="col" style="min-width: 100px;">新規格</th>
+                                        <th scope="col" style="min-width: 70px;">單位</th>
+                                        <th scope="col" style="min-width: 100px;">庫別 </th>
+                                        <th scope="col" style="min-width: 200px;">30天以內庫存數量</th>
+                                        <th scope="col" style="min-width: 200px; ">30天以內庫存金額</th>
+                                        <th scope="col" style="min-width: 200px; ">30~90天庫存數量</th>
+                                        <th scope="col" style="min-width: 200px; ">30~90天庫存金額</th>
+                                        <th scope="col" style="min-width: 200px; ">90~180天庫存數量</th>
+                                        <th scope="col" style="min-width: 200px; ">90~180天庫存金額</th>
+                                        <th scope="col" style="min-width: 200px; ">180~270天庫存數量</th>
+                                        <th scope="col" style="min-width: 200px; ">180~270天庫存金額</th>
+                                        <th scope="col" style="min-width: 200px; ">270~365天庫存數量</th>
+                                        <th scope="col" style="min-width: 200px; ">270~365天庫存金額</th>
+                                        <th scope="col" style="min-width: 200px; ">365天以上庫存數量</th>
+                                        <th scope="col" style="min-width: 200px; ">365天以上庫存金額</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 90);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+            Query@(itemName)();
+
+            if (!isMobile) {
+                $("#cboUserNoQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboUserNoQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": "@Session["CompanyId"]"}, "", "NA", "", "UserWithNo", "UserNo");
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        })
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetInventoryAgingReport", "ScmInventory")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "ChangeType": $("#cboChangeTypeQ@(itemName)").val(),
+                "DataDate": $("#txtDataDateQ@(itemName)").val().split("-").join(""),
+            };
+
+            let resule = DataAccess.Get(targetUrl, postData, false);
+
+            if (resule.status == "success") {
+                pageCount = parseInt(resule.TotalCount) > 0 ? parseInt(resule.TotalCount) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(resule.data, function (i, item) {
+                        defaultFileId@(itemName) = item.DefaultFileId;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LA001}">${item.LA001}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MB002}">${item.MB002}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MB003}">${item.MB003}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.NewMtlItemNo}">${item.NewMtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.NewMtlItemName}">${item.NewMtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.NewMtlItemSpec}">${item.NewMtlItemSpec}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MB004}">${item.MB004}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.LA009 != null ? item.LA009 : ``}-${item.MC002 != null ? item.MC002 : ``}" >${item.LA009 != null ? item.LA009 : ``}-${item.MC002 != null ? item.MC002 : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_QTY_30D}" >${item.INV_QTY_30D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_AMT_30D}" >${item.INV_AMT_30D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_QTY_30_90D}" >${item.INV_QTY_30_90D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_AMT_30_90D}" >${item.INV_AMT_30_90D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_QTY_90_180D}" >${item.INV_QTY_90_180D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_AMT_90_180D}" >${item.INV_AMT_90_180D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_QTY_180_270D}" >${item.INV_QTY_180_270D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_AMT_180_270D}" >${item.INV_AMT_180_270D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_QTY_270_365D}" >${item.INV_QTY_270_365D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_AMT_270_365D}" >${item.INV_AMT_270_365D}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_QTY_365D_PLUS}" >${item.INV_QTY_365D_PLUS}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.INV_AMT_365D_PLUS}" >${item.INV_AMT_365D_PLUS}</td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="30" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(resule.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Excel@(itemName)() {
+            let targetUrl = "@Url.Action("InventoryAgingReportExcelDownload", "ScmInventory")";
+            let postData = {
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "ChangeType": $("#cboChangeTypeQ@(itemName)").val(),
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+</script>
+)

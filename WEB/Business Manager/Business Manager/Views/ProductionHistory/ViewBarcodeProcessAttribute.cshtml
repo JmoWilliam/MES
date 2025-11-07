@@ -1,0 +1,266 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewBarcodeProcessAttribute";
+    string itemNameText = "設定製令屬性資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .modal-body {
+             max-height: 50vh;
+             overflow-y: auto;
+         }
+
+        .page-style {
+            padding: 5px;
+            max-width: 150px;
+            min-width: 75px;
+            margin-bottom: 15px;
+        }
+
+        .input-header {
+            display: flex;
+        }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">製令: <span class="sub-text" id="desWoErpFullNo@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="input-header">
+                    <div style="margin-right: 15px;">
+                        <i class="far fa-sliders-h"></i> <span style="font-weight: 600;">屬性名稱</span>
+                        <select id="cboItemNo@(itemName)" class="page-style"></select>
+                    </div>
+                    <div style="margin-right: 5px;">
+                        <i class="fas fa-file-edit"></i> <span style="font-weight: 600;">屬性值</span>
+                        <input type="text" id="txtItemValue@(itemName)"/>
+                    </div>
+                    <div>
+                        <input type="date" id="txtDateCode@(itemName)" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center active-content" scope="col" style="max-width: 50px;">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                選取
+                                                <input type="checkbox" id="cbxBarcodeNoAll@(itemName)" name="cbxBarcodeNoAll@(itemName)" checked>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </th>
+                                        <th scope="col" style="min-width: 110px;">條碼代碼</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+    let objForm@(itemName) = "#queryForm@(itemName)";
+    let moProcessId@(itemName);
+    let source@(itemName);
+    let BarcodeProcessAttributeJson =
+    {
+        BarcodeProcessAttributeInfo: []
+    };
+
+    function Pop@(itemName)(moProcessId, woErpFullNo, source) {
+        moProcessId@(itemName) = moProcessId;
+        source@(itemName) = source;
+        setTimeout(function () {
+            $("#txtItemValue@(itemName)").focus();
+        },500);
+        $("#desWoErpFullNo@(itemName)").html(woErpFullNo);
+
+        $("#txtItemValue@(itemName)").val("");
+        $("#txtDatecode@(itemName)").val("");
+
+        Query@(itemName)();
+
+        $("#modal@(itemName)").modal({
+            backdrop: "static",
+            keyboard: false,
+            show: true
+        });
+
+        $("#txtDateCode@(itemName)").change(function () {
+            setTimeout(function () {
+                $("#txtItemValue@(itemName)").focus();
+            }, 250);
+        });
+    }
+
+    function Query@(itemName)() {
+        InitData@(itemName)();
+    }
+
+    function InitData@(itemName)() {
+        let targetUrl = "@Url.Action("GetMoProcessItem", "ProductionHistory")";
+
+        let postData = {
+            "MoProcessId": moProcessId@(itemName)
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            if (data.result.length > 0) {
+                $("#cboItemNo@(itemName)").empty();
+                $.each(data.result, function (i, item) {
+                    $("#cboItemNo@(itemName)").append(`<option data-chk-unique="${item.ChkUnique}" value="${item.ItemNo}">${item.ItemNo}-${item.TypeName}</option>`);
+                });
+                GetBarcodeProcessAttribute@(itemName)();
+            }
+        }
+
+        $("#cbxBarcodeNoAll@(itemName)").click(function () {
+            if ($(this).prop("checked")) {
+                $("input[type='checkbox'][data-type='BarcodeNo']").prop("checked", true);
+            }
+            else {
+                $("input[type='checkbox'][data-type='BarcodeNo']").prop("checked", false);
+            }
+        });
+    }
+
+    $("#cboItemNo@(itemName)").change(function () {
+        GetBarcodeProcessAttribute@(itemName)();
+        setTimeout(function () {
+            $("#txtItemValue@(itemName)").focus();
+        }, 250);
+    });
+
+    function GetBarcodeProcessAttribute@(itemName)() {
+        let targetUrl = "@Url.Action("GetBarcodeProcessAttribute", "ProductionHistory")";
+
+        let postData = {
+            "MoProcessId": moProcessId@(itemName),
+            "ItemNo": $("#cboItemNo@(itemName)").val()
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        let innerHtml = '';
+        let checkBool = false;
+        let barcodeList = [];
+        if (data.status == "success") {
+            if (data.result.length > 0) {
+                $.each(data.result, function (i, item) {
+                    if ((item.ItemValue == null || item.CheckItemValue == null) && barcodeList.indexOf(item.BarcodeNo) == -1) {
+                        barcodeList.push(item.BarcodeNo);
+                        checkBool = true;
+                        innerHtml += `<tr>
+                                        <td class="text-center active-content" scope="col" style="max-width: 50px;">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-type="BarcodeNo" id="cbxBarcodeNo@(itemName)${item.BarcodeNo}" name="cbxBarcodeNo@(itemName)" data-barcode-process-id="${item.BarcodeProcessId}" value="${item.BarcodeNo}" checked>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                        <td>
+                                            ${item.BarcodeNo}<br>
+                                            ${JudgeTrayBarcode@(itemName)(`${item.TrayBarcode}`, `${item.TrayNo}`)}
+                                        </td>
+                                      </tr>`;
+                    }
+
+                    function JudgeTrayBarcode@(itemName)(trayBarcode, trayNo) {
+                        let innerHtml = '';
+                        if (trayBarcode == "Y") {
+                            innerHtml += `<code>(${trayNo})</code>`;
+                        }
+                        return innerHtml;
+                    }
+                });
+            }
+
+            if (checkBool == false) {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="2" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                              </tr>`;
+            }
+        }
+
+        $("#tblData@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+
+        $("#cbxBarcodeNoAll@(itemName)").prop("checked", true);
+
+        return checkBool;
+    }
+
+    $("#txtItemValue@(itemName)").keydown(function (event) {
+        if (event.keyCode == 13) {
+            BarcodeProcessAttributeJson.BarcodeProcessAttributeInfo = [];
+            if ($("#txtItemValue@(itemName)").val() == "") {
+                alert("屬性值不可為空", "alert", 0);
+            } else {
+                $.each($("input[type='checkbox'][data-type='BarcodeNo']:checked"), function (i) {
+                    let barcodeProcessId = $(this).data("barcode-process-id");
+                    var InputBarcodeProcessAttributeInfo =
+                    {
+                        "BarcodeProcessId": barcodeProcessId,
+                        "ItemNo": $("#cboItemNo@(itemName)").val(),
+                        "ItemValue": $("#txtItemValue@(itemName)").val(),
+                        "ChkUnique": $("#cboItemNo@(itemName)").find(":selected").data("chk-unique"),
+                        "DateCode": $("#txtDateCode@(itemName)").val()
+                    };
+
+                    BarcodeProcessAttributeJson.BarcodeProcessAttributeInfo.push(InputBarcodeProcessAttributeInfo);
+                });
+
+                let targetUrl = "@Url.Action("AddBarcodeProcessAttribute", "ProductionHistory")";
+                let postData = {
+                    "BarcodeProcessAttributeData": JSON.stringify(BarcodeProcessAttributeJson)
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                if (result) {
+                    //Query@(itemName)();
+                    let checkbool = GetBarcodeProcessAttribute@(itemName)();
+                    if (checkbool == false) {
+                        Close@(itemName)();
+                        setTimeout(function () {
+                            $("#txtBarcodeNoMesScanningInterface").focus();
+                        }, 500);
+                    }
+                    ReturnMesScanningInterface();
+
+                    if (source@(itemName) == "CreateNewBarcode") {
+                        ReturnViewCreateNewBarcode();
+                    }
+                    $("#txtItemValue@(itemName)").val("");
+                }
+            }
+        }
+    });
+
+    function Close@(itemName)() {
+        $("#modal@(itemName)").modal('hide');
+    }
+</script>
+            )

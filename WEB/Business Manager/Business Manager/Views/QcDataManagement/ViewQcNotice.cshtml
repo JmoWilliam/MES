@@ -1,0 +1,250 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewQcNotice";
+    string itemNameText = "查看量測通知單資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtQcNoticeNoQ@(itemName)" name="txtQcNoticeNoQ@(itemName)"
+                                               placeholder="請輸入通知單號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)"
+                                               placeholder="請輸入製令" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入品號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                               placeholder="請輸入品名" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboQcNoticeType@(itemName)">
+                                            <option value="">請選擇量測類型</option>
+                                            <option value="IPQC">工程檢</option>
+                                            <option value="OQC">出貨檢</option>
+                                            <option value="TVPQC">試產檢</option>
+                                            <option value="TQC">全吋檢</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">通知單號</th>
+                                        <th scope="col">檢驗類別</th>
+                                        <th scope="col" style="max-width: 200px;">品號</th>
+                                        <th scope="col" style="max-width: 200px;">品名</th>
+                                        <th scope="col" style="max-width: 200px;">製令</th>
+                                        <th scope="col">送檢數量</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let targetSelector@(itemName);
+        let QcNoticeId@(itemName);
+        let QcNoticeNo@(itemName);
+        let QcNoticeType@(itemName);
+        let QcNoticeQty@(itemName);
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            QcNoticeId@(itemName) = config.objectQcNoticeId;
+            QcNoticeNo@(itemName) = config.objectQcNoticeNo;
+            QcNoticeType@(itemName) = config.objectQcNoticeType;
+            QcNoticeQty@(itemName) = config.objectQcNoticeQty;
+
+            if (!isMobile) {
+                $("#cboDepartmentIdQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetQcNotice", "QcItemSetting")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 200px;">${_row}</td>
+                                        <td style="max-width: 200px;">${item.QcNoticeNo}</td>
+                                        ${JudgeQcType@(itemName)(`${item.QcNoticeType}`)}
+                                        <td style="max-width: 200px; min-width: 150px;"">${item.MtlItemNo != null ? item.MtlItemNo : `${item.WoMtlItemNo != null ? item.WoMtlItemNo : ``}`}</td>
+                                        <td style="max-width: 200px; min-width: 150px;">${item.MtlItemName != null ? item.MtlItemName : `${item.WoMtlItemName != null ? item.WoMtlItemName : ``}`}</td>
+                                        <td style="max-width: 200px; min-width: 150px;">${item.WoErpPrefix != null ? `${item.WoErpPrefix}-${item.WoErpNo}` : ``}</td>
+                                        <td style="max-width: 200px; min-width: 115px;">${item.QcNoticeQty}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-qc-notice-no="${item.QcNoticeNo}" value="${item.QcNoticeId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" id="txtQcNoticeNo@(itemName)" data-qc-notice-id="${item.QcNoticeId}" value="${item.QcNoticeNo}"/>
+                                          <input type="hidden" id="txtQcNoticeType@(itemName)" data-qc-notice-id="${item.QcNoticeId}" value="${item.QcNoticeType}"/>
+                                          <input type="hidden" id="txtQcNoticeQty@(itemName)" data-qc-notice-id="${item.QcNoticeId}" value="${item.QcNoticeQty}"/>
+                                        </td>
+                                      </tr>`;
+
+                        function JudgeQcType@(itemName)(qcNoticeType) {
+                            let innerHtml = '';
+                            if (qcNoticeType == "IPQC") {
+                                innerHtml += `<td style="max-width: 200px; min-width: 100px;">工程檢<code>(IPQC)</code></td>`;
+                            }
+                            else if (qcNoticeType == "OQC") {
+                                innerHtml += `<td style="max-width: 200px; min-width: 100px;">出貨檢<code>(OQC)</code></td>`;
+                            }
+                            else if (qcNoticeType == "PVTQC") {
+                                innerHtml += `<td style="max-width: 200px; min-width: 100px;">試產檢<code>(TVPQC)</code></td>`;
+                            }
+                            else if (qcNoticeType == "TQC") {
+                                innerHtml += `<td style="max-width: 200px; min-width: 100px;">全吋檢<code>(TQC)</code></td>`;
+                            }
+                            return innerHtml;
+                        }
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-qc-notice-id]:checked") {
+                    let qcNoticeId = $(this).val();
+
+                    if (qcNoticeId) {
+                        let qcNoticeNo = $(`input[id="txtQcNoticeNo@(itemName)"][data-qc-notice-id="${qcNoticeId}"]`).val();
+                        let qcNoticeType = $(`input[id="txtQcNoticeType@(itemName)"][data-qc-notice-id="${qcNoticeId}"]`).val();
+                        let qcNoticeQty = $(`input[id="txtQcNoticeQty@(itemName)"][data-qc-notice-id="${qcNoticeId}"]`).val();
+
+                        if (QcNoticeId@(itemName)) ElementSetValue(QcNoticeId@(itemName), qcNoticeId, "change");
+                        if (QcNoticeNo@(itemName)) ElementSetValue(QcNoticeNo@(itemName), qcNoticeNo, "change");
+                        if (QcNoticeType@(itemName)) ElementSetValue(QcNoticeType@(itemName), qcNoticeType, "change");
+                        if (QcNoticeQty@(itemName)) ElementSetValue(QcNoticeQty@(itemName), qcNoticeQty, "change");
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+                                )

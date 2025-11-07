@@ -1,0 +1,272 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRoutingItemProcess";
+    string itemNameText = "查看途程品號流程卡資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .setting-icon {
+             display: flex;
+             justify-content: center;
+             align-content: center;
+             flex-wrap: wrap;
+         }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl" >
+        <div class="modal-content" style="width:95vw;left: 50%; transform: translate(-50%, 0%);">
+            <div class="modal-header">
+                <h5 class="modal-title">流程卡細節</h5>
+            </div>
+
+            <!--內容物-->
+
+            <div class="modal-body" style="height:65vh;overflow-y:auto;padding-top:0;">
+                <div class="header-title" style="">
+                    <span class="text-center" style="width:5%;color: #959595;font-weight: 700;">製程</span>
+                    <span class="text-center" style="width:15%;">製程說明</span>
+                    <span class="text-center" style="width:15%;">加工備註</span>
+                    <span class="text-center" style="width:15%;">刻字規則</span>
+                    <span class="text-center" style="width:12.5%;">標準工時</span>
+                    <span class="text-center" style="width:12.5%;">當站完工至下站</br>移轉時間</span>
+                    <span class="text-center" style="width:12.5%;">標準工時</br>上下公差秒</span>
+                    <span class="text-center" style="width:12.5%;">當站最小前置秒</span>
+                </div>
+                <div id="listData@(itemName)"></div>
+
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <div class="card card-shadow mb-4">
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="table-custom">
+                                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col" style="max-width: 75px;">#</th>
+                                                        <th scope="col" style="max-width: 200px;">屬性代碼</th>
+                                                        <th scope="col" style="max-width: 200px;">屬性名稱</th>
+                                                        <th scope="col" style="max-width: 200px;">屬性描述</th>
+                                                        <th class="text-center" scope="col" style="max-width: 250px;">操作</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody></tbody>
+                                            </table>
+                                        </div>
+                                        <div class="pagination" id="page@(itemName)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewRipQcItem")
+
+
+@Html.Resource("js",
+    @<script>
+        let routingItemId@(itemName);
+        let routingItemProcessJson@(itemName) =
+        {
+            routingItemProcessInfo: []
+        };
+        function Pop@(itemName)(routingItemId) {
+            routingItemId@(itemName) = routingItemId;
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetRoutingItemProcess", "Routing")";
+            let postData = {
+                "OrderBy": "",
+                "RoutingItemId": routingItemId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `
+                                    <div class="flow-card" style="">
+                                        <div class="row" style="font-weight:600;padding:15px;">${item.ProcessAlias}<br />
+                                        `;
+                                        if (item.ProcessCheckStatus == "Y") {
+                                            innerHtml += ` 
+                                            <i class="fas fa-vote-yea" style="color: #03FC52;">需工程檢</i><br />`;
+                                        } 
+                        innerHtml +=` 
+                                        <!--量測項目-->
+                                        <div class="" style="padding-top: 30px;">
+                                            <a class="active-link auth-routingqcItem" href="javascript:PopViewRoutingItemQcItem('${item.RoutingItemId}', '${item.ItemProcessId}', '${item.ProcessAlias}');">
+                                                <i class="fas fa-file-excel"> 量測項目</i>
+                                            </a>
+                                         </div>
+                                     </div>
+                                        <div style="width:15%;padding:5px;">
+                                            <textarea data-type="RoutingItemProcess" data-item-process-id="${item.ItemProcessId}" data-routing-item-id="${item.RoutingItemId}" class="form-control" id="txtRoutingItemProcessDesc${item.ItemProcessId}@(itemName)" name="txtRoutingItemProcessDesc@(itemName)" rows="3">${item.RoutingItemProcessDesc}</textarea>
+                                        </div>
+                                        <div style="width:15%;padding:5px;">
+                                            <textarea data-item-process-id="${item.ItemProcessId}" id="txt${item.ItemProcessId}Remark@(itemName)" class="form-control" name="comments" rows="3" cols="50" wrap="soft">${item.Remark}</textarea>
+                                        </div>
+                                        <div style="width:15%;padding:5px;">
+                                            <textarea data-item-process-id="${item.ItemProcessId}" id="txt${item.ItemProcessId}AttrSetting@(itemName)" class="form-control" name="comments" rows="3" cols="50" wrap="soft">${item.AttrSetting}</textarea>
+                                        </div>
+                                        <div style="width:12.5%;padding:5px;">
+                                            <input id="txtCycleTime@(itemName)" data-item-process-id="${item.ItemProcessId}" type="number" class="form-control" value="${item.CycleTime}" />
+                                        </div>
+                                        <div style="width:12.5%;padding:5px;">
+                                            <input id="txtMoveTime@(itemName)" data-item-process-id="${item.ItemProcessId}" type="number" class="form-control" value="${item.MoveTime}" />
+                                        </div>
+                                        <div style="width:12.5%;padding:5px;">
+                                            <input id="txtProcessingTime@(itemName)" data-item-process-id="${item.ItemProcessId}" type="number" class="form-control" value="${item.ProcessingTime}" />
+                                        </div>
+                                        <div style="width:12.5%;padding:5px;">
+                                            <input id="txtWatingTime@(itemName)" data-item-process-id="${item.ItemProcessId}" type="number" class="form-control" value="${item.WatingTime}" />
+                                        </div>
+                                      </div>`;
+                    });
+                }
+                $("#listData@(itemName)").html(innerHtml);
+            }
+        }
+
+        function Save@(itemName)() {
+            //檢核此途程品號是否有【刻字站】
+            //有，提醒製程單位要維護【刻字規則】
+            //沒有，直接修正
+            let targetUrl = "@Url.Action("GetRoutingProcessItemList", "Routing")";
+            let postData = {            
+                "RoutingId": routingIdRoutingProcess,
+                "ProcessIdList": "11" //預設刻字站
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                var pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    swal.fire({
+                        titleText: "請確認此途程品號是否已設定過屬性【刻字】",
+                        text: "此動作無法復原，請確認是否要執行?",
+                        icon: "question",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            routingItemProcessJson@(itemName).routingItemProcessInfo = [];
+                            $("textarea[data-type='RoutingItemProcess']").each(function (index) {
+                                let thisId = this.id;
+                                let itemProcessId = $(`#${thisId}`).data("item-process-id");
+                                let routingItemId = $(`#${thisId}`).data("routing-item-id");
+                                let cycleTime = $("input[id='txtCycleTime@(itemName)'][data-item-process-id='" + itemProcessId + "']").val();
+                                let moveTime = $("input[id='txtMoveTime@(itemName)'][data-item-process-id='" + itemProcessId + "']").val();
+
+                                let processingTime = $("input[id='txtProcessingTime@(itemName)'][data-item-process-id='" + itemProcessId + "']").val();
+                                let watingTime = $("input[id='txtWatingTime@(itemName)'][data-item-process-id='" + itemProcessId + "']").val();
+
+                                let inputData =
+                                {
+                                    "ItemProcessId": itemProcessId,
+                                    "RoutingItemId": routingItemId,
+                                    "RoutingItemProcessDesc": $(`#${thisId}`).val(),
+                                    "Remark": $(`#txt${itemProcessId}Remark@(itemName)`).val(),
+                                    "AttrSetting": $(`#txt${itemProcessId}AttrSetting@(itemName)`).val(),
+                                    "CycleTime": cycleTime,
+                                    "MoveTime": moveTime,
+                                    "ProcessingTime": processingTime,
+                                    "WatingTime": watingTime
+                                }
+                                routingItemProcessJson@(itemName).routingItemProcessInfo.push(inputData);
+                            });
+                        
+                            let targetUrl = "@Url.Action("UpdateRoutingItemProcess", "Routing")";
+                            let postData = {
+                                "RoutingItemProcessData": JSON.stringify(routingItemProcessJson@(itemName))
+                            };
+                        
+                            let result = DataAccess.Update(targetUrl, postData, false, true);
+                            if (result) {
+                                Return@(itemName)();
+                                Close@(itemName)();
+                            }
+                        }
+                    });
+                } else {
+                    routingItemProcessJson@(itemName).routingItemProcessInfo = [];
+                    $("textarea[data-type='RoutingItemProcess']").each(function (index) {
+                        let thisId = this.id;
+                        let itemProcessId = $(`#${thisId}`).data("item-process-id");
+                        let routingItemId = $(`#${thisId}`).data("routing-item-id");
+                        let cycleTime = $("input[id='txtCycleTime@(itemName)'][data-item-process-id='" + itemProcessId + "']").val();
+                        let moveTime = $("input[id='txtMoveTime@(itemName)'][data-item-process-id='" + itemProcessId + "']").val();
+
+                        let processingTime = $("input[id='txtProcessingTime@(itemName)'][data-item-process-id='" + itemProcessId + "']").val();
+                        let watingTime = $("input[id='txtWatingTime@(itemName)'][data-item-process-id='" + itemProcessId + "']").val();
+
+                    
+                        let inputData =
+                        {
+                            "ItemProcessId": itemProcessId,
+                            "RoutingItemId": routingItemId,
+                            "RoutingItemProcessDesc": $(`#${thisId}`).val(),
+                            "Remark": $(`#txt${itemProcessId}Remark@(itemName)`).val(),
+                            "AttrSetting": $(`#txt${itemProcessId}AttrSetting@(itemName)`).val(),
+                            "CycleTime": cycleTime,
+                            "MoveTime": moveTime,
+                            "ProcessingTime": processingTime,
+                            "WatingTime": watingTime
+                        }
+                        routingItemProcessJson@(itemName).routingItemProcessInfo.push(inputData);
+                    });
+                
+                    let targetUrl = "@Url.Action("UpdateRoutingItemProcess", "Routing")";
+                    let postData = {
+                        "RoutingItemProcessData": JSON.stringify(routingItemProcessJson@(itemName))
+                    };
+                
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+                    if (result) {
+                        Return@(itemName)();
+                        Close@(itemName)();
+                    }
+                }                      
+            }
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName), .list-mode, .header-title", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

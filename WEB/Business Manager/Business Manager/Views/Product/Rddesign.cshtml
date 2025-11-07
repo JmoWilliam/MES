@@ -1,0 +1,339 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "RdDesign";
+    string itemNameText = "研發設計圖";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="title-row">
+                    <h5 class="fw-600">@(itemNameText)</h5>
+                    <a class="btn btn-info auth-design" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">客戶品號</th>
+                                        <th scope="col" style="min-width: 150px;">客戶版次/系統版次</th>
+                                        <th scope="col" style="min-width: 200px;">客戶圖號</th>
+                                        <th scope="col" style="min-width: 150px;">研發版次/系統版次</th>
+                                        <th scope="col" style="min-width: 150px;">2D研發設計圖</th>
+                                        <th scope="col" style="min-width: 200px;">2D-PDF研發設計圖</th>
+                                        <th scope="col" style="min-width: 150px;">變更原因</th>
+                                        <th scope="col" style="min-width: 150px;">出圖日期</th>
+                                        <th class="text-center" scope="col" style="min-width: 150px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="form-label col-12">@(itemNameText)<span class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <input type="hidden" id="txtDesignId@(itemName)" />
+                                <div class="btn-group">
+                                    <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                    <a class="btn btn-outline-danger pop-clear" id="clearBtn@(itemName)" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                </div>
+                                <dl class="help-block">
+                                    <dt>客戶品號</dt>
+                                    <dd id="desCustomerMtlItemNo@(itemName)"></dd>
+                                    <dt>客戶圖號</dt>
+                                    <dd id="desCustomerDwgNo@(itemName)"></dd>
+                                    <dt>客戶版次</dt>
+                                    <dd id="desEdition@(itemName)"></dd>
+                                    <dt>系統版次</dt>
+                                    <dd id="desVersion@(itemName)"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Expand@(itemName)() {
+            if (parseInt($("#MtlItemId").val()) > 0) {
+                Return@(itemName)();
+            } else {
+                alert("請先儲存品號", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetRdDesign", "Product")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemId": $("#MtlItemId").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        let RdDesignRow = 0;
+                        let RdDesign;
+                        if (item.RdDesignControl) {
+                            RdDesign = JSON.parse(item.RdDesignControl);
+                            RdDesignRow = RdDesign.data.length;
+                        }
+
+                        innerHtml += `<tr>
+                                        <td ${(RdDesignRow > 0 ? `rowspan="${RdDesignRow}"` : ``)}>${_row}</td>
+                                        <td ${(RdDesignRow > 0 ? `rowspan="${RdDesignRow}"` : ``)} class="ellipsis" data-toggle="tooltip" title="${item.CustomerMtlItemNo}" style="max-width: 200px;">${item.CustomerMtlItemNo}</td>
+                                        <td ${(RdDesignRow > 0 ? `rowspan="${RdDesignRow}"` : ``)}>${item.CustCadEdition} / ${item.CustCadVersion}</td>
+                                        <td ${(RdDesignRow > 0 ? `rowspan="${RdDesignRow}"` : ``)} class="ellipsis" data-toggle="tooltip" title="${item.CustomerDwgNo}" style="max-width: 200px;">${item.CustomerDwgNo}</td>
+                                        ${RdDesignRow > 0 ? `<td>${RdDesign.data[0].RdDesignEdition} / ${RdDesign.data[0].RdDesignVersion}</td>`
+                                                          : `<td ${(RdDesignRow > 1 ? `rowspan="${RdDesignRow}"` : ``)}></td>`}
+                                        ${RdDesignRow > 0 ? `${JudgeCad2DFileAbsolutePath@(itemName)(RdDesign.data[0].Cad2DFileAbsolutePath, RdDesign.data[0].Cad2DFile, RdDesign.data[0].Cad2DFileName, RdDesign.data[0].Cad2DFileExtension)}`
+                                                          : `<td ${(RdDesignRow > 1 ? `rowspan="${RdDesignRow}"` : ``)}></td>`}
+                                        ${RdDesignRow > 0 ? `${JudgePdf2DFileAbsolutePath@(itemName)(RdDesign.data[0].Pdf2DFileAbsolutePath, RdDesign.data[0].Pdf2DFile, RdDesign.data[0].Pdf2DFileName, RdDesign.data[0].Pdf2DFileExtension)}`
+                                                          : `<td ${(RdDesignRow > 1 ? `rowspan="${RdDesignRow}"` : ``)}></td>`}
+                                        ${RdDesignRow > 0 ? `<td>${RdDesign.data[0].Cause}</td>`
+                                                          : `<td ${(RdDesignRow > 1 ? `rowspan="${RdDesignRow}"` : ``)}></td>`}
+                                        ${RdDesignRow > 0 ? `<td>${RdDesign.data[0].DesignDate}</td>`
+                                                          : `<td ${(RdDesignRow > 1 ? `rowspan="${RdDesignRow}"` : ``)}></td>`}
+                                        <td ${(RdDesignRow > 0 ? `rowspan="${RdDesignRow}"` : ``)} class="text-center active-content">
+                                          <a class="active-link auth-design-delete" href="javascript:Delete@(itemName)(${item.DesignId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>
+                                      ${RdDesign@(itemName)(item.RdDesignControl)}`;
+
+                        function JudgeCad2DFileAbsolutePath@(itemName)(cad2DFileAbsolutePath, cad2DFile, cad2DFileName, cad2DFileExtension) {
+                            let innerHtml = '';
+                            if (typeof (cad2DFileAbsolutePath) != "undefined") {
+                                let fileFullNameList = cad2DFileAbsolutePath.split('\\');
+                                let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Drawing/GetCadFile?FilePath=${cad2DFileAbsolutePath}"><i class="fas fa-download"></i></a>
+                                                ${fileFullName}
+                                              </td>`;
+                            }
+                            else if (typeof (cad2DFile) != "undefined") {
+                                innerHtml += JudgeCad2DFile@(itemName)(cad2DFile, cad2DFileName, cad2DFileExtension);
+                            }
+                            else {
+                                innerHtml += `<td></td>`;
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function JudgePdf2DFileAbsolutePath@(itemName)(pdf2DFileAbsolutePath, pdf2DFile, pdf2DFileName, pdf2DFileExtension) {
+                            let innerHtml = '';
+                            if (typeof (pdf2DFileAbsolutePath) != "undefined") {
+                                let fileFullNameList = pdf2DFileAbsolutePath.split('\\');
+                                let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Drawing/GetCadFile?FilePath=${pdf2DFileAbsolutePath}"><i class="fas fa-download"></i></a>
+                                                ${fileFullName}
+                                              </td>`;
+                            }
+                            else if (typeof (pdf2DFile) != "undefined") {
+                                innerHtml += JudgePdf2DFile@(itemName)(pdf2DFile, pdf2DFileName, pdf2DFileExtension);
+                            }
+                            else {
+                                innerHtml += `<td></td>`;
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function JudgeCad2DFile@(itemName)(cad2DFile, cad2DFileName, cad2DFileExtension) {
+                            let innerHtml = '';
+                            if (cad2DFile != "null") {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${cad2DFileName}${cad2DFileExtension}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Web/GetFile?fileId=${cad2DFile}"><i class="fas fa-download"></i></a>
+                                                ${cad2DFileName}${cad2DFileExtension}
+                                              </td>`;
+                            }
+                            else {
+                                innerHtml += `<td></td>`;
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function JudgePdf2DFile@(itemName)(pdf2DFile, pdf2DFileName, pdf2DFileExtension) {
+                            let innerHtml = '';
+                            if (pdf2DFile != "undefined") {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${pdf2DFileName}${pdf2DFileExtension}" style="max-width: 250px;">
+                                                <a class="active-link mr-1" href="/Web/GetFile?fileId=${pdf2DFile}"><i class="fas fa-download"></i></a>
+                                                ${pdf2DFileName}${pdf2DFileExtension}
+                                              </td>`;
+                            }
+                            else {
+                                innerHtml += `<td></td>`;
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function RdDesign@(itemName)(source) {
+                            let html = '';
+
+                            if (source) {
+                                let json = JSON.parse(source);
+
+                                for (let x = 1; x < json.data.length; x++) {
+                                    html += `<tr>
+                                               <td>${json.data[x].RdDesignEdition} / ${json.data[x].RdDesignVersion}</td>
+                                               ${JudgeCad2DFileAbsolutePath@(itemName)(json.data[x].Cad2DFileAbsolutePath, json.data[x].Cad2DFile, json.data[x].Cad2DFileName, json.data[x].Cad2DFileExtension)}
+                                               ${JudgePdf2DFileAbsolutePath@(itemName)(json.data[x].Pdf2DFileAbsolutePath, json.data[x].Pdf2DFile, json.data[x].Pdf2DFileName, json.data[x].Pdf2DFileExtension)}
+                                               <td>${json.data[x].Cause}</td>
+                                               <td>${json.data[x].DesignDate}</td>
+                                             </tr>`;
+                                }
+                            }
+
+                            return html;
+                        }
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)() {
+            $("#clearBtn@(itemName)").click();
+
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            let popConfig = {
+                targetSelector: "#txtDesignId@(itemName)",
+                popFunction: "PopViewRdDesign",
+                objectDesignId: "#txtDesignId@(itemName)",
+                objectCustomerMtlItemNo: "#desCustomerMtlItemNo@(itemName)",
+                objectCustomerDwgNo: "#desCustomerDwgNo@(itemName)",
+                objectEdition: "#desEdition@(itemName)",
+                objectVersion: "#desVersion@(itemName)"
+            };
+            InitPopView(popConfig);
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+
+                let targetUrl = "@Url.Action("UpdateMtlRdDesign", "Product")";
+                let postData = {
+                    "MtlItemId": $("#MtlItemId").val(),
+                    "DesignId": $("#txtDesignId@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                if (result) {
+                    let aitargetUrl = "@Url.Action("AddAutoReadCadDesign", "Drawing")";
+                    let aipostData = {
+                        "MtlItemId": $("#MtlItemId").val()
+                    };
+
+                    //let airesult = DataAccess.Add(aitargetUrl, aipostData, false, false);
+                    console.log(airesult);
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function Delete@(itemName)(DesignId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMtlRdDesign", "Product")";
+                    let postData = {
+                        "DesignId": DesignId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, false);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+    </script>
+)

@@ -1,0 +1,303 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "Index";
+    string itemNameText = "點餐系統";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .order-post {
+            font-weight: 900;
+            margin: 21px auto;
+            padding: 0 0px 5px;
+            border: solid 1px #efa17a;
+            max-width: 354px;
+            border-radius: 8px;
+        }
+        .order-post-title {
+            background: #efa17a;
+            color: #fff;
+            text-align: center;
+            line-height: 2.5;
+            border-radius: 5px 5px 0 0;
+        }
+        .order-post-content {
+            padding: 9px 10px;
+            text-align: center;
+        }
+       
+        /*首頁餐點時間附註*/
+        .time-block {
+            font-size: 14px;
+            padding: 0 10px;
+            color: #5d5d5d;
+        }
+    </style>
+)
+
+ <div class="body-mob">
+     <header>
+         <div class="header-content">
+             <div class="header-title">
+                 <div class="page-title">所有餐點</div>
+                 <!--日期選擇-->
+                 @*<div class="select-date">
+                     <select class="form-control" id="cboDate@(itemName)" name="cboDate@(itemName)"
+                             data-msg-required="請選擇日期" data-rule-required="true"></select>
+                 </div>
+                 <a class="lot-order" href="@Url.Action("NumerousMenu", "FoodOrdering")" style="color: #ed836b; opacity: 0;">
+                     <i class="fas fa-users"></i>
+                     <span>批量點餐</span>
+                 </a>*@
+             </div>
+         </div>
+     </header>
+     @*<main class="menu-choose" style="height: calc(100vh - 105px); display:none;">
+         <div class="order-menu">
+             <ul id="MealInfo@(itemName)"></ul>
+             <div class="pagination" id="page@(itemName)"></div>
+         </div>
+     </main>
+     <main class="time-close" style="height: calc(100vh - 105px);">
+         <div style="padding:50px 0;">
+             <div class="icon-check" style="overflow: hidden; margin: 0 auto;position: relative;">
+                 <i class="far fa-transporter-empty"></i>
+                 <img src="~/Areas/EBP/Content/images/food-ordering/time-icon.png" alt="Alternate Text" />
+             </div>
+             <p class="modal-text" style="font-size:22px;">目前時間不開放訂購，請於非上班時間點餐，<br />下個可訂餐時段為
+             <font color="Salmon"><span class="ordertime"></span></font> !</p>
+         </div>
+     </main>
+     <main class="date-choose" style="height: calc(100vh - 105px); display:none;">
+         <div style="padding:50px 0;">
+             <div class="icon-check" style="overflow: hidden; margin: 0 auto;position: relative;">
+                 <i class="far fa-transporter-empty"></i>
+                 <img src="~/Areas/EBP/Content/images/food-ordering/date-icon.png" alt="Alternate Text" />
+             </div>
+             <p class="modal-text" style="font-size:22px;">尚未選擇餐點日期</p>
+         </div>
+     </main>*@
+     <main style="height: calc(100vh - 105px);">
+         <div style="padding: 50px 0;">
+             <div class="icon-check" style="overflow: hidden; margin: 0 auto;position: relative;">
+                 <img src="~/Areas/EBP/Content/images/food-ordering/new-logo.png" />
+             </div>
+             <p class="modal-text" style="font-size: 22px;">準備好迎接新的體驗了嗎！！ <a href="https://www.company-meal.com/" target="_blank" style="color: #6777EF;"><i class="fas fa-external-link"></i></a></p>
+         </div>
+     </main>
+ </div>
+
+<footer class="nav">
+    <div class="nav-content">
+        <ul class="nav-menu" style="">
+            <li>
+                <a href="@Url.Action("/", "FoodOrdering")" class="nav-link active">
+                    <i class="far fa-home-lg"></i>
+                    <span>首頁</span>
+                </a>
+            </li>
+            <li>
+                <a href="@Url.Action("DiningCar", "FoodOrdering")" class="nav-link">
+                    <i class="fas fa-utensils-alt"></i>
+                    <span>我的餐車</span>
+                    <span class="number-display" style="display: none;"></span>
+                </a>
+            </li>
+            <li>
+                <a href="@Url.Action("Account", "FoodOrdering")" class="nav-link">
+                    <i class="fas fa-user-circle"></i>
+                    <span>帳號</span>
+                </a>
+            </li>
+        </ul>
+     </div>
+</footer>
+
+@Html.Resource("js",
+    @<script>
+        let cartJson;
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 99
+        };
+
+        let CalendarData;
+        let nextDate;
+        let workDate;
+
+        $(document).ready(function () {
+            ComboBoxs.Default("#cboDate@(itemName)", "@Url.Action("GetMealDate", "FoodOrdering")", {}, "", "NA", "", "Weekday", "CalendarDate");
+
+            //判斷餐車筆數
+            if (sessionStorage.getItem("mealCart")) {
+                cartJson = JSON.parse(sessionStorage.getItem("mealCart"));
+
+                if (cartJson.mealInfo.length > 0) {
+                    $(".number-display").show();
+                    $(".number-display").html(cartJson.mealInfo.length);
+                }
+            }
+
+            //取得holiday API
+            let holidayUrl = "https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/" + (new Date()).Format("yyyy") + ".json";
+
+            CalendarData = DataAccess.GetAPI(holidayUrl, {}, false);
+
+            if (getObjects(CalendarData, "date", (new Date()).Format("yyyyMMdd"))[0].isHoliday) {
+                $(".select-date").show();
+                $(".menu-choose").hide();
+                $(".time-close").hide();
+                $(".date-choose").show();
+            } else {
+                //判斷工作日
+                let targetUrl = "@Url.Action("CheckWorkday", "FoodOrdering")";
+                let postData = {};
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    workDate = data.result;
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+                
+                //判斷訂餐時間顯示訊息
+                let targetUrlOt = "@Url.Action("GetOrderTime", "FoodOrdering")";
+                let postDataOt = {};
+
+                let dataOt = DataAccess.Get(targetUrlOt, postDataOt, false);
+
+                if (dataOt.status == "success") {
+                    let tempPending = (new Date(workDate) - new Date(new Date().Format("yyyy-MM-dd"))) / 1000 / 60 / 60 / 24;
+
+                    var startTime = dataOt.result[0].StartTime;
+                    var endTime = dataOt.result[0].EndTime;
+
+                    let pendingDay = -1 + tempPending;
+                    if (new Date(workDate + " " + new Date().Format("hh:mm")) < new Date(workDate + " " + endTime)) {
+                        pendingDay = tempPending;
+                    }
+
+                    console.log(pendingDay);
+
+                    var st = new Date(workDate + " " + startTime);
+                    var et = new Date(workDate + " " + endTime);
+
+                    if (st > et) {
+                        st.setDate(st.getDate() - (1 + pendingDay));
+                        nextDate = st;
+                    } else {
+                        st.setDate(st.getDate() - pendingDay);
+                        nextDate = st;
+                    }
+
+                    et.setDate(et.getDate() - pendingDay);
+
+                    console.log(st);
+                    console.log(et);
+
+                    //可訂餐時間
+                    if (new Date() >= st && new Date() < et) {
+                        $(".select-date").show();
+                        $(".menu-choose").hide();
+                        $(".time-close").hide();
+                        $(".date-choose").show();
+                    } else {
+                        $(".select-date").hide();
+                        $(".menu-choose").hide();
+                        $(".time-close").show();
+                        $(".date-choose").hide();
+                        $(".ordertime").html(nextDate.Format("MM/dd hh:mm"));
+                    }
+                } else {
+                    alert(dataOt.msg, "alert", 0);
+                }
+            }
+
+            $("#cboDate@(itemName)").change(function () {
+                $(".menu-choose").show();
+                $(".date-choose").hide();
+                Query@(itemName)();
+            });
+
+            let targetUrl = "@Url.Action("GetStaffUserId", "FoodOrdering")";
+            let postData = {};
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $(".lot-order").css("opacity", 1);
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        });
+
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            Datas@(itemName).GetMealInfo@(itemName)(objPage@(itemName));
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetMealInfo@(itemName)", function (objPage) {
+                let innerHtml = '';
+                let pageCount = 0;
+
+                let targetUrl = "@Url.Action("GetMealInfo", "FoodOrdering")";
+                let postData = {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.PageSize,
+                    "MealDate": $("#cboDate@(itemName)").val()
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                    if (pageCount > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<li class="order-item">
+                                            <a href="@Url.Action("McDetail", "FoodOrdering")?MealId=${item.MealId}&MealDate=${$(`#cboDate@(itemName)`).val()}">
+                                              <div class="order-item-img">
+                                                <img src="${item.MealImage == -1 ? `@Url.Content("~/Areas/EBP/Content/images/food-ordering/meal-01.png")` : `/Web/GetFile?fileId=${item.MealImage}`}" />
+                                              </div>
+                                              <div class="order-item-content">
+                                                <div class="text-block">
+                                                  <p>${item.RestaurantName} ${item.MealName}</p>
+                                                  <p class="price-color">$${item.MealPrice}</p>
+
+                                                </div>
+                                                 <!--點餐時間附註版-->
+                                                 <div class="time-block">
+                                                  <p>點餐時間
+                                                    <i class="far fa-clock" style="padding:0 5px"></i>
+                                                      ${item.StartTime} - ${item.EndTime}
+                                                  </p>
+                                                 </div>
+
+                                              </div>
+                                            </a>
+                                          </li>`;
+                        });
+                    }
+                } else {
+                    swal.fire({
+                        title: data.msg,
+                        icon: "error",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    })
+                }
+
+                $("#MealInfo@(itemName)").html(innerHtml);
+                Pager("#page@(itemName)", pageCount, objPage, Datas@(itemName).GetMealInfo@(itemName));
+            });
+        }
+</script>
+)

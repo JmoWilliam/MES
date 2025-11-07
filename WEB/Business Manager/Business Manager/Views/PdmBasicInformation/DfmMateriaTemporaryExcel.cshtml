@@ -1,0 +1,399 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DfmMateriaTemporaryExcel";
+    string itemNameText = "物料樣板資料管理";
+}
+
+<script src="@Url.Content("~/Scripts/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.js")"></script>
+<link href="@Url.Content("~/Content/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.css")" rel="stylesheet" />
+
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                                        )
+
+
+<div style="height: 75%; width: 100%;" id="MaterialTemporary"></div>
+
+
+
+@Html.Partial("ViewMaterialDfm")
+
+
+@Html.Resource("js",
+    @<script>
+        let spreadsheet@(itemName);
+        let spreadsheetData@(itemName);
+
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfoQiMaterial: []
+        }
+
+        let QiMaterialExcelList = []
+        let tempNumberMaterial = 1;
+        var QiMaterialTemplateDefault = "";
+
+
+        
+
+        function Expand@(itemName)() {
+            if (parseInt($("#DfmItemCategoryId").val()) > 0) {
+                $("#modal@(itemName)").modal({
+                    backdrop: "static",
+                    keyboard: false,
+                    show: true
+                });
+                $(".advanced-block").slideDown("slow");
+
+                ResetSpreadsheet@(itemName)();
+
+                $("#MaterialTemporary").css("height", "600px");
+
+                spreadsheet@(itemName).clear();
+
+
+                @*spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                    var rows = cell.substr(1);
+                    var MaterialNo = spreadsheet@(itemName).getValue("A" + rows)
+                    if (rows != 1) {
+                        if (MaterialNo != null) {
+                            spreadsheet@(itemName).setValue("E" + rows, "=MULTIPLY(C" + rows + ";D" + rows + ")")
+                            spreadsheet@(itemName).setValidation("B" + rows, ["1:考慮方案數量", "2:不考慮方案數量"])
+                        }
+                        if (cell.indexOf("A") != -1 && cell != "A1") {
+                            ComboBoxs.Default("#cboDfmMaterialId@(itemName)", "@Url.Action("GetDfmMaterial", "PdmBasicInformation")", {}, "", "ALL", "", "DfmMaterialFullItemNo", "DfmMaterialId");
+                            $("#modalDfmMaterial@(itemName)").modal("show");
+                        }
+                    }
+                });*@
+
+                spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                    if (id == "Save") {
+                        SaveExcelData@(itemName)();
+                    }
+                    else if (id == "Delete") {
+                        DeleteExcelData@(itemName)();
+                    }
+                    else if (id == "DownloadExcel") {
+                        DownloadExcel@(itemName)();
+                    }
+                    else if (id == "AddNewItem") {
+                        SaveExcelData@(itemName)();
+                        let popConfig = {
+                            targetSelector: "#txtDfmMaterialId@(itemName)",
+                            popFunction: "PopViewMaterialDfm",
+                            objectDfmMaterialId: "#txtDfmMaterialId@(itemName)",
+                            objectDfmMaterialNo: "#txtDfmMaterialNo@(itemName)",
+                            objectDfmItemCategoryId: $("#DfmItemCategoryId").val()
+                        };
+                        PopViewMaterialDfm(popConfig)
+                    }
+                });
+
+                QiMaterialTemplateDefault  = `{
+                    "sheets": [
+                        {
+                            "name": "sheet1",
+                            "data": [
+                                {
+                                    "cell": "A1",
+                                    "css": "dhx_generated_class_u1690959030028",
+                                    "format": "common",
+                                    "value": "物料名稱"
+                                },
+                                {
+                                    "cell": "B1",
+                                    "css": "dhx_generated_class_u1690959030039",
+                                    "format": "common",
+                                    "value": "單價"
+                                }
+                            ],
+                            "cols": [
+                                {
+                                    "width": 200
+                                },
+                                {
+                                    "width": 120
+                                }
+                            ],
+                            "rows": [
+                                {
+                                    "height": 32
+                                }
+                            ]
+                        }
+                    ],
+                    "styles": {
+                        "dhx_generated_class_u1690959030028": {
+                            "background": "#BCE4CE",
+                            "text-align": "center",
+                            "justify-content": "center"
+                        },
+                        "dhx_generated_class_u1690959030038": {
+                            "background": "#81D4FA",
+                            "text-align": "center",
+                            "justify-content": "center"
+                        },
+                        "dhx_generated_class_u1690959030039": {
+                            "background": "#D6BDCC",
+                            "text-align": "center",
+                            "justify-content": "center"
+                        },
+                        "dhx_generated_class_u1690959030040": {
+                            "background": "#FFCDD2",
+                            "text-align": "center",
+                            "justify-content": "center"
+                        },
+                        "dhx_generated_class_u1690959030041": {
+                            "background": "#90D2AF",
+                            "text-align": "center",
+                            "justify-content": "center"
+                        },
+                        "dhx_generated_class_u1690959030042": {
+                            "background": "#88A3F9",
+                            "text-align": "center",
+                            "justify-content": "center"
+                        },
+                        "dhx_generated_class_u1690959030043": {
+                            "background": "#D2C5C1",
+                            "text-align": "center",
+                            "justify-content": "center"
+                        }
+                    },
+                    "formats": [
+                        {
+                            "name": "Common",
+                            "id": "common",
+                            "mask": "",
+                            "example": "1500.31"
+                        },
+                        {
+                            "name": "Number",
+                            "id": "number",
+                            "mask": "#,##0.00",
+                            "example": "1500.31"
+                        },
+                        {
+                            "name": "Percent",
+                            "id": "percent",
+                            "mask": "#,##0.00%",
+                            "example": "15.0031"
+                        },
+                        {
+                            "name": "Currency",
+                            "id": "currency",
+                            "mask": "$#,##0.00",
+                            "example": "1500.31"
+                        },
+                        {
+                            "name": "Date",
+                            "id": "date",
+                            "mask": "mm-dd-yy",
+                            "example": "44490",
+                            "dateFormat": "%d/%m/%Y"
+                        },
+                        {
+                            "name": "Time",
+                            "id": "time",
+                            "mask": "h:mm:ss am/pm",
+                            "example": "0.5625",
+                            "timeFormat": 12
+                        },
+                        {
+                            "name": "Text",
+                            "id": "text",
+                            "mask": "@@",
+                            "example": "some text"
+                        }
+                    ]
+                }`
+
+                Return@(itemName)();
+
+            }
+            else {
+                alert("DFM種類項目資料有誤，無法展開單身!!", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)(objPage) {
+            var maxPlace = 0
+            tempNumberMaterial = 0;
+            QiMaterialExcelList = [];
+
+            let targetUrl = "@Url.Action("GetDfmCategoryTemplate", "PdmBasicInformation")";
+            let postData = {
+                "DfmItemCategoryId": $("#DfmItemCategoryId").val(),
+                "DataType": "Material"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#DfmCtId").val(item.DfmCtId)
+                        if (item.QiMaterialTemplate != null) {
+                            let dataset = JSON.parse(item.QiMaterialTemplate);
+                            dataset.sheets[0].data.forEach(function (v) {
+                                if (v.cell.indexOf('A') != -1) {
+                                    maxPlace = v.cell.split('A')[1]
+                                    if (typeof v.value !== "undefined") {
+                                        QiMaterialExcelList.push(v.value.split(':')[0])
+                                    }
+                                }
+                            })
+                            spreadsheet@(itemName).parse(dataset);
+                            spreadsheetData@(itemName) = dataset;
+                        }
+                        else {
+                            let dataset = JSON.parse(QiMaterialTemplateDefault);
+                            spreadsheet@(itemName).parse(dataset);
+                            spreadsheetData@(itemName) = dataset;
+                        }
+                    });
+                    spreadsheet@(itemName).lock("A1:B1");
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            tempNumberMaterial = parseInt(maxPlace);
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#MaterialTemporary").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("MaterialTemporary", {
+                menu: true
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-search",
+                tooltip: "新增物料",
+                id: "AddNewItem",
+                class:"pop-view"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-save",
+                tooltip: "儲存數據",
+                id: "Save"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-trash-alt",
+                tooltip: "刪除暫存數據",
+                id: "Delete"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-download",
+                tooltip: "下載當前EXCEL",
+                id: "DownloadExcel"
+            });
+        }
+        
+
+        function SaveExcelData@(itemName)() {
+            spreadsheetData@(itemName) = spreadsheet@(itemName).serialize();
+            let targetUrl = "@Url.Action("UpdateDfmCategoryTemplate", "PdmBasicInformation")";
+            let postData = {
+                "DfmCtId": $("#DfmCtId").val(),
+                "DfmItemCategoryId": $("#DfmItemCategoryId").val(),
+                "DataType": "Material",
+                "SpreadsheetData": JSON.stringify(spreadsheetData@(itemName))
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function DeleteExcelData@(itemName)() {
+            swal.fire({
+                titleText: "確認要刪除暫存數據嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDfmCategoryTemplate", "PdmBasicInformation")";
+                    let postData = {
+                        "DfmCtId": $("#DfmCtId").val(),
+                        "DfmItemCategoryId": $("#DfmItemCategoryId").val(),
+                        "DataType": "Material"
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function DownloadExcel@(itemName)() {
+            spreadsheet@(itemName).export.xlsx();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+            ReturnDfmQuotationItem()
+            QiProcessExcelList = [];
+            tempNumber = 1;
+        }
+
+        function Return@(itemName)() {
+            InitData@(itemName)();
+        }
+    </script>
+                                                                )

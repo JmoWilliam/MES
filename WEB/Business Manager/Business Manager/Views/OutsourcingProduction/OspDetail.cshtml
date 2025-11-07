@@ -1,0 +1,557 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "OspDetail";
+    string itemNameText = "託外生產單詳細資料管理";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+    </style>
+        )
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">製令</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)" placeholder="請輸入製令">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboProdModeQ@(itemName)">材料品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入材料品號">
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--清單-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right" style="display: flex; justify-content: flex-end;">
+                        <a style="margin-right: 5px;" class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">品號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">品名</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">製令</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">製令製程</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">託外生產數量</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">供貨生產數量</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">製程代碼</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">量測狀態</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 130px;">預計回廠日期</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 130px;">備註</th>
+                                        <th class="text-center col-sticky" scope="col" style="max-width: 250px; min-width: 100px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增修改-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="OspDetailId" name="OspDetailId" value="-1" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtOspNo@(itemName)">加工製令<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtMoId@(itemName)" value="" />
+                                        <div class="btn-group btn-group@(itemName)">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>製令</dt>
+                                            <dd id="desWoErpFullNo@(itemName)"></dd>
+                                            <dt>品號</dt>
+                                            <dd id="desMtlItemNo@(itemName)"></dd>
+                                            <dt>品名</dt>
+                                            <dd id="desMtlItemName@(itemName)"></dd>
+                                            <dt>規格</dt>
+                                            <dd id="desMtlItemSpec@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboMoProcessId@(itemName)">加工製程<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboMoProcessId@(itemName)" name="cboMoProcessId@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboProcessCode@(itemName)">加工代碼<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboProcessCode@(itemName)" name="cboProcessCode@(itemName)"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtOspQty@(itemName)">託外加工數量</label>
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="txtOspQty@(itemName)" name="txtOspQty@(itemName)"
+                                                   value="0"
+                                                   readonly />
+                                            <div class="input-group-append">
+                                                <a id="PopOspBarcode@(itemName)" class="btn btn-success pop-view" href="javascript:void(0);"><i class="fas fa-plus"></i></a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtSuppliedQty@(itemName)">供貨生產數量</label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtSuppliedQty@(itemName)" name="txtSuppliedQty@(itemName)"
+                                               value="0"
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtExpectedDate@(itemName)">預計回廠日期<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtExpectedDate@(itemName)" name="txtExpectedDate@(itemName)"
+                                               placeholder="請輸入預計回廠日期"
+                                               data-msg-required="請輸入預計回廠日期" data-rule-required="true"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboProcessCheckStatus@(itemName)">是否支援工程檢<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboProcessCheckStatus@(itemName)" name="cboProcessCheckStatus@(itemName)" required>
+                                            <option value="Y" selected>是</option>
+                                            <option value="N">否</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboProcessCheckType@(itemName)">工程檢頻率</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboProcessCheckType@(itemName)" name="cboProcessCheckType@(itemName)" required>
+                                            <option value="">請選擇</option>
+                                            <option value="1">全檢</option>
+                                            <option value="2" selected>抽檢</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtRemark@(itemName)">備註<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtRemark@(itemName)"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("../Inventory/ViewManufactureOrder")
+@Html.Partial("ViewOspBarcode")
+
+@Html.Resource("js",
+    @<script>
+        let ospId@(itemName);
+        let supplierNo@(itemName);
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        $(function () {
+            $("#txtMoId@(itemName)").change(function () {
+                ComboBoxs.Default("#cboMoProcessId@(itemName)", "@Url.Action("GetMoProcess", "Production")", { "MoId": $(this).val() }, "", "NA", "", "ProcessAlias", "MoProcessId");
+            });
+
+            $("#cboProcessCheckStatus@(itemName)").change(function () {
+                let processCheckStatus = $("#cboProcessCheckStatus@(itemName)").val();
+                if (processCheckStatus == "Y") {
+                    $("#cboProcessCheckType@(itemName)").prop("disabled", false);
+                    $("#cboProcessCheckType@(itemName)").val("2");
+                }
+                else {
+                    $("#cboProcessCheckType@(itemName)").prop("disabled", true);
+                    $("#cboProcessCheckType@(itemName)").val("");
+                }
+            });
+        });
+
+        function Expand@(itemName)(ospId, supplierNo) {
+            if (ospId > 0) {
+                ospId@(itemName) = ospId;
+                supplierNo@(itemName) = supplierNo;
+                $(".advanced-block").slideDown("slow");
+                Return@(itemName)();
+            } else {
+                alert("詳細資料展開失敗，請聯繫資訊人員!", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetOspDetail", "OutsourcingProduction")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "OspId": ospId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px; min-width: 100px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 200px; min-width: 100px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpPrefix}-${item.WoErpNo}" style="max-width: 200px; min-width: 100px;">${item.WoErpPrefix}-${item.WoErpNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="max-width: 200px; min-width: 100px;">${item.ProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OspQty}" style="min-width: 150px; min-width: 100px;">${item.OspQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SuppliedQty}" style="min-width: 150px; min-width: 100px;">${item.SuppliedQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessCode} ${item.ProcessCodeName}" style="max-width: 200px; min-width: 150px;">${item.ProcessCode} ${item.ProcessCodeName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessCheckStatus == `Y` ? `需量測` : `不量測`}" style="max-width: 150px; min-width: 100px;">${item.ProcessCheckStatus == `Y` ? `需量測` : `不量測`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ExpectedDate}" style="max-width: 200px; min-width: 150px;">${item.ExpectedDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="max-width: 200px; min-width: 150px;">${item.Remark}</td>
+                                        <td class="text-center active-content col-sticky" style="min-width: 250px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.OspDetailId}');"><i class="fas fa-edit"></i></a>
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.OspDetailId}');"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(OspDetailId) {
+            $("#OspDetailId").val(OspDetailId ? OspDetailId : 0);
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+            $(".btn-group@(itemName)").show();
+
+            $("#txtMoId@(itemName)").siblings(".help-block").hide();
+            $("#txtMoId@(itemName)").val("");
+
+            if (!isMobile) {
+                $("#cboMoProcessId@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboProcessCode@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+            ComboBoxs.Default("#cboProcessCode@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "ProcessCode", "Condition": supplierNo@(itemName).split(' ')[0] }, "", "NA", "", "MWFullNO", "MW001");
+            $("#cboMoProcessId@(itemName)").empty();
+
+            Suites.DateDropper("#txtExpectedDate@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtExpectedDate@(itemName)", currentDate);
+
+            if (OspDetailId > 0) {
+                let targetUrl = "@Url.Action("GetOspDetail", "OutsourcingProduction")";
+                let postData = {
+                    "OspDetailId": OspDetailId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $("#txtMoId@(itemName)").siblings(".help-block").show();
+                    $(".btn-group@(itemName)").hide();
+                    $.each(data.result, function (i, item) {
+                        if (item.ProcessCheckStatus == "Y") {
+                            $("#cboProcessCheckType@(itemName)").prop("disabled", false);
+                            $("#cboProcessCheckType@(itemName)").val(item.ProcessCheckType);
+                        }
+                        else {
+                            $("#cboProcessCheckType@(itemName)").prop("disabled", true);
+                            $("#cboProcessCheckType@(itemName)").val("");
+                        }
+
+                        ComboBoxs.Default("#cboMoProcessId@(itemName)", "@Url.Action("GetMoProcess", "Production")", { "MoId": item.MoId }, "", "NA", "", "ProcessAlias", "MoProcessId");
+                        $("#txtMoId@(itemName)").siblings(".help-block").show();
+                        $("#txtMoId@(itemName)").val(item.MoId);
+                        $("#OspDetailId").val(item.OspDetailId);
+                        $("#desWoErpFullNo@(itemName)").html(item.WoErpPrefix + "-" + item.WoErpNo);
+                        $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                        $("#desMtlItemName@(itemName)").html(item.MtlItemName);
+                        $("#desMtlItemSpec@(itemName)").html(item.MtlItemSpec);
+                        $("#cboMoProcessId@(itemName)").val(item.MoProcessId);
+                        $("#cboProcessCode@(itemName)").val(item.ProcessCode);
+                        $("#txtOspQty@(itemName)").val(item.OspQty);
+                        $("#txtSuppliedQty@(itemName)").val(item.SuppliedQty);
+                        $("#txtExpectedDate@(itemName)").val(item.ExpectedDate);
+                        $("#cboProcessCheckStatus@(itemName)").val(item.ProcessCheckStatus);
+                        $("#txtRemark@(itemName)").val(item.Remark);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            let popConfig = {
+                targetSelector: "#txtMoId@(itemName)",
+                popFunction: "PopViewManufactureOrder",
+                objectMoId: "#txtMoId@(itemName)",
+                objectMtlItemNo: "#desMtlItemNo@(itemName)",
+                objectMtlItemName: "#desMtlItemName@(itemName)",
+                objectMtlItemSpec: "#desMtlItemSpec@(itemName)",
+                objectWoErpFullNo: "#desWoErpFullNo@(itemName)",
+            };
+            InitPopView(popConfig);
+
+            let popConfig2 = {
+                targetSelector: "#txtOspQty@(itemName)",
+                popFunction: "PopViewOspBarcode",
+                objectOspDetailId: $("#OspDetailId").val(),
+                objectMoProcessId: $("#cboMoProcessId@(itemName)").val(),
+                objectWoErpFullNo: $("#desWoErpFullNo@(itemName)").text(),
+                objectProcessName: $("#cboMoProcessId@(itemName) option:selected").text(),
+                objectOspNo: $("#txtOspNoOutsourcingProduction").val(),
+                objectMoId: $("#txtMoId@(itemName)").val()
+            };
+            InitPopView(popConfig2);
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let OspDetailId = parseInt($("#OspDetailId").val());
+
+                if (OspDetailId <= 0) {
+                    let targetUrl = "@Url.Action("AddOspDetail", "OutsourcingProduction")";
+                    let postData = {
+                        "OspId": ospId@(itemName),
+                        "MoId": $("#txtMoId@(itemName)").val(),
+                        "MoProcessId": $("#cboMoProcessId@(itemName)").val(),
+                        "ProcessCheckStatus": $("#cboProcessCheckStatus@(itemName)").val(),
+                        "ProcessCheckType": $("#cboProcessCheckType@(itemName)").val(),
+                        "OspQty": $("#txtOspQty@(itemName)").val(),
+                        "SuppliedQty": $("#txtSuppliedQty@(itemName)").val(),
+                        "ProcessCode": $("#cboProcessCode@(itemName)").val(),
+                        "ExpectedDate": $("#txtExpectedDate@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val()
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        Swal.fire(
+                            "新增成功!", //標題 
+                            "請繼續新增託外條碼維護!", //訊息內容(可省略)
+                            "success",
+                        );
+
+                        $.each(data.result, function (i, item) {
+                            $("#OspDetailId").val(item.OspDetailId);
+                        });
+
+                        let popConfig2 = {
+                            targetSelector: "#txtOspQty@(itemName)",
+                            popFunction: "PopViewOspBarcode",
+                            objectOspDetailId: $("#OspDetailId").val(),
+                            objectMoProcessId: $("#cboMoProcessId@(itemName)").val(),
+                            objectWoErpFullNo: $("#desWoErpFullNo@(itemName)").text(),
+                            objectProcessName: $("#cboMoProcessId@(itemName) option:selected").text(),
+                            objectOspNo: $("#txtOspNoOutsourcingProduction").val()
+                        };
+                        InitPopView(popConfig2);
+
+                        setTimeout(function () {
+                            swal.close();
+                            $("#PopOspBarcode@(itemName)").click();
+                        }, 1250);
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateOspDetail", "OutsourcingProduction")";
+                    let postData = {
+                        "OspDetailId": OspDetailId,
+                        "OspId": ospId@(itemName),
+                        "MoId": $("#txtMoId@(itemName)").val(),
+                        "MoProcessId": $("#cboMoProcessId@(itemName)").val(),
+                        "ProcessCheckStatus": $("#cboProcessCheckStatus@(itemName)").val(),
+                        "ProcessCheckType": $("#cboProcessCheckType@(itemName)").val(),
+                        "OspQty": $("#txtOspQty@(itemName)").val(),
+                        "SuppliedQty": $("#txtSuppliedQty@(itemName)").val(),
+                        "ProcessCode": $("#cboProcessCode@(itemName)").val(),
+                        "ExpectedDate": $("#txtExpectedDate@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(OspDetailId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteOspDetail", "OutsourcingProduction")";
+                    let postData = {
+                        "OspDetailId": OspDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+        }
+    </script>
+                        )

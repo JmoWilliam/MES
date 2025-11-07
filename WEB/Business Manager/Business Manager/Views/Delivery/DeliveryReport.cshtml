@@ -1,0 +1,211 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DeliveryReport";
+    string itemNameText = "出貨報告查詢";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                                                        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="container">出貨日期 </label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtDeliveryDateQ@(itemName)" name="txtDeliveryDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-6">
+                                <label class="container">訂單客戶</label>
+                                <select class="form-control" id="cboCustomerIdQ@(itemName)" name="cboCustomerIdQ@(itemName)"></select>
+                            </div>
+                            <div class="col-6">
+                                <label class="container">出貨客戶</label>
+                                <select class="form-control" id="cboDcIdQ@(itemName)" name="cboDcIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-6">
+                                <label class="container">品號</label>
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                       data-msg-extraRegex="請輸入品號"  placeholder="請輸入品號"/>
+                            </div>
+                            <div class="col-6">
+                                <label class="container">品名</label>
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                       data-msg-extraRegex="請輸入品名"  placeholder="請輸入品名"/>
+                            </div>
+                        </div>
+
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom customization">
+                            <table class="table table-bordered table-striped table-sticky" type="hidden" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th class="text-center" scope="col" style="min-width: 200px;">訂單</th>
+                                        <th scope="col" style="min-width: 175px;">品號</th>
+                                        <th scope="col" style="min-width: 300px;">品名</th>
+                                        <th scope="col" style="min-width: 150px;">客戶品名</th>
+                                        <th class="text-right" scope="col" style="min-width: 100px;">【正常品】<br>數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 90px;">【贈品】<br>數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 90px;">【備品】<br>數量</th>
+                                        <th scope="col" style="min-width: 250px;">客戶名稱</th>
+                                        <th scope="col" style="min-width: 100px;">送貨客戶</th>
+                                        <th scope="col" style="min-width: 100px;">訂單狀況</th>
+                                        <th scope="col" style="min-width: 100px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 999
+    };
+
+    $(document).ready(function () {
+        let currentDate = new Date();
+        Suites.DatePicker("txtDeliveryDateQ@(itemName)", currentDate);
+
+        ComboBoxs.Default("#cboCustomerIdQ@(itemName)", "@Url.Action("GetCustomer", "ScmBasicInformation")", { "Status": "A", "TransferStatus": "A" }, "", "ALL", "", "CustomerWithNo", "CustomerId");
+        ComboBoxs.Default("#cboDcIdQ@(itemName)", "@Url.Action("GetDeliveryCustomer", "ScmBasicInformation")", { "Status": "A" }, "", "ALL", "", "DcShortName", "DcId");
+
+        $("#cboCustomerIdQ@(itemName), #cboDcIdQ@(itemName)").select2({
+            dropdownAutoWidth: true,
+            width: "100%"
+        });
+
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetDeliveryDetail", "Delivery")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage@(itemName).pageIndex + 1),
+                "PageSize": objPage@(itemName).pageSize,
+                "DeliveryDate": $("#txtDeliveryDateQ@(itemName)").val(),
+                "CustomerId": $("#cboCustomerIdQ@(itemName)").val(),
+                "DcId": $("#cboDcIdQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.data != "") {
+                    $.each(data.result, function (i, item) {
+                        let _row = (i + 1) + ".";
+                        innerHtml += `<tr>
+                                    <td>${_row}</td>
+                                    <td>${item.SoErpNo}</td>
+                                    <td>${item.MtlItemNo}</td>
+                                    <td>${item.MtlItemName}</td>
+                                    <td>${item.CustomerMtlItemName}</td>
+                                    <td>${item.NormalQty}</td>
+                                    <td>${item.FreebieQty}</td>
+                                    <td>${item.SpareQty}</td>
+                                    <td>${item.CustomerName}</td>
+                                    <td>${item.DcShortName}</td>
+                                    <td>${item.OrderSituation}</td>
+                                    <td class="text-center">
+                                        <a class="btn file-excel auth-excel" href="javascript:Excel@(itemName)('${item.DoDetailId}', '${item.DoDate}', '${item.DeliveryCustomerId}', '${item.MtlItemNo}', '${item.MtlItemName}', '${item.DcId}', '${item.TypeThree}');"><i class="fas fa-file-excel"></i>出貨報告</a>
+                                    </td>
+                                </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                                </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function Excel@(itemName)(DoDetailId, DoDate, CustomerId, MtlItemNo, MtlItemName, DcId, TypeThree) {
+            let targetUrl = "@Url.Action("DeliveryReportOutputForExcel", "Delivery")";
+            let postData = {
+                "DoDetailId": DoDetailId,
+                "DeliveryDate": DoDate,
+                "CustomerId": CustomerId,
+                "MtlItemNo": MtlItemNo,
+                "MtlItemName": MtlItemName,
+                "DcId": DcId,
+                "MtlTypeThree": TypeThree
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+            
+            
+        }
+
+    </script>
+                                                                    )

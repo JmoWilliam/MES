@@ -1,0 +1,3466 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MesScanningInterface";
+    string itemNameText = "MES過站刷取頁面";
+    string authority = ViewBag.authority;
+
+    string MoId = "-1";
+    string MoProcessId = "-1";
+    string MachineId = "-1";
+    string UserId = "-1";
+
+    MoId = Request["MoId"];
+    MoProcessId = Request["MoProcessId"];
+    MachineId = Request["MachineId"];
+    UserId = Request["UserId"];
+
+    ViewBag.Title = itemNameText;
+}
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/mes_scan.min.css")?20220617v12" rel="stylesheet" />
+                )
+@Html.Resource("css",
+    @<style>
+
+         /*版頭設定*/
+         .container-fluid {
+             padding: 0;
+             padding-right: 8px;
+             padding-left: 8px;
+         }
+
+         .container_full {
+             margin-top: 0;
+         }
+
+         .modal-header {
+             padding: 0.5rem 1rem;
+         }
+
+         select.select3 {
+             padding: 5px 10px;
+             border-color: #c9cdcf;
+             border-radius: 3px;
+             height: 40px;
+             width: 100%;
+             outline: none;
+         }
+
+             select.select3:focus-visible {
+                 border: 1px solid #a768f3;
+                 outline: none;
+             }
+
+         .lot-scanner {
+             display: flex;
+         }
+
+         .modal-item-content {
+             margin-bottom: 15px;
+             display: flex;
+             flex-direction: column;
+         }
+
+             .modal-item-content label {
+                 font-weight: 600;
+             }
+
+         .qc-btn {
+             padding: 12px;
+             background: #f1ede6;
+             border-radius: 12px;
+             color: #7d7d7d;
+             font-weight: 600;
+         }
+
+         .qc-choose {
+             display: flex;
+             justify-content: flex-start;
+         }
+
+        .qcitem-btn {
+            padding: 12px;
+            background: #d7d7d7;
+            border-radius: 12px;
+            color: #2d1e1e;
+            font-weight: 600;
+        }
+            .qcitem-btn :hover {
+                background: #e5e5e5;
+            }
+    </style>
+                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="mes_content" id="MesScanningInterface">
+    <div class="col-12">
+        <div class="infonfunc card-body">
+            <div class="row">
+                <!-- 左方列表 -->
+                <div class="mes_info col-xs-12 col-sm-12 col-md-7" style="" id="divMoInfo">
+                    <div class="row">
+                        <div class="" style="width:45%;">
+                            <ul style="margin-bottom: 5px;">
+                                <li class="list-btn-block">
+                                    <div class="" style="">
+                                        <p data-key="order">製令</p>
+                                        <h2 id="txtWoErpNo@(itemName)"></h2>
+                                    </div>
+                                    <div class="" style="">
+                                        <a class="btn-change btn" href="MesConsole">
+                                            <span data-key="replace">更換</span>
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <p data-key="productname">品名</p>
+                                    <h2 id="txtMtlItemName@(itemName)"></h2>
+                                </li>
+                                <li>
+                                    <p data-key="productnumber">品號</p>
+                                    <h2 id="txtMtlItemNo@(itemName)"></h2>
+                                </li>
+                                <li class="list-btn-block" style="border-bottom:0;">
+                                    <div class="" style="">
+                                        <p data-key="quantity">數量</p>
+                                        <h2 id="txtQuantity@(itemName)"></h2>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div style="width:55%">
+                            <ul>
+                                <li class="list-btn-block">
+                                    <div class="" style="">
+                                        <p data-key="station">站別</p>
+                                        <h2 id="txtProcessAlias@(itemName)"></h2>
+                                    </div>
+                                    <div class="" style="display:flex;flex-direction:row;">
+                                        <a id="aQcBtn@(itemName)" style="margin-bottom: 5px;" class="btn-change btn mr-2" href="javascript: OpenQcModal@(itemName)();" data-key="sendforinspectionandmeasurement">
+                                            送檢量測
+                                        </a>
+                                        <a style="margin-bottom: 5px;" class="btn-change btn mr-2" href="/ProductionHistory" data-key="backtohome">
+                                            回首頁
+                                        </a>
+                                    </div>
+                                </li>
+
+                                <li class="list-btn-block">
+                                    <div class="" style="">
+                                        <p data-key="machine">機台</p>
+                                        <h2 id="txtMachineDesc@(itemName)"></h2>
+                                    </div>
+
+                                    <div class="" style="display: flex; flex-direction: row;">
+                                        <a style="margin-bottom: 5px;" class="btn-change btn mr-2" id="machineTime" onclick="PopTimeCountView@(itemName)(this.id)" data-key="machinetiming" @*data-toggle="modal" data-target="#changeStatus" data-backdrop="static"*@>
+                                            機台計時
+                                        </a>
+                                    </div>
+                                </li>
+
+                                <li class="list-btn-block">
+                                    <div class="" style="">
+                                        <p data-key="personnel">人員</p>
+                                        <h2 id="txtUserNo@(itemName)"></h2>
+                                    </div>
+
+                                    <div class="" style="display: flex;flex-direction: row;">
+                                        <a style="margin-bottom: 5px;" class="btn-change btn mr-2" id="manTime" onclick="PopTimeCountView@(itemName)(this.id)" data-key="personneltiming" @*data-toggle="modal" data-target="#changeStatus" data-backdrop="static"*@>
+                                            人員計時
+                                        </a>
+
+                                        <a class="btn-change btn" data-toggle="modal" data-target="#changeMember" data-backdrop="static" data-key="replace">
+                                            更換
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </a>
+                                    </div>
+                                </li>
+                                <li class="list-btn-block" style="border-bottom:0;">
+                                    <div class="col-6" style="width : 50%">
+
+                                    </div>
+                                    <div class="" style="display: flex;flex-direction: row;">
+                                        @*<a style="margin-bottom: 5px;" class="btn-change btn mr-2" id="machineTime" onclick="">語言</a>*@
+                                        <select class="form-control" id="language-select2" style="">
+                                            <option value="chinese">中文(Chinese)</option>
+                                            <option value="thai">泰文(ภาษาไทย)</option>
+                                            <option value="vietnamese">越文(Tiếng Việt)</option>
+                                        </select>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!-- 右方按鈕 -->
+                <div class="col-xs-12 col-sm-12  col-md-5 pl-0 pr-1">
+                    <div class="function-content">
+                        <div class="function-item">
+                            <div class="swipe">
+                                <ul class="nav" style="">
+                                    <li>
+                                        <span data-key="unproducedquantity">未生產量</span>
+
+                                        <strong style="color:#E77891" id="ProcessQty@(itemName)"></strong>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="logout">
+                                <a class="btn" onclick="javascript:Logout@(itemName)();" data-key="logout">
+                                    登出<i class="fa fa-sign-out ml-1" style=""></i>
+                                </a>
+                            </div>
+
+                        </div>
+                        <div class="function-item2">
+                            <div class="machine-block" style="">
+                                <h2 class="mt-1 mb-1" data-key="machineoperation">機台操作</h2>
+
+                                <div class="line">
+                                    <a id="aKnifeSetting@(itemName)" class="btn-machine btn mt-2" href="javascript: void(0);">
+                                        <span data-key="toolchange">更換刀具</span>
+
+                                        <i class="fas fa-exchange-alt  ml-1"></i>
+                                    </a>
+                                    <a class="btn-machine btn  mt-2">
+                                        <span data-key="machinestoppedwaitingformaterial">停機待料</span>
+
+                                        <i class="fas fa-stop ml-1"></i>
+                                    </a>
+                                </div>
+                                <div class="line machine-block-btn">
+                                    <a id="aJigSetting@(itemName)" class="btn-machine btn" href="javascript: PopViewJigBarcode()">
+                                        <span data-key="fixturesetup">治具設定</span>
+
+                                        <i class="fa fa-check-square  ml-1" style=""></i>
+                                    </a>
+                                    <a class="btn-machine btn" data-toggle="modal" data-target="#OtherFunctionModal@(itemName)" data-backdrop="static">
+                                        <span data-key="otherfunctions">其他功能</span>
+
+                                        <i class="fas fa-caret-square-down ml-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="btn-group function-block">
+                                <h2 class="mt-1 mb-1" style="line-height:32px;" data-key="passstationoperation">過站操作</h2>
+
+                                <a id="aAdvancedFunction@(itemName)" class="btn btn-set" href="javascript: PopViewAdvancedFunction();" data-key="advancedfunctions" @*data-toggle="modal" data-target="#advanced" data-backdrop="static"*@>
+                                    進階功能
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <main class="mes_table_wrapper">
+        <div class="row">
+            <div class=" col-12">
+                <div class="card card-shadow">
+                    <div class="table-outer">
+                        <table id="tblData@(itemName)" class="table-platform-sticky">
+                            <thead>
+                                <tr class="headerrow">
+                                    <th scope="col" width="35%">
+                                        <form></form>
+                                        <div class="form-row align-items-center">
+                                            <div class="col-auto">
+                                                <label class="sr-only" for="txtBarcodeNo@(itemName)" data-key="pleaseentermainbarcode">請輸入主條碼</label>
+                                                <div class="input-group ">
+                                                    <div class="input-group-prepend">
+                                                        <div class="input-group-text">
+                                                            <div class="check-follow">
+                                                                <input type="checkbox" id="followBarcode" checked="">
+                                                                <div class="state p-off">
+                                                                    <i class="far fa-lightbulb"></i>
+                                                                    <label style="text-indent: 0px;">跟</label>
+                                                                </div>
+                                                                <div class="state p-on" style="color: #ff0000;">
+                                                                    <i class="fas fa-lightbulb"></i>
+                                                                    <label style="text-indent: 0px;">首</label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <input type="text" class="form-control" style="min-width: 8vw;" id="txtBarcodeNo@(itemName)" placeholder="請輸入主條碼">
+                                                    <div class="lot-scanner" style="margin-left: 5px;">
+                                                        <div style="margin-right: 5px;">
+                                                            <select id="cboKeyenceId@(itemName)" class="form-control" style="min-width: 8vw;"></select>
+                                                        </div>
+                                                        <div style="margin-right: 5px;">
+                                                            <button class="btn btn-success" style="height: 100%;" onclick="LotScanner@(itemName)()">
+                                                                <i class="fad fa-print-search"></i>批量掃描
+                                                            </button>
+                                                        </div>
+                                                        <div >
+                                                            <button type="button" style="height: 100%;" class="btn btn-danger" onclick="TxKeyenceProcessFromTemp@(itemName)()"><i class="fas fa-paper-plane"></i>批量過站</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="lot-process" style="display: none; display: flex;">
+                                                        <div>
+                                                            <select id="cboBarcodeStatus@(itemName)" class="form-control">
+                                                                <option value="P" selected data-key="goodproduct">P-良品</option>
+                                                                <option value="F" data-key="defectiveproduct">F-不良品</option>
+                                                                <option value="S" data-key="scrap">S-報廢</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <button class="btn btn-success" style="margin-left: 5px; width: 100%; height: 100%;" onclick="LotProcess@(itemName)()" data-key="submit">送出</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </th>
+                                    <th scope="col" data-key="quantity">數量</th>
+                                    <th scope="col" data-key="starttime">開始時間</th>
+                                    <th scope="col" data-key="endtime">結束時間</th>
+                                    <th scope="col" data-key="operation">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<!-- 彈窗 加工前作業 -->
+<div class="modal fade" id="working">
+    <div class="modal-dialog" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title" data-key="operation">操作</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="col-12 mb-3" style="padding:3rem 3rem;background:#eee;">
+                            <h1 class="fw-600">
+                                <span data-key="pre-processingoperations">加工前作業</span>
+                                <span class="float-lg-right" style="">時間 01:40:03</span>
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-lg btn-block btn-working btn-start" data-key="start">
+                            開始
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" data-dismiss="modal" class="btn  btn-lg btn-block btn-working btn-end" data-key="end">
+                            結束
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+            </div>-->
+        </div>
+    </div>
+</div>
+
+<!-- 彈窗 狀態計時 (人員 機台 加工前後共用) -->
+<div class="modal fade" id="timeCountView@(itemName)">
+    <div class="modal-dialog" style="padding-top:7%;">
+        <div class="modal-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title" id="timeTypeTitle@(itemName)" data-key="end">狀態計時</h5>
+
+                <button class="close" @*data-dismiss="modal"*@ type="button" id="timeCountClose@(itemName)" onclick="Close@(itemName)('timeCountView@(itemName)');">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+
+                <button type="button" style="" class="btn btn-info" id="timeCountChangeMan@(itemName)" data-toggle="modal" data-target="#changeMember" data-backdrop="static">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span data-key="replace">更換</span>
+
+                </button>
+
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="col-12 mb-3" style="padding:1rem;background:#eee;">
+                            <h5 id="txtCountTimeUserNo@(itemName)"></h5>
+                            <input type="hidden" id="txtBarcodeId@(itemName)" />
+                            <input type="hidden" id="txtEventId@(itemName)" />
+                            <div class="btn" style="width:100%">
+                                <select class="form-control" id="cboEventItem@(itemName)" name="cboEventItem@(itemName)"></select>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <label class="form-label" style="color: #ff0000;" id="txtStartTime@(itemName)"></label>
+                <div class="row">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-lg btn-block btn-working btn-start" id="start@(itemName)" onclick="AddStart@(itemName)()" data-key="start">
+                            開始
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" @*data-dismiss="modal"*@ class="btn  btn-lg btn-block btn-working btn-end" id="end@(itemName)" onclick="AddEnd@(itemName)()" data-key="end">
+                            結束
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @*<div class="modal-body">
+                    <form>
+                        <div class="input-group" style="">
+                            <label class="input-group-addon" for="basic-addon" style="">
+                                <i class="fa fa-id-card mr-1"></i>
+                                <span style="padding-left: 5px;">員工編號</span>
+                            </label>
+                            <input type="text" class="form-control form-control-add" id="basic-addon" placeholder="請輸入員工編號">
+                        </div>
+                    </form>
+                </div>*@
+            <div class="modal-footer">
+                @*<button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 彈窗 更換人員 -->
+<div class="modal fade" id="changeMember">
+    <div class="modal-dialog" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title" data-key="changepersonnel">更換人員</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="input-group" style="">
+                        <label class="input-group-addon" for="basic-addon" style="">
+                            <i class="fa fa-id-card mr-1"></i>
+                            <span style="padding-left: 5px;" data-key="employeeid">員工編號</span>
+                        </label>
+                        <input type="text" class="form-control form-control-add" id="txtSystemKeyLogin@(itemName)" placeholder="請輸入金鑰" data-key="pleaseenterkey" value="92A3AC6CE2A2940A3BC5AFAEA2F1CA1A6C4232930F2B1045BF5635EAD80D9E49">
+                        <input type="text" class="form-control form-control-add" id="txtAccount@(itemName)" placeholder="請輸入員工編號" data-key="pleaseenteremployeeid">
+                    </div>
+                </form>
+            </div>
+            <!-- <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+            </div>-->
+        </div>
+    </div>
+</div>
+
+<!-- 治具過站 -->
+<div class="modal fade" id="JigBarcodeProcess@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    <span data-key="fixturepassstation">治具過站</span>
+
+
+                    <span data-key="fixturecode" class="sub-title">治具代碼: <span class="sub-text" id="desJigNo@(itemName)"></span></span>
+                    <span data-key="fixturename" class="sub-title">治具名稱: <span class="sub-text" id="desJigName@(itemName)"></span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id=" ">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblJigBarcode@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col" data-key="productbarcode">產品條碼</th>
+                                        <th scope="col" data-key="productstatus">產品狀態</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                <span data-key="all">全選</span>
+                                                <input type="checkbox" id="cbxJigBarcodeSelectAll@(itemName)" checked>
+                                            </label>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id=" "></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                <button type="button" class="btn btn-success" onclick="JigBarcodeProcess@(itemName)()" data-key="passstation"><i class="fas fa-paper-plane"></i>過站</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 批量刷取NG條碼 -->
+<div class="modal fade" id="LotBarcodeNgCode@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    <span data-key="batchngbarcodedatacollection">批量NG條碼刷取資料</span>
+                    <span class="sub-title">
+                        <span data-key="originalbarcodecode">
+                            原條碼代碼:
+                        </span>
+
+                        <span class="sub-text" id="desBarcodeNo@(itemName)"></span>
+                    </span>
+                    <span class="sub-title">
+                        <span data-key="originalbarcodequantity">
+                            原條碼數量:
+                        </span>
+
+                        <span class="sub-text" id="desBarcodeQty@(itemName)"></span>
+                    </span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id=" ">
+                    <div class="col-12">
+                        <form autocomplete="off" id="editForm@(itemName)">
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 ">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtNgBarcodeNo@(itemName)">
+                                            <span data-key="ngbarcode">NG條碼</span>
+
+
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <input type="text" class="form-control" id="txtNgBarcodeNo@(itemName)" name="txtNgBarcodeNo@(itemName)" required />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row min-barcodes" style="display: none;">
+                                <div class="col-lg-12 col-md-12 ">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="cboMinBarcodes@(itemName)">
+                                            <span data-key="camerabarcode">鏡頭條碼</span>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <div class="input-group">
+                                                <select class="form-control" id="cboMinBarcodes@(itemName)" name="cboMinBarcodes@(itemName)"
+                                                        data-msg-required="請選擇條碼" data-rule-required="true" multiple></select>
+                                                <div class="input-group-append">
+                                                    <a id="aClearMinBarcodes" class="btn btn-danger pop-view" href="javascript:ClearMinBarcodes@(itemName)();"><i class="fas fa-eraser"></i></a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 ">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtNgBarcodeQty@(itemName)">
+                                            <span data-key="ngquantity">NG數量</span>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <input type="number" class="form-control" id="txtNgBarcodeQty@(itemName)" name="txtNgBarcodeQty@(itemName)"
+                                                   data-rule-required="true" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 ">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtCauseNo@(itemName)">
+                                            <span data-key="ngreason">NG原因</span>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <input type="text" class="form-control" id="txtCauseNo@(itemName)" name="txtCauseNo@(itemName)"
+                                                   data-rule-required="true" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                <button type="button" class="btn btn-success" onclick="SaveLotNgBarcode@(itemName)()">
+                    <i class="fas fa-paper-plane"></i>
+                    <span data-key="submit">確認</span>
+
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- NG數量過站 FOR 模造數量過站 -->
+<div class="modal fade" id="LotNgProcessModal@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    <span data-key="ngquantitypassstationdata">
+                        NG數量過站資料
+                    </span>
+
+                    <span class="sub-title">
+                        <span data-key="originalngquantity">
+                            原始NG數量:
+                        </span><span class="sub-text" id="desNgQty@(itemName)"></span>
+                    </span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id=" ">
+                    <div class="col-12">
+                        <form autocomplete="off" id="editForm2@(itemName)">
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 ">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtNgQty@(itemName)">
+                                            <span data-key="ngquantity">
+                                                NG數量
+                                            </span>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <input type="number" class="form-control" id="txtNgQty@(itemName)" name="txtNgQty@(itemName)"
+                                                   data-rule-required="true" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 ">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="cboNextMoProcess@(itemName)">
+                                            <span data-key="nextprocessstep">
+                                                下一站製程
+                                            </span>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <select class="form-control" id="cboNextMoProcess@(itemName)" required></select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 ">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtLotNgCauseNo@(itemName)">
+                                            <span data-key="ngreason">
+                                                NG原因
+                                            </span>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <input type="text" class="form-control" id="txtLotNgCauseNo@(itemName)" name="txtLotNgCauseNo@(itemName)"
+                                                   data-rule-required="true"
+                                                   oninput="EditDefectCauseNo@(itemName)('txtLotNgCauseNo@(itemName)');" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                <button type="button" class="btn btn-success" onclick="LotProcessSave@(itemName)()">
+                    <i class="fas fa-paper-plane"></i>
+                    <span data-key="submit">
+                        確認
+                    </span>
+
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 其他功能 -->
+<div class="modal fade" id="OtherFunctionModal@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    其他功能
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <a id="aLotBarcodeQtyMerge@(itemName)" class="btn btn-primary" href="javascript: PopViewLotBarcodeMerge();">
+                        <i class="fas fa-scanner-keyboard"></i>
+                        <span data-key="traysplitandmerge">
+                            拆併盤
+                        </span>
+                    </a>
+                    <a id="aMachineTransfer@(itemName)" class="btn btn-primary" href="javascript: MachineTransfer@(itemName)();">
+                        <i class="far fa-cash-register"></i>
+                        <span data-key="machinetrayloading">
+                            機台上拋
+                        </span>
+                    </a>
+                    <a id="aBarcodeMoprocess@(itemName)" class="btn btn-primary" href="javascript: PopViewBarcodeMoprocess();">
+                        <i class="far fa-barcode-read"></i>
+                        <span data-key="barcodeinformation">
+                            條碼資訊
+                        </span>
+                    </a>
+                    <a id="aPackageBarcode@(itemName)" class="btn btn-primary" href="javascript: PopViewPackageBarcode();">
+                        <i class="far fa-barcode-read"></i>
+                        <span data-key="packagingbarcode">
+                            包裝條碼
+                        </span>
+                    </a>
+                    <a id="aBarcodeTracking@(itemName)" class="btn btn-primary" href="javascript: PopViewBarcodeTracking();">
+                        <i class="fas fa-file-search"></i>
+                        <span data-key="barcodetracking">
+                            條碼追蹤
+                        </span>
+                    </a>
+                    <hr />
+                    <a id="aCreateNewBarcode@(itemName)" class="btn btn-danger" href="javascript: PopViewCreateNewBarcode();">
+                        <i class="fas fa-comment-alt-plus"></i>
+                        <span data-key="addbarcode(limitedtoquantitypassstation)">
+                            新增條碼(限數量過站)
+                        </span>
+                    </a>
+                    <hr />
+                    <a id="aTrayLensBind@(itemName)" class="btn btn-secondary" href="javascript: PopViewTrayLensBind();">
+                        <i class="fas fa-game-board-alt"></i>
+                        <span data-key="traybindingcamerabarcode">
+                            Tray盤綁定鏡頭條碼
+                        </span>
+                    </a>
+                    <a id="aTrayTurnover@(itemName)" class="btn btn-secondary" href="javascript: PopViewTrayTurnover();">
+                        <i class="fas fa-game-board"></i>
+                        <span data-key="trayrotation">
+                            Tray盤周轉
+                        </span>
+
+                    </a>
+                    @*<a id="aMtlSystem@(itemName)" class="btn btn-primary" href="javascript: void(0);"><i class="fas fa-scanner-keyboard"></i>上料系統</a>*@
+                    <hr />
+                    <a id="aMachineSchedule@(itemName)" class="btn btn-warning" href="javascript: PopViewMachineSchedule();">
+                        <i class="fas fa-game-board"></i>
+                        <span data-key="machinescheduling">
+                            機台排程
+                        </span>
+                    </a>
+                    <a id="aQcDataPotNumber@(itemName)" class="btn btn-warning" href="javascript:void(0);">
+                        <i class="fas fa-folder-upload"></i>
+                        <span data-key="qcdatapotnumber">
+                            量測數據上傳(依鍍膜鍋次)
+                        </span>
+                    </a>
+                </div>
+                @*<div class="row" id=" ">
+                        <div class="col-6">
+                            <a id="aLotBarcodeQtyMerge@(itemName)" class="btn btn-primary" href="javascript: PopViewLotBarcodeMerge();"><i class="fas fa-scanner-keyboard"></i>拆併盤</a>
+                        </div>
+                        <div class="col-6">
+                            <a id="aLotBarcodeQtyMerge@(itemName)" class="btn btn-primary" href="javascript: PopViewLotBarcodeMerge();"><i class="fas fa-scanner-keyboard"></i>拆併盤</a>
+                        </div>
+                    </div>*@
+            </div>
+            <div class="modal-footer">
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Keyence過站介面 -->
+<div class="modal fade" id="modalKeyenceProcess@(itemName)" style="">
+    <div class="modal-dialog modal-lg" style="padding-top:7%; " >
+        <div class="modal-content working-content" style="width:70vw;left: 50%; transform: translate(-50%, 0%);">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    Keyence過站
+                    <span class="sub-title">總共掃描數量: <span class="sub-text" id="desScanNumber@(itemName)"></span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id=" ">
+                    <div class="col-6">
+                        <select id="cboKeyenceIdQ@(itemName)" class="form-control"></select>
+                    </div>
+                    <div class="col-6" style="margin-bottom: 5px;">
+                        <button class="btn btn-success" onclick="LotScanner@(itemName)()" style="height: 100%;">
+                            <i class="fad fa-print-search"></i>重新掃描
+                        </button>
+                    </div>
+                    <div class="col-12 input-header" style="margin-top: 15px;">
+                        <div style="margin-right: 15px;">
+                            <i class="far fa-sliders-h"></i> <span style="font-weight: 600;">屬性名稱</span>
+                            <select id="cboItemNo@(itemName)" class="page-style"></select>
+                        </div>
+                        <div style="margin-right: 15px;">
+                            <i class="fas fa-file-edit"></i> <span style="font-weight: 600;">屬性值</span>
+                            <input type="text" id="txtItemValue@(itemName)" />
+                        </div>
+                        <div style="margin-right: 15px;">
+                            <i class="far fa-calendar"></i> <span style="font-weight: 600;">日期</span>
+
+                            <input type="date" id="txtDateCode@(itemName)" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div style="margin-right: 5px;">
+                            <button type="button" style="height: 100%;" class="btn btn-success" onclick="KeyenceProcess@(itemName)()"><i class="fas fa-paper-plane"></i>新增暫存</button>
+                        </div>
+                        
+                    </div>
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblJigBarcode@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">產品條碼</th>
+                                        <th scope="col">綁定條碼</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id=" "></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 送檢選擇Modal -->
+<div class="modal fade" id="modalQc@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    選擇送檢項目
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-item-content">
+                    <label>選擇送檢類型</label>
+                    <select id="cboQcTypeId@(itemName)" class="form-control"></select>
+                </div>
+                <div class="modal-item-content">
+                    <label>送檢單位</label>
+                    <select id="cboQcDepartment@(itemName)" class="form-control" required>
+                        <option value="">請選擇</option>
+                        <option value="Y">量測室</option>
+                        <option value="N">自主檢</option>
+                    </select>
+                </div>
+                <div class="modal-item-content">
+                    <label>量測車間(可不填)</label>
+                    <select id="cboShopId@(itemName)" class="form-control"></select>
+                </div>
+                <div class="modal-item-content">
+                    <label>量測機台</label>
+                    <select id="cboQmmDetailId@(itemName)" class="form-control"></select>
+                </div>
+
+                <div class="modal-item-content">
+                    <label>列印量測標籤 標籤機</label>
+                    <select id="cboLabelPrintMachine@(itemName)" class="form-control"></select>
+                </div>
+
+                <div>
+                    <div class="qc-barcode-reader">
+                        <input type="text" class="form-control" id="txtQcBarcodeNo@(itemName)" placeholder="請刷取送測條碼" />
+                    </div>
+                    <table class="table table-bordered table-striped table-sticky" id="tblQcBarcodeData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col">
+                                    <label class="col-12 col-form-label">
+                                        # 全選 <input type="checkbox" id="cbxQcBarcodeSelectAll@(itemName)" />
+                                    </label>
+                                </th>
+                                <th scope="col" style="min-width: 100px;">產品條碼</th>
+                                <th scope="col" style="min-width: 100px;">條碼數量</th>
+                                <th scope="col" style="min-width: 100px;">條碼狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <a class="qcitem-btn" href="javascript: PopViewQcItemSetting();"><i class="fas fa-cog"></i> 維護量測項目</a>
+                <a class="qc-btn" href="javascript: CreateQcRecord@(itemName)();"><i class="fas fa-paper-plane"></i> 送出</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 加工批量事件計時 -->
+<div class="modal fade" id="EventBarcode@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title" data-key="batchprocessingeventtiming">
+                    加工批量事件計時
+
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="col-12 mb-3 " style="padding:1rem;background:#eee;">
+                            <h5 id="txtLotCountTimeUserNo@(itemName)"></h5>
+                            <div class="row">
+                                <div class="col-lg-6 col-md-12" style="">
+
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtEventJigBarcode@(itemName)">
+                                            <span data-key="fixturebarcode">
+                                                治具條碼
+                                            </span>
+                                        </label>
+                                        <div class="col-12">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="txtEventJigBarcode@(itemName)" name="txtEventJigBarcode@(itemName)" data-key="pleaseenterfixturebarcode" placeholder="請輸入治具條碼" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="cboLotEventType@(itemName)">
+                                            <span data-key="timingstatus">
+                                                計時狀態
+                                            </span>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <div class="input-group">
+                                                <select class="form-control" id="cboLotEventType@(itemName)" name="cbsoEventItem@(itemName)">
+                                                    <option data-key="pleaseselect" value="-1">請選擇</option>
+                                                    <option data-key="beforeprocessing" value="0">加工前</option>
+                                                    <option data-key="afterprocessing" value="1">加工後</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="cboLotEventItem@(itemName)">
+                                            <span data-key="event">
+                                                事件
+                                            </span>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-12">
+                                            <div class="input-group">
+                                                <select class="form-control" id="cboLotEventItem@(itemName)" name="ccboEventItem@(itemName)"></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <div class="col-lg-6 col-md-12">
+                                    <div class="col-6" style="max-width: 100%;">
+                                        <label class="form-label" style="color: #ff0000;" id="txtLotStartTime@(itemName)"> </label>
+                                        <button type="button" class="btn btn-lg btn-block btn-working btn-start" id="lotstart@(itemName)" onclick="lotAddStart@(itemName)()" data-key="start">
+                                            開始
+                                        </button>
+                                    </div>
+                                    <div class="col-6" style="max-width: 100%;">
+                                        <button type="button" @*data-dismiss="modal"*@ class="btn  btn-lg btn-block btn-working btn-end" id="lotend@(itemName)" onclick="lotAddEnd@(itemName)()" data-key="end">
+                                            結束
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="col-12" id=" ">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblLotEventBarcode@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col" data-key="productbarcode">產品條碼</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                <span data-key="all">
+                                                    全選
+                                                </span>
+                                                <input type="checkbox" id="cbxEventBarcodeSelectAll@(itemName)" checked>
+                                            </label>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id=" "></div>
+                    </div>
+                </div>
+                @*<div class="card-footer text-right text-lg-right">
+                        <button type="button" class="btn btn-success" onclick="JigBarcodeProcess@(itemName)()"><i class="fas fa-paper-plane"></i>開始計時</button>
+                        <button type="button" class="btn btn-success" onclick="JigBarcodeProcess@(itemName)()"><i class="fas fa-paper-plane"></i>結束計時</button>
+                    </div>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="loadingdiv" id="loading" style="display: none">
+    <img src="~/assets/images/new-loading.gif" style="width: 75px;" />
+</div>
+
+@Html.Partial("ViewBarcodeProcessAttribute")
+@Html.Partial("ViewJigBarcode")
+@Html.Partial("ViewMaterial")
+@Html.Partial("ViewMaterialVehicle")
+@Html.Partial("ViewLotBarcodeMerge")
+@Html.Partial("ViewKnifeManagement")
+@Html.Partial("ViewJudgeScrapQty")
+@Html.Partial("ViewAdvancedFunction")
+@Html.Partial("ViewBarcodeMoprocess")
+@Html.Partial("ViewPackageBarcode")
+@Html.Partial("ViewCreateNewBarcode")
+@Html.Partial("ViewBarcodeTracking")
+@Html.Partial("ViewTrayLensBind")
+@Html.Partial("ViewTrayTurnover")
+@Html.Partial("ViewMachineSchedule")
+@Html.Partial("ViewQcDataPotNumber")
+@Html.Partial("ViewQcItemSetting")
+
+@Html.Resource("js",
+    @<script>
+        let BarcodeNo = "";
+        let ProcessId@(itemName) = -1;
+        let BarcodeProcessId@(itemName) = -1;
+        let BarcodeNoList = [];
+        let QtyProcessCheck@(itemName) = false;
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objForm2@(itemName) = "#editForm2@(itemName)";
+        let BarcodeCtrl@(itemName);
+        let LotStatus@(itemName);
+        let modeId@(itemName);
+        let UserNo@(itemName);
+        let CompanyId@(itemName);
+        let KeyenceId@(itemName);
+        let keyenceBarcodeList@(itemName);
+        let moProcessItemId@(itemName);
+
+        let timeCountType@(itemName);
+        let PreCollectionStatus@(itemName);
+        let PostCollectionStatus@(itemName);
+
+        let shopId@(itemName);
+
+        let moId;
+        let moProcessId;
+
+        //let BarcodeProcessAttributeJson =
+        //{
+        //    BarcodeProcessAttributeInfo: []
+        //};
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var currentLanguage = localStorage.getItem('language') || 'chinese';
+            $("#language-select2").val(currentLanguage)
+
+            async function loadTranslations() {
+                try {
+                    const response = await fetch('/MesConsoleLang.json'); // 请确保路径与文件名正确
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const translations = await response.json();
+                    return translations;
+                } catch (error) {
+                    console.error('Error loading translations:', error);
+                }
+            }
+
+            // 根据语言设置翻译
+            async function translateContent(language) {
+                const translations = await loadTranslations();
+                document.querySelectorAll('[data-key]').forEach(function (element) {
+                    const key = element.getAttribute('data-key');
+                    if (translations[language] && translations[language][key]) {
+                        if (element.placeholder !== undefined) {
+                            // 如果元素有 placeholder 属性
+                            element.setAttribute('placeholder', translations[language][key]);
+                        } else {
+                            // 如果是普通 HTML 元素
+                            element.textContent = translations[language][key];
+                        }
+                    }
+                });
+            }
+
+            // Update content on page load
+            translateContent(currentLanguage);
+
+            // Handle language toggle from select element
+            document.getElementById('language-select2').addEventListener('change', function (event) {
+                currentLanguage = event.target.value;
+                translateContent(currentLanguage);
+                localStorage.setItem('language', currentLanguage);
+            });
+
+            // Optional: Handle language toggle button
+            //document.getElementById('toggle-language').addEventListener('click', function () {
+            //    var languageOptions = ['chinese', 'thai', 'vietnamese'];
+            //    var currentIndex = languageOptions.indexOf(currentLanguage);
+            //    var nextIndex = (currentIndex + 1) % languageOptions.length;
+            //    currentLanguage = languageOptions[nextIndex];
+            //    translateContent(currentLanguage);
+            //    localStorage.setItem('language', currentLanguage);
+            //    document.getElementById('language-select').value = currentLanguage; // Sync with select element
+            //});
+        });
+
+        $(document).ready(function () {
+            //左上方列表
+            ManufactureOrde@(itemName)(@MoId);
+            Process@(itemName)(@MoProcessId);
+            Machine@(itemName)(@MachineId);
+            User@(itemName)(@UserId);
+            GetProcessMachine@(itemName)(@MoProcessId, @MachineId);
+            GetLoginByKey@(itemName)();
+            GetMfgOrderProcess@(itemName)();
+
+            moId = @MoId;
+            moProcessId = @MoProcessId;
+
+            $("#IPQCHref@(itemName)").prop("href", `/ProductionHistory/MesIPQC?MoId=${'@MoId'}&MoProcessId=${'@MoProcessId'}`)
+
+            Return@(itemName)();
+
+
+            ComboBoxs.Default("#cboKeyenceId@(itemName)", "@Url.Action("GetKeyence", "ProductionHistory")", { "Status": "A" }, "" + KeyenceId@(itemName) + "", "ALL", "", "KeyenceDesc", "KeyenceId");
+            ComboBoxs.Default("#cboKeyenceIdQ@(itemName)", "@Url.Action("GetKeyence", "ProductionHistory")", { "Status": "A" }, "" + KeyenceId@(itemName) + "", "ALL", "", "KeyenceDesc", "KeyenceId");
+
+            ComboBoxs.Default("#cboLabelPrintMachine@(itemName)", "@Url.Action("GetLabelPrintMachine", "ProductionHistory")", {}, "", "NA", "", "LabelPrintName", "LabelPrintNo");
+        
+
+            let woErpFullNo = $("#txtWoErpNo@(itemName)").text();
+            let processAlias = $("#txtProcessAlias@(itemName)").text();
+            let machineDesc = $("#txtMachineDesc@(itemName)").text();
+            $("#aJigSetting@(itemName)").prop("href", `javascript: PopViewJigBarcode('${@MoProcessId}', '${woErpFullNo}', '${processAlias}', '${@MachineId}', '${machineDesc}')`);
+
+            $("#aLotBarcodeQtyMerge@(itemName)").prop("href", `javascript: PopViewLotBarcodeMerge('${woErpFullNo}', '@MoId', '${@MoProcessId}', '${moProcessItemId@(itemName)}')`)
+
+            $("#aKnifeSetting@(itemName)").prop("href", `javascript: PopViewKnifeManagement('${@MoId}', '${@MoProcessId}', '${woErpFullNo}', '${processAlias}', '${machineDesc}', '@MachineId', '${ProcessId@(itemName)}', '${modeId@(itemName)}')`);
+
+            $("#aJudgeScrapQty@(itemName)").prop("href", `javascript: PopViewJudgeScrapQty('${@MoId}', '${woErpFullNo}', '${@MachineId}')`);
+
+            $("#aAdvancedFunction@(itemName)").prop("href", `javaScript: PopViewAdvancedFunction('${@MoId}', '${BarcodeCtrl@(itemName)}', '${@MoProcessId}', '${LotStatus@(itemName)}', '${@MachineId}')`);
+
+            $("#aMachineTransfer@(itemName)").prop("href", `javascript: MachineTransfer@(itemName)('${@MoId}', '${@MachineId}', '${@MoProcessId}')`)
+
+            $("#aBarcodeMoprocess@(itemName)").prop("href", `javascript: PopViewBarcodeMoprocess('${@MoProcessId}', '${woErpFullNo}', '${processAlias}')`);
+
+            $("#aPackageBarcode@(itemName)").prop("href", `javascript: PopViewPackageBarcode('${@MoProcessId}', '${@MoId}', '${woErpFullNo}', ${KeyenceId@(itemName)})`);
+
+            $("#aCreateNewBarcode@(itemName)").prop("href", `javascript: PopViewCreateNewBarcode('${@MoId}', '${@MoProcessId}', '${woErpFullNo}', '${processAlias}', '${@MachineId}')`);
+
+            //$("#aMtlSystem@(itemName)").prop("href", `javascript: PopViewMaterial('${@MoId}', '${woErpFullNo}', '${processAlias}', '${item.BarcodeNo}', '${MtlItemNo}', '${MtlItemName}', '${@MoProcessId}')`);
+
+            $("#aTrayLensBind@(itemName)").prop("href", `javascript: PopViewTrayLensBind('@MoId', '${@MoProcessId}', '${@MachineId}')`)
+            $("#aTrayTurnover@(itemName)").prop("href", `javascript: PopViewTrayTurnover('@MoId', '${@MoProcessId}', '${@MachineId}')`)
+            $("#aMachineSchedule@(itemName)").prop("href", `javascript: PopViewMachineSchedule('${@MachineId}');`)
+
+            $("#aQcDataPotNumber@(itemName)").off("click").on("click", function () {
+                var config = {
+                    MoId: @(MoId),
+                    ModeId: modeId@(itemName),
+                    MoProcessId: @(MoProcessId),
+                    MachineId: @(MachineId),
+                    UserId: @(UserId),
+                    WoErpNo: $("#txtWoErpNo@(itemName)").text(),
+                    MtlItemName: $("#txtMtlItemName@(itemName)").text(),
+                    MtlItemNo: $("#txtMtlItemNo@(itemName)").text(),
+                    Quantity: parseInt($("#txtQuantity@(itemName)").text()).toLocaleString(`en`),
+                    ProcessAlias: $("#txtProcessAlias@(itemName)").text(),
+                    MachineDesc: $("#txtMachineDesc@(itemName)").text()
+                }
+                PopViewQcDataPotNumber(config);
+            });
+
+            $("#cboBarcodeStatus@(itemName)").change(function () {
+                if ($("#cboBarcodeStatus@(itemName)").val() == "F" || $("#cboBarcodeStatus@(itemName)").val() == "S") {
+                    let BarcodeNo = $("#txtBarcodeNo@(itemName)").val();
+                    $("#desNgQty@(itemName)").html(BarcodeNo);
+
+                    $("#cboNextMoProcess@(itemName)").prop("disabled", false);
+                    $("#cboNextMoProcess@(itemName)").prop("required", true);
+
+                    if ($("#cboBarcodeStatus@(itemName)").val() == "S") {
+                        $("#cboNextMoProcess@(itemName)").prop("disabled", true);
+                        $("#cboNextMoProcess@(itemName)").prop("required", false);
+                    }
+
+                    $("#LotNgProcessModal@(itemName)").modal("show");
+                    $("#txtNgQty@(itemName)").val(BarcodeNo);
+                    $("#txtBarcodeNo@(itemName)").val("");
+                    ComboBoxs.Default("#cboNextMoProcess@(itemName)", "@Url.Action("GetMoProcess", "ProductionHistory")", { "MoId": '@MoId' }, "", "NA", "", "ProcessAlias", "MoProcessId");
+                }
+            });
+
+            $("#cboKeyenceIdQ@(itemName)").change(function () {
+                $("#cboKeyenceId@(itemName)").val($("#cboKeyenceIdQ@(itemName)").val());
+            });
+
+            $("#txtNgBarcodeNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    $("#txtNgBarcodeQty@(itemName)").focus();
+                    return false;
+                }
+            });
+
+            if (!isMobile) {
+                $("#cboShopId@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboQmmDetailId@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboLabelPrintMachine@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            $("#cboShopId@(itemName)").change(function () {
+                let shopId = $("#cboShopId@(itemName)").val();
+                ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": shopId }, "", "NA", "", "MachineName", "MachineNumber");
+            });
+
+            $("#txtNgBarcodeQty@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    $("#txtCauseNo@(itemName)").focus();
+                    return false;
+                }
+            });
+
+            $("#txtNgBarcodeQty@(itemName)").change(function () {
+                if ($(this).val() == -9999) {
+                    let targetUrl = "@Url.Action("GetBarcodeQty", "ProductionHistory")";
+                    let postData = {
+                        "BarcodeNo": $("#desBarcodeNo@(itemName)").html()
+                    };
+
+                    let data = DataAccess.Get(targetUrl, postData, false);
+
+                    if (data) {
+                        $.each(data.result, function (i, item) {
+                            $("#txtNgBarcodeQty@(itemName)").val(item.BarcodeQty);
+                        });
+                    }
+                }
+            });
+
+            $("#cbxQcBarcodeSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxQcBarcodeSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-qc-barcode-no]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-qc-barcode-no]").not(":disabled").prop("checked", false);
+                }
+            });
+
+            $("#txtQcBarcodeNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    let qcBarcodeNo = $(this).val();
+                    $("input[type='checkbox'][data-qc-barcode-no=" + qcBarcodeNo + "]").prop("checked", true);
+                    $(this).val("");
+                    return false;
+                }
+            });
+
+            $("#cboQcDepartment@(itemName)").change(function (i, item) {
+                let value = $(this).val();
+                if (value == "Y") {
+                    ComboBoxs.Default("#cboShopId@(itemName)", "@Url.Action("GetWorkShop", "QcDataManagement")", {}, "", "NA", "", "ShopName", "ShopId");
+                    $("#cboShopId@(itemName)").val("11");
+
+                    let shopId = $("#cboShopId@(itemName)").val();
+                    ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": shopId }, "", "NA", "", "MachineName", "MachineNumber");
+                }
+                else {
+                    ComboBoxs.Default("#cboShopId@(itemName)", "@Url.Action("GetWorkShop", "QcDataManagement")", {}, "", "NA", "", "ShopName", "ShopId");
+                    $("#cboShopId@(itemName)").val(shopId@(itemName));
+
+                    let shopId = $("#cboShopId@(itemName)").val();
+                    ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": shopId }, "", "NA", "", "MachineName", "MachineNumber");
+                }
+            });
+        });
+
+        function GetLoginByKey@(itemName)() {
+            let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+            let postData = {
+                "UserNo": $.cookie("Login"),
+                "KeyText": $.cookie("LoginKey")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                CompanyId@(itemName) = data.returnData.CompanyId;
+            } else {
+                alert(data.msg, "alert", 5000);
+            }
+        }
+
+        function OpenQcModal@(itemName)() {
+            $("#modalQc@(itemName)").modal("show");
+            ComboBoxs.Default("#cboQcTypeId@(itemName)", "@Url.Action("GetQcType", "QcDataManagement")", { "ModeId": modeId@(itemName) }, "", "NA", "", "QcTypeName", "QcTypeId");
+
+            ComboBoxs.Default("#cboShopId@(itemName)", "@Url.Action("GetWorkShop", "QcDataManagement")", {}, "", "NA", "", "ShopName", "ShopId");
+            ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", {}, "", "NA", "", "MachineName", "MachineNumber");
+
+            $("#cboQcDepartment@(itemName)").val("");
+
+            $("#cbxQcBarcodeSelectAll@(itemName)").prop("checked", false);
+            $(`input[type="checkbox"][data-qc-barcode-no]`).prop("checked", false);
+
+            let targetUrl = "@Url.Action("GetAllowQcBarcode", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId'
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    let count = 1;
+                    $.each(data.result, function (i, item) {
+                        if (item.BarcodeProcess != null && item.BarcodeProcessNull == null) {
+                            innerHtml += `<tr>
+                                            <td style="max-width: 150px; min-width: 135px;">
+                                                <label class="control control-solid control-solid-info control--checkbox">
+                                                    ${count}. <input type="checkbox" data-qc-barcode-no="${item.BarcodeNo}" value="${item.BarcodeId}"/>
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}">
+                                                ${item.BarcodeNo}
+                                                ${JudgeItemValue@(itemName)(`${item.ItemValue}`)}
+                                            </td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeQty}">${item.BarcodeQty}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeStatusName}">${item.BarcodeStatusName}</td>
+                                          </tr>`;
+                            count++;
+                        }
+
+                        function JudgeItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null") {
+                                let itemValueJson = JSON.parse(itemValue);
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<br><code>${item2.ItemValue}</code>`;
+                                });
+                            }
+
+                            return innerHtml;
+                        }
+                    });
+                }
+            } else {
+                alert(data.msg, "alert", 5000);
+            }
+
+            $("#tblQcBarcodeData@(itemName) tbody").html(innerHtml);
+        }
+
+        function CreateQcRecord@(itemName)() {
+            let barcodeList = [];
+            $.each($(`input[type="checkbox"][data-qc-barcode-no]:checked`), function (i, item) {
+                let barcodeId = $(this).val();
+                barcodeList.push(barcodeId);
+            });
+
+            let qcDepartment = $("#cboQcDepartment@(itemName)").val();
+            if (qcDepartment == "") {
+                alert("需選擇送檢單位才能進行後續流程", 5000);
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("AddQcRecord", "ProductionHistory")";
+            let postData = {
+                "QcNoticeId": -1,
+                "QcTypeId": $("#cboQcTypeId@(itemName)").val(),
+                "MoId": '@MoId',
+                "MoProcessId": '@MoProcessId',
+                "Remark": "",
+                "CurrentFileId": -1,
+                "QcRecordFile": -1,
+                "InputType": "Lettering",
+                "SupportAqFlag": "Y",
+                "ResolveFile": "",
+                "ResolveFileJson": "",
+                "BarcodeList": barcodeList.toString(),
+                "QcDepartment": $("#cboQcDepartment@(itemName)").val(),
+                "MachineNumber": $("#cboQmmDetailId@(itemName)").val(),
+                "QcItemJson": JSON.stringify(qcItemJson)
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                $("#modalQc@(itemName)").modal("hide");
+
+                $.each(data.result, function (i, item) {
+                    Swal.fire(
+                        "送測成功!!", //標題
+                        "量測單號: " + item.QcRecordId, //訊息內容(可省略)
+                        "success",
+                    );
+
+                    Print@(itemName)(item.QcRecordId);
+                });
+            }
+        }
+
+        function Print@(itemName)(qcRecordId) {
+            let targetUrl = "@Url.Action("PrintQCLable", "PrintLabel")";
+            let postData = {
+                "QcRecordId": qcRecordId,
+                "PrintMachineName": $("#cboLabelPrintMachine@(itemName)").val()
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                alert("完成1", "success", 0);
+
+            }
+        
+        }
+
+        function ManufactureOrde@(itemName)(MoId) {
+            let targetUrl = "@Url.Action("GetManufactureOrder", "ProductionHistory")";
+            let postData = {
+                "MoId": MoId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    BarcodeCtrl@(itemName) = item.BarcodeCtrl;
+                    LotStatus@(itemName) = item.LotStatus;
+                    modeId@(itemName) = item.ModeId;
+                    $(".lot-process").hide();
+                    if (item.BarcodeCtrl == "N") {
+                        $(".lot-process").show();
+                        $("#txtBarcodeNo@(itemName)").prop("placeholder", "請輸入過站數量");
+                    }
+                    $("#txtWoErpNo@(itemName)").html(item.WoErpPrefix + "-" + item.WoErpNo + "(" + item.WoSeq + ")");
+                    $("#txtMtlItemName@(itemName)").html(item.MtlItemName);
+                    $("#txtMtlItemNo@(itemName)").html(item.MtlItemNo);
+                    $("#txtQuantity@(itemName)").html(item.Quantity);
+
+                    if (item.BarcodeCtrl == "N") {
+                        QtyProcessCheck@(itemName) = true;
+                    }
+                });
+            } else {
+                alert(data.msg, "alert", 1000);
+            }
+        }
+
+        function Process@(itemName)(MoProcessId) {
+            let targetUrl = "@Url.Action("GetProcess", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": MoProcessId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    $("#txtProcessAlias@(itemName)").html(item.ProcessAlias);
+                    ProcessId@(itemName) = item.ProcessId;
+                    moProcessItemId@(itemName) = item.MoProcessItemId;
+                });
+            } else {
+                alert(data.msg, "alert", 1000);
+            }
+        }
+
+        function Machine@(itemName)(MachineId) {
+            let targetUrl = "@Url.Action("GetMachine", "ProductionHistory")";
+            let postData = {
+                "MachineId": MachineId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    $("#txtMachineDesc@(itemName)").html(item.MachineName + "(" + item.MachineDesc + ")");
+                    shopId@(itemName) = item.ShopId;
+                });
+            } else {
+                alert(data.msg, "alert", 1000);
+            }
+        }
+
+        function GetProcessMachine@(itemName)(MoProcessId, MachineId) {
+            let targetUrl = "@Url.Action("GetProcessMachine", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": MoProcessId,
+                "MachineId": MachineId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.KeyenceFlag == "Y") {
+                            $(".lot-scanner").show();
+                            KeyenceId@(itemName) = item.KeyenceId;
+                        }
+                        else {
+                            $(".lot-scanner").hide();
+                        }
+                    });
+                }
+                else {
+                    $(".lot-scanner").hide();
+                }
+            } else {
+                alert(data.msg, "alert", 1000);
+                $(".lot-scanner").hide();
+            }
+        }
+
+        function User@(itemName)(UserId) {
+            let targetUrl = "@Url.Action("GetUser", "ProductionHistory")";
+            let postData = {
+                "UserId": UserId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    $("#txtUserNo@(itemName)").html(item.UserName + "(" + item.UserNo + ")");
+                    $("#txtCountTimeUserNo@(itemName)").html("當前使用者：" + item.UserName + "(" + item.UserNo + ")");
+                    @*$("#txtLotCountTimeUserNo@(itemName)").html("當前使用者：" + item.UserName + "(" + item.UserNo + ")");*@
+                    UserNo@(itemName) = item.UserNo;
+                });
+            } else {
+                alert(data.msg, "alert", 1000) ;
+            }
+        }
+
+        function GetActiveBarcode@(itemName)() {
+            $("#tblData@(itemName) tbody").empty();
+            let targetUrl = "@Url.Action("GetActiveBarcode", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId'
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        //let lettering = GetBarcodeLettering@(itemName)(item.BarcodeNo);
+                        innerHtml = `<tr class="line-even">
+                                        <th>
+                                            <p>${item.BarcodeNo}</p>
+                                            ${JudgeTrayBarcode@(itemName)(`${item.TrayBarcode}`, `${item.TrayNo}`)}
+                                            ${JudgeItemValue@(itemName)(`${item.ItemValue}`)}
+                                        </th>
+                                        <td>${item.BarcodeQty}</td>
+                                        <td>${item.StartDate}</td>
+                                        <td>${item.FinishDate}</td>
+                                        <td>
+                                            <div id="${item.BarcodeNo}" class="btn-work-block">
+                                            </div>
+                                        </td>
+                                      </tr>`;
+
+                        BarcodeNoList.push(item.BarcodeNo);
+                        $("#tblData@(itemName) tbody").append(innerHtml);
+                        //GetWorkSet@(itemName)(item.BarcodeNo);
+                        //加工
+                        GetBarcodeEven@(itemName)(PreCollectionStatus@(itemName), PostCollectionStatus@(itemName), item.BarcodeId, item.BarcodeNo);
+
+                        GetLotNgBarcode@(itemName)(item.BarcodeNo, item.BarcodeQty, item.NgToBarcode, item.LotStatus, item.MinBarcodes);
+
+                        function JudgeTrayBarcode@(itemName)(trayBarcode, trayNo) {
+                            let innerHtml = '';
+                            if (trayBarcode == "Y") {
+                                innerHtml += `<p>(${trayNo})</p>`;
+                            }
+                            return innerHtml;
+                        }
+
+                        function JudgeItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null" && itemValue != null) {
+                                let itemValueJson = JSON.parse(itemValue);
+                                let dateCode = "";
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<code>${item2.ItemValue}</code><br>`;
+
+                                    if (k == 0) {
+                                        dateCode = item2.DateCode;
+                                    }
+
+                                    if (k == itemValueJson["data"].length - 1) {
+                                        innerHtml += `<code>${dateCode}</code><br>`;
+                                    }
+                                });
+                            }
+
+                            return innerHtml;
+                        }
+                    });
+                }
+                //$("#tblData@(itemName) tbody").append(innerHtml);
+                TableComponentInit();
+            }
+        }
+
+        //產品事件 => 加工前事件、加工後事件
+        function GetBarcodeProcessEvent@(itemName)(barcodeNo) {
+            let targetUrl = "@Url.Action("GetBarcodeProcessEvent", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId',
+                "BarcodeNo": barcodeNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let lettering = GetBarcodeLettering@(itemName)(item.BarcodeNo);
+                        if (item.PreCollectionStatus == "Y" && item.EventItemNo == null) {
+                            innerHtml += `<tr class="line-even">
+                                            <th>
+                                                <p>${item.BarcodeNo}</p>
+                                                <p>${lettering}</p>
+                                            </th>
+                                            <td>${item.BarcodeQty}</td>
+                                            <td>${item.StartDate}</td>
+                                            <td>${item.FinishDate}</td>
+                                            <td>
+                                                <div id="${item.BarcodeNo}" class="btn-work-block">
+                                                </div>
+                                            </td>
+                                          </tr>`;
+                            //innerHtml += `<tr class="line-even">
+                            //                <th>
+                            //                    <p>${item.BarcodeNo}</p>
+                            //                    <p>${lettering}</p>
+                            //                </th>
+                            //                <td>${item.BarcodeQty}</td>
+                            //                <td>${item.StartDate}</td>
+                            //                <td>${item.FinishDate}</td>
+                            //                <td>
+                            //                    <div id="${item.BarcodeNo}" class="btn-work-block">
+                            //                        <a class="btn  font20 btn-work">
+                            //                            加工前作業
+                            //                        </a>
+                            //                    </div>
+                            //                </td>
+                            //              </tr>`;
+                            return false;
+                        }
+                        else if (item.PostCollectionStatus == "Y" && item.EventItemNo != null) {
+                            innerHtml += `<tr class="line-even">
+                                            <th>
+                                                <p>${item.BarcodeNo}</p>
+                                                <p>${lettering}</p>
+                                            </th>
+                                            <td>${item.BarcodeQty}</td>
+                                            <td>${item.StartDate}</td>
+                                            <td>${item.FinishDate}</td>
+                                            <td>
+                                                <div id="${item.BarcodeNo}" class="btn-work-block">
+                                                </div>
+                                            </td>
+                                          </tr>`;
+                            //innerHtml += `<tr class="line-even">
+                            //                <th>
+                            //                    <p>${item.BarcodeNo}</p>
+                            //                    <p>${lettering}</p>
+                            //                </th>
+                            //                <td>${item.BarcodeQty}</td>
+                            //                <td>${item.StartDate}</td>
+                            //                <td>${item.FinishDate}</td>
+                            //                <td>
+                            //                    <div id="${item.BarcodeNo}" class="btn-work-block">
+                            //                        <a class="btn  font20 btn-work">
+                            //                            加工後作業
+                            //                        </a>
+                            //                    </div>
+                            //                </td>
+                            //              </tr>`;
+                            return false;
+                        }
+                        else {
+                            innerHtml += `<tr class="line-even">
+                                            <th>
+                                                <p>${item.BarcodeNo}</p>
+                                                <p>${lettering}</p>
+                                            </th>
+                                            <td>${item.BarcodeQty}</td>
+                                            <td>${item.StartDate}</td>
+                                            <td>${item.FinishDate}</td>
+                                            <td>
+                                                <div id="${item.BarcodeNo}" class="btn-work-block">
+                                                </div>
+                                            </td>
+                                          </tr>`;
+                            return false;
+                        }
+                    });
+                }
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+            $("#tblData@(itemName) tbody").append(innerHtml);
+        }
+
+        function GetLotNgBarcode@(itemName)(barcodeNo, barcodeQty, ngToBarcode, lotStatus, minBarcodes) {
+            let innerHtml = '';
+            if (barcodeQty > 1 || lotStatus == "Y" && ngToBarcode != "T") {
+                innerHtml += `<a class="btn  font20 btn-work-outline" href="javascript: PopLotBarcodeNgCode@(itemName)('${barcodeNo}', '${barcodeQty}', '${ngToBarcode}', '${minBarcodes}')">
+                                刷取NG條碼
+                              </a>`;
+            }
+            $("div[id='" + barcodeNo + "']").append(innerHtml);
+        }
+
+
+        function GetMoProcessItem@(itemName)() {
+            let targetUrl = "@Url.Action("GetMoProcessItem", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId'
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        GetBarcodeProcessAttribute@(itemName)(item.ItemNo);
+                    });
+                }
+            }
+        }
+
+        function GetBarcodeProcessAttribute@(itemName)(itemNo) {
+            let targetUrl = "@Url.Action("GetBarcodeProcessAttribute", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId',
+                "ItemNo": itemNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if ((BarcodeNoList.indexOf(item.BarcodeNo) == -1 && item.ItemValue == null) || (BarcodeNoList.indexOf(item.BarcodeNo) == -1 && item.CheckItemValue == null)) {
+                            BarcodeNoList.push(item.BarcodeNo);
+                            let woErpFullNo = $("#txtWoErpNo@(itemName)").text();
+                            innerHtml += `<tr class="line-even">
+                                            <th>
+                                                <p>${item.BarcodeNo}</p>
+                                                ${JudgeTrayBarcode@(itemName)(`${item.TrayBarcode}`, `${item.TrayNo}`)}
+                                            </th>
+                                            <td>${item.BarcodeQty}</td>
+                                            <td>${item.StartDate}</td>
+                                            <td>${item.FinishDate}</td>
+                                            <td>
+                                                <div id="${item.BarcodeNo}" class="btn-work-block">
+                                                    <a class="btn  font20 btn-work-outline" href="javascript:PopViewBarcodeProcessAttribute('@MoProcessId', '${woErpFullNo}')">
+                                                        屬性設定
+                                                    </a>
+                                                </div>
+                                            </td>
+                                          </tr>`;
+                            if (itemNo == "Lettering" && item.CheckItemValue == null) {
+                                PopViewBarcodeProcessAttribute(`@MoProcessId`, `${woErpFullNo}`);
+                            }
+
+                            function JudgeTrayBarcode@(itemName)(trayBarcode, trayNo) {
+                                let innerHtml = '';
+                                if (trayBarcode == "Y") {
+                                    innerHtml += `<p>(${trayNo})</p>`;
+                                }
+                                return innerHtml;
+                            }
+                        }
+                    });
+                }
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+
+            let innerHtmlData = $("#tblData@(itemName) tbody").html();
+            $("#tblData@(itemName) tbody").html(innerHtmlData + innerHtml);
+            TableComponentInit();
+        }
+
+        function GetMoMtlSettingForMTL@(itemName)() {
+            let innerHtml = '';
+            let targetUrl = "@Url.Action("GetMoMtlSettingForMTL02", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId'
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let woErpFullNo = $("#txtWoErpNo@(itemName)").text();
+                        let processAlias = $("#txtProcessAlias@(itemName)").text();
+                        if (BarcodeNoList.indexOf(item.BarcodeNo) == -1) {
+                            innerHtml = `<tr class="line-even">
+                                            <th style="color: green;">
+                                                <p>${item.BarcodeNo}</p>
+                                                ${JudgeTrayBarcode@(itemName)(`${item.TrayBarcode}`, `${item.TrayNo}`)}
+                                            </th>
+                                            <td>${item.BarcodeQty}</td>
+                                            ${JudgeBarcodeProcess@(itemName)(`${item.BarcodeProcess}`)}
+                                            <td>
+                                                <div id="${item.BarcodeNo}" class="btn-work-block">
+                                                    <a data-barcode-no=${item.BarcodeNo} data-a-type="mtl-control" class="btn  font20 btn-work-outline" href="javascript: ${item.VehicleFlag == `Y` ? `PopViewMaterialVehicle` : `PopViewMaterial`}('${@MoId}', '${woErpFullNo}', '${processAlias}', '${item.BarcodeNo}', '${@MoProcessId}')">
+                                                        上料設定
+                                                    </a>
+                                                </div>
+                                            </td>
+                                         </tr>`;
+
+                            let innerHtmlData = $("#tblData@(itemName) tbody").html();
+                            $("#tblData@(itemName) tbody").html(innerHtmlData + innerHtml);
+                            TableComponentInit();
+
+                            function JudgeBarcodeProcess@(itemName)(barcodeProcess) {
+                                let innerHtml = '';
+                                if (barcodeProcess != "null") {
+                                    let barcodeProcessJson = JSON.parse(barcodeProcess);
+                                    $.each(barcodeProcessJson.data, function (i, item) {
+                                        innerHtml += `<td>${item.StartDate}</td>
+                                                      <td>${item.FinishDate}</td>`;
+                                    });
+                                }
+
+                                return innerHtml;
+                            }
+
+                            function JudgeTrayBarcode@(itemName)(trayBarcode, trayNo) {
+                                let innerHtml = '';
+                                if (trayBarcode == "Y") {
+                                    innerHtml += `<p>(${trayNo})</p>`;
+                                }
+                                return innerHtml;
+                            }
+                        }
+                        else {
+                            innerHtml = `<a data-barcode-no=${item.BarcodeNo} data-a-type="mtl-control" class="btn  font20 btn-work-outline" href="javascript: ${item.VehicleFlag == `Y` ? `PopViewMaterialVehicle` : `PopViewMaterial`}('${@MoId}', '${woErpFullNo}', '${processAlias}', '${item.BarcodeNo}', '${@MoProcessId}')">
+                                            上料設定
+                                          </a>`;
+                            $("div[id='" + item.BarcodeNo + "']").append(innerHtml);
+                        }
+                    });
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+
+        function GetMoMtlSettingForMTLTemp@(itemName)() {
+            let targetUrl = "@Url.Action("GetMoMtlSettingForMTL", "ProductionHistory")";
+            let postData = {
+                "MoId": '@MoId',
+                "MoProcessId": '@MoProcessId'
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.result.length > 0) {
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        if (item.MoMtlSetting != null || (item.MoMtlSettingNotBind != null && item.FinalMoProcessCheck != null)) {
+                            let woErpFullNo = $("#txtWoErpNo@(itemName)").text();
+                            let processAlias = $("#txtProcessAlias@(itemName)").text();
+                            let MtlItemNo = "";
+                            let MtlItemName = "";
+
+                            if (item.ParentBarcode != null) {
+                                return false;
+                            }
+
+                            if (item.MtlItemNo != null) {
+                                MtlItemNo = item.MtlItemNo;
+                                MtlItemName = item.MtlItemName;
+                            }
+                            else {
+                                if (item.MoMtlSettingJson != null) {
+                                    let MoMtlSettingJson = JSON.parse(item.MoMtlSetting);
+                                    $.each(MoMtlSettingJson.data, function (j, item2) {
+                                        MtlItemNo = item2.MtlItemNo;
+                                        MtlItemName = item2.MtlItemName;
+                                    });
+                                }
+                                else {
+                                    if (item.MoMtlSettingNotBind != null) {
+                                        let MoMtlSettingNotBindJson = JSON.parse(item.MoMtlSettingNotBind);
+                                        $.each(MoMtlSettingNotBindJson.data, function (j, item2) {
+                                            MtlItemNo = item2.MtlItemNo;
+                                            MtlItemName = item2.MtlItemName;
+                                        });
+                                    };
+                                }
+                            }
+
+                            let checkControl = $(`a[data-barcode-no=${item.BarcodeNo}][data-a-type="mtl-control"]`).text();
+
+                            if (checkControl != "") return;
+
+                            if (typeof ($("div[id='" + item.BarcodeNo + "']").html()) == "undefined") {
+                                innerHtml = `<tr class="line-even">
+                                                <th>
+                                                    <p>${item.BarcodeNo}</p>
+                                                    ${JudgeTrayBarcode@(itemName)(`${item.TrayBarcode}`, `${item.TrayNo}`)}
+                                                </th>
+                                                <td>${item.BarcodeQty}</td>
+                                                <td>${item.StartDate}</td>
+                                                <td>${item.FinishDate}</td>
+                                                <td>
+                                                    <div id="${item.BarcodeNo}" class="btn-work-block">
+                                                        <a data-barcode-no=${item.BarcodeNo} data-a-type="mtl-control" class="btn  font20 btn-work-outline" href="javascript: PopViewMaterial('${@MoId}', '${woErpFullNo}', '${processAlias}', '${item.BarcodeNo}', '${MtlItemNo}', '${MtlItemName}', '${@MoProcessId}')">
+                                                          上料設定
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                              </tr>`;
+                                let innerHtmlData = $("#tblData@(itemName) tbody").html();
+                                $("#tblData@(itemName) tbody").html(innerHtmlData + innerHtml);
+                                TableComponentInit();
+                            }
+                            else {
+                                innerHtml = `<a data-barcode-no=${item.BarcodeNo} data-a-type="mtl-control" class="btn  font20 btn-work-outline" href="javascript: PopViewMaterial('${@MoId}', '${woErpFullNo}', '${processAlias}', '${item.BarcodeNo}', '${MtlItemNo}', '${MtlItemName}', '${@MoProcessId}')">
+                                                上料設定
+                                              </a>`;
+                                $("div[id='" + item.BarcodeNo + "']").append(innerHtml);
+                            }
+                        }
+
+                        function JudgeTrayBarcode@(itemName)(trayBarcode, trayNo) {
+                            let innerHtml = '';
+                            if (trayBarcode == "Y") {
+                                innerHtml += `<p>(${trayNo})</p>`;
+                            }
+                            return innerHtml;
+                        }
+                    });
+                }
+            }
+        }
+
+        function GetBarcodeLettering@(itemName)(barcodeNo) {
+            let targetUrl = "@Url.Action("GetBarcodeLettering", "ProductionHistory")";
+            let postData = {
+                "BarcodeNo": barcodeNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let lettering = "";
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        lettering = item.ItemValue;
+                    });
+                }
+            }
+
+            return lettering;
+        }
+
+        //更新
+        function UpdateProcessQty(MoProcessId) {
+            //取得待加工數
+            let targetUrl = "@Url.Action("GetProcessQty", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": MoProcessId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    $("#ProcessQty@(itemName)").html(item.ProcessQty);
+                });
+            } else {
+                alert(data.msg, "alert", 1000);
+            }
+        }
+
+        $("#txtBarcodeNo@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                if (QtyProcessCheck@(itemName) == false) BarcodeProcess@(itemName)();
+                else LotProcess@(itemName)();
+            }
+        });
+
+        $("#txtCauseNo@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                SaveLotNgBarcode@(itemName)();
+            }
+        });
+
+        $("#txtAccount@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                ChangeUserNo@(itemName)();
+            }
+        });
+
+        $("#txtLotNgCauseNo@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                LotProcessSave@(itemName)();
+            }
+        });
+
+        $(window).keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        $("#cbxJigBarcodeSelectAll@(itemName)").click(function () {
+            if ($(this).prop("checked")) {
+                $("input[type='checkbox'][data-jig-barcode-id][data-disabled='false']").prop("checked", true);
+            }
+            else {
+                $("input[type='checkbox'][data-jig-barcode-id][data-disabled='false']").prop("checked", false);
+            }
+        });
+
+        function BarcodeProcess@(itemName)() {
+            if ($("#txtBarcodeNo@(itemName)").val() == "" || $("#txtBarcodeNo@(itemName)").val() == "-1")
+            {
+                alert("主條碼不可為空", "alert", 5000);
+            }
+            else
+            {
+                BarcodeNo = $("#txtBarcodeNo@(itemName)").val();
+                $("#txtBarcodeNo@(itemName)").val("");
+
+                let targetUrl = "@Url.Action("GetJigBarcodeDetail", "ProductionHistory")";
+                let postData = {
+                    "JigNo": BarcodeNo,
+                    //"MoProcessId": '@MoProcessId'
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                let innerHtml = '';
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        let checkcount = 0;
+                        $.each(data.result, function (i, item) {
+                            $("#desJigNo@(itemName)").html(item.JigNo);
+                            $("#desJigName@(itemName)").html(item.JigName);
+                            innerHtml += `<tr>
+                                            <td scope="col" style="min-width: 75px;">${i + 1}.</td>
+                                            <td scope="col" style="min-width: 110px;">${item.BarcodeNo}</td>
+                                            <td scope="col" style="min-width: 110px;">${item.WorkingFlag == `N` ? `非加工中` : `加工中`}</td>
+                                            <td class="text-center">
+                                                <label class="control control-solid control-solid-info control--checkbox">
+                                                    <input type="checkbox" data-jig-barcode-id="${item.JigBarcodeId}" data-barcode-no="${item.BarcodeNo}" data-jig-no="${item.JigNo}" data-disabled="false" value="${item.JigBarcodeId}" checked>
+                                                    @*${JudgeProcessCheck@(itemName)(`${item.ProcessCheck}`, `${item.JigBarcodeId}`, `${item.BarcodeNo}`, `${item.JigNo}`, `${item.JigBarcodeId}`)}*@
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </td>
+                                            </tr>`;
+                            checkcount++;
+                        });
+
+                        function JudgeProcessCheck@(itemName)(processCheck, jigBarcodeId, barcodeNo, jigNo, jigBarcodeId) {
+                            let innerHtml = '';
+                            if (processCheck != "null") {
+                                innerHtml += `<input type="checkbox" data-jig-barcode-id="${jigBarcodeId}" data-barcode-no="${barcodeNo}" data-jig-no="${jigNo}" data-disabled="true" value="${jigBarcodeId}" disabled>`;
+                            }
+                            else {
+                                innerHtml += `<input type="checkbox" data-jig-barcode-id="${jigBarcodeId}" data-barcode-no="${barcodeNo}" data-jig-no="${jigNo}" data-disabled="false" value="${jigBarcodeId}" checked>`;
+                            }
+                            return innerHtml;
+                        }
+
+                        if (checkcount == 0) {
+                            innerHtml += `<tr>
+                                            <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                                <i class="fal fa-exclamation-circle"></i>&nbsp;此治具目前無可加工之條碼。
+                                            </td>
+                                          </tr>`;
+                        }
+                        $("#tblJigBarcode@(itemName) tbody").html(innerHtml);
+                        TableComponentInit();
+                        $("#JigBarcodeProcess@(itemName)").modal("show");
+                    }
+                    else {
+                        let targetUrl = "@Url.Action("TxBarcodeProcess", "ProductionHistory")";
+                        let postData = {
+                            "BarcodeNo": BarcodeNo,
+                            "MoProcessId": @MoProcessId,
+                            "MachineId": @MachineId,
+                            "UserId": '@UserId'
+                        };
+                        let data = DataAccess.Update(targetUrl, postData, false, false);
+                        if (data) {
+                            alert("條碼輸入成功!", "success", 2500);
+                            Return@(itemName)();
+                        }
+                    }
+                }
+                else {
+                    alert(data.msg, "alert", 5000);
+                }
+            }
+        }
+
+        function LotProcess@(itemName)() {
+            let BarcodeNo = $("#txtBarcodeNo@(itemName)").val();
+            if (BarcodeNo == "") {
+                alert("請輸入過站數量!", "alert", 5000);
+                return false;
+            }
+            let BarcodeStatus = $("#cboBarcodeStatus@(itemName)").val();
+            if (BarcodeStatus == "F") {
+                $("#desNgQty@(itemName)").html(BarcodeNo);
+                $("#LotNgProcessModal@(itemName)").modal("show");
+                $("#txtNgQty@(itemName)").val(BarcodeNo);
+                $("#txtBarcodeNo@(itemName)").val("");
+                $("#cboNextMoProcess@(itemName)").prop("disabled", false);
+                ComboBoxs.Default("#cboNextMoProcess@(itemName)", "@Url.Action("GetMoProcess", "ProductionHistory")", { "MoId": '@MoId' }, "", "NA", "", "ProcessAlias", "MoProcessId");
+            }
+            else if (BarcodeStatus == "S") {
+                $("#desNgQty@(itemName)").html(BarcodeNo);
+                $("#LotNgProcessModal@(itemName)").modal("show");
+                $("#txtNgQty@(itemName)").val(BarcodeNo);
+                $("#txtBarcodeNo@(itemName)").val("");
+                $("#cboNextMoProcess@(itemName)").prop("disabled", true);
+                ComboBoxs.Default("#cboNextMoProcess@(itemName)", "@Url.Action("GetMoProcess", "ProductionHistory")", { "MoId": '@MoId' }, "", "NA", "", "ProcessAlias", "MoProcessId");
+            }
+            else {
+                $("#txtBarcodeNo@(itemName)").val("");
+                let targetUrl = "@Url.Action("TxBarcodeProcess", "ProductionHistory")";
+                let postData = {
+                    "BarcodeNo": BarcodeNo,
+                    "QtyBarcodeStatus": BarcodeStatus,
+                    "MoProcessId": @MoProcessId,
+                    "MachineId": @MachineId,
+                    "UserId": @UserId
+                };
+                let data = DataAccess.Update(targetUrl, postData, false, false);
+                if (data) {
+                    Return@(itemName)();
+                    $("#cboBarcodeStatus@(itemName)").val("P");
+                    alert("數量過站成功!", "success", 2500);
+                }
+            }
+        }
+
+        let timer;
+        @*function EditDefectCauseNo@(itemName)(id) {
+            clearTimeout(timer)
+            timer = setTimeout(function () {
+                let defectCauseNo = $("#" + id + "").val();
+                let targetUrl = "@Url.Action("GetNgCause", "QmsBasicInformation")";
+                let postData = {
+                    "CauseNo": defectCauseNo.toUpperCase()
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length <= 0) {
+                        alert("找不到此NG代碼!");
+                        $("#" + id + "").val("");
+                    }
+                    else {
+                        SaveLotNgBarcode@(itemName)();
+                    }
+                }
+                else {
+                    alert(data.msg);
+                }
+            }, 2500);
+        }*@
+
+        function LotProcessSave@(itemName)() {
+            if ($(objForm2@(itemName)).valid()) {
+                let BarcodeNo = $("#txtNgQty@(itemName)").val();
+                let BarcodeStatus = $("#cboBarcodeStatus@(itemName)").val();
+                let LotNgCauseNo = $("#txtLotNgCauseNo@(itemName)").val();
+                let NextMoProcessId = $("#cboNextMoProcess@(itemName)").val();
+
+                let targetUrl = "@Url.Action("TxBarcodeProcess", "ProductionHistory")";
+                let postData = {
+                    "BarcodeNo": BarcodeNo,
+                    "QtyBarcodeStatus": BarcodeStatus,
+                    "QtyLotNgCauseNo": LotNgCauseNo,
+                    "QtyNextMoProcessId": NextMoProcessId,
+                    "MoProcessId": @MoProcessId,
+                    "MachineId": @MachineId,
+                    "UserId": '@UserId'
+                };
+                let data = DataAccess.Update(targetUrl, postData, false, false);
+                if (data) {
+                    Close@(itemName)('LotNgProcessModal@(itemName)');
+                    ResetForm(objForm2@(itemName));
+                    $("#cboBarcodeStatus@(itemName)").val("P");
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function GetBarcodeProcessId@(itemName)(barcodeNo) {
+            let targetUrl = "@Url.Action("GetBarcodeProcessId", "ProductionHistory")";
+            let postData = {
+                "BarcodeNo": barcodeNo,
+                "MoProcessId": '@MoProcessId'
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let BarcodeProcessId = -1;
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        BarcodeProcessId = item.BarcodeProcessId;
+                    });
+                }
+            }
+
+            return BarcodeProcessId
+        }
+
+        function JigBarcodeProcess@(itemName)() {
+            let JigBarcodeIdData = [];
+            let jigNo = "";
+            let count = 0;
+            $.each($("input[type='checkbox'][data-jig-barcode-id][data-barcode-no][data-jig-no]:checked"), function (i) {
+                if (count == 0) {
+                    jigNo = $(this).data("jig-no");
+                    count++;
+                }
+                if (JigBarcodeIdData.indexOf($(this).val()) == -1) {
+                    JigBarcodeIdData.push($(this).val());
+                }
+            });
+
+            let targetUrl = "@Url.Action("UpdateJigBarcodeWorkingFlag", "ProductionHistory")";
+            let postData = {
+                "JigBarcodeIdData": JigBarcodeIdData.toString(),
+                "JigNo": jigNo,
+                "MoProcessId": '@MoProcessId',
+                "MachineId": '@MachineId',
+                "UserId": '@UserId'
+            };
+            let data = DataAccess.Update(targetUrl, postData, false, false);
+            if (data) {
+                Close@(itemName)('JigBarcodeProcess@(itemName)');
+                Return@(itemName)();
+            }
+        }
+
+        function PopLotBarcodeNgCode@(itemName)(barcodeNo, barcodeQty, ngToBarcode, minBarcodes) {
+            $("#txtNgBarcodeNo@(itemName)").val("");
+            $("#txtNgBarcodeQty@(itemName)").val("");
+            $("#txtCauseId@(itemName)").val("");
+
+            $("#LotBarcodeNgCode@(itemName)").modal("show");
+            $("#desBarcodeNo@(itemName)").html(barcodeNo);
+            $("#desBarcodeQty@(itemName)").html(barcodeQty);
+
+            if (ngToBarcode == "Y") {
+                $("#txtNgBarcodeNo@(itemName)").prop("readonly", false);
+                $("#txtNgBarcodeNo@(itemName)").prop("required", true);
+            }
+            else {
+                $("#txtNgBarcodeNo@(itemName)").prop("readonly", true);
+                $("#txtNgBarcodeNo@(itemName)").prop("required", false);
+            }
+
+            $("#cboMinBarcodes@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            if (minBarcodes == "1") {
+                $(".min-barcodes").show();
+                $("#txtNgBarcodeQty@(itemName)").prop("readonly", true)
+                $("#cboMinBarcodes@(itemName)").prop("required", true);
+            }
+            else {
+                $(".min-barcodes").hide();
+                $("#txtNgBarcodeQty@(itemName)").prop("readonly", false)
+                $("#cboMinBarcodes@(itemName)").prop("required", false);
+            }
+
+            ComboBoxs.Default("#cboMinBarcodes@(itemName)", "@Url.Action("GetMinBarcodes", "ProductionHistory")", { "BarcodeNo": barcodeNo }, "", "CHOOSE-NUMBER", "", "BarcodeNo", "BarcodeId");
+            $("#aClearMinBarcodes").prop("href", `javascript:ClearMinBarcodes@(itemName)('${barcodeNo}');`)
+
+            $("#cboMinBarcodes@(itemName)").change(function () {
+                let totalQty = $("#cboMinBarcodes@(itemName)").val().length;
+                $("#txtNgBarcodeQty@(itemName)").val(totalQty);
+            });
+        }
+
+        function ClearMinBarcodes@(itemName)(barcodeNo) {
+            $("#cboMinBarcodes@(itemName)").empty();
+            ComboBoxs.Default("#cboMinBarcodes@(itemName)", "@Url.Action("GetMinBarcodes", "ProductionHistory")", { "BarcodeNo": barcodeNo }, "", "CHOOSE-NUMBER", "", "BarcodeNo", "BarcodeId");
+            $("#txtNgBarcodeQty@(itemName)").val("0");
+        }
+
+        function SaveLotNgBarcode@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("AddLotNgBarcodeProcess", "ProductionHistory")";
+                let postData = {
+                    "BarcodeNo": $("#desBarcodeNo@(itemName)").text(),
+                    "NgBarcodeNo": $("#txtNgBarcodeNo@(itemName)").val(),
+                    "NgBarcodeQty": $("#txtNgBarcodeQty@(itemName)").val(),
+                    "CauseId": $("#txtCauseId@(itemName)").val(),
+                    "MoId": '@MoId',
+                    "MachineId": '@MachineId',
+                    "CauseNo": $("#txtCauseNo@(itemName)").val(),
+                    "MoProcessId": '@MoProcessId',
+                    "MinBarcodes": $("#cboMinBarcodes@(itemName)").val().join(",")
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                if (result) {
+                    Close@(itemName)('LotBarcodeNgCode@(itemName)');
+                    ResetForm(objForm@(itemName));
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function MachineTransfer@(itemName)(MoId, MachineId, MoProcessId) {
+            let CompanyId = CompanyId@(itemName);
+            let UserNo = UserNo@(itemName);
+            $.ajax({
+                url: "@Url.Action("UploadNcCode", "ProductionHistory")",
+                type: "POST",
+                async: true,
+                data: {
+                    "CompanyId": CompanyId,
+                    "UserNo": UserNo,
+                    "MoProcessId": MoProcessId,
+                    "MachineId": MachineId
+                },
+                dataType: "json",
+                beforeSend: function (XMLHttpRequest) {
+                    $('#loading').css("display", "");
+                },
+                success: function (data) {
+
+                },
+                complete: function (XMLHttpRequest, textStatus) {
+                    $('#loading').css("display", "none");
+                    if (textStatus == 'timeout') {
+                        var xmlhttp = window.XMLHttpRequest ? new window.XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHttp");
+                        xmlhttp.abort();
+                        alert("網路逾時!");
+                    }
+                },
+                error: function (XMLHttpRequest, textStatus) {
+                    alert(XMLHttpRequest.statusText, "error", 0);
+                }
+            });
+        }
+
+        function LotScanner@(itemName)() {
+            $("#desScanNumber@(itemName)").html("0");
+            let targetUrl = "@Url.Action("KeyenceScan", "ProductionHistory")";
+            let postData = {
+                "KeyenceId": $("#cboKeyenceId@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                keyenceBarcodeList@(itemName) = data.result.m_StringValue.split(':')[1].split(',');
+
+                if (keyenceBarcodeList@(itemName).length <= 0) {
+                    alert("掃描不到任何一筆條碼資訊!!");
+                    return false;
+                }
+
+                let innerHtml = '';
+                $.each(keyenceBarcodeList@(itemName), function (i, item) {
+                    innerHtml += `<tr>
+                                    <td scope="col" style="width: 20%">${i + 1}.</td>
+                                    ${JudgeTrayBarcodeKeyence@(itemName)(item)}
+                                    <td scope="col" style="width: 40%">${GetTrayBarcode@(itemName)(item)}</td>
+                                  </tr>`;
+                });
+
+                $("#modalKeyenceProcess@(itemName) tbody").html(innerHtml);
+                TableComponentInit();
+
+                $("#desScanNumber@(itemName)").html(keyenceBarcodeList@(itemName).length);
+                $("#cboKeyenceIdQ@(itemName)").val($("#cboKeyenceId@(itemName)").val());
+                $("#modalKeyenceProcess@(itemName)").modal("show");
+                GetMoProcessItemKence@(itemName)();
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+
+            @*keyenceBarcodeList@(itemName) = ["0625T-0002", "0625T-0003", "0625T-0007"];
+                        keyenceBarcodeList@(itemName) = ["0612T-0031", "0612T-0032", "0612T-0033"];
+
+
+                if (keyenceBarcodeList@(itemName).length <= 0) {
+                    alert("掃描不到任何一筆條碼資訊!!");
+                    return false;
+                }
+
+                let innerHtml = '';
+                $.each(keyenceBarcodeList@(itemName), function (i, item) {
+                    innerHtml += `<tr>
+                                    <td scope="col" style="width: 20%">${i + 1}.</td>
+                                    ${JudgeTrayBarcodeKeyence@(itemName)(item)}
+                                    <td scope="col" style="width: 40%">${GetTrayBarcode@(itemName)(item)}</td>
+                                  </tr>`;
+                });
+
+                $("#modalKeyenceProcess@(itemName) tbody").html(innerHtml);
+                TableComponentInit();
+
+                $("#desScanNumber@(itemName)").html(keyenceBarcodeList@(itemName).length);
+                $("#cboKeyenceIdQ@(itemName)").val($("#cboKeyenceId@(itemName)").val());
+                $("#modalKeyenceProcess@(itemName)").modal("show");
+            GetMoProcessItemKence@(itemName)();*@
+        }
+
+        async function KeyenceProcess@(itemName)() {
+            @*var InputBarcodeProcessAttributeInfo =
+            {
+                "BarcodeProcessId": barcodeProcessId,
+                "ItemNo": $("#cboItemNo@(itemName)").val(),
+                "ItemValue": $("#txtItemValue@(itemName)").val(),
+                "ChkUnique": "N",
+                "DateCode": $("#txtDateCode@(itemName)").val()
+            };
+
+            BarcodeProcessAttributeJson.BarcodeProcessAttributeInfo.push(InputBarcodeProcessAttributeInfo);*@
+            if ($("#txtItemValue@(itemName)").val() == "") {
+                alert("請輸入屬性值!", "alert", 5000);
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("AddKeyenceProcessTemp", "ProductionHistory")";
+            let postData = {
+                "BarcodeList": keyenceBarcodeList@(itemName).toString(),
+                "MoProcessId": @MoProcessId,
+                "MachineId": @MachineId,
+                "UserId": '@UserId',
+                "ItemNo": $("#cboItemNo@(itemName)").val(),
+                "ItemValue": $("#txtItemValue@(itemName)").val(),
+                "ChkUnique": "N",
+                "DateCode": $("#txtDateCode@(itemName)").val()
+
+            };
+            data = DataAccess.Update(targetUrl, postData, false, false);
+            if (data) {
+                alert("條碼輸入成功!", "success", 2500);
+                $("#modalKeyenceProcess@(itemName)").modal("hide");
+                Return@(itemName)();
+            }
+        
+        }
+        
+        function GetTrayBarcode@(itemName)(tray) {
+            let resultHtml = "";
+            let targetUrl = "@Url.Action("GetBarcodeTrayKence", "ProductionHistory")";
+            let postData = {
+                "TrayNo": tray
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    let barcode = item.BarcodeNo;
+
+                    // 顯示 Barcode (第一行)
+                    resultHtml += `${barcode}<br>`;
+
+                    // 處理 BarcodeAttributes JSON 欄位
+                    if (item.BarcodeAttributes && item.BarcodeAttributes !== "null" && item.BarcodeAttributes !== null) {
+                        try {
+                            let itemValueJson = JSON.parse(item.BarcodeAttributes);
+
+                            // 顯示每個 ItemValue (每個一行)
+                            $.each(itemValueJson, function (k, item2) {
+                                resultHtml += `${item2.ItemValue}<br>`;
+                            });
+                        } catch (e) {
+                            console.error("JSON parsing error:", e);
+                        }
+                    }
+
+                    // 如果有多個結果，添加分隔線
+                    //if (i < data.result.length - 1) {
+                    //    resultHtml += `<hr style="margin: 10px 0;">`;
+                    //}
+                });
+            }
+
+            return resultHtml || "無資料";
+        
+        }
+
+        function JudgeTrayBarcodeKeyence@(itemName)(tray) {
+            let resultHtml = "";
+            let targetUrl = "@Url.Action("GetKeyenceProcessTemp", "ProductionHistory")";
+            let postData = {
+                "TrayNo": tray
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    resultHtml = `<td scope="col" style="width: 40%">${tray} (已暫存)</td>`;
+                } else {
+                    resultHtml = `<td scope="col" style="width: 40%">${tray}</td>`;
+
+                }
+
+            } else {
+
+                alert("錯誤!", "alert", 5000);
+
+            }
+
+            return resultHtml || "無資料";
+        
+        }
+        
+        function ChangeUserNo@(itemName)() {
+            let targetUrl = "@Url.Action("Logout", "User")";
+            let postData = {
+            };
+
+            var result = DataAccess.Update(targetUrl, postData, false, false);
+
+            targetUrl = "@Url.Action("ProductionHistoryLogin", "ProductionHistory")";
+            postData = {
+                "SystemKey": $("#txtSystemKeyLogin@(itemName)").val(),
+                "UserNo": $("#txtAccount@(itemName)").val().toUpperCase()
+            };
+            data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        window.location.assign(`/ProductionHistory/MesScanningInterface?MoId=${'@MoId'}&MoProcessId=${'@MoProcessId'}&MachineId=${'@MachineId'}&UserId=${item.UserId}`);
+                    });
+                }
+            } else {
+                alert(data.msg, "alert", 5000);
+            }
+        }
+
+        function Logout@(itemName)() {
+            let targetUrl = "@Url.Action("Logout", "User")";
+            let postData = {
+            };
+
+            var result = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (result) window.location.reload();
+        }
+
+        function Close@(itemName)(modalName) {
+            $("#" + modalName).modal("hide");
+            $('#cboEventItem@(itemName)').val("")
+            $('#txtBarcodeId@(itemName)').val("")
+            $("#txtStartTime@(itemName)").html("")
+        }
+
+        function Return@(itemName)() {
+            //檢查有無尚未結束計時
+            GetUnfinishMachineEvent@(itemName)()
+
+            BarcodeNoList = [];
+            //檢查此製令此製程尚未完工條碼
+            GetActiveBarcode@(itemName)();
+
+            //檢查是否有完工但尚未維護屬性之條碼
+            GetMoProcessItem@(itemName)();
+
+            //檢查是否有需要上料之條碼
+            GetMoMtlSettingForMTL@(itemName)();
+
+            //更新未生產量
+            UpdateProcessQty(@MoProcessId);
+        }
+
+        //計時
+        function PopTimeCountView@(itemName)(countType) {//機台 人員
+            timeCountType@(itemName) = countType;
+            $("#timeCountView@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#timeCountClose@(itemName)").show();
+            $("#start@(itemName)").attr('disabled', false);
+            $("#end@(itemName)").attr('disabled', true);
+            $("#cboEventItem@(itemName)").attr("disabled", false)
+            $("#timeCountChangeMan@(itemName)").hide();
+
+            switch (timeCountType@(itemName)) {
+                case "manTime":
+                    ComboBoxs.Default("#cboEventItem@(itemName)", "@Url.Action("GetUserEventSetting", "MesBasicInformation")", {}, "", "CHOOSE", "請選擇", "UserEventItemName", "UserEventItemId");
+                    $("#timeTypeTitle@(itemName)").html("人員狀態計時");
+                    @*$("#timeCountChangeMan@(itemName)").show();*@
+                    GetUnfinishManEvent@(itemName)("pop");
+                    break;
+                case "machineTime":
+                    ComboBoxs.Default("#cboEventItem@(itemName)", "@Url.Action("GetMachineEventSetting", "MesBasicInformation")", { "MachineId":  @MachineId}, "", "CHOOSE", "請選擇", "MachineEventName", "MachineEventItemId");
+                    $("#timeTypeTitle@(itemName)").html("機台狀態計時");
+                    @*$("#timeCountClose@(itemName)").hide();*@
+                    GetUnfinishMachineEvent@(itemName)("pop")
+                    break;
+            }
+
+
+        }
+
+        function PopProcessTimeCountView@(itemName)(countType, barcodeId, barcodeNo) {//加工
+            timeCountType@(itemName) = countType;
+             $("#timeCountView@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#timeCountClose@(itemName)").show();
+            $('#txtBarcodeId@(itemName)').val(barcodeId)
+
+            $("#start@(itemName)").attr('disabled', false);
+            $("#end@(itemName)").attr('disabled', true);
+
+            $("#cboEventItem@(itemName)").attr("disabled", false);
+            $("#timeCountChangeMan@(itemName)").hide();
+
+            switch (timeCountType@(itemName)) {
+                case "before":
+                    ComboBoxs.Default("#cboEventItem@(itemName)", "@Url.Action("GetProcessEventSetting", "MesBasicInformation")", { "TypeNo": "0", "ProcessId": ProcessId@(itemName), "ModeId":  modeId@(itemName) }, "", "CHOOSE", "請選擇", "ProcessEventName", "ProcessEventItemId");
+                    $("#timeTypeTitle@(itemName)").html("加工前狀態計時");
+                    break;
+                case "after":
+                    ComboBoxs.Default("#cboEventItem@(itemName)", "@Url.Action("GetProcessEventSetting", "MesBasicInformation")", { "TypeNo": "1", "ProcessId": ProcessId@(itemName), "ModeId":  modeId@(itemName) }, "", "CHOOSE", "請選擇", "ProcessEventName", "ProcessEventItemId");
+                    $("#timeTypeTitle@(itemName)").html("加工後狀態計時");
+                    break;
+            }
+
+            GetBarcodeUnfinishEven@(itemName)(barcodeNo);
+        }
+
+        function GetMfgOrderProcess@(itemName)() {
+            let targetUrl = "@Url.Action("GetMfgOrderProcess", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId',
+                "MoId": @MoId,
+                "ModeId": modeId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        PostCollectionStatus@(itemName) = item.PostCollectionStatus;
+                        PreCollectionStatus@(itemName) = item.PreCollectionStatus;
+                    });
+                }
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+        }
+
+        function SetAfterProcessingBT@(itemName)() {
+            let targetUrl = "@Url.Action("GetCollectionStatus", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId',
+                //"BarcodeNo": barcodeNo,
+                "ModeId": modeId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.PreCollectionStatus == "Y" && item.FinishDate.length > 0) {
+                            if (typeof ($("div[id='" + item.BarcodeNo + "']").html()) == "undefined") {
+                                innerHtml += `<tr class="line-even">
+                                            <th>
+                                                <p>${item.BarcodeNo}</p>
+                                            </th>
+                                            <td>${item.BarcodeQty}</td>
+                                            <td>${item.StartDate}</td>
+                                            <td>${item.FinishDate}</td>
+                                            <td>
+                                                <div id="${item.BarcodeNo}" class="btn-work-block">
+                                                    <a class="btn  font20 btn-work-outline" href="javascript: PopProcessTimeCountView@(itemName)('after','${item.BarcodeId}', '${barcodeNo}')">
+                                                        加工後計時
+                                                    </a>
+                                                </div>
+                                            </td>
+                                          </tr>`;
+
+                            }
+                            else {
+                                innerHtml = `<a class="btn  font20 btn-work-outline" href="javascript: PopProcessTimeCountView@(itemName)('after','${item.BarcodeId}', '${barcodeNo}')">
+                                                加工後計時
+                                             </a>`;
+                                //$("div[id='" + item.BarcodeNo + "']").append(innerHtml);
+                            }
+
+                        } else {
+                        }
+
+                    });
+
+                    let innerHtmlData = $("#tblData@(itemName) tbody").html();
+                    $("#tblData@(itemName) tbody").html(innerHtmlData + innerHtml);
+                    TableComponentInit();
+                }
+            }
+
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+        }
+        //AddStart
+
+        function AddStart@(itemName)(eventId, barcodeId) {
+            var now = new Date();
+            var formatted = now.getFullYear().toString() + "-" +
+                (now.getMonth() + 1).toString().padStart(2, '0') + "-" +
+                now.getDate().toString().padStart(2, '0') + " " +
+                now.getHours().toString().padStart(2, '0') + ":" +
+                now.getMinutes().toString().padStart(2, '0') + ":" +
+                now.getSeconds().toString().padStart(2, '0') + "." +
+                now.getMilliseconds().toString().padStart(3, '0');
+
+            var formatted2 = now.getFullYear().toString() + "-" +
+                (now.getMonth() + 1).toString().padStart(2, '0') + "-" +
+                now.getDate().toString().padStart(2, '0') + " " +
+                now.getHours().toString().padStart(2, '0') + ":" +
+                now.getMinutes().toString().padStart(2, '0') + ":" +
+                now.getSeconds().toString().padStart(2, '0');
+
+            $("#txtStartTime@(itemName)").html("開始時間: " + formatted2)
+
+            if (timeCountType@(itemName) == "manTime") {
+                AddUserStart@(itemName)(formatted);
+            } else {
+                AddMPStart@(itemName)(formatted)
+            }
+        }
+
+        function AddMPStart@(itemName)(formatted) {//機台 加工
+            let targetUrl = "@Url.Action("AddStartCoutTime", "ProductionHistory")";
+            let postData = {
+                "EventItemId": $('#cboEventItem@(itemName)').val(),
+                "BarcodeId": $('#txtBarcodeId@(itemName)').val(),
+                "MoProcessId": '@MoProcessId',
+                "StartTime": formatted,
+                //"BarcodeNo": barcodeNo,
+                "CountType": timeCountType@(itemName)
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                alert("計時開始", "success",1000)
+                $("#start@(itemName)").attr('disabled', true);
+                $("#end@(itemName)").attr('disabled', false);
+
+                $("#cboEventItem@(itemName)").attr("disabled", true)
+
+                 if (timeCountType@(itemName) == "machineTime") {
+                    $("#timeCountClose@(itemName)").hide();
+                 }
+
+
+                $.each(data.result, function (i, item) {
+                    $("#txtEventId@(itemName)").val(item.EventId)
+                });
+
+            } else {
+                alert(data.msg, "alert", 5000);
+
+            }
+        }
+
+        function AddUserStart@(itemName)(formatted) {//人員
+
+            let targetUrl = "@Url.Action("AddManStartCoutTime", "ProductionHistory")";
+            let postData = {
+                "EventItemId": $('#cboEventItem@(itemName)').val(),
+                //"BarcodeId": barcodeId,
+                //"MoProcessId": '@MoProcessId',
+                "StartTime": formatted,
+                //"BarcodeNo": barcodeNo,
+                "CountType": timeCountType@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+
+            if (data.status == "success") {
+                alert("計時結束", "success", 1000)
+                $("#start@(itemName)").attr('disabled', true);
+                $("#end@(itemName)").attr('disabled', false);
+                $("#cboEventItem@(itemName)").attr("disabled", true)
+                $("#timeCountClose@(itemName)").hide();
+                $("#timeCountChangeMan@(itemName)").show();
+
+                $.each(data.result, function (i, item) {
+                    $("#txtEventId@(itemName)").val(item.EventId)
+                });
+
+            } else {
+                alert(data.msg, "alert", 5000);
+
+            }
+        }
+
+        //AddEnd
+        function AddEnd@(itemName)() {
+            var now = new Date();
+            var formatted = now.getFullYear().toString() + "-" +
+                (now.getMonth() + 1).toString().padStart(2, '0') + "-" +
+                now.getDate().toString().padStart(2, '0') + " " +
+                now.getHours().toString().padStart(2, '0') + ":" +
+                now.getMinutes().toString().padStart(2, '0') + ":" +
+                now.getSeconds().toString().padStart(2, '0') + "." +
+                now.getMilliseconds().toString().padStart(3, '0');
+
+            let targetUrl = "@Url.Action("UpdateEndCoutTime", "ProductionHistory")";
+            let postData = {
+                "EventId": $("#txtEventId@(itemName)").val(),
+                //"BarcodeId": barcodeId,
+                //"MoProcessId": '@MoProcessId',
+                "Finish": formatted,
+                //"BarcodeNo": barcodeNo,
+                "CountType": timeCountType@(itemName)
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            let innerHtml = '';
+
+
+            if (data.status == "success") {
+                alert("計時結束", "success", 1000)
+
+                $("#start@(itemName)").attr('disabled', false);
+                $("#end@(itemName)").attr('disabled', true);
+                $("#cboEventItem@(itemName)").attr("disabled", false);
+                $("#txtStartTime@(itemName)").html("")
+                $("#txtEventId@(itemName)").val(-1);
+
+                $("#timeCountView@(itemName)").modal("hide");
+
+                @*switch (timeCountType@(itemName)) {
+                case "before":
+                case "after":
+                     Return@(itemName)();
+                     break;
+                }*@
+
+                @*if (timeCountType@(itemName) == "machineTime") {
+                    GetUnfinishManEvent@(itemName)()
+                } else if (timeCountType@(itemName) == "manTime") {
+                    GetBarcodeUnfinishEven@(itemName)()
+                }*@
+
+                Return@(itemName)();
+
+
+
+            } else {
+                alert(data.msg, "alert", 5000);
+
+            }
+
+        }
+
+
+        //var foundValue = array.filter(obj=>obj.name==='string 1');
+        function GetBarcodeEven@(itemName)(preCollection, postCollection, evenBarcodeId, barcodeNo ) {
+            let targetUrl = "@Url.Action("GetBarcodeEven", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId',
+                "BarcodeNo": barcodeNo,
+                "ModeId": modeId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    var preEvenData = data.result.filter(obj => obj.ProcessEventType === '0');
+                    var preFinishDate = preEvenData.length > 0 ? preEvenData[0].FinishDate : null;
+
+                    var postEvenData = data.result.filter(obj => obj.ProcessEventType === '1');
+                    var postFinishDate = postEvenData.length > 0 ? postEvenData[0].FinishDate : null;
+
+                    //無加工前DATA無加工後DATA
+                    if ((preEvenData.length == 0 && postEvenData.length == 0)) {
+
+                        innerHtml = `
+                              ${preCollection == `Y` ?
+                                `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>`
+                                : `<a hidden class="btn  font20 btn-work-outline disabled" href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>`
+                            }
+                             <a hidden class="btn  font20 btn-work-outline disable" href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>
+
+                                    `;
+
+                    }
+
+                    //有加工前無加工後
+                    if ((preEvenData.length > 0 && postEvenData.length == 0)) {
+
+                        innerHtml = `
+                              <a class="btn  font20 btn-work-outline" href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>
+
+                              ${postCollection == `Y` ?
+                                `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                                : `<a hidden class="btn  font20 btn-work-outline disable" href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                            }
+                                    `;
+
+                    }
+
+                    if ((preEvenData.length > 0 && postEvenData.length == 0 && preFinishDate == null)) {
+
+                        innerHtml = `
+                              <a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>
+
+
+                              ${postCollection == `Y` ?
+                                `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                                : `<a hidden class="btn  font20 btn-work-outline disable" href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                            }
+                                    `;
+
+                    }
+
+                    //有加工前有加工後DATA
+                    if (preEvenData.length > 0 && postEvenData.length > 0) {
+
+                        innerHtml = `
+                              <a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">
+                                 加工前計時
+                              </a>
+                              <a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')"  >
+                                 加工後計時
+                              </a>
+                                    `;
+                    }
+
+                    if (preEvenData.length > 0 && postEvenData.length > 0 && postFinishDate == null) {
+
+
+                        innerHtml = `
+                              <a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">
+                                 加工前計時
+                              </a>
+                              <a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')"  >
+                                 加工後計時
+                              </a>
+                                    `;
+                    }
+
+                    //無加工前有加工後DATA
+
+                    if ((preEvenData.length == 0 && postEvenData.length > 0)) {
+
+                         innerHtml = `
+                              ${preCollection == `Y` ?
+                             `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>`
+                             : `<a hidden class="btn  font20 btn-work-outline disabled" href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>`
+                                }
+                             ${postCollection == `Y` ?
+                             `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                             : `<a hidden class="btn  font20 btn-work-outline disable" href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                                }
+
+                                    `;
+
+                    }
+
+                    if ((preEvenData.length == 0 && postEvenData.length > 0 && postFinishDate == null)) {
+
+                         innerHtml = `
+                              ${preCollection == `Y` ?
+                             `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>`
+                             : `<a hidden class="btn  font20 btn-work-outline disabled" href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>`
+                                }
+                             ${postCollection == `Y` ?
+                             `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                             : `<a hidden class="btn  font20 btn-work-outline disable" href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                                }
+
+                                    `;
+
+                    }
+
+                }
+                else {
+                    innerHtml += `
+                              ${preCollection == `Y` ?
+                        `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>`
+                        : `<a hidden class="btn  font20 btn-work-outline disabled" href="javascript: PopProcessTimeCountView@(itemName)('before','${evenBarcodeId}', '${barcodeNo}')">加工前計時</a>`
+                                }
+
+                              ${postCollection == `Y` ?
+                             `<a class="btn  font20 btn-work-outline " href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                             : `<a hidden class="btn  font20 btn-work-outline disable" href="javascript: PopProcessTimeCountView@(itemName)('after','${evenBarcodeId}', '${barcodeNo}')" >加工後計時</a>`
+                                }
+
+                                    `;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+            $("div[id='" + barcodeNo + "']").append(innerHtml);
+        }
+
+        function GetBarcodeUnfinishEven@(itemName)(barcodeNo) {
+            var unfinishType = "";
+            var unfinishBarcodeId = 0;
+            var unfinishBarcodeNo = "";
+            let targetUrl = "@Url.Action("GetUnfinishBarcodeEven", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId',
+                "BarcodeNo": barcodeNo,
+                "ModeId": modeId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $("#cboEventItem@(itemName)").attr("disabled", true)
+                    $("#start@(itemName)").attr('disabled', true);
+                    $("#end@(itemName)").attr('disabled', false);
+                    var preEvenData = data.result.filter(obj => obj.ProcessEventType === '0');
+                    var preFinishDate = preEvenData.length > 0 ? preEvenData[0].FinishDate : null;
+                    var preEvenId = preEvenData.length > 0 ? preEvenData[0].BarcodeEventId : -1;
+                    var preEvenItemId = preEvenData.length > 0 ? preEvenData[0].ProcessEventItemId : -1;
+
+                    var postEvenData = data.result.filter(obj => obj.ProcessEventType === '1');
+                    var postFinishDate = postEvenData.length > 0 ? postEvenData[0].FinishDate : null;
+                    var postEvenId = postEvenData.length > 0 ? postEvenData[0].BarcodeEventId : -1;
+                    var postEvenItemId = postEvenData.length > 0 ? postEvenData[0].ProcessEventItemId : -1;
+
+                    //有加工前無加工後
+
+
+                    if ((preEvenData.length > 0  && preFinishDate == null)) {
+
+                        $("#txtEventId@(itemName)").val(preEvenId);
+                        $('#cboEventItem@(itemName)').val(preEvenItemId);
+                        $("#txtStartTime@(itemName)").html("開始時間: " + preEvenData[0].StartDate)
+                        unfinishType = "before";
+                        unfinishBarcodeId = preEvenData[0].BarcodeId;
+                        unfinishBarcodeNo = preEvenData[0].BarcodeNo;
+
+
+                    }
+
+                    //有加工前有加工後DATA
+
+                    if (postEvenData.length > 0 && postFinishDate == null) {
+
+                        $("#txtEventId@(itemName)").val(postEvenId);
+                        $('#cboEventItem@(itemName)').val(postEvenItemId);
+                        $("#txtStartTime@(itemName)").html("開始時間: " + postEvenData[0].StartDate)
+                        unfinishType = "after";
+                        unfinishBarcodeId = postEvenData[0].BarcodeId;
+                        unfinishBarcodeNo = postEvenData[0].BarcodeNo;
+
+
+
+                    }
+
+                    if (!barcodeNo) {
+                        PopProcessTimeCountView@(itemName)(unfinishType, unfinishBarcodeId, unfinishBarcodeNo);
+                    }
+
+                } else {
+                    $("#cboEventItem@(itemName)").attr("disabled", false)
+                    $("#start@(itemName)").attr('disabled', false);
+                    $("#end@(itemName)").attr('disabled', true);
+                    $("#txtEventId@(itemName)").val(-1);
+                    $("#txtStartTime@(itemName)").html("");
+                }
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+
+        }
+
+        function GetUnfinishManEvent@(itemName)(pop) {
+            @*$("#timeCount").modal("hide");
+            $("#start@(itemName)").attr('disabled', false);
+            $("#end@(itemName)").attr('disabled', true);*@
+            let targetUrl = "@Url.Action("GetUnfinishManEvent", "ProductionHistory")";
+            let postData = {
+
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+
+                    $.each(data.result, function (i, item) {
+                        $("#txtEventId@(itemName)").val(item.UserEventId);
+                        $('#cboEventItem@(itemName)').val(item.UserEventItemId);
+                        $("#txtStartTime@(itemName)").html("開始時間: " + item.StartDate)
+                    });
+
+                    $("#start@(itemName)").attr('disabled', true);
+                    $("#end@(itemName)").attr('disabled', false);
+                    $("#cboEventItem@(itemName)").attr("disabled", true)
+                    $("#timeCountClose@(itemName)").hide();
+                    $("#timeCountChangeMan@(itemName)").show();
+                    if (pop != "pop")
+                    {
+                    PopTimeCountView@(itemName)("manTime");
+                    }
+
+                } else {
+                    if (pop != "pop")
+                    {
+                    GetBarcodeUnfinishEven@(itemName)()
+                    }
+                }
+            } else {
+                alert(data.msg, "alert", 5000);
+            }
+            @*GetBarcodeUnfinishEven@(itemName)()*@
+        }
+
+        function GetUnfinishMachineEvent@(itemName)(pop) {
+            let targetUrl = "@Url.Action("GetUnfinishMachineEvent", "ProductionHistory")";
+            let postData = {
+                 "MachineId": @MachineId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            let innerHtml = '';
+            if (data.status == "success") {
+
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#txtEventId@(itemName)").val(item.MachineEventId);
+                        $('#cboEventItem@(itemName)').val(item.MachineEventItemId);
+                        $("#txtStartTime@(itemName)").html("開始時間: " + item.StartDate)
+                    });
+
+                    $("#start@(itemName)").attr('disabled', true);
+                    $("#end@(itemName)").attr('disabled', false);
+                    $("#cboEventItem@(itemName)").attr("disabled", true)
+                    $("#timeCountClose@(itemName)").hide();
+
+                    if (pop != "pop")
+                    {
+                    PopTimeCountView@(itemName)("machineTime");
+                    }
+
+                } else {
+                    if (pop != "pop")
+                    {
+                    GetUnfinishManEvent@(itemName)()
+                    }
+                }
+
+
+            } else {
+                alert(data.msg, "alert", 5000);
+            }
+        }
+
+        function PopLotProcessTimeCountView@(itemName)() {//批量加工計時
+            $("#EventBarcode@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+            GetLotEventActiveBarcde@(itemName) ()
+        }
+
+        $("#txtEventJigBarcode@(itemName)").change(function () {
+            if ($(this).val().length == 0) {
+                GetLotEventActiveBarcde@(itemName) ()
+            }
+        });
+
+        $("#txtEventJigBarcode@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                GetLotEventJigBarcde@(itemName) ();
+            }
+        });
+
+        function GetLotEventActiveBarcde@(itemName) () {
+            let targetUrl = "@Url.Action("GetActiveBarcode", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId'
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    let checkcount = 0;
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td scope="col" style="min-width: 75px;">${i + 1}.</td>
+                                        <td scope="col" style="min-width: 110px;">${item.BarcodeNo}</td>
+                                        <td class="text-center">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-barcode-id="${item.BarcodeId}" data-barcode-no="${item.BarcodeNo}" data-disabled="false" value="${item.BarcodeId}" checked>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                        </tr>`;
+                        checkcount++;
+                    });
+
+                    if (checkcount == 0) {
+                        innerHtml += `<tr>
+                                        <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                            <i class="fal fa-exclamation-circle"></i>&nbsp;此治具目前無可加工之條碼。
+                                        </td>
+                                      </tr>`;
+                    }
+                    $("#tblLotEventBarcode@(itemName) tbody").html(innerHtml);
+                    TableComponentInit();
+                }
+
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+        }
+
+        function GetLotEventJigBarcde@(itemName) () {
+            let targetUrl = "@Url.Action("GetJigBarcodeDetail", "ProductionHistory")";
+            let postData = {
+                "JigNo": $("#txtEventJigBarcode@(itemName)").val(),
+                //"MoProcessId": '@MoProcessId'
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    let checkcount = 0;
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td scope="col" style="min-width: 75px;">${i + 1}.</td>
+                                        <td scope="col" style="min-width: 110px;">${item.BarcodeNo}</td>
+                                        <td class="text-center">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-barcode-id="${item.JigBarcodeId}" data-barcode-no="${item.BarcodeNo}" data-disabled="false" value="${item.JigBarcodeId}" checked>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                        </tr>`;
+                        checkcount++;
+                    });
+
+                    if (checkcount == 0) {
+                        innerHtml += `<tr>
+                                        <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前無可加工之條碼。
+                                        </td>
+                                      </tr>`;
+                    }
+                    $("#tblLotEventBarcode@(itemName) tbody").html(innerHtml);
+                    TableComponentInit();
+                }
+
+            }
+            else {
+                alert(data.msg, "alert", 5000);
+            }
+        }
+
+        function lotAddStart@(itemName)() {
+            let JigBarcodeIdData = [];
+            let jigNo = "";
+            let count = 0;
+            $.each($("input[type='checkbox'][data-barcode-id][data-barcode-no]:checked"), function (i) {
+                if (count == 0) {
+                    jigNo = $(this).data("jig-no");
+                    count++;
+                }
+                if (JigBarcodeIdData.indexOf($(this).val()) == -1) {
+                    JigBarcodeIdData.push($(this).val());
+                }
+            });
+
+            let targetUrl = "@Url.Action("AddStartCoutTime", "ProductionHistory")";
+            let postData = {
+                "EventItemId": $('#cboEventItem@(itemName)').val(),
+                "BarcodeId": $('#txtBarcodeId@(itemName)').val(),
+                "MoProcessId": '@MoProcessId',
+                "StartTime": formatted,
+                //"BarcodeNo": barcodeNo,
+                "CountType": timeCountType@(itemName)
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                alert("計時開始", "success",1000)
+                $("#start@(itemName)").attr('disabled', true);
+                $("#end@(itemName)").attr('disabled', false);
+
+                $("#cboEventItem@(itemName)").attr("disabled", true)
+
+                 if (timeCountType@(itemName) == "machineTime") {
+                    $("#timeCountClose@(itemName)").hide();
+                 }
+
+
+                $.each(data.result, function (i, item) {
+                    $("#txtEventId@(itemName)").val(item.EventId)
+                });
+
+            } else {
+                alert(data.msg, "alert", 5000);
+
+            }
+        }
+
+        function PopViewQcSettingModal@(itemName)() {
+            $("#")
+        }
+
+        function GetMoProcessItemKence@(itemName)() {
+            
+            let targetUrl = "@Url.Action("GetMoProcessItem", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": '@MoProcessId'
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $("#cboItemNo@(itemName)").empty();
+                    $.each(data.result, function (i, item) {
+                        $("#cboItemNo@(itemName)").append(`<option data-chk-unique="${item.ChkUnique}" value="${item.ItemNo}">${item.ItemNo}-${item.TypeName}</option>`);
+                    });
+                    //GetBarcodeProcessAttribute@(itemName)();
+                }
+            }
+        }
+
+        function TxKeyenceProcessFromTemp@(itemName)() {
+            
+            let targetUrl = "@Url.Action("TxKeyenceProcessFromTemp", "ProductionHistory")";
+            let postData = {
+                "chunkSize": 100
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                alert(data.msg, "success", 5000);
+            } else {
+                alert(data.msg, "alert", 5000);
+            }
+        }
+
+    </script>
+                                                                                                                                )

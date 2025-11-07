@@ -1,0 +1,759 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewDeliveryToTsn";
+    string itemNameText = "出貨轉暫出";
+}
+
+@Html.Resource("css",
+    @<style>
+         .table:not(.table-custom-hover) tbody:hover td[rowspan], .table:not(.table-custom-hover) tbody tr:hover td,
+         .table:not(.table-custom-hover) tbody:hover th[rowspan], .table:not(.table-custom-hover) tbody tr:hover th {
+             color: #000000 !important;
+             background-color: #ffcccc !important;
+         }
+
+         .table-sticky thead .col-sticky:nth-child(1) {
+             position: sticky;
+             left: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-child(1) {
+             position: sticky;
+             left: 0;
+         }
+
+         .table-sticky thead .col-sticky:nth-child(2) {
+             position: sticky;
+             left: 75px;
+         }
+
+         .table-sticky tbody .col-sticky:nth-child(2) {
+             position: sticky;
+             left: 75px;
+         }
+
+         .table-sticky thead .col-sticky:nth-child(3) {
+             position: sticky;
+             left: 165px;
+         }
+
+         .table-sticky tbody .col-sticky:nth-child(3) {
+             position: sticky;
+             left: 165px;
+         }
+
+         .table-sticky thead .col-sticky:nth-child(4) {
+             position: sticky;
+             left: 330px;
+         }
+
+         .table-sticky tbody .col-sticky:nth-child(4) {
+             position: sticky;
+             left: 330px;
+         }
+
+         .table-sticky thead .col-sticky:nth-child(5) {
+             position: sticky;
+             left: 495px;
+         }
+
+         .table-sticky tbody .col-sticky:nth-child(5) {
+             position: sticky;
+             left: 495px;
+         }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content" style="width:95vw;left: 50%; transform: translate(-50%, 0%);">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <button class="close" type="button" onclick="Close@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtSearchKeyQ@(itemName)">關鍵字</label>
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)" placeholder="請輸入品號/品名/訂單單號" />
+                                    </div>
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtStartDateQ@(itemName)">起始日期</label>
+                                        <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)" placeholder="請輸入起始日期"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                               readonly />
+                                    </div>
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtStartDateQ@(itemName)">結束日期</label>
+                                        <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)" placeholder="請輸入結束日期"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                               readonly />
+                                    </div>
+                                    <div class="col-lg-2 col-3 mt-4">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                    <div class="col-lg-4 col-3 mt-4 text-right">
+                                        <a class="btn btn-info" href="javascript:PopTsnErpPrefix@(itemName)();"><i class="fas fa-plus"></i>開立單據</a>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky tiny-table" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th class="col-sticky text-center checkbox-mode" scope="col" style="min-width: 75px;">
+                                            <label class="control control-solid control-solid-info control--checkbox" style="margin-bottom: 0px;">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </th>
+                                        <th class="col-sticky" scope="col" style="min-width: 165px;">出貨日期</th>
+                                        <th class="col-sticky" scope="col" style="min-width: 165px;">訂單單號</th>
+                                        <th class="col-sticky" scope="col" style="min-width: 165px;">品號</th>
+                                        <th class="col-sticky" scope="col" style="min-width: 165px;">品名</th>
+                                        <th scope="col" style="min-width: 165px;">轉出庫</th>
+                                        <th scope="col" style="min-width: 165px;">轉入庫</th>
+                                        <th scope="col" style="min-width: 165px;">批號列表</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#FFECC9;">欲暫出<br>【正常品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#FFECC9;">欲暫出<br>【贈品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#FFECC9;">欲暫出<br>【備品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#85C1E9;">訂單<br>【正常品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#85C1E9;">訂單<br>【贈品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#85C1E9;">訂單<br>【備品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#73C6B6;">已暫出<br>【正常品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#73C6B6;">已暫出<br>【贈品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 110px; background-color:#73C6B6;">已暫出<br>【備品】數量</th>
+                                        <th scope="col" style="min-width: 150px;">訂單客戶</th>
+                                        <th scope="col" style="min-width: 150px;">出貨客戶</th>
+                                        <th scope="col" style="min-width: 150px;">訂單業務</th>
+                                        <th scope="col" style="min-width: 150px;">備註</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--單別POP-->
+<div class="modal fade" id="modalTsnErpPrefix@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close" type="button" onclick="CloseTsnErpPrefix@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="TsnErpPrefixForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboTsnErpPrefix@(itemName)">單別</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboTsnErpPrefix@(itemName)" name="cboTsnErpPrefix@(itemName)"
+                                        data-msg-required="請選擇暫出單單別" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboSalesmenId@(itemName)">業務人員</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboSalesmenId@(itemName)" name="cboSalesmenId@(itemName)"
+                                        data-msg-required="請選擇負責業務人員" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboDeptId@(itemName)">所屬部門</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboDeptId@(itemName)" name="cboDeptId@(itemName)"
+                                        data-msg-required="請選擇所屬部門" data-rule-required="true"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtRemark@(itemName)">單頭備註</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" placeholder="請輸入單頭備註" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer text-center">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalLotList@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    批號列表
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblLotListData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">批號</th>
+                                        <th scope="col" style="min-width: 100px;">欲暫出數量(正常品)</th>
+                                        <th scope="col" style="min-width: 100px;">欲暫出數量(贈品)</th>
+                                        <th scope="col" style="min-width: 100px;">欲暫出數量(備品)</th>
+                                        <th scope="col" style="min-width: 125px;">轉出庫別</th>
+                                        <th scope="col" style="min-width: 125px;">轉入庫別</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="pageLotListData@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="SaveLotList@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                <button type="button" class="btn btn-secondary list-mode" onclick="CloseLotList@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        function Pop@(itemName)() {
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+
+
+
+            $("#txtStartDateQ@(itemName)").val($("#txtStartDateQTempShippingNote").val());
+            $("#txtEndDateQ@(itemName)").val($("#txtEndDateQTempShippingNote").val());
+
+            Suites.DatePicker("txtStartDateQ@(itemName)", $("#txtStartDateQTempShippingNote").val());
+            Suites.DatePicker("txtEndDateQ@(itemName)", $("#txtEndDateQTempShippingNote").val());
+
+            Query@(itemName)();
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+        function InitData@(itemName)(objPage) {
+            SaveLotListObj = []
+            LotListObj = {}
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetDeliveryToTsn", "ScmInventory")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--checkbox">
+                                            <input type="checkbox" id="cbxDoDetail@(itemName)${item.DoDetailId}" data-do-detail-id="${item.DoDetailId}" data-lotmanagement="${item.LotManagement}" 
+                                                data-itemqty1="${item.PickRegularQty}" data-itemqty2="${item.PickFreebieQty}" data-itemqty3="${item.PickSpareQty}"
+                                            value="${item.DoDetailId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                        </td>
+                                        <td class="col-sticky">${item.DoDate}</td>
+                                        <td class="col-sticky">${item.SoErpFullNo}<code>(${item.SoSequence})</code></td>
+                                        <td class="col-sticky" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 150px;">${item.MtlItemNo}</td>
+                                        <td class="col-sticky" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 175px;">${item.MtlItemName}</td>
+                                        <td class="p-0">
+                                          <select class="form-control" id="cboTsnOutInventory@(itemName)${item.DoDetailId}" name="cboTsnOutInventory@(itemName)" data-do-detail-id="${item.DoDetailId}" data-out-inventory="${item.InventoryId}"></select>
+                                        </td>
+                                        <td class="p-0">
+                                          <select class="form-control" id="cboTsnInInventory@(itemName)${item.DoDetailId}" name="cboTsnInInventory@(itemName)" data-do-detail-id="${item.DoDetailId}"></select>
+                                        </td>
+                                        <td class="p-0">
+                                        ${item.LotManagement != `N` ? `
+                                          <button type="button" class="btn btn-primary auth-lot-management" onclick="OpenLotList@(itemName)(${item.DoDetailId})">批號列表</button>
+                                        `: `非批號模式`}
+                                        </td>
+
+
+                                        @*<td class="p-0">
+                                          <input type="number" class="form-control text-right" name="txtTsnQty@(itemName)" data-do-detail-id="${item.DoDetailId}" value="${item.PickQty.toLocaleString(`en`)}" />
+                                        </td>*@
+                                        <td class="text-right" style=" background-color:#FFECC9;">${item.PickRegularQty.toLocaleString(`en`)}</td>
+                                        <td class="text-right" style=" background-color:#FFECC9;">${item.PickFreebieQty.toLocaleString(`en`)}</td>
+                                        <td class="text-right" style=" background-color:#FFECC9;">${item.PickSpareQty.toLocaleString(`en`)}</td>
+
+                                        <td class="text-right" style=" background-color:#85C1E9;">${item.SoRegularQty.toLocaleString(`en`)}</td>
+                                        <td class="text-right" style=" background-color:#85C1E9;">${item.SoFreebieQty.toLocaleString(`en`)}</td>
+                                        <td class="text-right" style=" background-color:#85C1E9;">${item.SoSpareQty.toLocaleString(`en`)}</td>
+
+                                        <td class="text-right" style=" background-color:#73C6B6;">${item.TsnQty.toLocaleString(`en`)}</td>
+                                        <td class="text-right" style=" background-color:#73C6B6;">${item.TsnFreebieQty.toLocaleString(`en`)}</td>
+                                        <td class="text-right" style=" background-color:#73C6B6;">${item.TsnSpareQty.toLocaleString(`en`)}</td>
+
+                                        <td><code>${item.CustomerNo}</code> ${item.CustomerShortName}</td>
+                                        <td>${item.DcShortName}</td>
+                                        <td>
+                                          ${item.SalesmenGender == `M` ? `<span class="gender-male"><i class="fas fa-male"></i></span>` : item.SalesmenGender == `F` ? `<span class="gender-female"><i class="fas fa-female"></i></span>` : ``}${item.SalesmenNo} ${item.SalesmenName}
+                                        </td>
+                                        <td>${item.PcDoDetailRemark}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="20" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            ComboBoxs.Default("select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id], select[name='cboTsnInInventory@(itemName)'][data-do-detail-id]", "@Url.Action("GetInventory", "ScmBasicInformation")", { "Status": "A" }, "", "NA", "", "InventoryWithNo", "InventoryId");
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-do-detail-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-do-detail-id]").not(":disabled").prop("checked", false);
+                }
+            });
+
+            $("select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id]").each(function () {
+                $(this).val($(this).data("out-inventory"));
+            });
+
+            $("select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id], select[name='cboTsnInInventory@(itemName)'][data-do-detail-id]").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($("input[type='checkbox'][data-do-detail-id]:checked").length > 0) {
+                let doJson = [];
+
+                $.each($("input[type='checkbox'][data-do-detail-id]:checked"), function (i) {
+                    let doDetailId = $(this).data("do-detail-id");
+                    let LotManagement = $(this).data("lotmanagement");
+                    const index = SaveLotListObj.findIndex((v) => Object.keys(v)[0] == doDetailId); //暫存物件和勾選框同時有
+
+                    if (LotManagement != "N" && index >-1) {
+                        doJson.push(SaveLotListObj[index]);
+                    }
+                    else {
+                        if (LotManagement != "N") {
+                            GetDeliveryLotList@(itemName)(doDetailId)
+                            if (Object.keys(LotListObj).length > 0) {
+                                let index = SaveLotListObj.findIndex((v) => Object.keys(v)[0] === doDetailId);
+                                if (index !== -1) {
+                                    SaveLotListObj.splice(index, 1); // 移除該物件
+                                }
+                                SaveLotListObj.push(LotListObj)
+                                index = SaveLotListObj.findIndex((v) => Object.keys(v)[0] == doDetailId);
+                                doJson.push(SaveLotListObj[index]);
+                            }
+                            else {
+                                let ItemQty1 = $(this).data("itemqty1")
+                                let ItemQty2 = $(this).data("itemqty2")
+                                let ItemQty3 = $(this).data("itemqty3")
+                                let json = {
+                                    [doDetailId]: {
+                                        "N": {
+                                            "LotNumber": "",
+                                            "ItemQty1": ItemQty1,
+                                            "ItemQty2": ItemQty2,
+                                            "ItemQty3": ItemQty3,
+                                            "OutInventory": $(`select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id='${doDetailId}']`).val() ? $(`select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id='${doDetailId}']`).val() : -1,
+                                            "InInventory": $(`select[name='cboTsnInInventory@(itemName)'][data-do-detail-id='${doDetailId}']`).val() ? $(`select[name='cboTsnInInventory@(itemName)'][data-do-detail-id='${doDetailId}']`).val() : -1,
+                                        }
+                                    }
+                                };
+                                doJson.push(json);
+                            }
+                        }
+                        else {
+                            let ItemQty1 = $(this).data("itemqty1")
+                            let ItemQty2 = $(this).data("itemqty2")
+                            let ItemQty3 = $(this).data("itemqty3")
+                            let json = {
+                                [doDetailId]: {
+                                    "N": {
+                                        "LotNumber": "",
+                                        "ItemQty1": ItemQty1,
+                                        "ItemQty2": ItemQty2,
+                                        "ItemQty3": ItemQty3,
+                                        "OutInventory": $(`select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id='${doDetailId}']`).val() ? $(`select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id='${doDetailId}']`).val() : -1,
+                                        "InInventory": $(`select[name='cboTsnInInventory@(itemName)'][data-do-detail-id='${doDetailId}']`).val() ? $(`select[name='cboTsnInInventory@(itemName)'][data-do-detail-id='${doDetailId}']`).val() : -1,
+                                    }
+                                }
+                            };
+                            doJson.push(json);
+
+                        }
+                        
+                    }
+                });
+
+                //console.log(doJson)
+
+                let targetUrl = "@Url.Action("AddDeliveryToTsn1", "ScmInventory")";
+                let postData = {
+                    "TsnErpPrefix": $("#cboTsnErpPrefix@(itemName)").val(),
+                    "SalesmenId": $("#cboSalesmenId@(itemName)").val(),
+                    "DepartmentId": $("#cboDeptId@(itemName)").val(),
+                    "DoDetails": JSON.stringify(doJson),
+                    "Remark": $("#txtRemark@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Close@(itemName)();
+                    Query@(itemName)();
+                    CloseTsnErpPrefix@(itemName)();
+                }
+            } else {
+                alert("請至少選擇一筆出貨紀錄!");
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+
+            QueryTempShippingNote();
+        }
+
+        function PopTsnErpPrefix@(itemName)() {
+            let doDetail = [];
+            $.each($("input[type='checkbox'][data-do-detail-id]:checked"), function (i) {
+                let doDetailId = $(this).data("do-detail-id");
+                doDetail.push(doDetailId);
+            });
+
+            if (doDetail.length > 0) {
+                let SalesmenId = "";
+                let DepartmentId = "";
+
+                let targetUrl = "@Url.Action("GetSoSalesInfo", "ScmInventory")";
+                let postData = {
+                    "DoDetailId": doDetail.join()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+
+                    if (data.result.length == 1) {
+                        $.each(data.result, function (i, item) {
+                            SalesmenId = item.SalesmenId;
+                            DepartmentId = item.DepartmentId;
+                        });
+                    }
+                    console.log(SalesmenId);
+                    console.log(DepartmentId);
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                ComboBoxs.WithText("#cboTsnErpPrefix@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "TsnErpPrefix" }, "", "CHOOSE", "全部", "TsnErpPrefixName", "TsnErpPrefixNo");
+                ComboBoxs.Default("#cboSalesmenId@(itemName)", "@Url.Action("GetUserByAuthority", "BasicInformation")", { "FunctionCode": "SaleOrderManagement", "DetailCode": "add"}, SalesmenId, "CHOOSE", "請選擇業務", "UserWithNo", "UserId");
+                ComboBoxs.Default("#cboDeptId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", {}, DepartmentId, "CHOOSE", "請選擇部門", "DepartmentWithNo", "DepartmentId");
+
+                $("#cboTsnErpPrefix@(itemName), #cboSalesmenId@(itemName), #cboDeptId@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+
+                $("#modalTsnErpPrefix@(itemName)").modal({
+                    backdrop: "static",
+                    keyboard: false,
+                    show: true
+                });
+            } else {
+                alert("請至少選擇一筆資料!");
+            }
+        }
+
+        function CloseTsnErpPrefix@(itemName)() {
+            ResetForm("#TsnErpPrefixForm@(itemName)");
+
+            $("#modalTsnErpPrefix@(itemName)").modal("hide");
+            
+            Query@(itemName)();
+        }
+        let SaveLotListObj = []
+        let LotListObj = {}
+
+        function OpenLotList@(itemName)(DoDetailId) {
+            $("#modalLotList@(itemName)").modal("show");
+            let innerHtml = '';
+
+            const index = SaveLotListObj.findIndex((v) => Object.keys(v)[0] == DoDetailId);
+            if (index !== -1) {
+                LotListObj = SaveLotListObj[index]
+                for (var key in SaveLotListObj[index]) {
+                    if (key == DoDetailId) {
+                        let num = 0
+                        for (key1 in SaveLotListObj[index][key]) {
+                            let _row = (num + 1) + ".";
+                            let LotNumber = SaveLotListObj[index][key][key1].LotNumber
+                            let ItemQty1 = SaveLotListObj[index][key][key1].ItemQty1
+                            let ItemQty2 = SaveLotListObj[index][key][key1].ItemQty2
+                            let ItemQty3 = SaveLotListObj[index][key][key1].ItemQty3
+                            let OutInventoryLot = SaveLotListObj[index][key][key1].OutInventory
+                            let InInventoryLot = SaveLotListObj[index][key][key1].InInventory
+                            innerHtml += `<tr>
+                                            <td>${_row}</td>
+                                            <td class="col-sticky">${LotNumber}</td>
+                                            <td class="col-sticky">${ItemQty1}</td>
+                                            <td class="col-sticky">${ItemQty2}</td>
+                                            <td class="col-sticky">${ItemQty3}</td>
+                                            <td class="p-0">
+                                                <select class="form-control" name="cboTsnOutInventoryLot@(itemName)" data-lotnumber="${LotNumber}" data-do-detail-id="${DoDetailId}" data-out-inventory="${OutInventoryLot}"></select>
+                                            </td>
+                                            <td class="p-0">
+                                                <select class="form-control" name="cboTsnInInventoryLot@(itemName)" data-lotnumber="${LotNumber}" data-do-detail-id="${DoDetailId}" data-int-inventory="${InInventoryLot}"></select>
+                                            </td>
+                                            </tr>`;
+                            num++
+                        }
+                    }
+                }
+            }
+            else {
+                GetDeliveryLotList@(itemName)(DoDetailId)
+
+                if (!$.isEmptyObject(LotListObj[DoDetailId])) {
+                    for (var key in LotListObj) {
+                        if (key == DoDetailId) {
+                            let num = 0
+                            for (key1 in LotListObj[key]) {
+                                let _row = (num + 1) + ".";
+                                let LotNumber = LotListObj[key][key1].LotNumber
+                                let ItemQty1 = LotListObj[key][key1].ItemQty1
+                                let ItemQty2 = LotListObj[key][key1].ItemQty2
+                                let ItemQty3 = LotListObj[key][key1].ItemQty3
+                                let OutInventoryLot = LotListObj[key][key1].OutInventory
+                                let InInventoryLot = LotListObj[key][key1].InInventory
+                                innerHtml += `<tr>
+                                                <td>${_row}</td>
+                                                <td class="col-sticky">${LotNumber}</td>
+                                                <td class="col-sticky">${ItemQty1}</td>
+                                                <td class="col-sticky">${ItemQty2}</td>
+                                                <td class="col-sticky">${ItemQty3}</td>
+                                                <td class="p-0">
+                                                    <select class="form-control" name="cboTsnOutInventoryLot@(itemName)" data-lotnumber="${LotNumber}" data-do-detail-id="${DoDetailId}" data-out-inventory="${OutInventoryLot}"></select>
+                                                </td>
+                                                <td class="p-0">
+                                                    <select class="form-control" name="cboTsnInInventoryLot@(itemName)" data-lotnumber="${LotNumber}" data-do-detail-id="${DoDetailId}" data-int-inventory="${InInventoryLot}"></select>
+                                                </td>
+                                                </tr>`;
+                                num++
+                            }
+                        }
+                    }
+                }
+                else {
+                    innerHtml += `<tr>
+                                        <td class="text-center" colspan="20" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                        </td>
+                                      </tr>`;
+                }
+            }
+
+            $("#tblLotListData@(itemName) tbody").html(innerHtml);
+
+            ComboBoxs.Default("select[name='cboTsnOutInventoryLot@(itemName)'][data-do-detail-id], select[name='cboTsnInInventoryLot@(itemName)'][data-do-detail-id]", "@Url.Action("GetInventory", "ScmBasicInformation")", { "Status": "A" }, "", "NA", "", "InventoryWithNo", "InventoryId");
+
+            $("select[name='cboTsnOutInventoryLot@(itemName)'][data-do-detail-id]").each(function () {
+                $(this).val($(this).data("out-inventory"));
+            });
+            $("select[name='cboTsnInInventoryLot@(itemName)'][data-do-detail-id]").each(function () {
+                $(this).val($(this).data("int-inventory"));
+            });
+
+            $("select[name='cboTsnOutInventoryLot@(itemName)'][data-do-detail-id], select[name='cboTsnInInventoryLot@(itemName)'][data-do-detail-id]").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+        }
+        function CloseLotList@(itemName)() {
+            $("#modalLotList@(itemName)").modal("hide");
+
+        }
+        function SaveLotList@(itemName)() {
+            const DetailId = Object.keys(LotListObj).join('');
+            let errStatus = false
+
+            $("select[name='cboTsnOutInventoryLot@(itemName)'][data-do-detail-id]").each(function () {
+                let OutInventory = $(this).val()
+                if (OutInventory <= 0) {
+                    errStatus = true
+                    return false
+                }
+                let LotNumber = $(this).data("lotnumber")
+                LotListObj[DetailId][LotNumber].OutInventory = $(this).val()
+            });
+            if (errStatus) {
+                alert("庫別尚有未維護不可儲存")
+                return
+            }
+
+            $("select[name='cboTsnInInventoryLot@(itemName)'][data-do-detail-id]").each(function () {
+                let InInventory = $(this).val()
+                if (InInventory <= 0) {
+                    errStatus = true
+                    return false
+                }
+                let LotNumber = $(this).data("lotnumber")
+                LotListObj[DetailId][LotNumber].InInventory = $(this).val()
+            });
+
+            if (errStatus) {
+                alert("庫別尚有未維護不可儲存")
+                return
+            }
+
+            const index = SaveLotListObj.findIndex((v) => Object.keys(v)[0] === DetailId);
+            if (index !== -1) {
+                SaveLotListObj.splice(index, 1); // 移除該物件
+            }
+            SaveLotListObj.push(LotListObj)
+            $(`input[type='checkbox'][data-do-detail-id=${DetailId}]`).prop("checked", true);
+            $(`select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id=${DetailId}]`).prop("disabled", true)
+            $(`select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id=${DetailId}]`).val('').trigger("change.select2")
+            $(`select[name='cboTsnInInventory@(itemName)'][data-do-detail-id=${DetailId}]`).prop("disabled",true)
+            $(`select[name='cboTsnInInventory@(itemName)'][data-do-detail-id=${DetailId}]`).val('').trigger("change.select2")
+            CloseLotList@(itemName)()
+        }
+
+
+        function GetDeliveryLotList@(itemName)(DoDetailId) {
+            LotListObj = {}
+
+            let OutInventory = $(`select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id=${DoDetailId}]`).val()
+            let InInventory = $(`select[name='cboTsnInInventory@(itemName)'][data-do-detail-id=${DoDetailId}]`).val()
+
+            let targetUrl = "@Url.Action("GetDeliveryLotList", "PickingSystem")";
+            let postData = {
+                "DoDetailId": DoDetailId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+
+                    $.each(data.result, function (i, item) {
+                        let LotNumber = item.LotNumber;
+                        let ItemQty = item.ItemQty;
+                        let DoDetailId = item.DoDetailId;
+                        let ItemType = item.ItemType;
+
+                        if ($.isEmptyObject(LotListObj[DoDetailId])) {
+                            LotListObj[DoDetailId] = {
+                                [LotNumber]: {
+                                    "LotNumber": LotNumber,
+                                    "ItemQty1": ItemType == 1 ? ItemQty : 0,
+                                    "ItemQty2": ItemType == 2 ? ItemQty : 0,
+                                    "ItemQty3": ItemType == 3 ? ItemQty : 0,
+                                    "OutInventory": OutInventory,
+                                    "InInventory": InInventory,
+                                }
+                            }
+                        }
+                        else {
+                            if ($.isEmptyObject(LotListObj[DoDetailId][LotNumber])) {
+                                LotListObj[DoDetailId][LotNumber] = {
+                                    "LotNumber": LotNumber,
+                                    "ItemQty1": ItemType == 1 ? ItemQty : 0,
+                                    "ItemQty2": ItemType == 2 ? ItemQty : 0,
+                                    "ItemQty3": ItemType == 3 ? ItemQty : 0,
+                                    "OutInventory": OutInventory,
+                                    "InInventory": InInventory,
+                                }
+                            }
+                            else {
+                                if (ItemType == 1) {
+                                    LotListObj[DoDetailId][LotNumber].ItemQty1 = LotListObj[DoDetailId][LotNumber].ItemQty1 + ItemQty
+                                }
+                                else if (ItemType == 2) {
+                                    LotListObj[DoDetailId][LotNumber].ItemQty2 = LotListObj[DoDetailId][LotNumber].ItemQty2 + ItemQty
+                                }
+                                else if (ItemType == 3) {
+                                    LotListObj[DoDetailId][LotNumber].ItemQty3 = LotListObj[DoDetailId][LotNumber].ItemQty3 + ItemQty
+                                }
+                            }
+                        }
+                    });
+                }
+                else {
+
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+</script>
+        )

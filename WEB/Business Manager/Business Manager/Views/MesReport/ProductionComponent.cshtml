@@ -1,0 +1,263 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProductionComponent";
+    string itemNameText = "上料資訊查詢";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             border: none !important;
+         }
+
+         .badge {
+             font-size: 90% !important;
+         }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtWoErpFullNoQ@(itemName)">製令</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)" placeholder="請輸入製令" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">料號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入料號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNameQ@(itemName)">料名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)" placeholder="請輸入料名" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtBarcodeNoQ@(itemName)">條碼</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)" placeholder="請輸入條碼" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtBarcodeProcessNameQ@(itemName)">刻字</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtBarcodeProcessNameQ@(itemName)" name="txtBarcodeProcessNameQ@(itemName)" placeholder="請輸入刻字" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtBarcodeComponentNameQ@(itemName)">穴號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtBarcodeComponentNameQ@(itemName)" name="txtBarcodeComponentNameQ@(itemName)" placeholder="請輸入穴號" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 125px;">製令</th>
+                                        <th scope="col" style="min-width: 125px;">主成品料號</th>
+                                        <th scope="col" style="min-width: 150px;">主成品料名</th>
+                                        <th class="text-center" scope="col" style="min-width: 150px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetProductionComponent", "MesReport")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "BarcodeNo": $("#txtBarcodeNoQ@(itemName)").val(),
+                "BarcodeProcessName": $("#txtBarcodeProcessNameQ@(itemName)").val(),
+                "BarcodeComponentName": $("#txtBarcodeComponentNameQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.WoErpFullNo}</td>
+                                        <td>${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 150px;">${item.MtlItemName}</td>
+                                        <td class="text-center active-content">
+                                            <a class="active-link detail-button" href="javascript:Detail@(itemName)(${item.MoId});"><i class="fas fa-list"></i><span>單身</span></a>
+                                        </td>
+                                      </tr>
+                                      <tr data-mo-id="${item.MoId}" style="display: none;">
+                                        <td colspan="8">
+                                          <table style="width: 100%; margin: auto; border: 1px solid #d7d7e1;">
+                                            <thead>
+                                             <tr>
+                                                <th class="thead-customized" scope="col">領料單號</th>
+                                                <th class="thead-customized" scope="col">流水號</th>
+                                                <th class="thead-customized" scope="col">BOM品號</th>
+                                                <th class="thead-customized" scope="col">BOM品名</th>
+                                                <th class="thead-customized" scope="col">條碼</th>
+                                                <th class="thead-customized" scope="col">刻字</th>
+                                                <th class="thead-customized" scope="col">穴號</th>
+                                                <th class="thead-customized" scope="col">狀態</th>
+                                              </tr>
+                                           </thead>
+                                            <tbody>
+                                                ${DetailData@(itemName)(item.DetailData)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                      </tr>
+                                      <tr></tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="9" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function DetailData@(itemName)(DetailData) {
+            console.log(DetailData);
+            let html = '';
+
+            if (DetailData) {
+                let json = JSON.parse(DetailData);
+
+                for (let x = 0; x < json.data.length; x++) {
+
+                    html += `<tr>
+                                <td class="tbody-customized">${json.data[x].MrErpFullNo}</td>
+                                <td class="tbody-customized">${json.data[x].MrSequence}</td>
+                                <td class="tbody-customized">${json.data[x].MtlItemNo}</td>
+                                <td class="tbody-customized">${json.data[x].MtlItemName}</td>
+                                <td class="tbody-customized">${json.data[x].BarcodeNo}</td>
+                                <td class="tbody-customized">${json.data[x].BarcodeProcessName}</td>
+                                <td class="tbody-customized">${json.data[x].BarcodeComponentName}</td>
+                                <td class="tbody-customized">${json.data[x].BarcodeStatus}</td>
+                             </tr>`;
+                }
+            }
+
+            return html;
+        }
+
+        function Detail@(itemName)(MoId) {
+            if ($(`tr[data-mo-id=${MoId}]`).css("display") == "none") {
+                $("tr[data-mo-id]").hide();
+                $(`tr[data-mo-id=${MoId}]`).show();
+            } else {
+                $("tr[data-mo-id]").hide();
+            }
+        }
+
+    </script>
+                        )

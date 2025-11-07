@@ -1,0 +1,620 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DeliveryDetail";
+    string itemNameText = "出貨單明細";
+
+    string DoId = Request["DoId"] ?? "";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .picking-status {
+             display: none;
+         }
+
+         .tab {
+             overflow: hidden;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+             .tab button {
+                 font-size: 16px;
+                 width: 50%;
+                 color: #0041c4;
+                 background-color: #efefef;
+                 float: left;
+                 border: none;
+                 border-radius: 5px;
+                 margin-top: 0.5rem;
+                 outline: none;
+                 cursor: pointer;
+                 padding: .45rem;
+                 transition: 0.5s;
+             }
+
+                 .tab button.active {
+                     background-color: #0041c4;
+                     color: #fff;
+                 }
+
+         .tab-content {
+             display: none;
+             padding: 6px 12px;
+             animation: fadeEffect .5s;
+         }
+
+         @@keyframes fadeEffect {
+             from {
+                 opacity: 0;
+             }
+
+             to {
+                 opacity: 1;
+             }
+         }
+         /*改寫成電腦版寬版*/
+         @@media (min-width: 767px) {
+            .wrapper.wrap-listpick {
+                width: 100%;
+                max-width: 1080px;
+            }
+            #tab-item.content-pickup li.list-box {
+                display: flex;
+                column-gap: 10px;
+                flex-direction: column;
+            }
+
+
+            #tab-item .content-pickup li.list-box .list-title {
+                display: flex;
+                /* justify-content: space-between; */
+                align-items: center;
+                border-bottom: 1px solid #e0e0e0;
+                padding: 5px 0;
+            }
+
+            #tab-item .content-pickup li.list-box .list-content {
+                display: flex;
+                /* flex-direction: row; */
+                flex: 2;
+                padding: 5px 0;
+            }
+
+                #tab-item .content-pickup li.list-box .list-content .list-item {
+                    display: flex;
+                    /* flex-direction: column; */
+                    /* flex-flow: column; */
+                    flex-wrap: wrap;
+                }
+
+                    #tab-item .content-pickup li.list-box .list-content .list-item li {
+                        flex-basis: 33%;
+                    }
+
+            #tab-item .list-content .btn-block {
+                flex: 1;
+                padding: 0
+            }
+            }
+
+
+
+         
+</style>
+        )
+
+<input type="hidden" id="deliveryStatus@(itemName)" value="" />
+
+<header class="header-title">
+    <div class="link-area left-link">
+        <a href="javascript:history.back();">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <a href="@Url.Action("DeliveryList", "PickingSystem")">
+            <i class="fas fa-list-alt"></i>
+        </a>
+    </div>
+    <div class="title">@(itemNameText)</div>
+    <div class="link-area">
+        <a href="@Url.Action("Index", "PickingSystem")">
+            <i class="fas fa-home-lg-alt"></i>
+        </a>
+    </div>
+</header>
+
+<div class="wrapper wrap-listpick">
+    <div class="section section-pickup">
+        <div class="heading-pickup">
+            <div class="list-title">
+                <div class="number" id="desDoErpFullNo@(itemName)"></div>
+                <div class="status" id="desDoStatus@(itemName)"></div>
+            </div>
+            <div class="btn-block">
+                <a class="btn btn-sub btn-large picking-status binding-carton" style="border-top-right-radius: 0; border-bottom-right-radius: 0;" onclick="PopCarton@(itemName)()">綁定箱號</a>
+                @*<a class="btn btn-success btn-large picking-status binding-carton" style="border-top-left-radius: 0; border-bottom-left-radius: 0;" href="javascript: PopPackagingBarcode('@DoId')">包裝揀貨</a>*@
+
+            </div>
+            <div class="tab">
+                <button class="switch-tab" style="border-top-right-radius: 0; border-bottom-right-radius: 0;" data-target="item"><i class="fas fa-list"></i>&nbsp;物件</button>
+                <button class="switch-tab" style="border-top-left-radius: 0; border-bottom-left-radius: 0;" data-target="carton"><i class="far fa-box"></i>&nbsp;物流箱</button>
+            </div>
+        </div>
+        <div class="tab-container">
+            <div id="tab-item" class="tab-content">
+                <div class="content-pickup">
+                    <ul class="list-area" id="PickingItem@(itemName)"></ul>
+                </div>
+            </div>
+            <div id="tab-carton" class="tab-content">
+                <div class="content-pickup">
+                    <ul class="list-area" id="CartonItem@(itemName)"></ul>
+                </div>
+            </div>
+        </div>
+        <div class="btn-fixed">
+            <div class="btn-block">
+                <a class="btn btn-sub btn-large picking-status complete-picking">完成揀貨&nbsp;<i class="far fa-angle-double-right"></i></a>
+                <a class="btn btn-warn picking-status return-picking"><i class="far fa-angle-double-left"></i>&nbsp;回復揀貨</a>
+                <a class="btn btn-main picking-status confirm-delivery">出貨確認&nbsp;<i class="far fa-angle-double-right"></i></a>
+                <a class="btn btn-warn btn-large picking-status return-delivery"><i class="far fa-angle-double-left"></i>&nbsp;退回可出貨</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCarton@(itemName)">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">綁定物流箱</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <label class="form-label input-barcode">
+                            物流箱條碼 <span class="text-danger">* 【注意】請選擇含有物件的物流箱！</span>
+                            <input type="text" class="form-input" id="txtCartonBarcode@(itemName)" name="txtCartonBarcode@(itemName)" placeholder="請輸入物流箱條碼"
+                                   autocomplete="off" data-msg-required="請輸入物流箱條碼" data-rule-required="true" />
+                        </label>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div class="btn-block">
+                    <button class="btn btn-main btn-large" onclick="Datas@(itemName).UpdateDoCarton@(itemName)()"><i class="fas fa-check"></i>&nbsp;確定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalStatus@(itemName)">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改 - 出貨單狀態</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="desConfirm@(itemName)"></div>
+            </div>
+            <div class="modal-footer">
+                <div class="btn-block">
+                    <button class="btn btn-main btn-large" onclick="Datas@(itemName).UpdateDeleiveryStatus@(itemName)()">確定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("PackagingBarcode")
+
+
+@Html.Resource("js",
+    @<script>
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            $(".picking-status").click(function () {
+                let confirmHtml = ``;
+                let isShowPop = false;
+                $("#deliveryStatus@(itemName)").val("");
+
+                switch (true) {
+                    case $(this).hasClass("complete-picking"):
+                        confirmHtml += `<p class="modal-text">是否將出貨單設定為 <span class="main">【可出貨】</span>？</p>`;
+                        isShowPop = true;
+                        $("#deliveryStatus@(itemName)").val("R");
+                        break;
+                    case $(this).hasClass("return-picking"):
+                        confirmHtml += `<p class="modal-text">是否將出貨單回復為 <span class="main">【揀貨中】</span>？</p>`;
+                        isShowPop = true;
+                        $("#deliveryStatus@(itemName)").val("P");
+                        break;
+                    case $(this).hasClass("confirm-delivery"):
+                        confirmHtml += `<p class="modal-text">是否將出貨單設定為 <span class="main">【已出貨】</span>？</p>`;
+                        isShowPop = true;
+                        $("#deliveryStatus@(itemName)").val("S");
+                        break;
+                    case $(this).hasClass("return-delivery"):
+                        confirmHtml += `<p class="modal-text">是否將出貨單退回為 <span class="main">【可出貨】</span>？</p>`;
+                        isShowPop = true;
+                        $("#deliveryStatus@(itemName)").val("R");
+                        break;
+                }
+
+                if (isShowPop) {
+                    $("#desConfirm@(itemName)").html(confirmHtml);
+
+                    $("#modalStatus@(itemName)").modal({
+                        backdrop: "static",
+                        keyboard: false,
+                        show: true
+                    });
+                }
+            });
+
+            $(".switch-tab").click(function (e) {
+                let target = $(this).data("target");
+
+                $(".switch-tab").removeClass("active");
+                $(".tab-content").hide();
+                if (!$(this).hasClass("active")) {
+                    $(this).addClass("active");
+                    $(`#tab-${target}`).show();
+                }
+            });
+
+            InitData@(itemName)();
+        });
+
+        function InitData@(itemName)() {
+            $(".picking-status").hide();
+
+            Datas@(itemName).GetDeliveryOrder@(itemName)();
+            Datas@(itemName).GetDoDetail@(itemName)();
+            Datas@(itemName).GetCartonItem@(itemName)();
+
+            $("#modalCarton@(itemName)").modal('hide');
+            $("#modalStatus@(itemName)").modal('hide');
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetDeliveryOrder@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetDeliveryOrder", "PickingSystem")";
+                let postData = {
+                    "DoId": "@(DoId)"
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#desDoErpFullNo@(itemName)").html(`<span class="number-cell">${item.DoErpFullNo}</span>`);
+
+                        switch (item.Status) {
+                            case "N":
+                                $("#desDoStatus@(itemName)").addClass("status-warning");
+                                $("#desDoStatus@(itemName)").html("未揀貨");
+                                $(".binding-carton").show();
+
+                                $("[data-target='item']").trigger("click");
+                                break;
+                            case "P":
+                                $("#desDoStatus@(itemName)").addClass("status-sub");
+                                $("#desDoStatus@(itemName)").html("揀貨中");
+                                $(".binding-carton").show();
+                                $(".complete-picking").show();
+
+                                $("[data-target='item']").trigger("click");
+                                break;
+                            case "R":
+                                $("#desDoStatus@(itemName)").addClass("status-main");
+                                $("#desDoStatus@(itemName)").html("可出貨");
+                                $(".return-picking").show();
+                                $(".confirm-delivery").show();
+
+                                $("[data-target='carton']").trigger("click");
+                                break;
+                            case "S":
+                                $("#desDoStatus@(itemName)").addClass("status-finish");
+                                $("#desDoStatus@(itemName)").html("已出貨");
+                                $(".return-delivery").show();
+
+                                $("[data-target='carton']").trigger("click");
+                                break;
+                        }
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "GetDoDetail@(itemName)", function () {
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetDoDetail", "PickingSystem")";
+                let postData = {
+                    "DoId": "@(DoId)"
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<li class="list-box">
+                                            <div class="list-title">
+                                              <div class="number">
+                                                <span class="object">
+                                                    品名：${item.MtlItemName}
+                                                    ${item.CustomerPurchaseOrder.length > 0 ? `(客戶採單：${item.CustomerPurchaseOrder})` : ``}
+                                                </span>
+                                              </div>
+                                            </div>
+                                            <div class="list-content">
+                                              <ul class="list-item">
+                                                <li>
+                                                  <span class="heading">品號</span>
+                                                  <span class="detail">${item.MtlItemNo}</span>
+                                                </li>
+                                                <li>
+                                                  <span class="heading">規格</span>
+                                                  <span class="detail">${item.MtlItemSpec}</span>
+                                                </li>
+                                                <li>
+                                                  <span class="heading">出貨工程</span>
+                                                  <span class="detail">${item.DeliveryProcess}</span>
+                                                </li>
+                                                <li>
+                                                  <span class="heading">預計出貨數量【正常品】</span>
+                                                  <span class="detail">${item.RegularQty}</span>
+                                                </li>
+                                                <li>
+                                                  <span class="heading">預計出貨數量【贈品】</span>
+                                                  <span class="detail">${item.FreebieQty}</span>
+                                                </li>
+                                                <li>
+                                                  <span class="heading">預計出貨數量【備品】</span>
+                                                  <span class="detail">${item.SpareQty}</span>
+                                                </li>
+                                                <li>
+                                                  <span class="heading">已揀貨數量【正常品】</span>
+                                                  <span class="detail detail-warning">${item.PickRegularQty}</span>
+                                                </li>
+                                                <li>
+                                                  <span class="heading">已揀貨數量【贈品】</span>
+                                                  <span class="detail detail-warning">${item.PickFreebieQty}</span>
+                                                </li>
+                                                <li>
+                                                  <span class="heading">已揀貨數量【備品】數量</span>
+                                                  <span class="detail detail-warning">${item.PickSpareQty}</span>
+                                                </li>
+                                              </ul>
+                                              ${item.Status == 'N' || item.Status == 'P' ? `<div class="btn-block"><a class="btn btn-main btn-large" href="@Url.Action("PickingTask", "PickingSystem")?DoDetailId=${item.DoDetailId}">開始揀貨</a></div>` : ``}
+                                            </div>
+                                          </li>`;
+                        });
+                    } else {
+                        innerHtml += `<li class="list-box">
+                                        <div class="list-content">
+                                          <div class="list-box text-center p-3" style="background-color: #fff3cd;">
+                                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                          </div>
+                                        </div>
+                                      </li>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#PickingItem@(itemName)").html(innerHtml);
+            });
+
+            addMethod(this, "GetCartonItem@(itemName)", function () {
+                let innerHtml = '';
+                let cartonItem = JSON.parse('{ "data" : []}');
+
+                let targetUrl = "@Url.Action("GetCartonItem", "PickingSystem")";
+                let postData = {
+                    "DoId": "@(DoId)"
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+
+                            innerHtml += `<li class="list-box">
+                                            <a class="list-title" href="@Url.Action("PickingItem", "PickingSystem")?DoId=${item.DoId}&PickingCartonId=${item.PickingCartonId}">
+                                              <div class="number">
+                                                <span class="object">箱號：${item.CartonName} ${item.CartonBarcode ? `(${item.CartonBarcode})` : ``}</span>
+                                              </div>
+                                              <div class="expand">
+                                                <i class="fas fa-chevron-right"></i>
+                                              </div>
+                                            </a>
+                                            <div class="list-content">
+                                              <ul class="list-item">
+                                                ${DetailData@(itemName)(item.ItemDetail)}
+                                              </ul>
+                                              <div class="form-block mt-2">
+                                                <label class="form-label">物件總數量 </label>
+                                                <p style="font-weight: 700;">${TotalItem@(itemName)(item.ItemDetail)}</p>
+                                              </div>
+                                              ${item.Status == `R` && item.PickingCartonId != -999 ? `
+                                              <div class="form-block mt-2">
+                                                <label class="form-label" for="txtTotalWeight@(itemName)">物流箱重量 <span class="text-danger" style="margin-right: 10px;">*</span> 目前重量：<span class="text-danger">${item.TotalWeight} kg</span></label>
+                                                <div class="clearfix row row-cols-2 mt-1">
+                                                  <div class="col" style="padding-right:5px;">
+                                                    <input type="number" class="form-input" name="txtTotalWeight@(itemName)" placeholder="請輸入物流箱重量"
+                                                           autocomplete="off" data-carton-id="${item.PickingCartonId}" value="${item.TotalWeight}"
+                                                           data-msg-required="請輸入物流箱重量" data-rule-required="true" min="0" step="0.01"/>
+                                                  </div>
+                                                  <div class="col" style="padding-left:5px;">
+                                                    <select class="form-control" name="cboUomId@(itemName)" data-carton-id="${item.PickingCartonId}"
+                                                            data-msg-required="請選擇重量單位" data-rule-required="true"></select>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              <div class="btn-block" style="padding:0; margin:10px 0;">
+                                                <button class="btn btn-sub btn-large" onclick="Datas@(itemName).UpdateCartonWeight@(itemName)(${item.PickingCartonId})"><i class="fas fa-check"></i>&nbsp;確定</button>
+                                              </div>` : ``}
+                                              ${item.Status == `S` && item.PickingCartonId != -999 ? `
+                                              <div class="form-block mt-2">
+                                                <label class="form-label">物流箱重量 </label>
+                                                <p style="font-weight: 700;">${item.TotalWeightWithUom}</p>
+                                              </div>` : ``}
+                                            </div>
+                                          </li>`;
+
+                            cartonItem.data.push({
+                                "cartonId": item.PickingCartonId,
+                                "uomId": item.UomId
+                            })
+                        });
+                    } else {
+                        innerHtml += `<li class="list-box">
+                                        <div class="list-content">
+                                          <div class="list-box text-center p-3" style="background-color: #fff3cd;">
+                                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                          </div>
+                                        </div>
+                                      </li>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#CartonItem@(itemName)").html(innerHtml);
+
+                ComboBoxs.Default($("select[name='cboUomId@(itemName)']"), "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", { "Status": "A" }, 13, "NA", "", "UomWithNo", "UomId");
+
+                for (var i = 0; i < cartonItem.data.length; i++) {
+                    $(`select[name='cboUomId@(itemName)'][data-carton-id=${cartonItem.data[i].cartonId}]`).val(cartonItem.data[i].uomId);
+                }
+
+                function DetailData@(itemName)(source) {
+                    let html = '';
+
+                    if (source) {
+                        let json = JSON.parse(source);
+
+                        for (var i = 0; i < json.data.length; i++) {
+                            html += `<li class="item-box">
+                                       <span class="heading">物件</span>
+                                       <span class="detail" id="desMtlItemName@(itemName)" name="desMtlItemName@(itemName)">${json.data[i].MtlItemName}&nbsp;</span>
+                                       <code>(【${ItemTypeName(json.data[i].ItemType)}】數量:${json.data[i].ItemQty})</code>
+                                     </li>`;
+                        }
+                    }
+
+                    return html;
+                }
+
+                function ItemTypeName(itemType) {
+                    switch (itemType) {
+                        case "1":
+                            return "正常品";
+                            break;
+                        case "2":
+                            return "贈品";
+                            break;
+                        case "3":
+                            return "備品";
+                            break;
+                    }
+                }
+
+                function TotalItem@(itemName)(source) {
+                    let totalQty = 0;
+
+                    if (source) {
+                        let json = JSON.parse(source);
+
+                        for (var i = 0; i < json.data.length; i++) {
+                            totalQty += parseFloat(json.data[i].ItemQty);
+                        }
+                    }
+
+                    return totalQty;
+                }
+            });
+
+            addMethod(this, "UpdateDoCarton@(itemName)", function () {
+                if ($(objForm@(itemName)).valid()) {
+                    let targetUrl = "@Url.Action("UpdateDoCarton", "PickingSystem")";
+                    let postData = {
+                        "CartonBarcode": $("#txtCartonBarcode@(itemName)").val(),
+                        "DoId": "@(DoId)"
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        InitData@(itemName)();
+                    }
+                }
+            });
+
+            addMethod(this, "UpdateDeleiveryStatus@(itemName)", function () {
+                let targetUrl = "@Url.Action("UpdateDeleiveryStatus", "PickingSystem")";
+                let postData = {
+                    "DoIds": "@(DoId)",
+                    "Status": $("#deliveryStatus@(itemName)").val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    InitData@(itemName)();
+                }
+            });
+
+            addMethod(this, "UpdateCartonWeight@(itemName)", function (pickingCartonId) {
+                let totalWeight = $(`input[name='txtTotalWeight@(itemName)'][data-carton-id='${pickingCartonId}']`).val();
+                let uomId = $(`select[name='cboUomId@(itemName)'][data-carton-id='${pickingCartonId}']`).val();
+
+                let targetUrl = "@Url.Action("UpdateCartonWeight", "PickingSystem")";
+                let postData = {
+                    "PickingCartonId": pickingCartonId,
+                    "TotalWeight": totalWeight,
+                    "UomId": uomId
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    InitData@(itemName)();
+                }
+            });
+        }
+
+        function PopCarton@(itemName)() {
+            $("#modalCarton@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function PopPackagePick@(itemName)() {
+            $("#modalPackagingBarcodePackagingBarcode").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+        }
+    </script>
+        )

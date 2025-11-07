@@ -1,0 +1,241 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMailSendSetting";
+    string itemNameText = "郵件寄送設定";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <button class="close" type="button" onclick="Close@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-12 col-md-auto col-lg-auto mb-2 mb-md-0 mb-lg-0">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                               placeholder="請輸入寄送綱要/寄送代碼" />
+                                    </div>
+                                    <div class="col-12 col-md-auto col-lg-auto text-right text-md-left text-lg-left">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        <button type="button" class="btn btn-info" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 75px;">寄送綱要</th>
+                                        <th scope="col" style="min-width: 150px;">寄送代碼</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                            <fieldset>
+                                <input type="hidden" id="SettingId" name="SettingId" value="-1" />
+                                <div class="form-group row">
+                                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSettingSchema@(itemName)">寄送綱要 <span class="text-danger">*</span></label>
+                                    <div class="col-12 col-md-9 col-lg-9">
+                                        <input type="text" class="form-control" id="txtSettingSchema@(itemName)" name="txtSettingSchema@(itemName)" placeholder="請輸入寄送綱要"
+                                               data-msg-required="請輸入寄送綱要" data-rule-required="true"
+                                               data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtSettingNo@(itemName)">寄送代碼 <span class="text-danger">*</span></label>
+                                    <div class="col-12 col-md-9 col-lg-9">
+                                        <input type="text" class="form-control" id="txtSettingNo@(itemName)" name="txtSettingNo@(itemName)" placeholder="請輸入寄送代碼"
+                                               data-msg-required="請輸入寄送代碼" data-rule-required="true"
+                                               data-msg-maxlength="必須少於 10 個字元" maxlength="10" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let mailId@(itemName) = "";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(MailId) {
+            mailId@(itemName) = MailId;
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetMailSendSetting", "SystemSetting")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MailId": mailId@(itemName),
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">寄送綱要</span>${item.SettingSchema}</td>
+                                        <td><span class="stack-title">寄送代碼</span>${item.SettingNo}</td>
+                                        <td class="text-center active-content">
+                                          <span class="stack-title">操作</span>
+                                          <a class="active-link auth-send-setting" href="javascript:Edit@(itemName)(${item.SettingId});"><i class="fas fa-edit"></i></a>
+                                          <a class="active-link auth-send-setting" href="javascript:Delete@(itemName)(${item.SettingId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(SettingId) {
+            $("#SettingId").val(SettingId ? SettingId : 0);
+
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+            if (SettingId > 0) {
+                let targetUrl = "@Url.Action("GetMailSendSetting", "SystemSetting")";
+                let postData = {
+                    "SettingId": SettingId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtSettingSchema@(itemName)").val(item.SettingSchema);
+                        $("#txtSettingNo@(itemName)").val(item.SettingNo);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let SettingId = parseInt($("#SettingId").val());
+
+                if (SettingId <= 0) {
+                    let targetUrl = "@Url.Action("AddMailSendSetting", "SystemSetting")";
+                    let postData = {
+                        "MailId": mailId@(itemName),
+                        "SettingSchema": $("#txtSettingSchema@(itemName)").val(),
+                        "SettingNo": $("#txtSettingNo@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateMailSendSetting", "SystemSetting")";
+                    let postData = {
+                        "SettingId": SettingId,
+                        "SettingSchema": $("#txtSettingSchema@(itemName)").val(),
+                        "SettingNo": $("#txtSettingNo@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

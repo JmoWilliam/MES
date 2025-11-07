@@ -1,0 +1,249 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewBarcodeList";
+    string itemNameText = "條碼管理";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+    </style>
+                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 250px;">條碼</th>
+                                        <th class="text-center col-sticky checkbox-mode" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let targetSelector@(itemName);
+        let barcodeId@(itemName);
+        let type@(itemName);
+
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            barcodeId@(itemName) = config.objectbarcodeId;
+            barcodeNo@(itemName) = config.objectbarcodeNo;
+            type@(itemName) = config.type;
+
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-barcode-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-barcode-id]").not(":disabled").prop("checked", false);
+                }
+            });
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "";
+            let postData = {};
+
+            let BarcodeListView = $("#BarcodeListView").val();
+            switch (BarcodeListView) {
+                case 'OQC': {
+                    targetUrl = "@Url.Action("GetBarcodeList", "Abnormalquality")";
+                    postData = {
+                        "OrderBy": "",
+                        "PageIndex": (objPage.pageIndex + 1),
+                        "PageSize": objPage.pageSize,
+                        "MoId": $("#MoId").val(),
+                        "BarcodeListView": "OQC"
+                    };
+                    break
+                }
+                case 'NON':
+                case 'IPQC': {
+                    targetUrl = "@Url.Action("GetBarcodeList", "Abnormalquality")";
+                    postData = {
+                        "OrderBy": "",
+                        "PageIndex": (objPage.pageIndex + 1),
+                        "PageSize": objPage.pageSize,
+                        "MoProcessId": $("#MoProcessId").val(),
+                        "MoId": $("#MoId").val(),
+                        "BarcodeListView": "IPQC"
+                    };
+                    break
+                }
+                case 'MPC': {
+                    targetUrl = "@Url.Action("GetBarcodeList", "Abnormalquality")";
+                    postData = {
+                        "OrderBy": "",
+                        "PageIndex": (objPage.pageIndex + 1),
+                        "PageSize": objPage.pageSize,
+                        "MoId": $("#MoId").val(),
+                        "BarcodeListView": "MPC"
+                    };
+                    break
+                }
+            }
+
+            
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+
+            if (data.status == "success") {
+                pageCount = 1;
+
+                if (data.result.length > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${BarcodeListView == `IPQC` || BarcodeListView == `NON` || BarcodeListView ==`OQC`? item.BarcodeNo : item.MrBarcodeNo != null ? item.MrBarcodeNo : item.PrBarcodeNo}</td>
+                                        <td class="text-center col-sticky">`;
+                        switch (type@(itemName)) {
+                            case "radio":
+                                innerHtml += `<label class="control control-solid control-solid-info control--radio">
+                                                <input type="radio" data-barcode-id="${item.BarcodeId > 0 ? item.BarcodeId : `${item.BarcodeRegisterId != null ? item.BarcodeRegisterId : item.PrintId}`}" value="${item.BarcodeId > 0 ? item.BarcodeId : `${item.BarcodeRegisterId != null ? item.BarcodeRegisterId : item.PrintId}`}" />
+                                                <span class="control__indicator"></span>
+                                              </label>`;
+                                break;
+                            case "checkbox":
+                                innerHtml += `<label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-barcode-id="${item.BarcodeId > 0 ? item.BarcodeId : `${item.BarcodeRegisterId != null ? item.BarcodeRegisterId : item.PrintId}`}" value="${item.BarcodeId > 0 ? item.BarcodeId : `${item.MrBarcodeNo != null ? item.MrBarcodeNo : item.PrBarcodeNo }`}" />
+                                                <span class="control__indicator"></span>
+                                              </label>`;
+                                break;
+                        }
+                        innerHtml += `    
+                                          <input type="hidden" id="txtBarcodeId@(itemName)" data-mo-id="${item.BarcodeId > 0 ? item.BarcodeId : `${item.BarcodeRegisterId != null ? item.BarcodeRegisterId : item.PrintId}`}" value="${item.BarcodeId > 0 ? item.BarcodeId : `${item.BarcodeRegisterId != null ? item.BarcodeRegisterId : item.PrintId}`}"/>
+                                          <input type="hidden" name="txtBarcodeNo@(itemName)" id="txtBarcodeNo@(itemName)" data-mo-id="${item.BarcodeId > 0 ? item.BarcodeId : `${item.BarcodeRegisterId != null ? item.BarcodeRegisterId : item.PrintId}`}" value="${item.MrBarcodeNo != null ? item.MrBarcodeNo : item.PrBarcodeNo}"/>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="3" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            switch (type@(itemName)) {
+                case "checkbox":
+                    $(".radio-mode").hide();
+                    $(".checkbox-mode").show();
+                    break;
+            }
+        }
+
+        function Save@(itemName)() {
+            let barcodeIdList = [];
+            let barcodeNoList = [];
+
+            if ($("input[type='checkbox'][data-barcode-id]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-barcode-id]:checked"), function (i) {
+                    let barcodeId = $(this).data("barcode-id");
+                    let barcodeNo = $(`input[name="txtBarcodeNo@(itemName)"][data-mo-id="${barcodeId}"]`).val();
+                    
+                    barcodeIdList.push(barcodeId);
+                    barcodeNoList.push(barcodeNo);
+                });
+                if (barcodeId@(itemName)) ElementSetValue(barcodeId@(itemName), barcodeIdList, "change");
+                if (barcodeNo@(itemName)) ElementSetValue(barcodeNo@(itemName), barcodeNoList, "change");
+            }
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+                )

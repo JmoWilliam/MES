@@ -1,0 +1,281 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "Points";
+    string itemNameText = "活動積分";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="card card-shadow">
+    <div class="card-body">
+        <div class="row" id="listData@(itemName)">
+            <div class="col-12">
+                <form autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-row align-items-center mb-2">
+                            <div class="col-12 col-md-auto col-lg-auto text-right text-md-left text-lg-left">
+                                <button type="button" class="btn btn-info" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+                <div class="table-custom">
+                    <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="min-width: 125px;">#</th>
+                                <th scope="col" style="min-width: 200px;">類型</th>
+                                <th scope="col" style="min-width: 200px;">數量</th>
+                                <th scope="col" style="min-width: 350px;">備註</th>
+                                <th class="text-center" scope="col" style="min-width: 125px;">狀態</th>
+                                <th class="text-center" scope="col" style="min-width: 300px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="page@(itemName)"></div>
+            </div>
+        </div>
+        <div class="row" id="editData@(itemName)" style="display: none;">
+            <div class="col-12">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="ActivityPointId" name="ActivityPointId" value="-1" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboPointType@(itemName)">積分類型<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboPointType@(itemName)" name="cboPointType@(itemName)"
+                                        data-msg-required="請選擇積分類型" data-rule-required="true" ></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtPointQty@(itemName)">積分數量<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="number" class="form-control" id="txtPointQty@(itemName)" name="txtPointQty@(itemName)" placeholder="請輸入積分數量"
+                                       data-msg-required="請輸入積分數量" data-rule-required="true" value="1"/>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtRemark@(itemName)">積分備註</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="3" placeholder="請輸入積分備註"></textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer text-center text-lg-right edit-mode" style="display: none;">
+        <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+        <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Expand@(itemName)() {
+             if (parseInt($("#ActivityId").val()) > 0) {
+                Return@(itemName)();
+
+            } else {
+                alert("請先儲存活動資料", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetPoints", "Activity")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ActivityId": $("#ActivityId").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">類型</span>${TypeName(`ActivityPoint.PointType`, item.PointType)}</td>
+                                        <td><span class="stack-title">數量</span>${item.PointQty} 點</td>
+                                        <td><span class="stack-title">備註</span>${item.Remark}</td>
+                                        <td class="text-center auth-status-switch">
+                                          <span class="stack-title">狀態</span>
+                                          <input type="checkbox" name="chkStatus@(itemName)" data-activity-point-id="${item.ActivityPointId}" ${(item.Status == `A` ? `checked` : ``)} />
+                                        </td>
+                                        <td class="text-center un-auth auth-status-switch"><span class="stack-title">狀態</span>${StatusName(`Boolean`, item.Status)}</td>
+                                        <td class="text-center active-content">
+                                          <span class="stack-title">操作</span>
+                                          <a class="active-link" href="javascript:Edit@(itemName)(${item.ActivityPointId});"><i class="fas fa-edit"></i></a>
+                                          <a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.ActivityPointId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "啟用",
+                off: "停用",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStatus@(itemName)'][data-activity-point-id]").change(StatusSwitch@(itemName));
+        }
+
+        function Edit@(itemName)(ActivityPointId) {
+            $("#ActivityPointId").val(ActivityPointId ? ActivityPointId : 0);
+
+            ComboBoxs.WithText("#cboPointType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "ActivityPoint.PointType" }, "", "NA", "", "TypeName", "TypeNo");
+
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+            if (ActivityPointId > 0) {
+                let targetUrl = "@Url.Action("GetPoints", "Activity")";
+                let postData = {
+                    "ActivityPointId": ActivityPointId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#cboPointType@(itemName)").val(item.PointType);
+                        $("#txtPointQty@(itemName)").val(item.PointQty);
+                        $("#txtRemark@(itemName)").val(item.Remark);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            $("#cboPointType@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let ActivityPointId = parseInt($("#ActivityPointId").val());
+
+                if (ActivityPointId <= 0) {
+                    let targetUrl = "@Url.Action("AddPoints", "Activity")";
+                    let postData = {
+                        "ActivityId": $("#ActivityId").val(),
+                        "PointType": $("#cboPointType@(itemName)").val(),
+                        "PointQty": $("#txtPointQty@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdatePoints", "Activity")";
+                    let postData = {
+                        "ActivityPointId": ActivityPointId,
+                        "PointType": $("#cboPointType@(itemName)").val(),
+                        "PointQty": $("#txtPointQty@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(ActivityPointId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeletePoints", "Activity")";
+                    let postData = {
+                        "ActivityPointId": ActivityPointId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+        }
+
+        function StatusSwitch@(itemName)() {
+            var ActivityPointId = $(this).data("activity-point-id");
+
+            let targetUrl = "@Url.Action("UpdatePointStatus", "Activity")";
+            let postData = {
+                "ActivityPointId": ActivityPointId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+    </script>
+)

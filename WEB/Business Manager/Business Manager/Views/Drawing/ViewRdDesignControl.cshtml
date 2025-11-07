@@ -1,0 +1,590 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRdDesignControl";
+    string itemNameText = "研發設計圖版本控制";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .modal-body {
+             max-height: 75vh;
+             overflow-y: auto;
+         }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">目前部番(客戶品號): <span class="sub-text" id="desCustomerMtlItmeNo@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        @*<a href="http://192.168.20.52:16668/Drawing/GetCadFile?FilePath=\\192.168.20.199\mes_data\QV-1\%E9%8F%A1%E7%89%87\02001A-P3-221017-%E5%85%A8%E5%90%8B-NO.16-%E6%9E%B6%E5%8F%AF-T3-3-%E5%9B%9E%E7%81%AB%E5%89%8D-%E4%BA%8E%E8%98%8B.xlsx"></a>*@
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtEditionQ@(itemName)" name="txtEditionQ@(itemName)"
+                                               placeholder="請輸入研發版次" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        <button type="button" class="btn btn-info auth-version" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">研發版次<code>(系統版次)</code></th>
+                                        <th scope="col" style="min-width: 200px;">變更原因</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">發行狀態</th>
+                                        <th scope="col" style="min-width: 175px;">出圖日期</th>
+                                        <th scope="col" style="min-width: 175px;">變更日期</th>
+                                        <th scope="col" style="min-width: 175px;">變更人員</th>
+                                        <th scope="col" style="min-width: 250px;">3D研發設計圖</th>
+                                        <th scope="col" style="min-width: 250px;">2D研發設計圖</th>
+                                        <th scope="col" style="min-width: 250px;">2D-PDF研發設計圖</th>
+                                        <th scope="col" style="min-width: 250px;">JMO檔</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container" autocomplete="off" id="editForm@(itemName)">
+                            <fieldset>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="cboEdition@(itemName)">研發版次資訊</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboEdition@(itemName)" name="cboEdition@(itemName)"></select>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtEdition@(itemName)">研發版次 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtEdition@(itemName)" name="txtEdition@(itemName)"
+                                               placeholder="請輸入研發版次"
+                                               data-msg-required="請輸入研發版次" data-rule-required="true"
+                                               data-msg-maxlength="必須少於 32 個字元" maxlength="32" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label">變更類型 <span class="text-danger">*</span></label>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio">
+                                            版次變更
+                                            <input type="radio" id="rdoChangeType@(itemName)E" name="rdoChangeType@(itemName)" value="E"
+                                                   data-msg-required="請選擇變更類型" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio">
+                                            修改變更
+                                            <input type="radio" id="rdoChangeType@(itemName)U" name="rdoChangeType@(itemName)" value="U"
+                                                   data-msg-required="請選擇變更類型" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtCause@(itemName)">變更原因 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtCause@(itemName)" name="txtCause@(itemName)" rows="2"
+                                                  placeholder="請輸入變更原因"
+                                                  data-msg-required="請輸入變更原因" data-rule-required="true"
+                                                  data-msg-maxlength="必須少於 100 個字元" maxlength="100"></textarea>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtDesignDate@(itemName)">出圖日期 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtDesignDate@(itemName)" name="txtDesignDate@(itemName)"
+                                               placeholder="請輸入出圖日期"
+                                               data-msg-required="請輸入出圖日期" data-rule-required="true"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label">是否為發行版次 <span class="text-danger">*</span></label>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio">
+                                            發行版本
+                                            <input type="radio" id="rdoChangeReleasedStatus@(itemName)Y" name="rdoChangeReleasedStatus@(itemName)" value="Y"
+                                                   data-msg-required="請選擇版次類型" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-6">
+                                        <label class="control control-solid control-solid-info control--radio">
+                                            非發行版本
+                                            <input type="radio" id="rdoChangeReleasedStatus@(itemName)N" name="rdoChangeReleasedStatus@(itemName)" value="N"
+                                                   data-msg-required="請選擇版次類型" data-rule-required="true" />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboCad2DFolderPath@(itemName)">研發2D設計圖<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div style="display: flex;" class="btn-group btn-group-inv@(itemName)">
+                                            <select id="cboCad2DFolderPath@(itemName)" name="cboCad2DFolderPath@(itemName)" class="form-control" required></select>
+                                            <a class="btn btn-success pop-view" href="javascript: SearchCadFile@(itemName)('Cad2D');"><i class="fal fa-search"></i></a>
+                                            <a class="btn pop-view" style="background-color: #ef3f5f !IMPORTANT;" href="javascript: RemoveCadFile@(itemName)('Cad2D');"><i style="color: white;" class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl id="Cad2DFileHelp" class="help-block cad-help">
+                                            <dt>檔案預覽</dt>
+                                            <dd style="display: none;" id="desCad2DFileAbsolutePath@(itemName)" class="absolute-path"></dd>
+                                            <dd id="desCad2DFilePreview@(itemName)" class="cad-preview"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboJmoFolderPath@(itemName)">研發Jmo檔</label>
+                                    <div class="col-12">
+                                        <div style="display: flex;" class="btn-group btn-group-inv@(itemName)">
+                                            <select id="cboJmoFolderPath@(itemName)" name="cboJmoFolderPath@(itemName)" class="form-control"></select>
+                                            <a class="btn btn-success pop-view" href="javascript: SearchCadFile@(itemName)('Jmo');"><i class="fal fa-search"></i></a>
+                                            <a class="btn pop-view" style="background-color: #ef3f5f !IMPORTANT;" href="javascript: RemoveCadFile@(itemName)('Jmo');"><i style="color: white;" class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl id="JmoFileHelp" class="help-block cad-help">
+                                            <dt>檔案預覽</dt>
+                                            <dd style="display: none;" id="desJmoFileAbsolutePath@(itemName)" class="absolute-path"></dd>
+                                            <dd id="desJmoFilePreview@(itemName)" class="cad-preview"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboCad3DFolderPath@(itemName)">研發3D設計圖</label>
+                                    <div class="col-12">
+                                        <div style="display: flex;" class="btn-group btn-group-inv@(itemName)">
+                                            <select id="cboCad3DFolderPath@(itemName)" name="cboCad3DFolderPath@(itemName)" class="form-control"></select>
+                                            <a class="btn btn-success pop-view" href="javascript: SearchCadFile@(itemName)('Cad3D');"><i class="fal fa-search"></i></a>
+                                            <a class="btn pop-view" style="background-color: #ef3f5f !IMPORTANT;" href="javascript: RemoveCadFile@(itemName)('Cad3D');"><i style="color: white;" class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl id="Cad3DFileHelp" class="help-block cad-help">
+                                            <dt>檔案預覽</dt>
+                                            <dd style="display: none;" id="desCad3DFileAbsolutePath@(itemName)" class="absolute-path"></dd>
+                                            <dd id="desCad3DFilePreview@(itemName)" class="cad-preview"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboPdf2DFolderPath@(itemName)">研發2D PDF設計圖</label>
+                                    <div class="col-12">
+                                        <div style="display: flex;" class="btn-group btn-group-inv@(itemName)">
+                                            <select id="cboPdf2DFolderPath@(itemName)" name="cboPdf2DFolderPath@(itemName)" class="form-control"></select>
+                                            <a class="btn btn-success pop-view" href="javascript: SearchCadFile@(itemName)('Pdf2D');"><i class="fal fa-search"></i></a>
+                                            <a class="btn pop-view" style="background-color: #ef3f5f !IMPORTANT;" href="javascript: RemoveCadFile@(itemName)('Pdf2D');"><i style="color: white;" class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl id="Pdf2DFileHelp" class="help-block cad-help">
+                                            <dt>檔案預覽</dt>
+                                            <dd style="display: none;" id="desPdf2DFileAbsolutePath@(itemName)" class="absolute-path"></dd>
+                                            <dd id="desPdf2DFilePreview@(itemName)" class="cad-preview"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewLocalFile")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(DesignId, CustomerMtlItmeNo) {
+            $("#DesignId").val(DesignId);
+            $("#desCustomerMtlItmeNo@(itemName)").html(CustomerMtlItmeNo);
+
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+
+            let currentDate = new Date();
+
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 90);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetRdDesignControl", "Drawing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "DesignId": $("#DesignId").val(),
+                "Edition": $("#txtEditionQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.Edition}<code>(${item.Version})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Cause}" style="max-width: 200px;">${item.Cause}</td>
+                                        <td class="text-center auth-released-status">
+                                          <input type="checkbox" name="chkStatus@(itemName)" data-control-id="${item.ControlId}" ${item.ReleasedStatus == `Y` ? `checked` : ''} />
+                                        </td>
+                                        <td class="text-center un-auth auth-released-status">${StatusName(`Boolean`, `${item.ReleasedStatus}`)}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DesignDate}" style="max-width: 175px;">${item.DesignDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 175px;">${item.CreateDate}</td>
+                                        <td><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                        ${JudgeCad3DFileAbsolutePath(`${item.Cad3DFileAbsolutePath}`, `${item.Cad3DFile}`)}
+                                        ${JudgeCad2DFileAbsolutePath(`${item.Cad2DFileAbsolutePath}`, `${item.Cad2DFile}`)}
+                                        ${JudgePdf2DFileAbsolutePath(`${item.Pdf2DFileAbsolutePath}`, `${item.Pdf2DFile}`)}
+                                        ${JudgeJmoFileAbsolutePath(`${item.JmoFileAbsolutePath}`, `${item.JmoFile}`)}
+                                      </tr>`;
+                    });
+
+                    function JudgeCad3DFileAbsolutePath(cad3DFileAbsolutePath, cad3DFile) {
+                        let innerHtml = '';
+                        if (cad3DFileAbsolutePath != "null") {
+                            let fileFullNameList = cad3DFileAbsolutePath.split('\\');
+                            let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                            fileFullName = ChangeASCII@(itemName)(fileFullName);
+                            innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 250px;">
+                                            <a class="active-link auth-download mr-1" href="/Drawing/GetCadFile?FilePath=${cad3DFileAbsolutePath}"><i class="fas fa-download"></i></a>
+                                            ${fileFullName}
+                                          </td>`;
+                        }
+                        else if (cad3DFile != "null") {
+                            innerHtml += JudgeCad3DFile(cad3DFile);
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeCad2DFileAbsolutePath(cad2DFileAbsolutePath, cad2DFile) {
+                        let innerHtml = '';
+                        if (cad2DFileAbsolutePath != "null") {
+                            let fileFullNameList = cad2DFileAbsolutePath.split('\\');
+                            let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                            fileFullName = ChangeASCII@(itemName)(fileFullName);
+                            innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 250px;">
+                                            <a class="active-link auth-download mr-1" href="/Drawing/GetCadFile?FilePath=${cad2DFileAbsolutePath}"><i class="fas fa-download"></i></a>
+                                            ${fileFullName}
+                                          </td>`;
+                        }
+                        else if (cad2DFile != "null") {
+                            innerHtml += JudgeCad2DFile(cad2DFile);
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgePdf2DFileAbsolutePath(pdf2DFileAbsolutePath, pdf2DFile) {
+                        let innerHtml = '';
+                        if (pdf2DFileAbsolutePath != "null") {
+                            let fileFullNameList = pdf2DFileAbsolutePath.split('\\');
+                            let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                            fileFullName = ChangeASCII@(itemName)(fileFullName);
+                            innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 250px;">
+                                            <a class="active-link auth-download mr-1" href="/Drawing/GetCadFile?FilePath=${pdf2DFileAbsolutePath}"><i class="fas fa-download"></i></a>
+                                            ${fileFullName}
+                                          </td>`;
+                        }
+                        else if (pdf2DFile != "null") {
+                            innerHtml += JudgePdf2DFile(pdf2DFile);
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeJmoFileAbsolutePath(jmoFileAbsolutePath, jmoFile) {
+                        let innerHtml = '';
+                        if (jmoFileAbsolutePath != "null") {
+                            let fileFullNameList = jmoFileAbsolutePath.split('\\');
+                            let fileFullName = fileFullNameList[fileFullNameList.length - 1];
+                            fileFullName = ChangeASCII@(itemName)(fileFullName);
+                            innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${fileFullName}" style="max-width: 250px;">
+                                            <a class="active-link auth-download mr-1" href="/Drawing/GetCadFile?FilePath=${jmoFileAbsolutePath}"><i class="fas fa-download"></i></a>
+                                            ${fileFullName}
+                                          </td>`;
+                        }
+                        else if (jmoFile != "null") {
+                            innerHtml += JudgeJmoFile(jmoFile);
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeCad3DFile(cad3DFile) {
+                        let innerHtml = '';
+                        let Cad3DFile = JSON.parse(cad3DFile);
+                        if (Cad3DFile != null) {
+                            $.each(Cad3DFile.data, function (i, item) {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileInfo}" style="max-width: 250px;">
+                                                <a class="active-link auth-download mr-1" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i></a>
+                                                ${item.FileInfo}
+                                              </td>`;
+                            });
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeCad2DFile(cad2DFile) {
+                        let innerHtml = '';
+                        let Cad2DFile = JSON.parse(cad2DFile);
+                        if (Cad2DFile != null) {
+                            $.each(Cad2DFile.data, function (i, item) {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileInfo}" style="max-width: 250px;">
+                                                <a class="active-link auth-download mr-1" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i></a>
+                                                ${item.FileInfo}
+                                              </td>`;
+                            });
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgePdf2DFile(pdf2DFile) {
+                        let innerHtml = '';
+                        let Pdf2DFile = JSON.parse(pdf2DFile);
+                        if (Pdf2DFile != null) {
+                            $.each(Pdf2DFile.data, function (i, item) {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileInfo}" style="max-width: 250px;">
+                                                <a class="active-link auth-download mr-1" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i></a>
+                                                ${item.FileInfo}
+                                              </td>`;
+                            });
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeJmoFile(jmoFile) {
+                        let innerHtml = '';
+                        let JmoFile = JSON.parse(jmoFile);
+                        if (JmoFile != null) {
+                            $.each(JmoFile.data, function (i, item) {
+                                innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileInfo}" style="max-width: 250px;">
+                                                <a class="active-link auth-download mr-1" href="/Drawing/GetPdmFile?fileId=${item.FileId}"><i class="fas fa-download"></i></a>
+                                                ${item.FileInfo}
+                                              </td>`;
+                            });
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+                } else {
+                    innerHtml += '<tr>\
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">\
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。\
+                                    </td>\
+                                  </tr>';
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                on: "是",
+                off: "否",
+                onstyle: "success",
+                offstyle: "danger",
+                size: "mini"
+            });
+
+            $("input[name='chkStatus@(itemName)'][data-control-id]").change(StatusSwitch@(itemName));
+        }
+
+        function Edit@(itemName)(ControlId) {
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+            if (!isMobile) {
+                $("#cboEdition@(itemName), #cboCad2DFolderPath@(itemName), #cboJmoFolderPath@(itemName), #cboCad3DFolderPath@(itemName), #cboPdf2DFolderPath@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboEdition@(itemName)", "@Url.Action("GetRdDesignEdition", "Drawing")", { "DesignId": $("#DesignId").val() }, "", "HIDDEN", "快速選擇", "Edition", "Edition");
+
+            ComboBoxs.Default("#cboCad2DFolderPath@(itemName)", "@Url.Action("GetRdWhitelist", "Drawing")", { "UserId": @Convert.ToInt32(Session["UserId"]) }, "", "NA", "", "FolderPath", "ListId");
+            ComboBoxs.Default("#cboJmoFolderPath@(itemName)", "@Url.Action("GetRdWhitelist", "Drawing")", { "UserId": @Convert.ToInt32(Session["UserId"]) }, "", "NA", "", "FolderPath", "ListId");
+            ComboBoxs.Default("#cboCad3DFolderPath@(itemName)", "@Url.Action("GetRdWhitelist", "Drawing")", { "UserId": @Convert.ToInt32(Session["UserId"]) }, "", "NA", "", "FolderPath", "ListId");
+            ComboBoxs.Default("#cboPdf2DFolderPath@(itemName)", "@Url.Action("GetRdWhitelist", "Drawing")", { "UserId": @Convert.ToInt32(Session["UserId"]) }, "", "NA", "", "FolderPath", "ListId");
+
+            Suites.DateDropper("#txtDesignDate@(itemName)");
+
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtDesignDate@(itemName)", currentDate);
+
+            $(".cad-help").hide();
+            $(".absolute-path").html("");
+            $(".cad-preview").html("");
+
+            $("#cboEdition@(itemName)").off("change").on("change", function () {
+                $("#txtEdition@(itemName)").val($("#cboEdition@(itemName) option:selected").val()).focus();
+                $("#cboEdition@(itemName)").prop('selectedIndex', 0);
+            });
+
+            $("#cboCad2DFolderPath@(itemName)").change(function () {
+                SearchCadFile@(itemName)("Cad2D");
+            });
+            $("#cboJmoFolderPath@(itemName)").change(function () {
+                SearchCadFile@(itemName)("Jmo");
+            });
+            $("#cboCad3DFolderPath@(itemName)").change(function () {
+                SearchCadFile@(itemName)("Cad3D");
+            });
+            $("#cboPdf2DFolderPath@(itemName)").change(function () {
+                SearchCadFile@(itemName)("Pdf2D");
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("AddRdDesignControl02", "Drawing")";
+                let postData = {
+                    "DesignId": $("#DesignId").val(),
+                    "Edition": $("#txtEdition@(itemName)").val(),
+                    "EditionType": $("input[name='rdoChangeType@(itemName)']:checked").val(),
+                    "Cause": $("#txtCause@(itemName)").val(),
+                    "DesignDate": $("#txtDesignDate@(itemName)").val(),
+                    "ReleasedStatus": $("input[name='rdoChangeReleasedStatus@(itemName)']:checked").val(),
+                    "Cad3DFileAbsolutePath": $("#desCad3DFileAbsolutePath@(itemName)").text(),
+                    "Cad2DFileAbsolutePath": $("#desCad2DFileAbsolutePath@(itemName)").text(),
+                    "Pdf2DFileAbsolutePath": $("#desPdf2DFileAbsolutePath@(itemName)").text(),
+                    "JmoFileAbsolutePath": $("#desJmoFileAbsolutePath@(itemName)").text()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function SearchCadFile@(itemName)(fileType) {
+            let listId = $(`#cbo${fileType}FolderPath@(itemName)`).val();
+            let folderHtmlPath = `#cbo${fileType}FolderPath@(itemName)`;
+            let fileHtmlPath = `#des${fileType}FileAbsolutePath@(itemName)`;
+            let filePreviewHtmlPath = `#des${fileType}FilePreview@(itemName)`;
+            let helpHtmlPath = `#${fileType}FileHelp`;
+            PopViewLocalFile(listId, "N", folderHtmlPath, fileHtmlPath, filePreviewHtmlPath, helpHtmlPath);
+        }
+
+        function ChangeASCII@(itemName)(fileName) {
+            if (fileName.indexOf("%2B") != -1) fileName = fileName.replace("%2B", "+");
+            if (fileName.indexOf("%2F") != -1) fileName = fileName.replace("%2F", "/");
+            if (fileName.indexOf("%3F") != -1) fileName = fileName.replace("%3F", "?");
+            if (fileName.indexOf("%23") != -1) fileName = fileName.replace("%23", "#");
+            if (fileName.indexOf("%26") != -1) fileName = fileName.replace("%26", "&");
+            if (fileName.indexOf("%3D") != -1) fileName = fileName.replace("%3D", "=");
+
+            return fileName;
+        }
+
+        function RemoveCadFile@(itemName)(fileType) {
+            ComboBoxs.Default(`#cbo${fileType}FolderPath@(itemName)`, "@Url.Action("GetRdWhitelist", "Drawing")", { "UserId": @Convert.ToInt32(Session["UserId"]) }, "", "NA", "", "FolderPath", "ListId");
+            $(`#cbo${fileType}FolderPath@(itemName)`).val("");
+            $(`#${fileType}FileHelp`).hide();
+            $(`#des${fileType}FileAbsolutePath@(itemName)`).html("");
+            $(`#des${fileType}FilePreview@(itemName)`).html("");
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+
+        function StatusSwitch@(itemName)() {
+            var controlId = $(this).data("control-id");
+
+            let targetUrl = "@Url.Action("UpdateRdDesignControlReleasedStatus", "Drawing")";
+            let postData = {
+                "ControlId": controlId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+                Query@(itemName)();
+            }
+        }
+    </script>
+                )

@@ -1,0 +1,383 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "VideoChat";
+    string itemNameText = "視訊";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtUserName@(itemName)">暱稱 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtUserName@(itemName)" name="txtUserName@(itemName)" placeholder="請輸入暱稱"
+                                       data-msg-required="請輸入暱稱" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtRoom@(itemName)">房號 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="text" class="form-control" id="txtRoom@(itemName)" name="txtRoom@(itemName)" placeholder="請輸入房號"
+                                       data-msg-required="請輸入房號" data-rule-required="true" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="codec">codec</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="codec">
+                                    <option value="opus">Opus</option>
+                                    <option value="ISAC">iSAC 16K</option>
+                                    <option value="G722">G722</option>
+                                    <option value="PCMU">PCMU</option>
+                                    <option value="red">RED</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="codecPreferences">codecPreferences</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="codecPreferences">
+                                    <option selected value="">Default</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="localAudio">本人</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <video id="localVideo" autoplay playsinline controls muted style="width: 100%;"></video>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="remoteAudio">對方</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <video id="remoteVideo" autoplay playsinline controls style="width: 100%;"></video>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-info" id="startButton"><i class="fas fa-wifi"></i>開啟連線</button>
+                <button type="button" class="btn btn-success" id="callButton"><i class="fas fa-webcam"></i>撥打</button>
+                <button type="button" class="btn btn-danger" id="closeButton"><i class="fas fa-wifi-slash"></i>結束連線</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+)
+
+@Html.Resource("js",
+    @<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        let socket;
+        let peer;
+        let cacheStream;
+
+        const userName = document.querySelector('input#txtUserName@(itemName)');
+        const inputRoom = document.querySelector('input#txtRoom@(itemName)');
+
+        const startButton = document.querySelector('button#startButton');
+        const callButton = document.querySelector('button#callButton');
+        const closeButton = document.querySelector('button#closeButton');
+
+        const localVideo = document.getElementById("localVideo");
+        const remoteVideo = document.getElementById("remoteVideo");
+
+        const offerOptions = {
+            offerToReceiveAudio: 1,
+            offerToReceiveVideo: 1,
+            voiceActivityDetection: false
+        };
+
+        const mediaConstraints = {
+            audio: true,
+            video: true
+        };
+
+        startButton.addEventListener("click", connection);
+        callButton.addEventListener("click", calling);
+        closeButton.addEventListener("click", closing);
+
+        function connection() {
+            socket = io('wss://bm.zy-tech.com.tw:4445')
+
+            socket.emit("join-room", { username: userName.value, room: inputRoom.value });
+
+            socket.on('join-room-message', (message) => {
+                console.log(message);
+            });
+
+            socket.on('room-brocast', (message) => {
+                console.log(message);
+            });
+
+            socket.on("offer", (offer) => handleSDPOffer(offer));
+            socket.on("answer", (answer) => handleSDPAnswer(answer));
+            socket.on("icecandidate", (icecandidate) => handleNewIceCandidate(icecandidate));
+            return socket;
+        }
+
+        async function calling() {
+            try {
+                if (peer) {
+                    alert("你已經建立連線!");
+                } else {
+                    createPeerConnection();
+
+                    await addStreamProcess();
+                }
+            } catch (error) {
+                console.log(`Error ${error.name}: ${error.message}`);
+            }
+        }
+
+        function closing() {
+            console.log("Closing connection call");
+            if (!peer) return;
+            if (!socket) return;
+
+            socket.disconnect();
+            socket.off();
+
+            peer.onicecandidate = null;
+            peer.ontrack = null;
+            peer.onnegotiationneeded = null;
+            peer.onconnectionstatechange = null;
+            peer.oniceconnectionstatechange = null;
+            peer.onicegatheringstatechange = null;
+            peer.onsignalingstatechange = null;
+
+            peer.getSenders().forEach((sender) => {
+                peer.removeTrack(sender);
+            });
+
+            if (localVideo.srcObject) {
+                localVideo.pause();
+                localVideo.srcObject.getTracks().forEach((track) => {
+                    track.stop();
+                });
+            }
+
+            peer.close();
+            peer = null;
+            cacheStream = null;
+        }
+
+        const codecPreferences = document.querySelector('#codecPreferences');
+        const supportsSetCodecPreferences = window.RTCRtpTransceiver &&
+            'setCodecPreferences' in window.RTCRtpTransceiver.prototype;
+        if (supportsSetCodecPreferences) {
+            const { codecs } = RTCRtpSender.getCapabilities('audio');
+            codecs.forEach(codec => {
+                if (['audio/CN', 'audio/telephone-event'].includes(codec.mimeType)) {
+                    return;
+                }
+                const option = document.createElement('option');
+                option.value = (codec.mimeType + ' ' + codec.clockRate + ' ' +
+                    (codec.sdpFmtpLine || '')).trim();
+                option.innerText = option.value;
+                codecPreferences.appendChild(option);
+            });
+            codecPreferences.disabled = false;
+        } else {
+            codecPreferences.style.display = 'none';
+        }
+
+        function gotStream(stream) {
+            console.log('Received local stream');
+            cacheStream = stream;
+            const audioTracks = cacheStream.getAudioTracks();
+            if (audioTracks.length > 0) {
+                console.log(`Using Audio device: ${audioTracks[0].label}`);
+            }
+            cacheStream.getTracks().forEach(track => peer.addTrack(track, cacheStream));
+            console.log('Adding Local Stream to peer connection');
+
+            if (supportsSetCodecPreferences) {
+                const preferredCodec = codecPreferences.options[codecPreferences.selectedIndex];
+                if (preferredCodec.value !== '') {
+                    const [mimeType, clockRate, sdpFmtpLine] = preferredCodec.value.split(' ');
+                    const { codecs } = RTCRtpSender.getCapabilities('audio');
+                    console.log(mimeType, clockRate, sdpFmtpLine);
+                    console.log(JSON.stringify(codecs, null, ' '));
+                    const selectedCodecIndex = codecs.findIndex(c => c.mimeType === mimeType && c.clockRate === parseInt(clockRate, 10) && c.sdpFmtpLine === sdpFmtpLine);
+                    const selectedCodec = codecs[selectedCodecIndex];
+                    codecs.splice(selectedCodecIndex, 1);
+                    codecs.unshift(selectedCodec);
+                    const transceiver = peer.getTransceivers().find(t => t.sender && t.sender.track === cacheStream.getAudioTracks()[0]);
+                    transceiver.setCodecPreferences(codecs);
+                    console.log('Preferred video codec', selectedCodec);
+                }
+            }
+        }
+
+        function onCreateSessionDescriptionError(error) {
+            console.log(`Failed to create session description: ${error.toString()}`);
+        }
+
+        function createPeerConnection() {
+            peer = new RTCPeerConnection();
+            peer.onicecandidate = handleIceCandidate;
+            peer.ontrack = handleRemoteStream;
+            peer.onnegotiationneeded = handleNegotiationNeeded;
+            peer.onconnectionstatechange = handleConnectionStateChange;
+            peer.oniceconnectionstatechange = handleICEConnectionStateChange;
+            peer.onicegatheringstatechange = handleICEGatheringStateChange;
+            peer.onsignalingstatechange = handleSignalingStateChange;
+        }
+
+        function handleIceCandidate(event) {
+            socket.emit("icecandidate", { room: inputRoom.value, candidate: event.candidate });
+        }
+
+        function handleRemoteStream(event) {
+            console.log(`handleRemoteStream:${event}`)
+            if (remoteVideo.srcObject !== event.streams[0]) {
+                remoteVideo.srcObject = event.streams[0];
+            }
+        }
+
+        function handleConnectionStateChange() {
+            console.log("*** WebRTC connectionState 狀態改變: " + peer.connectionState);
+
+            switch (peer.connectionState) {
+                case "closed":
+                case "failed":
+                case "disconnected":
+                    closing();
+                    break;
+            }
+        }
+
+        function handleICEConnectionStateChange() {
+            console.log("*** ICE agent連線狀態改變: " + peer.iceConnectionState);
+
+            switch (peer.iceConnectionState) {
+                case "closed":
+                case "failed":
+                case "disconnected":
+                    closing();
+                    break;
+            }
+        }
+
+        function handleICEGatheringStateChange() {
+            console.log("*** ICE gathering state changed to: " + peer.iceGatheringState);
+        }
+
+        function handleSignalingStateChange() {
+            console.log("*** WebRTC signaling 狀態改變: " + peer.signalingState);
+        }
+
+        async function addStreamProcess() {
+            let errMsg = "";
+            try {
+                await getUserStream();
+            } catch (error) {
+                errMsg = "getUserStream error ===> " + error.toString();
+                throw new Error(errMsg);
+            }
+        }
+
+        async function getUserStream() {
+            console.log("getUserMedia ...");
+            if ("mediaDevices" in navigator) {
+                await navigator.mediaDevices.getUserMedia(mediaConstraints)
+                    .then(gotStream)
+                    .catch(e => {
+                        alert(`getUserMedia() error: ${e.name}`);
+                    });
+
+                localVideo.srcObject = cacheStream;
+            }
+        }
+
+        async function handleNegotiationNeeded() {
+            console.log("*** handleNegotiationNeeded fired!");
+            try {
+                console.log("createOffer ...");
+                console.log("setLocalDescription ...");
+                await peer.setLocalDescription(await peer.createOffer(offerOptions));
+                console.log("signaling offer ...");
+                socket.emit("offer", { room: inputRoom.value, offer: peer.localDescription });
+            } catch (error) {
+                console.log(`Failed to create session description: ${error.toString()}`);
+                console.log(`Error ${error.name}: ${error.message}`);
+            }
+        }
+
+        async function handleSDPOffer(desc) {
+            console.log("*** 收到遠端送來的offer");
+            try {
+                if (!peer) {
+                    createPeerConnection();
+                }
+
+                console.log("setRemoteDescription ...");
+                console.log(desc);
+                await peer.setRemoteDescription(desc);
+
+                if (!cacheStream) {
+                    await addStreamProcess();
+                }
+
+                await createAnswer();
+            } catch (error) {
+                console.log(`Failed to create session description: ${error.toString()}`);
+                console.log(`Error ${error.name}: ${error.message}`);
+            }
+        }
+
+        async function handleSDPAnswer(desc) {
+            console.log("*** 遠端接受我們的offer並發送answer回來");
+            try {
+                console.log("setRemoteDescription ...");
+                await peer.setRemoteDescription(desc)
+            } catch (error) {
+                console.log(`Error ${error.name}: ${error.message}`);
+            }
+        }
+
+        async function createAnswer() {
+            try {
+                console.log("createAnswer ...");
+                const answer = await peer.createAnswer();
+                console.log("setLocalDescription ...");
+                await peer.setLocalDescription(answer);
+                console.log("signaling answer ...");
+                socket.emit("answer", { room: inputRoom.value, answer: answer });
+            } catch (error) {
+                errMsg = "Create Answer error ===> " + error.toString();
+                throw new Error(errMsg);
+            }
+        }
+
+        async function handleNewIceCandidate(candidate) {
+            console.log(`*** 加入新取得的 ICE candidate: ${JSON.stringify(candidate)}`);
+            try {
+                await peer.addIceCandidate(candidate);
+            } catch (error) {
+                console.log(`Failed to add ICE: ${error.toString()}`);
+            }
+        }
+    </script>
+)

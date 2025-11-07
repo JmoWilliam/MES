@@ -1,0 +1,499 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewLettering";
+    string itemNameText = "設定刻字資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         #modal@(itemName) .modal-body {
+             max-height: 75vh;
+             overflow-y: auto;
+         }
+</style>
+        )
+
+<div class="modal fade" data-backdrop="static" id="modal@(itemName)" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">製令: <span class="sub-text" id="desWoErpFullNo@(itemName)"></span></span>
+                    <span class="sub-title">品號: <span class="sub-text" id="desMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">品名: <span class="sub-text" id="desMtlItemName@(itemName)"></span></span>
+                    <span class="sub-title">生產數量: <span class="sub-text" id="desQuantity@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <div class="form-row align-items-center mb-2" style="display: flex; justify-content: flex-end;">
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-info auth-add text-right" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                <a id="aLetteringHistory@(itemName)" class="btn btn-danger auth-print text-right" href="javascript: PopViewLetteringHistory();"><i class="fas fa-history"></i>歷史紀錄</a>
+                                <button type="button" class="btn btn-info auth-print text-right" onclick="Print@(itemName)()"><i class="fas fa-print"></i>列印</button>
+                                <button type="button" class="btn btn-secondary auth-delete text-right" onclick="DeleteLot@(itemName)()"><i class="fas fa-trash-alt"></i>批量刪除</button>
+                                <button type="button" class="btn btn-primary auth-delete text-right" onclick="DeleteAll@(itemName)()"><i class="fad fa-trash"></i>全部刪除</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center active-content" scope="col" style="min-width: 50px;">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                選取
+                                                <input type="checkbox" id="cbxBarcodeLetteringAll@(itemName)" name="cbxBarcodeLetteringAll@(itemName)" checked>
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </th>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">刻字碼</th>
+                                        <th scope="col" style="min-width: 200px;">建立日期</th>
+                                        <th class="text-center" scope="col" style="max-width: 150px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container" autocomplete="off" id="editForm@(itemName)">
+                            <fieldset>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtMoItemPartPrefix@(itemName)">刻號前綴<code>(若流水碼需設定特殊位置，請以【+】區隔，EX:A123-+-B12 => A123-001-B12)</code></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtMoItemPartPrefix@(itemName)" oninput="PreLettering@(itemName)()"
+                                               placeholder="請輸入刻號前綴"
+                                               data-msg-required="請輸入刻號前綴"
+                                               data-msg-maxlength="必須少於 50 個字元" maxlength="60" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtSeq@(itemName)">流水碼長度</label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtSeq@(itemName)" oninput="PreLettering@(itemName)()" value="0" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="cboLetteringType@(itemName)">刻字型態</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboLetteringType@(itemName)">
+                                            <option value="1" selected>連號</option>
+                                            <option value="2">跳號</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="divSerial@(itemName)" class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtMoItemPartSortNumberSerial@(itemName)">起始流水號</label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtMoItemPartSortNumberSerial@(itemName)" oninput="PreLettering@(itemName)()" />
+                                    </div>
+                                </div>
+                                <div id="divJump@(itemName)" class="form-group row" style="display: none;">
+                                    <label class="col-12 col-form-label" for="txtMoItemPartSortNumberJump@(itemName)">跳號設定</label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtMoItemPartSortNumberJump@(itemName)" oninput="PreLettering@(itemName)()" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtParticularNo@(itemName)">流水號特殊字元</label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtParticularNo@(itemName)" oninput="PreLettering@(itemName)()" value="" />
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtPreLettering@(itemName)">刻號預覽</label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtPreLettering@(itemName)" readonly />
+                                    </div>
+                                </div>
+                                <div id="divRemind@(itemName)" class="row" style="display: none;">
+                                    <div class="col-12 mt-2">
+                                        <div class="alert alert-info border-0">
+                                            <ul style="padding-inline-start: 20px;">
+                                                <li>若使用跳號規則，請用下方格式輸入:</li>
+                                                <li>多條碼時，請用<mark><code>,</code></mark>分隔；EX：<code>1,3,5,7,9</code></li>
+                                                <li>數量請和此張製令生產數量相同</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewLetteringHistory")
+
+@Html.Resource("js",
+@<script>
+    let moId@(itemName);
+    let quantity@(itemName);
+    let mtlItemName@(itemName);
+    let woSeq@(itemName);
+    let objForm@(itemName) = "#editForm@(itemName)";
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 10
+    };
+    let SeqLength = 0;//流水號長度
+    let AttrSetting = "";//刻字命名規則
+    let PlusSign = "";//取特殊字元【+】
+
+    $(function () {
+        $("#cboLetteringType@(itemName)").change(function () {
+            $("#txtMoItemPartSortNumberSerial@(itemName)").val("");
+            $("#txtMoItemPartSortNumberJump@(itemName)").val("");
+            $("#txtPreLettering@(itemName)").val("");
+            let type = $("#cboLetteringType@(itemName)").val();
+
+            if (type == "1") {
+                $("#divSerial@(itemName)").show();
+                $("#divJump@(itemName)").hide();
+                $("#divRemind@(itemName)").hide();
+            }
+            else {
+                $("#divSerial@(itemName)").hide();
+                $("#divJump@(itemName)").show();
+                $("#divRemind@(itemName)").show();
+            }
+        });
+    });
+
+    function Pop@(itemName)(moId, woErpPrefix, woErpNo, quantity, mtlItemNo, mtlItemName, woSeq) {
+        moId@(itemName) = moId;
+        quantity@(itemName) = quantity;
+        mtlItemName@(itemName) = mtlItemName;
+        woSeq@(itemName) = woSeq;
+        $("#desWoErpFullNo@(itemName)").html(woErpPrefix + "-" + woErpNo + "(" + woSeq + ")");
+        $("#desQuantity@(itemName)").html(quantity);
+        $("#desMtlItemNo@(itemName)").html(mtlItemNo);
+        $("#desMtlItemName@(itemName)").html(mtlItemName);
+
+        let woErpFullNo = woErpPrefix + "-" + woErpNo + "(" + woSeq + ")"
+        $("#aLetteringHistory@(itemName)").prop("href", `javascript: PopViewLetteringHistory('${woErpFullNo}', '${mtlItemNo}');`)
+
+        Query@(itemName)();
+
+         $("#cbxBarcodeLetteringAll@(itemName)").click(function () {
+            if ($(this).prop("checked")) {
+                $("input[type='checkbox'][data-type='BarcodeLettering']").prop("checked", true);
+            }
+            else {
+                $("input[type='checkbox'][data-type='BarcodeLettering']").prop("checked", false);
+            }
+        });
+
+        $("#modal@(itemName)").modal({
+            backdrop: "static",
+            keyboard: false,
+            show: true
+        });
+
+        QryRoutingItemProcess(moId@(itemName));
+
+    }
+
+    function QryRoutingItemProcess(MoId) {
+        let targetUrl = "@Url.Action("GetMoProcess", "Production")";
+        let postData = {
+            "MoId": MoId,
+            "MoProcessId": -1,
+            "OrderBy":"",
+            "PageIndex": -1,
+            "PageSize":-1
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {
+                $("#txtMoItemPartPrefix@(itemName)").val(item.ProcessAlias);
+            });
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+    }
+
+
+
+    function Query@(itemName)() {
+        objPage@(itemName).pageIndex = 0;
+        InitData@(itemName)(objPage@(itemName));
+    }
+
+    function InitData@(itemName)(objPage) {
+        let innerHtml = '';
+        let pageCount = 0;
+
+        let targetUrl = "@Url.Action("GetMoItemPart", "Production")";
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage.pageIndex + 1),
+            "PageSize": objPage.pageSize,
+            "MoId": moId@(itemName)
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+            if (pageCount > 0) {
+                objPage = PageCaculate(pageCount, objPage);
+
+                $.each(data.result, function (i, item) {
+                    let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                    innerHtml += `<tr>
+                                    <td class="text-center active-content" scope="col" style="min-width: 50px;">
+                                        <label class="control control-solid control-solid-info control--checkbox">
+                                            <input type="checkbox" data-type="BarcodeLettering" id="cbxBarcodeLettering@(itemName)${item.MoItemPartId}" name="cbxBarcodeLettering@(itemName)" value="${item.MoItemPartId}" checked>
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </td>
+                                    <td>${_row}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.MoItemPartNo}" style="min-width: 200px;">${item.MoItemPartNo}</td>
+                                    <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 200px;">${item.CreateDate}</td>
+                                    <td class="text-center active-content" style="min-width: 150px;">
+                                        <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.MoItemPartId}');"><i class="fas fa-trash-alt"></i></a>
+                                    </td>
+                                  </tr>`;
+                });
+            } else {
+                innerHtml += '<tr>\
+                                <td class="text-center" colspan="5" style="background-color: #fff3cd;">\
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。\
+                                </td>\
+                              </tr>';
+            }
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+
+        $("#tblData@(itemName) tbody").html(innerHtml);
+
+        TableComponentInit();
+        Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+    }
+
+    function Edit@(itemName)() {
+        AttrSetting = "";
+        PlusSign = "";
+        Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+        $("#divSerial@(itemName)").show();
+        $("#divJump@(itemName)").hide();
+        $("#divRemind@(itemName)").hide();
+
+        //查詢是否有刻字細項
+        let targetUrl = "@Url.Action("GetMoRoutingItemProcess", "Production")";
+        let postData = {
+            "MoId": moId@(itemName)
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {
+                AttrSetting = item.AttrSetting;
+            });
+        }
+        //解析刻字細項
+        if (AttrSetting != null && AttrSetting != "" && AttrSetting.indexOf("+")) {
+            console.log(AttrSetting);
+            //計算流水號長度
+            let letter = "+";
+            SeqLength = AttrSetting.split(letter).length - 1;
+            $("#txtSeq@(itemName)").val(SeqLength);
+            PlusSign = letter.repeat(SeqLength);
+
+            let newPreFix = AttrSetting.replace(PlusSign, "+");
+            $("#txtMoItemPartPrefix@(itemName)").val(newPreFix);
+        }
+        else {
+            let prefix = mtlItemName@(itemName).split(' ')[1];
+            $("#txtMoItemPartPrefix@(itemName)").val(prefix);
+            $("#txtSeq@(itemName)").val(2);
+            $("#txtParticularNo@(itemName)").val("-");
+        }
+
+        $("#txtMoItemPartSortNumberSerial@(itemName)").val("1");
+        PreLettering@(itemName)();
+    }
+
+    let timer;
+    function PreLettering@(itemName)() {
+        clearTimeout(timer)
+        timer = setTimeout(function () {
+            let prefixNo = $("#txtMoItemPartPrefix@(itemName)").val();
+            let partSeqSerial = $("#txtMoItemPartSortNumberSerial@(itemName)").val();
+            let partSeqJump = $("#txtMoItemPartSortNumberJump@(itemName)").val();
+            let seq = $("#txtSeq@(itemName)").val();
+            let particularNo = $("#txtParticularNo@(itemName)").val();
+            if (prefixNo != "") {
+                if (partSeqSerial != "") {
+                    if (prefixNo.indexOf('+') != -1) {
+                        $("#txtPreLettering@(itemName)").val(prefixNo.split('+')[0] + particularNo + partSeqSerial.padStart(parseInt(seq), '0') + prefixNo.split('+')[1]);
+                    }
+                    else {
+                        $("#txtPreLettering@(itemName)").val(prefixNo + particularNo + partSeqSerial.padStart(parseInt(seq), '0'));
+                    }
+                }
+                else if (partSeqJump != "") {
+                    let partSeqJumpList = partSeqJump.split(',');
+                    if (prefixNo.indexOf('+') != -1) {
+                        $("#txtPreLettering@(itemName)").val(prefixNo.split('+')[0] + particularNo + partSeqJumpList[0].padStart(parseInt(seq), '0') + prefixNo.split('+')[1]);
+                    }
+                    else {
+                        $("#txtPreLettering@(itemName)").val(prefixNo + particularNo + partSeqJumpList[0].padStart(parseInt(seq), '0'));
+                    }
+                }
+                else {
+                    $("#txtPreLettering@(itemName)").val(prefixNo + particularNo);
+                }
+            }
+        }, 500);
+    }
+
+    function Save@(itemName)() {
+        if ($(objForm@(itemName)).valid()) {
+            if ($("txtSeq@(itemName)").val() != 0) {
+                let targetUrl = "@Url.Action("AddMoItemPart", "Production")";
+                let postData = {
+                    "MoId": moId@(itemName),
+                    "MoItemPartPrefix": $("#txtMoItemPartPrefix@(itemName)").val(),
+                    "Seq": $("#txtSeq@(itemName)").val(),
+                    "LetteringType": $("#cboLetteringType@(itemName)").val(),
+                    "MoItemPartSortNumberSerial": $("#txtMoItemPartSortNumberSerial@(itemName)").val(),
+                    "MoItemPartSortNumberJump": $("#txtMoItemPartSortNumberJump@(itemName)").val(),
+                    "ParticularNo": $("#txtParticularNo@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            } else {
+                alert("流水碼長度不可為 0 ");
+            }
+        }
+    }
+
+    function Delete@(itemName)(MoItemPartId) {
+        swal.fire({
+            titleText: "確認要刪除嗎?",
+            text: "此動作無法復原，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let targetUrl = "@Url.Action("DeleteMoItemPart", "Production")";
+                let postData = {
+                    "MoItemPartId": MoItemPartId
+                };
+
+                let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                if (result) {
+                    Query@(itemName)();
+                }
+            }
+        });
+    }
+
+    function DeleteLot@(itemName)() {
+        swal.fire({
+            titleText: "確認要刪除嗎?",
+            text: "此動作無法復原，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let moItemPartIdList = [];
+                $.each($("input[type='checkbox'][data-type='BarcodeLettering']:checked"), function (i) {
+                    moItemPartIdList.push($(this).val());
+                });
+
+                console.log(moItemPartIdList);
+
+                let targetUrl = "@Url.Action("DeleteLotMoItemPart", "Production")";
+                let postData = {
+                    "MoItemPartId": moItemPartIdList.toString()
+                };
+
+                let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                if (result) {
+                    Query@(itemName)();
+                }
+            }
+        });
+    }
+
+    function DeleteAll@(itemName)() {
+        swal.fire({
+            titleText: "確認要刪除嗎?",
+            text: "此動作無法復原，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let targetUrl = "@Url.Action("DeleteAllMoItemPart", "Production")";
+                let postData = {
+                    "MoId": moId@(itemName)
+                };
+
+                let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                if (result) {
+                    Query@(itemName)();
+                }
+            }
+        });
+    }
+    function Print@(itemName)() {
+        let targetUrl = "@Url.Action("GetBarcodeLetteringPdf", "Production")";
+        let postData = {
+            "MoId": moId@(itemName)
+        };
+        FileAccess.AjaxDownload(targetUrl, postData, false);
+    }
+
+    function Return@(itemName)() {
+        ResetForm(objForm@(itemName));
+        Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+        Query@(itemName)();
+    }
+
+    function Close@(itemName)() {
+        ResetForm(objForm@(itemName));
+        $("#modal@(itemName)").modal('hide');
+    }
+</script>
+            )

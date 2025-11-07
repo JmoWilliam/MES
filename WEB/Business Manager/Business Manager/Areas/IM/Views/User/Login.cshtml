@@ -1,0 +1,173 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "Login";
+    string itemNameText = "登入";
+
+    ViewBag.Title = itemNameText;
+
+    var preUrl = Url.Action("/", new { Area = "IM" });
+
+    if (Request["preUrl"] != null)
+    {
+        preUrl = Uri.UnescapeDataString(Request["preUrl"]);
+    }
+
+    if (Convert.ToInt32(Session["UserId"]) > 0)
+    {
+        var redirectUrl = "https://" + Request.Url.Authority + preUrl;
+        var uri = new Uri(redirectUrl);
+        var newQueryString = HttpUtility.ParseQueryString(uri.Query);
+
+        string pagePathWithoutQueryString = uri.GetLeftPart(UriPartial.Path).Replace("https://", "").Replace(Request.Url.Authority, "");
+        redirectUrl = newQueryString.Count > 0 ? String.Format("{0}?{1}", pagePathWithoutQueryString, newQueryString) : pagePathWithoutQueryString;
+
+        Response.Redirect(redirectUrl);
+    }
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="body-bg">
+    <div class="login-content">
+        <div class="login-block">
+            <div class="logo">
+                <img src="@Url.Content("~/Areas/IM/Content/images/logo.png")" alt="logo" />
+            </div>
+            <div class="login-form">
+                <form autocomplete="off" id="form@(itemName)" method="post">
+                    <div class="form-group row">
+                        <div class="col-12 mb-2">
+                            <label class="login-account">
+                                <input type="text" class="form-control" id="txtUsername@(itemName)" name="txtUsername@(itemName)" placeholder="請輸入帳號" />
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-12 mb-3">
+                            <label class="login-key">
+                                <input type="password" class="form-control" id="txtPassword@(itemName)" name="txtPassword@(itemName)" placeholder="請輸入密碼" />
+                            </label>
+                        </div>
+                    </div>
+                </form>
+                <div class="login-form-box">
+                    <input type="checkbox" id="rememberPassword" disabled />
+                    <span class="res-control-indicator"></span>
+                    <label class="res-control res-control-checkbox" for="rememberPassword">
+                        記住帳密
+                    </label>
+                    <a class="forget-link" href="javascript:void(0);">忘記密碼?</a>
+                </div>
+                <a class="link-btn mt-4" href="javascript:void(0);" onclick="SignIn@(itemName)()">登入</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title password-title"></h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="new@(itemName)">
+                    <fieldset>
+                        <div class="form-group">
+                            <label for="txtNewPassword@(itemName)">新密碼</label>
+                            <input type="password" class="form-control" id="txtNewPassword@(itemName)" name="txtNewPassword@(itemName)" placeholder="請輸入新密碼" />
+                            <small class="form-text text-muted">8~15位數，至少包含一個大寫字母、一個小寫字母、一個數字</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="txtConfirmPassword@(itemName)">確認密碼</label>
+                            <input type="password" class="form-control" id="txtConfirmPassword@(itemName)" name="txtConfirmPassword@(itemName)" placeholder="請輸入確認密碼" />
+                        </div>
+                        <button type="button" class="btn btn-primary btn-lg btn-block mt-4" onclick="Check@(itemName)()"><i class="fas fa-check"></i></button>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(document).ready(function () {
+            $("#txtUsername@(itemName)").focus();
+        });
+
+        $("#txtUsername@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) $("#txtPassword@(itemName)").focus();
+        });
+
+        $("#txtPassword@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) SignIn@(itemName)();
+        });
+
+        function SignIn@(itemName)() {
+            $.ajax({
+                url: "@Url.Action("GetLogin", "User", new { Area = "IM" })",
+                type: "POST",
+                async: false,
+                dataType: "json",
+                data: {
+                    "Username": $("#txtUsername@(itemName)").val(),
+                    "Password": $("#txtPassword@(itemName)").val()
+                },
+                dataType: "json",
+                beforeSend: function (XMLHttpRequest) {
+                },
+                success: function (data) {
+                    switch (data.status) {
+                        case "success":
+                            location.reload();
+                            break;
+                        case "newPassword":
+                            $(".password-title").html("首次登入，請輸入新密碼");
+
+                            $("#modal@(itemName)").modal({
+                                backdrop: "static",
+                                keyboard: false,
+                                show: true
+                            });
+                            break;
+                        case "expirePassword":
+                            $(".password-title").html("密碼過期，請輸入新密碼");
+
+                            $("#modal@(itemName)").modal({
+                                backdrop: "static",
+                                keyboard: false,
+                                show: true
+                            });
+                            break;
+                        default:
+                            alert(data.msg);
+                            break;
+                    }
+                },
+                complete: function (XMLHttpRequest, textStatus) {
+                    if (textStatus == 'timeout') {
+                        var xmlhttp = window.XMLHttpRequest ? new window.XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHttp");
+                        xmlhttp.abort();
+                        alert("網路逾時!");
+                    }
+
+                    $("#loaderWrpper").hide();
+                },
+                error: function (XMLHttpRequest, textStatus) {
+                    alert(XMLHttpRequest.statusText, "error", 0);
+                }
+            });
+        }
+
+        function Check@(itemName)() {
+
+        }
+    </script>
+)

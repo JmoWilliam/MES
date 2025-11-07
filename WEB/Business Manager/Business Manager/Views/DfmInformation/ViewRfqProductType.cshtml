@@ -1,0 +1,140 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRfqProductType";
+    string itemNameText = "RFQ包裝種類資料";
+
+    string RfqDetailId = Request["RfqDetailId"] ?? "";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        td {
+            vertical-align: middle;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form autocomplete="off" id="queryForm@(itemName)"></form>
+                <div class="form-group row">
+                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboRfqProClassId@(itemName)">產品類別<span class="text-danger">*</span></label>
+                    <div class="col-12 col-md-6 col-lg-6">
+                        <select class="form-control" id="cboRfqProClassId@(itemName)" name="cboRfqProClassId@(itemName)"></select>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboRfqPkTypeId@(itemName)">包裝方式</label>
+                    <div class="col-12 col-md-6 col-lg-6">
+                        <select class="form-control" id="cboRfqPkTypeId@(itemName)" name="cboRfqPkTypeId@(itemName)"></select>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboSustSupplyStatus@(itemName)">客供盛盤</label>
+                    <div class="col-12 col-md-6 col-lg-6">
+                        <select class="form-control" id="cboSustSupplyStatus@(itemName)" name="cboSustSupplyStatus@(itemName)">
+                            <option value="CHOOSE" selected>請選擇</option>
+                            <option value="Y">是</option>
+                            <option value="N">否</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-center text-lg-right read-hide">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        function Pop@(itemName)() {
+            ComboBoxs.Default("#cboRfqProClassId@(itemName)", "@Url.Action("GetRfqProductClass", "ScmBasicInformation")", {}, "", "NA", "", "RfqProductClassName", "RfqProClassId");    //產品類別
+            ComboBoxs.Default("#cboRfqPkTypeId@(itemName)", "@Url.Action("GetRfqPackageType", "ScmBasicInformation")", {}, "", "NA", "", "PackagingMethod", "RfqPkTypeId");             //包裝方式
+
+            //修改產品類別時，需一併修正包裝方式
+            $("#cboRfqProClassId@(itemName)").change(function () {
+                ComboBoxs.Default("#cboRfqPkTypeId@(itemName)", "@Url.Action("GetRfqPackageType", "ScmBasicInformation")", { "RfqProClassId": $("#cboRfqProClassId@(itemName)").val() }, "", "NA", "", "PackagingMethod", "RfqPkTypeId"); //包裝方式              //業務人員
+            });
+
+            $("#cboRfqProClassId@(itemName), #cboRfqPkTypeId@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Save@(itemName)() {
+
+            let isValid = true;
+            let errorMsg = "";
+
+            if ($("#cboRfqProClassId@(itemName)").val() == "") {
+                isValid = false;
+                errorMsg += "請選擇產品類別";
+            }
+
+            if ($("#cboRfqPkTypeId@(itemName)").val() == "") {
+                isValid = false;
+                errorMsg += "請選擇包裝方式";
+            }
+
+            if ($("#cboSustSupplyStatus@(itemName)").val() == "") {
+                isValid = false;
+                errorMsg += "請選擇客供盛盤";
+            }
+
+            if (isValid) {
+                let targetUrl = "@Url.Action("GetRfqPackageType", "ScmBasicInformation")";
+                let postData = {
+                    "RfqProClassId": $("#cboRfqProClassId@(itemName)").val(),
+                    "RfqPkTypeId": $("#cboRfqPkTypeId@(itemName)").val(),
+                    "SustSupplyStatus": $("#cboSustSupplyStatus@(itemName)").val()
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                let packagingIndex = -1;
+                let packaging = {
+                    RfqProClassId: $("#cboRfqProClassId@(itemName)").val(),
+                    RfqProductClassName: $("#cboRfqProClassId@(itemName) option:selected").text(),
+                    RfqPkTypeId: $("#cboRfqPkTypeId@(itemName)").val(),
+                    PackagingMethod: $("#cboRfqPkTypeId@(itemName) option:selected").text(),
+                    SustSupplyStatus: $("#cboSustSupplyStatus@(itemName)").val(),
+                    SustSupplyStatusName: $("#cboSustSupplyStatus@(itemName) option:selected").text()
+                }
+
+                PackagingJson.data.push(packaging);
+
+                packagingIndex = PackagingJson.data.length - 1;
+
+                LoadPackagingRfqDetail(PackagingJson);
+                Close@(itemName)();
+            } else {
+                alert(errorMsg);
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

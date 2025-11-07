@@ -1,0 +1,318 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "Bingo";
+    string itemNameText = "賓果";
+
+    string BingoNo = Request["BingoNo"] ?? "";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+        .row-cols-5 {
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+        .square {
+            position: relative;
+            width: 100%;
+            border: 1px solid #000;
+            background-color: #fff;
+        }
+
+            .square:after {
+                content: "";
+                display: block;
+                padding-bottom: 100%;
+            }
+
+        .content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .card-content {
+            display: flex;
+            flex-flow: column nowrap;
+            height: 100%;
+        }
+
+        .card-top {
+            height: 20%;
+            flex: 0 0 auto;
+            text-align: left;
+            padding-left: 10px;
+            padding-top: 10px;
+            font-size: 25px;
+            line-height: 20px;
+        }
+
+        .card-center {
+            height: 60%;
+            flex: 0 0 auto;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-flow: column wrap;
+        }
+
+            .card-center i {
+                font-size: 60px;
+            }
+
+        .card-bottom {
+            height: 20%;
+            flex: 0 0 auto;
+            text-align: right;
+            padding-right: 10px;
+            padding-bottom: 10px;
+            font-size: 25px;
+            line-height: 20px;
+        }
+
+       
+
+        @@media print {
+            body {
+                -webkit-print-color-adjust: exact; /*強制列印預設背景色，覆蓋用戶設定*/
+            }
+
+            .row-cols-5 {
+                padding-top: 5px;
+                padding-bottom: 5px;
+            }
+
+            .col {
+                padding-right: 5px;
+                padding-left: 5px;
+                padding-bottom: 11px !important;
+            }
+
+            .card-content {
+                height:100%;
+            }
+
+            .card-top {
+                padding-left: 10px;
+                padding-top: 10px;
+                font-size: 30px;
+            }
+
+            .card-center i {
+                font-size: 60px;
+            }
+
+            .card-bottom {
+                padding-right: 10px;
+                padding-bottom: 10px;
+                font-size: 30px;
+            }
+
+            @@page {
+                size: A4 portrait; /*A4 直式*/
+                page-break-after: avoid; /*避免放置分頁符號*/
+                margin: 15px 0 0;
+                padding: 0;
+            }
+            .col-12 .row.row-cols-5.text-center {
+                padding: 15px 30px;
+            }
+
+                .col-12 .row.row-cols-5.text-center .col {
+                    padding-right: 5px;
+                    padding-left: 5px;
+                    padding-bottom: 11px !important;
+                }
+        }
+
+ 
+
+
+        @@media screen and (max-width:1024px) {
+          
+
+            .card-top {
+                padding-left: 5px;
+                padding-top: 5px;
+                font-size: 20px;
+            }
+
+            .card-center i {
+                font-size: 40px;
+            }
+
+            .card-bottom {
+                padding-right: 5px;
+                padding-bottom: 5px;
+                font-size: 20px;
+            }
+
+            .col-12 .row.row-cols-5.text-center {
+                padding: 0;
+            }
+        }
+
+        @@media screen and (max-width:768px) {
+            .row-cols-5 {
+                padding-top: 5px;
+                padding-bottom: 5px;
+            }
+
+            .col {
+                padding-right: 5px;
+                padding-left: 5px;
+            }
+
+           
+
+            .card-top {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 30%;
+                padding-left: 0;
+            }
+
+            .card-center {
+                height: 70%;
+            }
+
+                .card-center i {
+                    font-size: 30px;
+                }
+
+            .card-bottom {
+                display: none;
+            }
+            .col-12 .row.row-cols-5.text-center {
+                padding: 0px;
+            }
+                .col-12 .row.row-cols-5.text-center .col {
+                    
+                    padding-bottom: 5px !important;
+                }
+        }
+
+        @@media screen and (max-width:425px) {
+            .row-cols-5 {
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+
+            .col {
+                padding-right: 0;
+                padding-left: 0;
+            }
+
+
+            .card-top {
+                margin-bottom: 5px;
+            }
+
+            .card-center i {
+                font-size: 28px;
+            }
+
+            .card-center span {
+                font-size: 12px;
+                white-space: nowrap;
+            }
+        }
+    </style>
+)
+
+<div class="row" >
+    <div class="col-12 text-left" style="font-size: 22pt; font-weight: bold; line-height: 3;">桌次：</div>
+    <div class="col-12" id="plate@(itemName)" style="border: solid 5px #d3d3d3;"></div>
+    <div class="col-12 text-center">
+        <img class="gen-qrcode" src="" />
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(document).ready(function () {
+            InitData@(itemName)();
+
+            let host = `https://bm.zy-tech.com.tw`;
+            let targetUrl = `@Url.Action("BingoVerification", "Gaming")?BingoNo=@(BingoNo)`;
+            $(".gen-qrcode").attr("src", `@Url.Action("QRCodeOutput", "SystemSetting")?inputString=${host}${targetUrl}&dimension=200`);
+        });
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetBingoMap", "Gaming")";
+            let postData = {
+                "BingoNo": "@(BingoNo)"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                innerHtml = `<div class="row row-cols-5 text-center">`;
+
+                $.each(data.result, function (i, item) {
+                    let content = item.MapContent.split(',');
+
+                    innerHtml += `<div class="col">
+                                    <div class="square">
+                                      <div class="content">
+                                        <div class="card-content" style="color: ${Color(content[0])};">
+                                          <div class="card-top"><i class="${Suits(content[0])} ${content[0]}"></i></div>
+                                          <div class="card-center"><i class="${Suits(content[0])} ${content[1]}"></i><span>${content[2]}</span></div>
+                                          <div class="card-bottom"><i class="${Suits(content[0])} ${content[0]}"></i></div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>`;
+                    if (i == 11) {
+                        innerHtml += `<div class="col">
+                                        <div class="square">
+                                          <div class="content">
+                                            <img src="/Content/images/icons/icon-512x512.png" />
+                                          </div>
+                                        </div>
+                                      </div>`;
+                    }
+                });
+
+                innerHtml += `</div>`;
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#plate@(itemName)").html(innerHtml);
+
+            function Color(type) {
+                switch (type) {
+                    case "fa-spade":
+                        return "#13a2f9";
+                    case "fa-club":
+                        return "#fb8c00";
+                    case "fa-heart":
+                        return "#e21919";
+                    case "fa-diamond":
+                        return "#43a047";
+                }
+            }
+
+            function Suits(type) {
+                switch (type) {
+                    case "fa-spade":
+                        return "fas";
+                    case "fa-club":
+                        return "fas";
+                    case "fa-heart":
+                        return "fas";
+                    case "fa-diamond":
+                        return "fas";
+                }
+            }
+        }
+    </script>
+)

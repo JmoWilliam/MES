@@ -1,0 +1,1703 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QcGoodsReceiptManagement";
+    string itemNameText = "進貨檢驗資料管理";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+
+    string QcRecordId = Request["QcRecordId"] ?? "";
+    string QcGoodsReceiptId = Request["QcGoodsReceiptId"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+
+         .qc-file-info {
+             padding: 18px;
+             background: #f7f4f4c4;
+             border-radius: 15px;
+             margin-bottom: 15px;
+             box-shadow: 5px 5px 10px rgb(137 137 137 / 19%);
+         }
+
+         .qc-file-body {
+             overflow: scroll;
+             max-height: 65vh;
+             margin-bottom: 15px;
+         }
+
+         .qc-file-item {
+             display: flex;
+             justify-content: space-between;
+             padding: 15px;
+             background: #e9e9e9;
+             border-radius: 15px;
+             margin-bottom: 15px;
+         }
+
+         .item-file {
+             width: 100%;
+             display: flex;
+             align-items: center;
+             font-size: 16px;
+             font-weight: 600;
+         }
+
+         .qc-machine {
+             width: 100%;
+         }
+
+         .check-all {
+             padding: 10px;
+             display: flex;
+             font-weight: 600;
+             font-size: 18px;
+         }
+
+             .check-all input {
+                 width: 18px;
+                 margin-right: 8px;
+             }
+
+         .qc-file-check-box {
+             margin-right: 8px;
+         }
+
+         .qc-file-footer {
+             display: flex;
+             justify-content: flex-end;
+         }
+
+         .btn-resolve {
+             background-color: #686973;
+             border-radius: 5px;
+             color: #fff;
+             display: inline-block;
+             padding: 0.1875rem 0.5rem;
+             min-width: 35px;
+             height: 35px;
+             line-height: 30px;
+             text-align: center;
+         }
+
+             .btn-resolve:hover {
+                 background-color: #8684ad;
+                 color: #fff;
+             }
+
+         .btn-remove-resolve {
+             background-color: #e55151;
+             border-radius: 5px;
+             color: #fff;
+             display: inline-block;
+             padding: 0.1875rem 0.5rem;
+             min-width: 35px;
+             height: 35px;
+             line-height: 30px;
+             text-align: center;
+         }
+
+             .btn-remove-resolve:hover {
+                 background-color: #8684ad;
+                 color: #fff;
+             }
+
+         .check-all {
+             display: flex;
+             align-items: center;
+         }
+
+         .parameter-bar {
+             width: 100%;
+             display: flex;
+         }
+
+         #loading {
+             display: none;
+             position: fixed;
+             top: 50%;
+             left: 50%;
+             transform: translate(-50%, -50%);
+             padding: 20px;
+             border-radius: 5px;
+             z-index: 1000;
+         }
+
+         .confirm-item {
+             display: flex;
+             justify-content: flex-start;
+             margin-bottom: 15px;
+         }
+
+         .confirm-btn {
+             width: 100%;
+             text-align: center;
+             padding: 65px;
+             background: #6d9b77;
+             font-size: 36px;
+             font-weight: 600;
+             color: aliceblue;
+         }
+
+             .confirm-btn:hover {
+                 background: #9dc3a6;
+                 color: aliceblue;
+             }
+
+         .reconfirm-btn {
+             width: 100%;
+             text-align: center;
+             padding: 65px;
+             background: #d5778c;
+             font-size: 36px;
+             font-weight: 600;
+             color: aliceblue;
+         }
+
+             .reconfirm-btn:hover {
+                 background: #df98a8;
+                 color: aliceblue;
+             }
+    </style>
+                                                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 60vh; overflow: scroll;">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">ERP進貨單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtGrErpFullNoQ@(itemName)" name="txtGrErpFullNoQ@(itemName)"
+                                       placeholder="請輸入ERP進貨單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">量測單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtQcRecordIdQ@(itemName)" name="txtQcRecordIdQ@(itemName)"
+                                       placeholder="請輸入量測單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">MES進貨單編號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtGrIdQ@(itemName)" name="txtGrIdQ@(itemName)"
+                                       placeholder="請輸入MES製令編號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">進貨檢驗單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtQcGoodsReceiptIdQ@(itemName)" name="txtQcGoodsReceiptIdQ@(itemName)"
+                                       placeholder="請輸入進貨檢驗單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                       placeholder="請輸入品號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                       placeholder="請輸入品名">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">上傳狀態</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCheckQcMeasureDataQ@(itemName)">
+                                    <option value="" selected>全部</option>
+                                    <option value="Y">已上傳</option>
+                                    <option value="N">未上傳</option>
+                                    <option value="P">已上傳但未判定</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">建單日期</label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       placeholder="請輸入建單日期"
+                                       data-msg-required="請輸入建單日期" data-rule-required="true"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       placeholder="請輸入建單日期"
+                                       data-msg-required="請輸入建單日期" data-rule-required="true"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">建立人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtPoErpFullNoQ@(itemName)">ERP採購單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtPoErpFullNoQ@(itemName)" name="txtPoErpFullNoQ@(itemName)" placeholder="請輸入ERP採購單號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtPrErpFullNoQ@(itemName)">ERP請購單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtPrErpFullNoQ@(itemName)" name="txtPrErpFullNoQ@(itemName)" placeholder="請輸入ERP請購單號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboPoUserIdQ@(itemName)">採購人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboPoUserIdQ@(itemName)" name="cboPoUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboPrUserIdQ@(itemName)">請購人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboPrUserIdQ@(itemName)" name="cboPrUserIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th class="text-center" scope="col" style="max-width: 450px;">操作</th>
+                                        <th scope="col" style="max-width: 100px;">量測單號</th>
+                                        <th scope="col" style="min-width: 110px;">進貨單號</th>
+                                        <th scope="col" style="min-width: 100px;">進貨編號</th>
+                                        <th scope="col" style="max-width: 200px;">品號</th>
+                                        <th scope="col" style="max-width: 200px;">品名</th>
+                                        <th scope="col" style="max-width: 200px;">建單日期</th>
+                                        <th scope="col" style="max-width: 200px;">建立人員</th>
+                                        <th scope="col" style="max-width: 150px;">單據狀態</th>
+                                        <th scope="col" style="max-width: 150px;">檢驗結果</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 115px;">備註</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 115px;">請購單號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 115px;">請購人</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 115px;">採購單號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 115px;">採購人</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增/編輯-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="QcRecordId" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtGrDetailId@(itemName)">綁定進貨單身<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtGrDetailId@(itemName)" value="" />
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="txtGrErpFullNo@(itemName)" name="txtGrErpFullNo@(itemName)" placeholder="請輸入進貨單號" />
+                                            <div class="input-group-append">
+                                                <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                                <a class="btn btn-outline-danger pop-clear" href="javascript:ClearGrDetailId@(itemName)();"><i class="fas fa-eraser"></i></a>
+                                            </div>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>品號</dt>
+                                            <dd id="desMtlItemNo@(itemName)"></dd>
+                                            <dt>品名</dt>
+                                            <dd id="desGrMtlItemName@(itemName)"></dd>
+                                            <dt>規格</dt>
+                                            <dd id="desGrMtlItemSpec@(itemName)"></dd>
+                                            <dt>供應商</dt>
+                                            <dd id="desSupplierFullNo@(itemName)"></dd>
+                                            <dt>批號</dt>
+                                            <dd id="desLotNumberNo@(itemName)"></dd>
+                                            <dt>進貨數量</dt>
+                                            <dd id="desReceiptQty@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboInputType@(itemName)">輸入格式<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select id="cboInputType@(itemName)" class="form-control" required>
+                                            <option value="BarcodeNo">條碼</option>
+                                            <option value="LotNumber" selected>批號</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="divRemind@(itemName)" class="row">
+                            <div class="col-12 mt-2">
+                                <div class="alert alert-info border-0">
+                                    <ul style="padding-inline-start: 20px;">
+                                        <li>輸入格式說明:</li>
+                                        <li>穴號模式，請用<mark><code>-</code></mark>代表第幾穴第幾片；EX：<code>1-1、2-2</code></li>
+                                        <li>刻字模式請直接輸入刻字流水號碼，EX: <code>1、2</code></li>
+                                        <li>條碼模式請輸入模仁上號碼或是紙本條碼，EX: <code>143501、1603001</code></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" @*style="display: none;"*@>
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtResolveFile@(itemName)">解析檔案</label>
+                                    <div class="col-12">
+                                        <input type="file" id="fileResolveFile@(itemName)" name="fileResolveFile@(itemName)" accept=".txt,.csv,.json,.xlsx" multiple />
+                                        <input type="hidden" id="txtResolveFile@(itemName)" name="txtResolveFile@(itemName)" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="qc-file-info">
+                            <div class="check-all">
+                                <input type="checkbox" id="cbxSelectAll@(itemName)" /> <span style="margin-right: 10px;">全選</span>
+                                <select style="width: 50%;" id="cboQcClassId@(itemName)" class="form-control"></select>
+                                <select style="width: 50%;" id="cboSelectAllMachineNumber@(itemName)" class="form-control"></select>
+                            </div>
+                            <div class="qc-file-body">
+                            </div>
+                            <div class="qc-file-footer">
+                                <a class="btn-remove-resolve" style="margin-right: 10px;" href="javascript:RemoveResolveFile@(itemName)();"><i class="fas fa-trash-alt"> 刪除暫存</i></a>
+                                <a class="btn-resolve" href="javascript:ResolveFile@(itemName)();"><i class="fas fa-file-search"> 解析檔案</i></a>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtQcRecordFile@(itemName)">其他檔案<code>(EX:面型圖)</code></label>
+                                    <div class="col-12">
+                                        <input type="file" @*accept=".alx,.aly,.png"*@ id="fileQcRecordFile@(itemName)" name="fileQcRecordFile@(itemName)" multiple />
+                                        <input type="hidden" id="txtQcRecordFile@(itemName)" name="txtQcRecordFile@(itemName)" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                  placeholder="請輸入備註"
+                                                  data-msg-required="請輸入備註"
+                                                  data-msg-maxlength="必須少於 50 個字元" maxlength="50"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--其他分頁-->
+<div class="advanced-block">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav flag-tabs nav-fill" role="tablist">
+                <li class="flag-item">
+                    <a id="aQcGrDetail@(itemName)" class="flag-link  active" data-toggle="tab" href="#tabQcGrDetail">
+                        <i class="fas fa-sliders-h"></i> 設定量測記錄詳細資料
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane active" id="tabQcGrDetail">
+            @Html.Partial("QcGrDetail")
+        </div>
+    </div>
+</div>
+
+<!--選擇列印機台-->
+<div class="modal fade" id="modalPrint@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <input type="hidden" id="txtPrintQcRecordId@(itemName)" />
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    列印標籤條碼
+                    <span class="sub-title">製令: <span class="sub-text" id="desPrintWoErpFullNo@(itemName)"></span></span>
+                    <span class="sub-title">品號: <span class="sub-text" id="desPrintMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">品名: <span class="sub-text" id="desPrintMtlItemName@(itemName)"></span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <select class="form-control" id="cboLabelPrintMachine@(itemName)"></select>
+            </div>
+            <div class="modal-footer">
+                <a id="aPrint@(itemName)" class="btn btn-success" href="javascript: Print@(itemName)();"><i class="fas fa-paper-plane"></i>列印</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loadingdiv" id="loading" style="display: none">
+    <img src="~/assets/images/loading.gif" style="width: 75px;" />
+</div>
+
+@Html.Partial("ViewGrDetail")
+@Html.Partial("ViewQcGoodsReceipt")
+
+<script src="@Url.Content("~/Scripts/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.js")"></script>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let defaultFileId@(itemName);
+        let checkQcMeasureData@(itemName);
+        let modeId@(itemName);
+
+        let resolveFileJson@(itemName) =
+        {
+            resolveFileInfo: []
+        };
+
+        let qmmDetailJson@(itemName) =
+        {
+            qmmDetailInfo: []
+        };
+
+        $(document).ready(function () {
+            Suites.DateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 90);
+            Suites.SetDateDropper("#txtStartDateQ@(itemName)", currentDate);
+
+            if ("@QcRecordId") {
+                $("#txtQcRecordIdQ@(itemName)").val("@QcRecordId");
+                $("#cboCheckQcMeasureDataQ@(itemName)").val("");
+                $("#txtStartDateQ@(itemName)").val("1999-01-01");
+                Edit@(itemName)("@QcRecordId", "P");
+            }
+
+            if ("@QcGoodsReceiptId") {
+                $("#txtQcGoodsReceiptIdQ@(itemName)").val("@QcGoodsReceiptId");
+                $("#cboCheckQcMeasureDataQ@(itemName)").val("");
+                $("#txtStartDateQ@(itemName)").val("1999-01-01");
+            }
+
+            Query@(itemName)();
+
+            ResetQmmDetailJson@(itemName)();
+
+            resolveFileJson@(itemName).resolveFileInfo = [];
+
+            if (!isMobile) {
+                $("#cboUserIdQ@(itemName), #cboPoUserIdQ@(itemName), #cboPrUserIdQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboUserIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": "@Session["CompanyId"]", "Status": "A" }, "", "ALL", "", "UserWithNo", "UserId");
+            ComboBoxs.Default("#cboPoUserIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": "@Session["CompanyId"]", "Status": "A" }, "", "ALL", "", "UserWithNo", "UserId");
+            ComboBoxs.Default("#cboPrUserIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": "@Session["CompanyId"]", "Status": "A" }, "", "ALL", "", "UserWithNo", "UserId");
+
+
+            $("#txtGrErpFullNoQ@(itemName), #txtMtlItemNoQ@(itemName), #txtGrMtlItemNameQ@(itemName), #txtGrIdQ@(itemName), #txtQcRecordIdQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#txtGrErpFullNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    QueryGrDetail@(itemName)();
+                    return false;
+                }
+            });
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            $("#cboSelectAllMachineNumber@(itemName)").change(function () {
+                let machineNumber = $(this).val();
+                $.each($("input[type='checkbox'][data-file-id]:checked"), function (i) {
+                    let fileId = $(this).data("file-id");
+                    ComboBoxs.Default(`#cboQmmDetail@(itemName)${fileId}`, "@Url.Action("GetQmmDetail", "QcDataManagement")", {}, "", "NA", "", "MachineName", "MachineNumber");
+                    $(`#cboQmmDetail@(itemName)${fileId}`).val(machineNumber);
+
+                    $.each(resolveFileJson@(itemName).resolveFileInfo, function (j, item2) {
+                        if (fileId == item2.FileId) {
+                            resolveFileJson@(itemName).resolveFileInfo[j]["MachineNumber"] = machineNumber;
+                        }
+                    });
+                });
+
+                $.each(resolveFileJson@(itemName).resolveFileInfo, function (i, item) {
+                    resolveFileJson@(itemName).resolveFileInfo[i]["AllMachineNumber"] = $("#cboSelectAllMachineNumber@(itemName)").val();
+                });
+            });
+
+            $("#txtResolveFile@(itemName)").change(function () {
+                ReloadResoloveFileJson@(itemName)();
+            });
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-file-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-file-id]").not(":disabled").prop("checked", false);
+                }
+            });
+
+            $("#cboQcClassId@(itemName)").change(function (i, item) {
+                $.each(resolveFileJson@(itemName).resolveFileInfo, function (i, item) {
+                    resolveFileJson@(itemName).resolveFileInfo[i]["QcClassId"] = $("#cboQcClassId@(itemName)").val();
+                });
+            });
+
+            $("#aQcFileManagement@(itemName)").click(function () {
+                ExpandQcFileManagement();
+            });
+        });
+
+        function ChangeMachineNumber@(itemName)(e) {
+            let machineNumber = $(e).val();
+            let fileId = $(e).data("file-id");
+            $.each(resolveFileJson@(itemName).resolveFileInfo, function (i, item) {
+                if (item.FileId == fileId) {
+                    resolveFileJson@(itemName).resolveFileInfo[i]["MachineNumber"] = machineNumber;
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetQcGoodsReceipt", "QcDataManagement")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "GrErpFullNo": $("#txtGrErpFullNoQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "CheckQcMeasureData": $("#cboCheckQcMeasureDataQ@(itemName)").val(),
+                "UserId": $("#cboUserIdQ@(itemName)").val(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val(),
+                "GrId": $("#txtGrIdQ@(itemName)").val(),
+                "QcRecordId": $("#txtQcRecordIdQ@(itemName)").val(),
+                "QcGoodsReceiptId": $("#txtQcGoodsReceiptIdQ@(itemName)").val(),
+                "PoErpFullNo": $("#txtPoErpFullNoQ@(itemName)").val(),
+                "PoUserId": $("#cboPoUserIdQ@(itemName)").val(),
+                "PrErpFullNo": $("#txtPrErpFullNoQ@(itemName)").val(),
+                "PrUserId": $("#cboPrUserIdQ@(itemName)").val()
+
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        defaultFileId@(itemName) = item.DefaultFileId;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="text-center active-content" >
+                                          <div class="btn-group mb-4 show" style="margin-bottom: 0 !important; position: static;">
+                                            <button type="button" class="btn btn-primary dropdown-toggle" data-so-id="${item.QcRecordId}" style="padding-top: 0; padding-bottom: 0;">動作</button>
+                                            <div class="dropdown-menu btn-text-left-block" data-so-id="${item.QcRecordId}" style="overflow-y: auto; z-index: 999; max-height: 150px;">
+                                            <a class="dropdown-item btn-text-left auth-update" href="javascript:Edit@(itemName)('${item.QcRecordId}', '${item.CheckQcMeasureData}', '${item.ModeId}');"><i class="fas fa-edit"></i>編輯</a>
+                                            <a class="dropdown-item btn-text-left auth-read" href="javascript:PopViewQcGoodsReceipt('${item.QcGoodsReceiptId}', '${item.GrDetailId}', 'view');"><i class="fas fa-eye"></i>查看驗收修改作業</a>
+                                            ${item.ConfirmStatus == `N` ? `<a class="dropdown-item btn-text-left auth-gr-inspection" href="javascript:PopViewQcGoodsReceipt('${item.QcGoodsReceiptId}', '${item.GrDetailId}', 'edit');"><i class="fas fa-tasks"></i>驗收修改作業</a>` : ``}
+                                            ${item.CheckQcMeasureData == `N` ? `<a class="dropdown-item btn-text-left auth-delete" href="javascript:Delete@(itemName)('${item.QcRecordId}');"><i class="fas fa-trash-alt"></i>刪除</a>` : ``}
+                                            ${item.CheckQcMeasureData == `Y` || item.CheckQcMeasureData == `P` ? `<a class="dropdown-item btn-text-left auth-update" href="javascript:CancelMeasurementUpload@(itemName)('${item.QcRecordId}');"><i class="fas fa-redo"></i>取消上傳</a>` : ``}
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td class="text-primary" style="min-width: 100px;">
+                                          <a href="@Url.Action("IframeMeasurementRecord", "MesReport")?QcRecordId=${item.QcRecordId}" target="_blank">
+                                          ${item.QcRecordId}
+                                          </a>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.GrErpPrefix}-${item.GrErpNo}(${item.GrSeq})" style="min-width: 200px;">${item.GrErpPrefix}-${item.GrErpNo}<code>(${item.GrSeq})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.GrDetailId}" style="min-width: 100px;">${item.GrDetailId}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px; min-width: 135px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 200px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 200px;">${item.CreateDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserNo}${item.UserName}" style="min-width: 150px;"><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                        ${JudgeCheckQcMeasureData@(itemName)(`${item.CheckQcMeasureData}`, `${item.CheckQcMeasureDataName}`)}
+                                        ${JudgeQcStatus(`${item.QcStatus}`, `${item.QcStatusName}`)}
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="max-width: 200px;">${item.Remark}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PrErpFullNo || ''}" style="max-width: 200px;">${item.PrErpFullNo || ''}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PrConfidmUser || ''}" style="max-width: 200px;">${item.PrConfidmUser || ''}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoErpFullNo || ''}" style="max-width: 200px;">${item.PoErpFullNo || ''}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoConfidmUser || ''}" style="max-width: 200px;">${item.PoConfidmUser || ''}</td>
+
+                                      </tr>`;
+
+                        function JudgeCheckQcMeasureData@(itemName)(checkQcMeasureData, checkQcMeasureDataName) {
+                            let innerHtml = '';
+                            if (checkQcMeasureData == "Y") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${checkQcMeasureDataName}" style="max-width: 150;"><i style="color: #338b33; font-weight: 600;" class="fad fa-badge-check"></i> ${checkQcMeasureDataName}</td>`;
+                            }
+                            else if (checkQcMeasureData == "P") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${checkQcMeasureDataName}" style="max-width: 150;"><i style="color: #4b66c7; font-weight: 600;" class="fas fa-exclamation-circle"></i> ${checkQcMeasureDataName}</td>`;
+                            }
+                            else if (checkQcMeasureData == "N") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${checkQcMeasureDataName}" style="max-width: 150;"><i style="color: #d15f84; font-weight: 600;" class="fas fa-exclamation-circle"></i> ${checkQcMeasureDataName}</td>`;
+                            }
+                            else if (checkQcMeasureData == "A") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${checkQcMeasureDataName}" style="max-width: 150;"><i style="color: #3e60c3; font-weight: 600;" class="fas fa-paper-plane"></i> ${checkQcMeasureDataName}</td>`;
+                            }
+                            else if (checkQcMeasureData == "C") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${checkQcMeasureDataName}" style="max-width: 150;"><i style="color: #52974e; font-weight: 600;" class="fas fa-user-check"></i> ${checkQcMeasureDataName}</td>`;
+                            }
+                            else if (checkQcMeasureData == "F") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${checkQcMeasureDataName}" style="max-width: 150;"><i style="color: #82a7ab; font-weight: 600;" class="fas fa-exclamation-triangle"></i> ${checkQcMeasureDataName}</td>`;
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function JudgeSystemStatus@(itemName)(qcStatus, statusName) {
+                            let innerHtml = '';
+                            if (qcStatus == "P") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${item.statusName}" style="max-width: 150;"><i style="color: green; font-weight: 600;" class="fad fa-badge-check"></i> ${statusName}</td>`;
+                            }
+                            else if (qcStatus == "F") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${item.statusName}" style="max-width: 150;"><i style="color: red; font-weight: 600;" class="fas fa-exclamation-triangle"></i> ${statusName}</td>`;
+                            }
+                            else if (qcStatus == "M") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: brown;" class="fad fa-flag-checkered"></i> ${statusName}</td>`;
+                            }
+                            else if (qcStatus == "R") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: cornflowerblue;" class="fas fa-user-edit"></i> ${statusName}</td>`;
+                            }
+                            else if (qcStatus == "A") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;"><i style="color: cornflowerblue;" class="fas fa-paper-plane"></i> ${statusName}</td>`;
+                            }
+                            else {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${statusName}" style="max-width: 150px;">${statusName}</td>`;
+                            }
+                            return innerHtml;
+                        }
+
+                        function JudgeQcStatus(qcStatus, qcStatusName) {
+                            let innerHtml = '';
+                            if (qcStatus == "Y") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${item.qcStatusName}" style="max-width: 150;"><i style="color: green; font-weight: 600;" class="fad fa-badge-check"></i> ${qcStatusName}</td>`;
+                            }
+                            else if (qcStatus == "W") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${item.qcStatusName}" style="max-width: 150;"><i style="color: yellow; font-weight: 600;" class="fas fa-calendar-check"></i> ${qcStatusName}</td>`;
+                            }
+                            else if (qcStatus == "N") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${item.qcStatusName}" style="max-width: 150;"><i style="color: red; font-weight: 600;" class="fas fa-times-circle"></i> ${qcStatusName}</td>`;
+                            }
+                            else if (qcStatus == "A") {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${item.qcStatusName}" style="max-width: 150;"><i style="color: #5549b5; font-weight: 600;" class="fas fa-exclamation-circle"></i> ${qcStatusName}</td>`;
+                            }
+                            else {
+                                innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${item.qcStatusName}" style="max-width: 150;">${qcStatusName}</td>`;
+                            }
+
+                            return innerHtml;
+                        }
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $(".dropdown-toggle").off("click").on("click", function () {
+                let soId = $(this).data("so-id");
+
+                if ($(`.dropdown-menu[data-so-id='${soId}']`).hasClass("show")) {
+                    $(".dropdown-menu").removeClass("show");
+                } else {
+                    $(".dropdown-menu").removeClass("show");
+
+                    $(`.dropdown-menu[data-so-id='${soId}']`).addClass("show");
+                    $(`.dropdown-menu[data-so-id='${soId}']`).css({
+                        top: `${$(this).position().top + $(this).height() + 5}px`,
+                        left: `${$(this).position().left - $(this).width() + 38}px`
+                    });
+                }
+            });
+
+            $("body").off("click").on("click", function (e) {
+                if ($(".dropdown-menu").hasClass("show")) {
+                    if (!$(e.target).hasClass("dropdown-toggle")
+                        && !$(e.target).parents().hasClass("dropdown-toggle")) {
+                        $(".dropdown-menu").removeClass("show");
+                    }
+                }
+            });
+        }
+
+        function Edit@(itemName)(qcRecordId, checkQcMeasureData, modeId) {
+            $("#QcRecordId").val(qcRecordId ? qcRecordId : 0);
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            $("#txtGrErpFullNo@(itemName)").prop("readonly", false);
+            $(".input-group-append").show();
+
+            $("#txtCurrentFile@(itemName)").val("");
+            $("#txtQcRecordFile@(itemName)").val("");
+            $("#txtResolveFile@(itemName)").val("");
+            $("#txtGrErpFullNo@(itemName)").val("");
+            $("#txtRemark@(itemName)").val("");
+
+            resolveFileJson@(itemName).resolveFileInfo = [];
+
+            $(".qc-file-body").empty();
+
+            $("#txtGrDetailId@(itemName)").val("");
+            $("#txtGrDetailId@(itemName)").siblings(".help-block").hide();
+
+            $(".advanced-block").hide();
+
+            if (!isMobile) {
+                $("#cboSelectAllMachineNumber@(itemName)").select2({
+                    width: "25%"
+                });
+                $("#cboQcClassId@(itemName)").select2({
+                    width: "25%"
+                });
+            }
+            ComboBoxs.Default("#cboSelectAllMachineNumber@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { }, "", "NA", "", "MachineName", "MachineNumber");
+
+            ComboBoxs.Default("#cboQcClassId@(itemName)", "@Url.Action("GetQcClass", "QcDataManagement")", {}, "", "NA", "", "QcClassFullNo", "QcClassId");
+
+            checkQcMeasureData@(itemName) = "N";
+
+            $("#aQcDataDetail@(itemName)").click();
+
+            if (qcRecordId > 0) {
+                checkQcMeasureData@(itemName) = checkQcMeasureData
+                $("#txtGrErpFullNo@(itemName)").prop("readonly", true);
+                $(".input-group-append").hide();
+                let targetUrl = "@Url.Action("GetQcGoodsReceipt", "QcDataManagement")";
+                let postData = {
+                    "QcRecordId": qcRecordId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        defaultFileId@(itemName) = item.DefaultFileId;
+                        ExpandQcGrDetail(qcRecordId, item.GrErpPrefix + '-' + item.GrErpNo + "(" + item.GrSeq + ")", item.InputType, item.DefaultFileId, item.CheckQcMeasureData, item.MtlItemNo, item.GrMtlItemName, item.GrMtlItemSpec);
+                        $("#txtGrDetailId@(itemName)").siblings(".help-block").show();
+                        $("#txtGrDetailId@(itemName)").val(item.GrDetailId);
+                        $("#txtGrErpFullNo@(itemName)").val(item.GrErpPrefix + "-" + item.GrErpNo + "(" + item.GrSeq + ")");
+                        $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                        $("#desGrMtlItemName@(itemName)").html(item.MtlItemName);
+                        $("#desGrMtlItemSpec@(itemName)").html(item.MtlItemSpec.length > 0 ? item.MtlItemSpec.length : "無規格");
+                        $("#desSupplierFullNo@(itemName)").html(item.SupplierNo + ' ' + item.SupplierShortName);
+                        $("#desReceiptQty@(itemName)").html(item.ReceiptQty);
+                        $("#desLotNumberNo@(itemName)").html(item.LotNumber);
+                        $("#cboInputType@(itemName)").val(item.InputType);
+                        $("#txtRemark@(itemName)").html(item.Remark)
+
+                        if (item.QcRecordFile != null) {
+                            let qcRecordFileJson = JSON.parse(item.QcRecordFile);
+                            let qcRecordFileList = [];
+                            $.each(qcRecordFileJson.data, function (j, item2) {
+                                qcRecordFileList.push(item2.FileId);
+                            });
+                            $("#txtQcRecordFile@(itemName)").val(qcRecordFileList.toString());
+                        }
+
+                        if ((item.ResolveFile != null && item.ResolveFile != "") && item.ResolveFileJson == null) {
+                            let resolveFileJson = JSON.parse(item.ResolveFile);
+                            let resolveFileList = [];
+                            $.each(resolveFileJson.data, function (i, item) {
+                                resolveFileList.push(item.FileId);
+                            });
+                            $("#txtResolveFile@(itemName)").val(resolveFileList.toString());
+                            ReloadResoloveFileJson@(itemName)();
+                        }
+
+                        if (item.ResolveFileJson != null && item.ResolveFileJson != "") {
+                            resolveFileJson@(itemName) = JSON.parse(item.ResolveFileJson);
+                            let resolveFileList = [];
+                            $.each(resolveFileJson@(itemName).resolveFileInfo, function (i, item) {
+                                resolveFileList.push(item.FileId);
+                            });
+                            $("#txtResolveFile@(itemName)").val(resolveFileList.toString());
+                            ReloadResoloveFileJson@(itemName)();
+                        }
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            let popConfig = {
+                targetSelector: "#txtGrDetailId@(itemName)",
+                popFunction: "PopViewGrDetail",
+                objectGrDetailId: "#txtGrDetailId@(itemName)",
+                objectGrErpFullNo: "#txtGrErpFullNo@(itemName)",
+                objectMtlItemNo: "#desMtlItemNo@(itemName)",
+                objectGrMtlItemName: "#desGrMtlItemName@(itemName)",
+                objectGrMtlItemSpec: "#desGrMtlItemSpec@(itemName)",
+                objectSupplierFullNo: "#desSupplierFullNo@(itemName)",
+                objectReceiptQty: "#desReceiptQty@(itemName)",
+                objectLotNumberNo: "#desLotNumberNo@(itemName)",
+                objectTransferStatus: "",
+            };
+            InitPopView(popConfig);
+
+            let uploadConfig2 = {
+                fileSelector: "#fileQcRecordFile@(itemName)",
+                targetSelector: "#txtQcRecordFile@(itemName)",
+                required: false,
+                uploadPath: "/QcDataManagement/QcDataManagement",
+                maxFileCount: 999,
+                defaultFile: $("#txtQcRecordFile@(itemName)").val()
+            };
+            Suites.FileUpload(uploadConfig2);
+
+            let uploadConfig3 = {
+                fileSelector: "#fileResolveFile@(itemName)",
+                targetSelector: "#txtResolveFile@(itemName)",
+                required: false,
+                uploadPath: "/QcDataManagement/QcDataManagement",
+                maxFileCount: 999,
+                defaultFile: $("#txtResolveFile@(itemName)").val()
+            };
+            Suites.FileUpload(uploadConfig3);
+        }
+
+        function QueryGrDetail@(itemName)() {
+            let grErpFullNo = $("#txtGrErpFullNo@(itemName)").val();
+            if (grErpFullNo.indexOf("-") != -1 && grErpFullNo.indexOf("(") == -1) {
+                alert("請連同進貨單身序號一起輸入! EX: 3411-20240402001(0001)");
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("GetGrDetail", "GoodsReceipt")";
+
+            let postData = {
+                "GrErpFullNoWithSeq": grErpFullNo.trim()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#txtGrDetailId@(itemName)").val(item.GrDetailId);
+                        $("#txtGrErpFullNo@(itemName)").val(item.GrErpPrefix + "-" + item.GrErpNo + "(" + item.GrSeq + ")");
+                        $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                        $("#desGrMtlItemName@(itemName)").html(item.GrMtlItemName);
+                        $("#desGrMtlItemSpec@(itemName)").html(item.GrMtlItemSpec);
+                        $("#desSupplierFullNo@(itemName)").html(item.SupplierNo + ' ' + item.SupplierName);
+                        $("#desReceiptQty@(itemName)").html(item.ReceiptQty);
+                        $("#txtGrDetailId@(itemName)").siblings(".help-block").show();
+                    });
+                }
+                else {
+                    alert("查無進貨單資料!");
+                    ClearGrDetail@(itemName)();
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let QcRecordId = parseInt($("#QcRecordId").val());
+                if (QcRecordId <= 0) {
+                    let targetUrl = "@Url.Action("AddQcGoodsReceipt", "QcDataManagement")";
+                    let postData = {
+                        "GrDetailId": $("#txtGrDetailId@(itemName)").val(),
+                        "InputType": $("#cboInputType@(itemName)").val(),
+                        "QcRecordFile": $("#txtQcRecordFile@(itemName)").val(),
+                        "ResolveFile": $("#txtResolveFile@(itemName)").val(),
+                        "ResolveFileJson": JSON.stringify(resolveFileJson@(itemName)),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+                    if (data) {
+                        let qcRecordId;
+                        $.each(data.result, function (i, item) {
+                            qcRecordId = item.QcRecordId;
+                        });
+                        $("#QcRecordId").val(qcRecordId);
+                        let grErpFullNo = $("#txtgrErpFullNo@(itemName)").val();
+                        let qcTypeId = $("#cboQcTypeId@(itemName)").val();
+                        let inputType = $("#cboInputType@(itemName)").val();
+                        Edit@(itemName)(qcRecordId);
+                        ExpandQcDataDetail(qcRecordId, grErpFullNo, qcTypeId, inputType, defaultFileId@(itemName), "N");
+                    }
+                }
+                else {
+                    let targetUrl = "@Url.Action("UpdateQcGoodsReceipt", "QcDataManagement")";
+                    let postData = {
+                        "QcRecordId": QcRecordId,
+                        "GrDetailId": $("#txtGrDetailId@(itemName)").val(),
+                        "InputType": $("#cboInputType@(itemName)").val(),
+                        "QcRecordFile": $("#txtQcRecordFile@(itemName)").val(),
+                        "ResolveFile": $("#txtResolveFile@(itemName)").val(),
+                        "ResolveFileJson": JSON.stringify(resolveFileJson@(itemName)),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        let grErpFullNo = $("#txtgrErpFullNo@(itemName)").val();
+                        let qcTypeId = $("#cboQcTypeId@(itemName)").val();
+                        let inputType = $("#cboInputType@(itemName)").val();
+
+                        ExpandQcDataDetail(QcRecordId, grErpFullNo, qcTypeId, inputType, defaultFileId@(itemName), checkQcMeasureData@(itemName));
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(qcRecordId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteQcGoodsReceipt", "QcDataManagement")";
+                    let postData = {
+                        "QcRecordId": qcRecordId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function ExportExcel@(itemName)(qcRecordId, fileId, defaultFileId) {
+            dataLoadingCheck = false;
+            ResetSpreadsheetQcDataDetail();
+            InitDataQcDataDetail(qcRecordId);
+            setTimeout(function () {
+                spreadsheet.export.xlsx();
+            }, 250);
+        }
+
+        function PopModalPrint@(itemName)(qcRecordId, woErpFullNo, mtlItemNo, mtlItemName) {
+            $("#txtPrintQcRecordId@(itemName)").val(qcRecordId);
+            $("#desPrintWoErpFullNo@(itemName)").html(woErpFullNo);
+            $("#desPrintMtlItemNo@(itemName)").html(mtlItemNo);
+            $("#desPrintMtlItemName@(itemName)").html(mtlItemName);
+            $("#modalPrint@(itemName)").modal("show");
+        }
+
+        function Print@(itemName)() {
+            let QcRecordId = $("#txtPrintQcRecordId@(itemName)").val();
+            let LabelPrintMachine = $("#cboLabelPrintMachine@(itemName)").val();
+            let targetUrl = "@Url.Action("PrintQCLable", "PrintLabel")";
+            let postData = {
+                "QcRecordId": QcRecordId,
+                "PrintMachineName": LabelPrintMachine
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                $("#modalPrint@(itemName)").modal("hide");
+            }
+        }
+
+        function ResolveFile@(itemName)() {
+            let qcRecordId = $("#QcRecordId").val();
+            if (qcRecordId <= 0) {
+                alert("單據尚未建立完成，請先儲存後再進行解析!!");
+                return false;
+            }
+
+            let qcClassId = $("#cboQcClassId@(itemName)").val();
+            if (qcClassId.length <= 0) {
+                alert("量測產品類型不能為空!!");
+                return false;
+            }
+
+            let letterNoList = [];
+            let qcData =
+            {
+                data: [
+                    {
+                        "cell": "A1",
+                        "value": "序號",
+                        "css": "title-class"
+                    },
+                    {
+                        "cell": "B1",
+                        "value": "檢測項目"
+                    },
+                    {
+                        "cell": "C1",
+                        "value": "檢測備註"
+                    },
+                    {
+                        "cell": "D1",
+                        "value": "量測設備"
+                    },
+                    {
+                        "cell": "E1",
+                        "value": "設計值"
+                    },
+                    {
+                        "cell": "F1",
+                        "value": "上限"
+                    },
+                    {
+                        "cell": "G1",
+                        "value": "下限"
+                    },
+                    {
+                        "cell": "H1",
+                        "value": "Z軸"
+                    },
+                    {
+                        "cell": "I1",
+                        "value": "量測人員"
+                    },
+                    {
+                        "cell": "J1",
+                        "value": "量測工時(s)"
+                    },
+                ],
+                "styles": {
+                    "title-class": {
+                        "background": "#7d8083",
+                        "color": "#fff"
+                    },
+                    "design-value-class": {
+                        "color": "red"
+                    }
+                }
+            };
+
+            let result;
+            $.ajax({
+                url: "@Url.Action("ResolveFile", "QcDataManagement")",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    "QcRecordId": qcRecordId,
+                    "QcClassId": qcClassId,
+                    "ResolveFileJsonString": JSON.stringify(resolveFileJson@(itemName)),
+                    "ResolveType": "IQC"
+                },
+                async: true,  // 設置為非同步
+                beforeSend: function () {
+                    $('#loading').css("display", "block");
+                    $("body").css("overflow", "hidden");
+                },
+                success: function (data) {
+                    result = data;
+                    if (result.status == "success") {
+                        letterNoList = result.letterNo;
+                        Swal.fire({
+                            title: "解析數據成功!",
+                            text: "請檢查下方數據解析是否無誤。",
+                            icon: "success"
+                        });
+                    }
+                    else {
+                        alert(result.msg, 5000);
+                        return false;
+                    }
+
+                    //Header
+                    let startIndex = 11;
+                    let doubleTitle = 0;
+                    let count = 0;
+                    $.each(letterNoList, function (i, item) {
+                        let cell = "";
+
+                        if (i <= 15) {
+                            cell = String.fromCharCode(64 + startIndex + i) + "1";
+                        }
+                        else {
+                            if (count > 15) {
+                                count = 0;
+                                doubleTitle++;
+                            }
+                            else {
+                                cell = String.fromCharCode(64 + 1 + doubleTitle) + String.fromCharCode(64 + 1 + count) + "1";
+                                count++;
+                            }
+                        }
+
+                        let letterNo =
+                        {
+                            "cell": cell.toString(),
+                            "value": item,
+                            "format": "common"
+                        }
+                        qcData.data.push(letterNo);
+                    });
+
+                    //Body
+                    if (result.data.length > 0) {
+                        let row = 2;
+                        $.each(result.data, function (i, item) {
+
+                            let thisCellIndex = "";
+                            let hasValue = qcData.data.some(function (item2) {
+                                if (item2.value == item.QcItemNo) {
+                                    thisCellIndex = item2.cell.toString().match(/\d+/)[0].toString();
+                                }
+                                return item2.value == item.QcItemNo;
+                            });
+
+                            if (!hasValue) {
+                                let qcItemNo =
+                                {
+                                    "cell": "A" + row.toString(),
+                                    "value": item.QcItemNo
+                                }
+                                qcData.data.push(qcItemNo);
+
+                                let qcItemName =
+                                {
+                                    "cell": "B" + row.toString(),
+                                    "value": item.QcItemName
+                                }
+                                qcData.data.push(qcItemName);
+
+                                let qcItemDesc =
+                                {
+                                    "cell": "C" + row.toString(),
+                                    "value": item.QcItemDesc
+                                }
+                                qcData.data.push(qcItemDesc);
+
+                                let machineName =
+                                {
+                                    "cell": "D" + row.toString(),
+                                    "value": item.MachineName
+                                }
+                                qcData.data.push(machineName);
+
+                                let designValue =
+                                {
+                                    "cell": "E" + row.toString(),
+                                    "value": item.DesignValue,
+                                    "format": "common"
+                                }
+                                qcData.data.push(designValue);
+
+                                let upperTolerance =
+                                {
+                                    "cell": "F" + row.toString(),
+                                    "value": item.UpperTolerance,
+                                    "format": "common"
+                                }
+                                qcData.data.push(upperTolerance);
+
+                                let lowerTolerance =
+                                {
+                                    "cell": "G" + row.toString(),
+                                    "value": item.LowerTolerance,
+                                    "format": "common"
+                                }
+                                qcData.data.push(lowerTolerance);
+
+                                let zAxis =
+                                {
+                                    "cell": "H" + row.toString(),
+                                    "value": item.ZAxis,
+                                    "format": "common"
+                                }
+                                qcData.data.push(zAxis);
+
+                                let qcUser =
+                                {
+                                    "cell": "I" + row.toString(),
+                                    "value": item.UserNo
+                                }
+                                qcData.data.push(qcUser);
+
+                                row++;
+                            }
+
+                            let thisCellNo = "";
+                            $.each(qcData.data, function (k, item2) {
+                                let thisCell = item2.cell.toString();
+                                if (thisCell.length == 2 && thisCell.split('')[1] == "1") {
+                                    if (item2.value.toString() == item.LetteringNo) {
+                                        thisCellNo = thisCell.split('')[0].toString();
+                                        return false;
+                                    }
+                                }
+                                else if (thisCell.length == 3 && thisCell.split('')[2] == "1") {
+                                    if (item2.value.toString() == item.LetteringNo) {
+                                        thisCellNo = thisCell.split('')[0].toString() + thisCell.split('')[1].toString();
+                                        return false;
+                                    }
+                                }
+                            });
+
+                            //計算是否入規
+                            let valueResult = "";
+                            let thisMeasureValue = parseFloat(item.MeasureValue);
+                            let designValue = item.DesignValue != null ? parseFloat(item.DesignValue) : -999;
+                            let upperTolerance = item.UpperTolerance != null ? parseFloat(item.UpperTolerance) : 1;
+                            let lowerTolerance = item.LowerTolerance != null ? parseFloat(item.LowerTolerance) : -1;
+
+                            if (thisMeasureValue > (designValue + upperTolerance) || thisMeasureValue < (designValue + lowerTolerance)) {
+                                valueResult = "design-value-class";
+                            }
+                            let measureValue =
+                            {
+                                "cell": thisCellNo + `${thisCellIndex.length <= 0 ? (row - 1).toString() : thisCellIndex.toString()}`,
+                                "value": parseFloat(item.MeasureValue),
+                                "format": "common",
+                                "css": valueResult
+                            }
+                            qcData.data.push(measureValue);
+                        });
+                    }
+                    spreadsheet.parse(qcData);
+                    data = spreadsheet.serialize();
+
+                    $("button[data-dhx-id='SaveTempJson']").click();
+                },
+                error: function (error) {
+                    alert(result.msg);
+                    return false;
+                },
+                complete: function () {
+                    $('#loading').css("display", "none");
+                    $("body").css("overflow", "auto");
+                }
+            });
+
+            @*let targetUrl = "@Url.Action("ResolveFile", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": qcRecordId,
+                "QcClassId": qcClassId,
+                "ResolveFileJsonString": JSON.stringify(resolveFileJson@(itemName))
+            };
+
+            let result = DataAccess.Get(targetUrl, postData, false);
+
+            if (result.status == "success") {
+                letterNoList = result.letterNo;
+                Swal.fire({
+                    title: "解析數據成功!",
+                    text: "請檢查下方數據解析是否無誤。",
+                    icon: "success"
+                });
+            }
+            else {
+                alert(result.msg);
+                return false;
+            }*@
+        }
+
+        function ReloadResoloveFileJson@(itemName)() {
+            $(".qc-file-body").empty();
+
+            let fileIdList = $("#txtResolveFile@(itemName)").val();
+
+            if (fileIdList == "") {
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("GetFileInfo", "QcDataManagement")";
+            let postData = {
+                "FileIdList": fileIdList
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let checkFileAlive = false;
+                        $.each(resolveFileJson@(itemName).resolveFileInfo, function (j, item2) {
+                            if (item.FileId == item2.FileId) {
+                                checkFileAlive = true;
+                                return false;
+                            }
+                        });
+
+                        if (checkFileAlive == false) {
+                            let inputResolveFileInfo =
+                            {
+                                "FileId": item.FileId,
+                                "FileFullName": item.FileFullName,
+                                "MachineNumber": $("#cboSelectAllMachineNumber@(itemName)").val(),
+                                "UserNo": '@Session["UserNo"]',
+                                "QcClassId": $("#cboQcClassId@(itemName)").val(),
+                                "AllMachineNumber": $("#cboSelectAllMachineNumber@(itemName)").val()
+                            };
+                            resolveFileJson@(itemName).resolveFileInfo.push(inputResolveFileInfo);
+                        }
+                    });
+                }
+            }
+
+            $.each(resolveFileJson@(itemName).resolveFileInfo, function (j, item2) {
+                if (fileIdList.indexOf(item2.FileId) == -1) {
+                    resolveFileJson@(itemName).resolveFileInfo.splice(j, 1);
+                }
+            });
+
+            let innerHtml = "";
+            $.each(resolveFileJson@(itemName).resolveFileInfo, function (i, item) {
+                $("#cboQcClassId@(itemName)").val(item.QcClassId);
+                $("#cboSelectAllMachineNumber@(itemName)").val(item.AllMachineNumber);
+
+                innerHtml += `<div class="qc-file-item">
+                                <input type="hidden" id="txtResolveFileId@(itemName)${item.FileId}" value="${item.FileId}">
+                                <div class="item-file">
+                                    <input class="qc-file-check-box" data-file-id="${item.FileId}" type="checkbox"/>
+                                    <p>檔案名稱: ${item.FileFullName}</p>
+                                </div>
+                                <div class="parameter-bar">
+                                    <div class="qc-machine">
+                                        ${GetMachineNumberCbo@(itemName)(`${item.FileId}`, `${item.MachineNumber}`)}
+                                    </div>
+                                    <div style="width: 100%" class="effective-diameter-r1">
+                                        <input type="number" data-file-id="${item.FileId}" data-eff-type="EffectiveDiameterR1" class="form-control" id="txtEffectiveDiameterR1@(itemName)${item.FileId}" placeholder="請輸入R1有效徑..." oninput="SettingEffectiveDiameter@(itemName)(this);" value="${item.EffectiveDiameterR1}" />
+                                    </div>
+                                    <div style="width: 100%" class="effective-diameter-r2">
+                                        <input type="number" data-file-id="${item.FileId}" data-eff-type="EffectiveDiameterR2" class="form-control" id="txtEffectiveDiameterR2@(itemName)${item.FileId}" placeholder="請輸入R2有效徑..." oninput="SettingEffectiveDiameter@(itemName)(this);" value="${item.EffectiveDiameterR2}" />
+                                    </div>
+                                </div>
+                              </div>`;
+
+                function GetMachineNumberCbo@(itemName)(fileId, machineNumber) {
+                    let innerHtml = "";
+                    innerHtml += `<select class="form-control qmm-detail" data-file-id="${fileId}" id="cboQmmDetail@(itemName)${fileId}" onchange="ChangeMachineNumber@(itemName)(this)">
+                                    <option value="">請選擇</option>`;
+                    $.each(qmmDetailJson@(itemName).qmmDetailInfo, function (i, item) {
+                        innerHtml += `<option value="${item.MachineNumber}" ${item.MachineNumber == machineNumber ? `selected` : ``}>${item.MachineName}</option>`;
+                    });
+                    innerHtml += `</select>`;
+
+                    return innerHtml;
+                }
+            });
+            $(".qc-file-body").html(innerHtml);
+
+            if (!isMobile) {
+                $.each($(".qmm-detail[data-file-id]"), function (i, item) {
+                    let fileId = $(this).data("file-id");
+                    $(`#cboQmmDetail@(itemName)${fileId}`).select2({
+                        width: "100%"
+                    });
+                });
+            }
+        }
+
+        function SaveResolveFileJson@(itemName)() {
+            let targetUrl = "@Url.Action("UpdateResolveFileJson", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": QcRecordId,
+                "ResolveFileJson": JSON.stringify(resolveFileJson@(itemName))
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+        }
+
+        function RemoveResolveFile@(itemName)() {
+            let qcRecordId = $("#QcRecordId").val();
+            if (qcRecordId <= 0) {
+                alert("尚無儲存的數據!!");
+                return false;
+            }
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteResolveFileJson", "QcDataManagement")";
+                    let postData = {
+                        "QcRecordId": qcRecordId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        resolveFileJson@(itemName).resolveFileInfo = [];
+                        ReloadResoloveFileJson@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function GetQcTypeSupportProcessFlag@(itemName)(qcTypeId) {
+            let targetUrl = "@Url.Action("GetQcType", "QcDataManagement")";
+            let postData = {
+                "QcTypeId": qcTypeId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let supportProcessFlag = "";
+            if (data) {
+                $.each(data.result, function (i, item) {
+                    supportProcessFlag = item.SupportProcessFlag;
+                });
+            }
+
+            return supportProcessFlag;
+        }
+
+        function SettingEffectiveDiameter@(itemName)(e) {
+            let fileId = $(e).data("file-id");
+            let effType = $(e).data("eff-type");
+            let value = $(e).val();
+
+            $.each(resolveFileJson@(itemName).resolveFileInfo, function (i, item) {
+                if (item.FileId == fileId) {
+                    resolveFileJson@(itemName).resolveFileInfo[i][effType] = value;
+                    return false;
+                }
+            });
+        }
+
+        function CheckGoods@(itemName)(status) {
+            let qcRecordId = $("#QcRecordId").val();
+            let targetUrl = "@Url.Action("UpdateCheckGoods", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": qcRecordId,
+                "CheckQcMeasureData": status,
+                "Disallowance": $("#txtDisallowance@(itemName)").val()
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                $("#modalReceiptGoods@(itemName)").modal("hide");
+                checkQcMeasureData@(itemName) = status;
+                checkQcMeasureDataQcDataDetail = status;
+            }
+        }
+
+        function ResetQmmDetailJson@(itemName)() {
+            qmmDetailJson@(itemName).qmmDetailInfo = [];
+
+            let targetUrl = "@Url.Action("GetQmmDetail", "QcDataManagement")";
+
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status = "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let inputQmmDetailInfo =
+                        {
+                            "MachineNumber": item.MachineNumber,
+                            "MachineName": item.MachineName
+                        }
+                        qmmDetailJson@(itemName).qmmDetailInfo.push(inputQmmDetailInfo);
+                    });
+                }
+            }
+        }
+
+        function CancelMeasurementUpload@(itemName)(QcRecordId) {
+            swal.fire({
+                titleText: "確認要取消上傳嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("CancelMeasurementUpload", "QcDataManagement")";
+                    let postData = {
+                        "QcRecordId": QcRecordId,
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function ClearGrDetailId@(itemName)() {
+            $("#txtGrDetailId@(itemName)").val("");
+            $("#txtGrErpFullNo@(itemName)").val("");
+            $("#txtGrDetailId@(itemName)").siblings(".help-block").hide();
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            ResetForm(objForm@(itemName));
+            //Query@(itemName)();
+            InitData@(itemName)(objPage@(itemName));
+            $("#modalReceiptGoods@(itemName)").modal("hide");
+        }
+</script>
+                                                )

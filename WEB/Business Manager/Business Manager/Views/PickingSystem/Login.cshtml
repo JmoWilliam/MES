@@ -1,0 +1,105 @@
+﻿@using Business_Manager.Helpers
+@using System.Web;
+@{
+    string itemName = "Login";
+    string itemNameText = "揀貨登入";
+
+    ViewBag.Title = itemNameText;
+
+    var preUrl = Url.Action("Index", "PickingSystem");
+
+    if (Request["preUrl"] != null)
+    {
+        preUrl = Uri.UnescapeDataString(Request["preUrl"]);
+    }
+
+    HttpCookie Login = Request.Cookies.Get("Login");
+
+    if (Login != null)
+    {
+        var redirectUrl = "http://" + Request.Url.Authority + preUrl;
+        var uri = new Uri(redirectUrl);
+        var newQueryString = HttpUtility.ParseQueryString(uri.Query);
+
+        string pagePathWithoutQueryString = uri.GetLeftPart(UriPartial.Path).Replace("http://", "").Replace(Request.Url.Authority, "");
+        redirectUrl = newQueryString.Count > 0 ? String.Format("{0}?{1}", pagePathWithoutQueryString, newQueryString) : pagePathWithoutQueryString;
+
+        Response.Redirect(redirectUrl);
+    }
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="body-bg">
+    <div class="wrapper wrap-index">
+        <div class="content-index">
+            <div class="logo">
+                <img src="@Url.Content("~/Content/images/logo.png")" />
+            </div>
+            <div class="login-form">
+                <form autocomplete="off" id="form@(itemName)" method="post">
+                    <div class="form-group row">
+                        <div class="col-12 mb-2">
+                            <label class="login-key">
+                                <input type="text" class="form-control" id="txtSystemKey@(itemName)" name="txtSystemKey@(itemName)" placeholder="請輸入系統金鑰" />
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-12 mb-5">
+                            <label class="login-account">
+                                <input type="text" class="form-control" id="txtAccount@(itemName)" name="txtAccount@(itemName)" placeholder="請輸入使用者編號" />
+                            </label>
+                        </div>
+                    </div>
+                </form>
+                <a class="nav-link mt-4 " onclick="Login@(itemName)()">登入</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(document).ready(function () {
+            $("#txtSystemKey@(itemName)").focus();
+
+            $("#txtSystemKey@(itemName)").keydown(DelayTrigger(function (e) {
+                if ($("#txtSystemKey@(itemName)").val()) {
+                    $("#txtAccount@(itemName)").focus();
+                }
+            }, 500));
+
+            $("#txtAccount@(itemName)").keydown(DelayTrigger(function (e) {
+                if ($("#txtSystemKey@(itemName)").val() && $("#txtAccount@(itemName)").val()) {
+                    Login@(itemName)();
+                }
+            }, 1000));
+
+            $("#form@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        });
+
+        function Login@(itemName)() {
+            let targetUrl = "@Url.Action("PickingLogin", "PickingSystem")";
+            let postData = {
+                "SystemKey": $("#txtSystemKey@(itemName)").val(),
+                "Account": $("#txtAccount@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status != "success") {
+                alert(data.msg);
+            } else {
+                location.reload();
+            }
+        }
+    </script>
+)

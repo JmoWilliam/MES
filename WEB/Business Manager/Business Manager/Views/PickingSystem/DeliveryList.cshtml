@@ -1,0 +1,590 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DeliveryList";
+    string itemNameText = "所有出貨單";
+
+    ViewBag.Title = itemNameText;
+
+    DateTime tempDateTime = default(DateTime);
+
+    string MtlItemType = Request["MtlItemType"];
+    string DoErpFullNo = Request["DoErpFullNo"];
+    string CartonBarcode = Request["CartonBarcode"];
+    string DeliveryStatus = Request["DeliveryStatus"] ?? "A";
+    string StartDate = DateTime.Now.ToString("yyyy-MM-dd");
+    if (Request["StartDate"] != null)
+    {
+        if (DateTime.TryParse(Request["StartDate"], out tempDateTime))
+        {
+            StartDate = Convert.ToDateTime(Request["StartDate"]).ToString("yyyy-MM-dd");
+        }
+    }
+    string EndDate = DateTime.Now.ToString("yyyy-MM-dd");
+    if (Request["EndDate"] != null)
+    {
+        if (DateTime.TryParse(Request["EndDate"], out tempDateTime))
+        {
+            EndDate = Convert.ToDateTime(Request["EndDate"]).ToString("yyyy-MM-dd");
+        }
+    }
+}
+
+@Html.Resource("css",
+    @<style>
+        .header-link-area {
+            color: #fff;
+            width: 20%;
+        }
+
+        .list-area {
+            margin: 0;
+        }
+
+        .number {
+            display: inline;
+        }
+
+        .label-checkbox {
+            width: 70%;
+            pointer-events: none;
+        }
+
+        .choose {
+            display: none;
+            padding: 5px;
+            font-weight: bold;
+            margin-top: 0.35rem;
+            color: #20A4F3;
+            border: 0;
+            background: none;
+        }
+
+            .choose:focus {
+                outline: none;
+            }
+
+        .status {
+            margin-bottom: 0.25rem;
+        }
+
+        .select-section .select-group .select-line .content input {
+            font-size: 15px;
+        }
+    </style>
+)
+
+<input type="hidden" id="deliveryStatus@(itemName)" value=""  />
+
+<header class="header-title">
+    <div class="header-link-area left-link">
+        <a href="javascript:history.back();">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+    </div>
+    <div class="title">@(itemNameText)</div>
+    <div class="header-link-area ">
+        <a href="@Url.Action("Index", "PickingSystem")">
+            <i class="fas fa-home-lg-alt"></i>
+        </a>
+    </div>
+</header>
+
+<div class="overlay"></div>
+
+<div class="wrapper wrap-shiplist">
+    <form autocomplete="off" id="queryForm@(itemName)">
+        <div class="filter-area">
+            <div class="filter-project">
+                <a class="link-type" data-link="type">
+                    <span class="filter-txt">產品類型</span>
+                    <span class="filter-arrow"></span>
+                </a>
+                <a class="link-number" data-link="number">
+                    <span class="filter-txt">出貨單號</span>
+                    <span class="filter-arrow"></span>
+                </a>
+                <a class="link-status" data-link="status">
+                    <span class="filter-txt">單據狀態</span>
+                    <span class="filter-arrow"></span>
+                </a>
+                <a class="link-date" data-link="date">
+                    <span class="filter-txt">出貨日期</span>
+                    <span class="filter-arrow"></span>
+                </a>
+            </div>
+            <div class="filter-subentry">
+                <div class="subentry subentry-type" data-link="type">
+                    <div class="select-section">
+                        <div class="select-group row row-cols-1 row-cols-sm-1 row-cols-md-1">
+                            <div class="select-line">
+                                <span>產品類別</span>
+                                <div class="content">
+                                    <select class="form-control" id="cboMtlItemTypeQ@(itemName)" name="cboMtlItemTypeQ@(itemName)"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-btn-block">
+                        <button type="button" class="btn btn-cancel" onclick="Reset@(itemName)('type')"><i class="fas fa-redo-alt"></i>&nbsp;重置</button>
+                        <button type="button" class="btn btn-main" onclick="Query@(itemName)()"><i class="fas fa-check"></i>&nbsp;確定</button>
+                    </div>
+                </div>
+                <div class="subentry subentry-number" data-link="number">
+                    <div class="select-section">
+                        <div class="select-group row row-cols-1 row-cols-sm-1 row-cols-md-1">
+                            <div class="select-line">
+                                <span>出貨單號</span>
+                                <div class="content">
+                                    <input type="text" class="form-control" id="txtDoErpFullNoQ@(itemName)" name="txtDoErpFullNoQ@(itemName)" placeholder="請輸入出貨單號" />
+                                </div>
+                            </div>
+                            <div class="select-line">
+                                <span>物流箱條碼</span>
+                                <div class="content">
+                                    <label class="input-barcode">
+                                        <input type="text" class="form-control" id="txtCartonBarcodeQ@(itemName)" name="txtCartonBarcodeQ@(itemName)" placeholder="請輸入物流箱條碼" />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-btn-block">
+                        <button type="button" class="btn btn-cancel" onclick="Reset@(itemName)('number')"><i class="fas fa-redo-alt"></i>&nbsp;重置</button>
+                        <button type="button" class="btn btn-main" onclick="Query@(itemName)()"><i class="fas fa-check"></i>&nbsp;確定</button>
+                    </div>
+                </div>
+                <div class="subentry subentry-status" data-link="status">
+                    <div class="select-section">
+                        <div class="swatch clearfix row row-cols-3 row-cols-sm-5 row-cols-md-5">
+                            <div class="col swatch-element plain m available">
+                                <input type="radio" id="AllDelivery@(itemName)" name="chkDeliveryStatusQ@(itemName)" value="A" checked />
+                                <label for="AllDelivery@(itemName)">不限</label>
+                            </div>
+                            <div class="col swatch-element plain l available">
+                                <input type="radio" id="Notpickedyet@(itemName)" name="chkDeliveryStatusQ@(itemName)" value="N" />
+                                <label for="Notpickedyet@(itemName)">未揀貨</label>
+                            </div>
+                            <div class="col swatch-element plain xl available">
+                                <input type="radio" id="Picking@(itemName)" name="chkDeliveryStatusQ@(itemName)" value="P" />
+                                <label for="Picking@(itemName)">揀貨中</label>
+                            </div>
+                            <div class="col swatch-element plain xxl available">
+                                <input type="radio" id="Readytoship@(itemName)" name="chkDeliveryStatusQ@(itemName)" value="R" />
+                                <label for="Readytoship@(itemName)">可出貨</label>
+                            </div>
+                            <div class="col swatch-element plain xxl available">
+                                <input type="radio" id="Shipped@(itemName)" name="chkDeliveryStatusQ@(itemName)" value="S" />
+                                <label for="Shipped@(itemName)">已出貨</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-btn-block">
+                        <button type="button" class="btn btn-cancel" onclick="Reset@(itemName)('status')"><i class="fas fa-redo-alt"></i>&nbsp;重置</button>
+                        <button type="button" class="btn btn-main" onclick="Query@(itemName)()"><i class="fas fa-check"></i>&nbsp;確定</button>
+                    </div>
+                </div>
+                <div class="subentry subentry-date" data-link="date">
+                    <div class="select-section">
+                        <div class="swatch clearfix row row-cols-3 row-cols-sm-3 row-cols-md-3">
+                            <div class="col swatch-element plain m available">
+                                <input type="radio" id="Yesterday@(itemName)" name="chkDeliveryDateQ@(itemName)" value="Y" />
+                                <label for="Yesterday@(itemName)">昨日</label>
+                            </div>
+                            <div class="col swatch-element plain l available">
+                                <input type="radio" id="Today@(itemName)" name="chkDeliveryDateQ@(itemName)" value="N" checked />
+                                <label for="Today@(itemName)">今日</label>
+                            </div>
+                            <div class="col swatch-element plain xl available">
+                                <input type="radio" id="Tomorrow@(itemName)" name="chkDeliveryDateQ@(itemName)" value="T" />
+                                <label for="Tomorrow@(itemName)">明日</label>
+                            </div>
+                        </div>
+                        <div class="select-group row row-cols-1 row-cols-sm-2 row-cols-md-2">
+                            <div class="select-line">
+                                <div class="content">
+                                    <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)" placeholder="請輸入開始日期" readonly />
+                                </div>
+                            </div>
+                            <div class="select-line">
+                                <div class="content">
+                                    <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)" placeholder="請輸入結束日期" readonly />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-btn-block">
+                        <button type="button" class="btn btn-cancel" onclick="Reset@(itemName)('date')"><i class="fas fa-redo-alt"></i>&nbsp;重置</button>
+                        <button type="button" class="btn btn-main" onclick="Query@(itemName)()"><i class="fas fa-check"></i>&nbsp;確定</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <p class="choose-block clearfix">
+        <button type="button" class="choose select-all" style="float: left;">全選</button>
+        <button type="button" class="choose un-select-all" style="float: left;">取消全選</button>
+        <button type="button" class="choose choose-delivery" onclick="Choose@(itemName)()" style="float: right;">選取出貨單</button>
+        <button type="button" class="choose cancel-delivery" onclick="Cancel@(itemName)()" style="float: right;">取消選取</button>
+    </p>
+    <div class="main-shiplist">
+        <div class="list-area" id="DeliveryOrder@(itemName)"></div>
+        <div class="pagination" id="page@(itemName)"></div>
+    </div>
+    <div class="btn-fixed" style="display: none;">
+        <div class="btn-block">
+            <a class="btn btn-warn picking-status return-picking" href="javascript:void(0);"><i class="far fa-angle-double-left"></i>&nbsp;回復揀貨</a>
+            <a class="btn btn-main picking-status confirm-delivery" href="javascript:void(0);">出貨確認&nbsp;<i class="far fa-angle-double-right"></i></a>
+            <a class="btn btn-warn btn-large picking-status return-delivery" href="javascript:void(0);"><i class="far fa-angle-double-left"></i>&nbsp;退回可出貨</a>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改 - 出貨單狀態</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="desConfirm@(itemName)"></div>
+            </div>
+            <div class="modal-footer">
+                <div class="btn-block">
+                    <button class="btn btn-main" onclick="Datas@(itemName).UpdateDeleiveryStatus@(itemName)()">確定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 5
+        };
+
+        $(document).ready(function () {
+            ComboBoxs.Default("#cboMtlItemTypeQ@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MtlItemType", "Condition": 2 }, "@(MtlItemType)", "CHOOSE", "全部", "TypeName", "TypeNo");
+
+            $("#txtDoErpFullNoQ@(itemName)").val("@(DoErpFullNo)");
+            $("#txtCartonBarcodeQ@(itemName)").val("@(CartonBarcode)");
+            $('input[name="chkDeliveryStatusQ@(itemName)"]').filter("[value='@(DeliveryStatus)']").prop('checked', true);
+
+            Suites.DatePicker("txtStartDateQ@(itemName)", new Date("@(StartDate)"));
+            Suites.DatePicker("txtEndDateQ@(itemName)", new Date("@(EndDate)"));
+
+            Query@(itemName)();
+
+            $("[class^=link-]").on("click", function () {
+                var alink = $(this).data("link");
+
+                if ($(`.filter-subentry .subentry.subentry-${alink}`).hasClass("d-flex")) {
+                    RemoveFilter@(itemName)();
+
+                } else {
+                    RemoveFilter@(itemName)();
+
+                    $(".overlay").show();
+                    $("body").addClass("hidden");
+                    $(`.filter-subentry .subentry.subentry-${alink}`).addClass("d-flex");
+                    $(`.link-${alink} .filter-arrow`).addClass("active");
+                }
+            });
+
+            $("body").off("click").on("click", function (e) {
+                if ($('.subentry').hasClass("d-flex")) {
+                    if (!$(e.target).hasClass("filter-txt")
+                        && !$(e.target).parents().hasClass("subentry")
+                        && !$(e.target).parents().hasClass("dhx_calendar")) {
+                        RemoveFilter@(itemName)();
+                    }
+                }
+            });
+
+            $("input[type='radio'][name='chkDeliveryDateQ@(itemName)']").click(function () {
+                let dateStatus = $(this).val();
+                let nowDate = new Date();
+
+                switch (dateStatus) {
+                    case "Y":
+                        nowDate.setDate(nowDate.getDate() - 1);
+                        break;
+                    case "N":
+                        nowDate.setDate(nowDate.getDate());
+                        break;
+                    case "T":
+                        nowDate.setDate(nowDate.getDate() + 1);
+                        break;
+                }
+
+                Suites.SetDateDropper("#txtStartDateQ@(itemName), #txtEndDateQ@(itemName)", nowDate);
+            });
+
+            $(".select-all").click(function () {
+                $("input[type='checkbox'][name='cbxDelivery@(itemName)']").not(":disabled").prop("checked", true);
+                $(".select-all").hide();
+                $(".un-select-all").show();
+            });
+
+            $(".un-select-all").click(function () {
+                $("input[type='checkbox'][name='cbxDelivery@(itemName)']").not(":disabled").prop("checked", false);
+                $(".select-all").show();
+                $(".un-select-all").hide();
+            });
+
+            $(".picking-status").click(function () {
+                let confirmHtml = ``;
+                $("#deliveryStatus@(itemName)").val("");
+
+                if ($("input[name='cbxDelivery@(itemName)']:checked").length > 0) {
+                    console.log($(this));
+                    switch (true) {
+                        case $(this).hasClass("return-picking"):
+                            confirmHtml += `<p class="modal-text">是否將以下出貨單回復為 <span class="main">【揀貨中】</span>？</p>`;
+                            $("#deliveryStatus@(itemName)").val("P");
+                            break;
+                        case $(this).hasClass("confirm-delivery"):
+                            confirmHtml += `<p class="modal-text">是否將以下出貨單設定為 <span class="main">【已出貨】</span>？</p>`;
+                            $("#deliveryStatus@(itemName)").val("S");
+                            break;
+                        case $(this).hasClass("return-delivery"):
+                            confirmHtml += `<p class="modal-text">是否將以下出貨單退回為 <span class="main">【可出貨】</span>？</p>`;
+                            $("#deliveryStatus@(itemName)").val("R");
+                            break;
+                    }
+
+                    $.each($("input[name='cbxDelivery@(itemName)']:checked"), function (i) {
+                        confirmHtml += `<a class="modal-quote">
+                                          <p>
+                                            <span class="heading">出貨單號</span>
+                                            <span class="detail">【${$(`input[name=txtDoErpFullNo@(itemName)][data-do-id=${$(this).val()}]`).val()}】</span>
+                                          </p>
+                                        </a>`;
+                    });
+
+                    $("#desConfirm@(itemName)").html(confirmHtml);
+
+                    $("#modal@(itemName)").modal({
+                        backdrop: "static",
+                        keyboard: false,
+                        show: true
+                    });
+                } else {
+                    alert("請至少選擇一筆出貨單!");
+                }
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            Datas@(itemName).GetDeliveryOrder@(itemName)(objPage@(itemName));
+
+            RemoveFilter@(itemName)();
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetDeliveryOrder@(itemName)", function (objPage) {
+                Cancel@(itemName)();
+                $(".choose-delivery").hide();
+
+                let innerHtml = '';
+                let pageCount = 0;
+
+                let targetUrl = "@Url.Action("GetDeliveryOrder", "PickingSystem")";
+                let postData = {
+                    "OrderBy": "",
+                    "PageIndex": (objPage.pageIndex + 1),
+                    "PageSize": objPage.pageSize,
+                    "TypeTwo": $("#cboMtlItemTypeQ@(itemName)").val(),
+                    "DoErpFullNo": $("#txtDoErpFullNoQ@(itemName)").val(),
+                    "CartonBarcode": $("#txtCartonBarcodeQ@(itemName)").val(),
+                    "Status": $("input[name='chkDeliveryStatusQ@(itemName)']:checked").val(),
+                    "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                    "EndDate": $("#txtEndDateQ@(itemName)").val()
+                };
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                window.history.replaceState(null, null,
+                    `?MtlItemType=${$("#cboMtlItemTypeQ@(itemName)").val()}&DoErpFullNo=${$("#txtDoErpFullNoQ@(itemName)").val()}&CartonBarcode=${$("#txtCartonBarcodeQ@(itemName)").val()}&DeliveryStatus=${$("input[name='chkDeliveryStatusQ@(itemName)']:checked").val()}&StartDate=${$("#txtStartDateQ@(itemName)").val()}&EndDate=${$("#txtEndDateQ@(itemName)").val()}`);
+
+                if (data.status == "success") {
+                    pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                    if (pageCount > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<div class="list-box item-element-box">
+                                            <div class="delivery-checkbox" style="display: none;">
+                                              <input type="checkbox" class="cb-element" id="cbxDelivery@(itemName)${item.DoId}" name="cbxDelivery@(itemName)" value="${item.DoId}" />
+                                              <input type="hidden" name="txtDoErpFullNo@(itemName)" data-do-id="${item.DoId}" value="${item.DoErpFullNo}" />
+                                              <span class="ele-control-indicator"></span>
+                                            </div>
+                                            <a class="delivery-link" href="@Url.Action("DeliveryDetail", "PickingSystem")?DoId=${item.DoId}">
+                                              <div class="list-title">
+                                                <label class="ele-control ele-control-checkbox distance-l label-checkbox" for="cbxDelivery@(itemName)${item.DoId}">
+                                                  <span class="number">
+                                                    <span style="display:block;">
+                                                      <span class="number-cell">${item.DoErpFullNo}</span>
+                                                    </span>
+                                                  </span>
+                                                </label>
+                                                ${item.Status == `N` ? `<div class="status status-warning" id="desDelivertStatus@(itemName)" name="desDelivertStatus@(itemName)">未揀貨</div>` : ``}
+                                                ${item.Status == `P` ? `<div class="status status-sub" id="desDelivertStatus@(itemName)" name="desDelivertStatus@(itemName)">揀貨中</div>` : ``}
+                                                ${item.Status == `R` ? `<div class="status status-main" id="desDelivertStatus@(itemName)" name="desDelivertStatus@(itemName)">可出貨</div>` : ``}
+                                                ${item.Status == `S` ? `<div class="status status-black" id="desDelivertStatus@(itemName)" name="desDelivertStatus@(itemName)">已出貨</div>` : ``}
+                                                <div class="expand">
+                                                  <i class="fas fa-chevron-right"></i>
+                                                </div>
+                                              </div>
+                                              <div class="list-content">
+                                                <ul class="list-item">
+                                                  <li>
+                                                    <span class="heading">客戶名稱</span>
+                                                    <span class="detail" id="desCustomerWithNo@(itemName)" name="desCustomerWithNo@(itemName)">${item.CustomerWithNo}</span>
+                                                  </li>
+                                                  <li>
+                                                    <span class="heading">送貨客戶</span>
+                                                    <span class="detail" id="desDcName@(itemName)" name="desDcName@(itemName)">${item.DcName}</span>
+                                                  </li>
+                                                  <li>
+                                                    <span class="heading">出貨日期</span>
+                                                    <span class="detail" id="desDoDate@(itemName)" name="desDoDate@(itemName)">${item.DoDate}</span>
+                                                  </li>
+                                                </ul>
+                                              </div>
+                                            </a>
+                                          </div>`;
+                        });
+
+                        ToggleStauts@(itemName)();
+                    } else {
+                        innerHtml += `<div class="list-box text-center p-3" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                      </div>`;
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#DeliveryOrder@(itemName)").html(innerHtml);
+                Pager("#page@(itemName)", pageCount, objPage, Datas@(itemName).GetDeliveryOrder@(itemName));
+            });
+
+            addMethod(this, "UpdateDeleiveryStatus@(itemName)", function () {
+                let doList = [];
+                $.each($("input[name='cbxDelivery@(itemName)']:checked"), function () {
+                    doList.push($(this).val());
+                });
+
+                if (doList.length > 0) {
+                    let targetUrl = "@Url.Action("UpdateDeleiveryStatus", "PickingSystem")";
+                    let postData = {
+                        "DoIds": doList.join(","),
+                        "Status": $("#deliveryStatus@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        $("#modal@(itemName)").modal('hide');
+                        Query@(itemName)();
+                    }
+                } else {
+                    alert("請選取出貨單!");
+                }
+            });
+        }
+
+        function Reset@(itemName)(block) {
+            switch (block) {
+                case "type":
+                    ResetElement("#cboMtlItemTypeQ@(itemName)");
+                    break;
+                case "number":
+                    ResetElement("#txtDoErpFullNoQ@(itemName)");
+                    ResetElement("#txtCartonBarcodeQ@(itemName)");
+                    break;
+                case "status":
+                    $('input[name="chkDeliveryStatusQ@(itemName)"]').prop('checked', false);
+                    $('input[name="chkDeliveryStatusQ@(itemName)"]').filter("[value='A']").prop('checked', true);
+                    break;
+                case "date":
+                    $('input[name="chkDeliveryDateQ@(itemName)"]').prop('checked', false);
+                    $('input[name="chkDeliveryDateQ@(itemName)"]').filter("[value='N']").prop('checked', true);
+                    break;
+            }
+
+            Query@(itemName)();
+        }
+
+        function RemoveFilter@(itemName)() {
+            $("body").removeClass("hidden");
+            $(".overlay").hide();
+            $(".filter-subentry .subentry").removeClass("d-flex");
+            $(".filter-arrow").removeClass("active");
+        }
+
+        function Choose@(itemName)() {
+            $(".choose-delivery").hide();
+            $(".cancel-delivery").show();
+            $(".select-all").show();
+            $(".delivery-checkbox").show();
+            $(".label-checkbox").css("padding-left", "40px");
+            $(".label-checkbox").css("pointer-events", "auto");
+            $(".expand").css("opacity", "0");
+            $(".btn-fixed").show();
+            $(".fix-circle").hide();
+
+            $("input[type='checkbox']").not(":disabled").prop("checked", false);
+
+            $(".delivery-link").on("click", function (e) {
+                var deliveryId = $(this).find("label").attr("for");
+                $('#' + deliveryId).click();
+                return false;
+            });
+        }
+
+        function Cancel@(itemName)() {
+            $(".choose-delivery").show();
+            $(".cancel-delivery").hide();
+            $(".select-all").hide();
+            $(".un-select-all").hide();
+            $(".delivery-checkbox").hide();
+            $(".label-checkbox").css("padding-left", "0px");
+            $(".label-checkbox").css("pointer-events", "none");
+            $(".expand").css("opacity", "100");
+            $(".btn-fixed").hide();
+            $(".fix-circle").show();
+
+            $(".delivery-link").off("click");
+        }
+
+        function ToggleStauts@(itemName)() {
+            let deliveryStatus = $("input[name='chkDeliveryStatusQ@(itemName)']:checked").val();
+
+            switch (deliveryStatus) {
+                case "R":
+                    $(".choose-delivery").show();
+
+                    $(".return-picking").show();
+                    $(".confirm-delivery").show();
+                    $(".return-delivery").hide();
+                    break;
+                case "S":
+                    $(".choose-delivery").show();
+
+                    $(".return-picking").hide();
+                    $(".confirm-delivery").hide();
+                    $(".return-delivery").show();
+                    break;
+                default:
+                    $(".choose-delivery").hide();
+                    break;
+            }
+        }
+    </script>
+)

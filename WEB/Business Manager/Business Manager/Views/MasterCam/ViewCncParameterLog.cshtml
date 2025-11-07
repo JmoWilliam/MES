@@ -1,0 +1,483 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewCncParameterLog";
+    string itemNameText = "編程參數設定";
+    string authority = ViewBag.authority;
+}
+<!--新增/編輯-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="row row-cols-xl-3">
+                            <div class="col-4">
+                                <h1 class="form-label col-12">機台刀具</h1>
+                                <form class="container" autocomplete="off" id="MachineToolEditForm@(itemName)"></form>
+                            </div>
+                            <div class="col-4">
+                                <h1 class="form-label col-12">主程式參數</h1>
+                                <form class="container" autocomplete="off" id="MainEditForm@(itemName)"></form>
+                            </div>
+                            <div class="col-4">
+                                <h1 class="form-label col-12">副程式參數</h1>
+                                <form class="container" autocomplete="off" id="SubEditForm@(itemName)"></form>
+                                @*<!--補正精車檔案上傳-->
+                                <div id="fileUpload" style="display:none">
+                                    <label class="col-12 col-form-label" for="txtTinishTurning">補正精車檔案上傳</label>
+                                    <div class="col-12">
+                                        <input type="file" id="fileTinishTurning" name="fileTinishTurning" />
+                                        <input type="hidden" id="txtTinishTurning" name="txtTinishTurning" />
+                                    </div>
+                                </div>
+                                <!--精D檔案上傳-->
+                                <div id="fileUpload-2" style="display:none">
+                                    <label class="col-12 col-form-label" for="txtTinishDcut">精D檔案上傳</label>
+                                    <div class="col-12">
+                                        <input type="file" id="fileTinishDcut" name="filetxtTinishDcut" />
+                                        <input type="hidden" id="txtTinishDcut" name="txttxtTinishDcut" />
+                                    </div>
+                                </div>*@
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-warning" onclick="Upload@(itemName)()"><i class="fas fa-save"></i>上傳參數</button>
+                <button type="button" class="btn btn-success" id="Save@(itemName)" onclick="Save@(itemName)()" style="display:none"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+@<script>
+    let ModeId@(itemName) = -1;
+    let ProcessId@(itemName) =-1
+    let CncParameterArray = [];  
+    let CncToolArray = [];  
+    let CncParameterCount = 0;
+
+    function MakeForm@(itemName)(CncProgId) { 
+        let MaininnerHtml = "", SubinnerHtml= "";
+        CncParameterArray = [];  
+        MaininnerHtml = '<div class="row"><div class="card  col-12"><div class="card-body">';
+        SubinnerHtml = '<div class="row"><div class="card  col-12"><div class="card-body">';       
+        let targetUrl = "@Url.Action("GetCncParameter", "MasterCam")";
+        let postData = {
+            "CncProgId": CncProgId,
+            "CncParamStatus": "P"
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {   
+                CncParameterCount = data
+                if (item.CncParamLevel == 'M') {
+                    CncParameterArray.push(item.CncParamNo);//新增 參數到陣列
+                    switch (item.CncParamType) {
+                        case "Text":
+                            MaininnerHtml += `
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="${item.CncParamNo}" value="${item.CncParamName}">${item.CncParamName}<span class="text-danger">*</span></label>
+                                    <div class="input-group col-12">
+                                        <input type="text" class="form-control" id="${item.CncParamNo}" value="${item.CncParamValue}"
+                                                data-CncParamName="${item.CncParamName}"
+                                                data-msg-required="請輸入${item.CncParamName}"
+                                                required placeholder="請輸入${item.CncParamName}"                                                
+                                                onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                            break
+                        case "Combobox":
+                            MaininnerHtml += `
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="${item.CncParamNo}">${item.CncParamName}<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="${item.CncParamNo}" name="cbo${item.CncParamNo}">`;
+                                    let RETURN_VALUE = JSON.parse(item.CncParamValue);
+                                    $.each(RETURN_VALUE.data, function (j, option) {
+                                        var ShowOption = option.ShowOption;
+                                        var OptionValue = option.OptionValue;
+                                        MaininnerHtml += "<option value='" + OptionValue + "'>" + ShowOption + "</option>";
+                                    });
+                                    MaininnerHtml += `</select>
+                                    </div>
+                                </div>
+                            </div>
+                            `;
+                            break
+                        case "File":
+                            $(`#${item.CncParamNo}`).show();
+                            break
+                        case "Radio": break
+                        case "Checkbox": break
+                        default: break
+                    }
+                } else if (item.CncParamLevel == 'S'){
+                    CncParameterArray.push(item.CncParamNo);//新增 參數到陣列
+                    switch (item.CncParamType) {
+                        case "Text":
+                            SubinnerHtml += `
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="${item.CncParamNo}" value="${item.CncParamName}">${item.CncParamName}<span class="text-danger">*</span></label>
+                                    <div class="input-group col-12">
+                                        <input type="text" class="form-control" id="${item.CncParamNo}" value="${item.CncParamValue}"
+                                                data-CncParamName="${item.CncParamName}"
+                                                data-msg-required="請輸入${item.CncParamName}" 
+                                                required placeholder="請輸入${item.CncParamName}" 
+                                                onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                            break
+                        case "Combobox":
+                            SubinnerHtml += `
+                            <div class="col-lg-12 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="${item.CncParamNo}">${item.CncParamName}<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="${item.CncParamNo}" name="cbo${item.CncParamNo}">`;
+                                let RETURN_VALUE = JSON.parse(item.CncParamValue);
+                                $.each(RETURN_VALUE.data, function (j, option) {
+                                    var ShowOption = option.ShowOption;
+                                    var OptionValue = option.OptionValue;
+                                    SubinnerHtml += "<option value='" + OptionValue + "'>" + ShowOption + "</option>";
+                                });
+                                SubinnerHtml += `</select>
+                                    </div>
+                                </div>
+                            </div>
+                            `;
+                            break
+                        case "File":
+                            $(`#${item.CncParamNo}`).show();
+                            break
+                        case "Radio": break
+                        case "Checkbox": break
+                        default: break
+                    }
+                }
+            });
+            MaininnerHtml += "</div></div></div>";
+            SubinnerHtml += "</div></div></div>";
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+        $("#MainEditForm@(itemName)").html(MaininnerHtml);
+        $("#SubEditForm@(itemName)").html(SubinnerHtml);
+
+        //let uploadConfig = {
+        //    fileSelector: "#fileTinishTurning",
+        //    targetSelector: "#txtTinishTurning",
+        //    required: false,
+        //    uploadPath: "/MasterCam/ViewCncParameterLog",
+        //    maxFileCount: 1,
+        //    defaultFile: $("#txtTinishTurning").val()
+        //};
+        //Suites.FileUpload(uploadConfig);
+
+        //let uploadConfig2 = {
+        //    fileSelector: "#fileTinishDcut",
+        //    targetSelector: "#txtTinishDcut",
+        //    required: false,
+        //    uploadPath: "/MasterCam/ViewCncParameterLog",
+        //    maxFileCount: 1,
+        //    defaultFile: $("#txtTinishDcut").val()
+        //};
+        //Suites.FileUpload(uploadConfig2);
+    }
+
+    function MakeFormMachineTool@(itemName)(CncProgId, MachineId) {    
+        let cboCncParamNoArray = [];
+        let targetUrl = "@Url.Action("GetCncParameter", "MasterCam")";
+        let postData = {
+            "CncProgId": CncProgId,
+            "CncParamStatus": "T",
+            "MachineId": MachineId
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            let MachineToolEditFormHtml = "<div class='row'>";
+            $.each(data.result, function (i, item) {
+                if (item.CncParamStatus == 'T' && item.CncParamLevel == 'S') {
+                    CncToolArray.push(item.CncParamNo);
+                    MachineToolEditFormHtml += `
+                    <div class='col-lg-12 col-md-12' >
+                        <div class='row'>
+                                <div class="col-lg-12 col-md-12">
+                                        <div class="form-group row">
+                                                <div class="card  col-12">
+                                                        <div class="card-header">
+                                                            <input type="hidden" name="KnifeCheck" value="${i}"/>
+                                                            <input type="hidden" id="CncParamStatus_${i}" value="${item.CncParamStatus}"/>
+                                                            <input type="hidden" id="CncParamNo_${i}" value="${item.CncParamNo}"/>
+                                                            <label class="form-label col-12" for="txt${item.CncParamNo}">
+                                                                ${ item.CncParamName}<span class="text-danger">*</span>
+                                                            </label>
+                                                                <div class="col-12">
+                                                                    <select class="form-control" id="cboNCKnifeInfo_${i}" name="cboToolMachine" data-CncParamName="${item.CncParamName}"></select>
+                                                                </div>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <label class="form-label col-12" for="txtMachineLocation">刀座<span class="text-danger">*</span></label>
+                                                            <div class="col-12">
+                                                                <input type="text" class="form-control" id="txtMachineLocation_${i}" name="txtMachineLocation"
+                                                                        placeholder="請輸入刀座" data-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                                            </div>
+                                                            <label class="form-label col-12" for="txtMo">刀R<span class="text-danger">*</span></label>
+                                                            <div class="col-12">                                                               
+                                                                <input type="text" class="form-control" id="txtToolR_${i}" name="txtToolR"
+                                                                        placeholder="請輸入刀R" data-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                                            </div>
+                                                            <label class="form-label col-12" for="txtMo">內角<span class="text-danger">*</span></label>
+                                                            <div class="col-12">
+                                                                <input type="text" class="form-control" id="txtInclination_${i}" name="txtInclination"
+                                                                        placeholder="請輸入內角" data-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                                            </div>
+                                                            <label class="form-label col-12" for="txtMo">擺角<span class="text-danger">*</span></label>
+                                                            <div class="col-12">
+                                                                <input type="text" class="form-control" id="txtTilt_${i}" name="txtTilt"
+                                                                        placeholder="請輸入擺角" data-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                                            </div>
+                                                            <label class="form-label col-12" for="txtMo">傾角<span class="text-danger">*</span></label>
+                                                            <div class="col-12">
+                                                                <input type="text" class="form-control" id="txtVertical_Tilt_${i}" name="txtVertical_Tilt" value=0
+                                                                        placeholder="請輸入傾角" data-rule-required="true" onkeyup="this.value=this.value.replace(/[, ]/g,'')" />
+                                                            </div>
+                                                        </div>
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+                    </div>
+                    `;
+                    cboCncParamNoArray.push("cbo"+item.CncParamNo);
+                }
+            });
+            MachineToolEditFormHtml += '</div>';
+            $("#MachineToolEditForm@(itemName)").html(MachineToolEditFormHtml);
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+        GetMoProcessParameter($("#cboMoProcessCncProgramLog").val());
+        $.each(cboCncParamNoArray, function (i, item) {
+            if (!isMobile) {
+                $("#cboNCKnifeInfo_"+i).select2({
+                    width: "100%"
+                });
+            }
+            ComboBoxs.Default("#cboNCKnifeInfo_" + i, "@Url.Action("GetToolMachine", "MasterCam")", { MachineId: $("#cboProcessMachineCncProgramLog").val(),ModeId:ModeId@(itemName),ProcessId:ProcessId@(itemName)}, "", "ALL", "", "ToolModelName", "ToolId");
+        });
+
+        $("[id*='cboNCKnifeInfo_']").change(function () { 
+
+            var ID = $(this).attr("id").split("_")[1];           
+            let ToolId = $("#cboNCKnifeInfo_" + ID).val();           
+            let targetUrl = "@Url.Action("GetToolMachineParameter", "MasterCam")";
+            let postData = {
+                "ToolId": ToolId,
+                "ModeId":ModeId@(itemName),
+                "ProcessId":ProcessId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    switch (item.ParameterKey) { 
+                        case "TooLR":
+                            if (item.ParameterValue != 0) {
+                                $("#txtToolR_" + ID).val(item.ParameterValue);
+                            } else {
+                                $("#txtToolR_" + ID).val(0);
+                            }
+                        case "Inclination":
+                            if (item.ParameterValue != 0) {
+                                $("#txtInclination_" + ID).val(item.ParameterValue);
+                            } else {
+                                $("#txtInclination_" + ID).val(0);
+                            }
+                        case "VERTICAL_TILT":
+                            if (item.ParameterValue != 0) {
+                                $("#txtVertical_Tilt_" + ID).val(item.ParameterValue);
+                            } else {
+                                $("#txtVertical_Tilt_" + ID).val(0);
+                            }
+                        case "TILT":
+                            if (item.ParameterValue != 0) {
+                                $("#txtTilt_" + ID).val(item.ParameterValue);
+                            } else {
+                                $("#txtTilt_" + ID).val(0);
+                            }
+                    }
+                    $("#txtMachineLocation_" + ID).val(item.MachineLocation);
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        });
+
+    }
+
+    function Upload@(itemName)() {
+
+        //新增Log id
+        let targetUrl = "@Url.Action("AddCncProgramLog", "MasterCam")";
+        let postData = {
+            "CncProgId": $("#cboCncProgramCncProgramLog").val(),
+            "MoProcessId": $("#cboMoProcessCncProgramLog").val(),
+            "MachineId": $("#cboProcessMachineCncProgramLog").val()
+        };
+        let data = DataAccess.EditContinued(targetUrl, postData, false);
+        if (data) {
+            $.each(data.result, function (i, item) {
+                cncProgLogId = item.CncProgLogId
+            });                
+        }
+        if (cncProgLogId != -1) {
+            //上傳前確認一次參數數量是否一致
+
+
+            //加工參數上傳           
+            for (var key = 0; key < CncParameterArray.length; key++) {
+                let k = CncParameterArray[key];                
+                let value = $("#" + k).val();
+                console.log(k + ":"+value);
+                targetUrl = "@Url.Action("AddCncProgramRequest", "MasterCam")";
+                postData = {
+                    "CncProgLogId": cncProgLogId,
+                    "RequestKey": k,
+                    "RequestValues": value
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status != "success") {
+                    alert(data.msg, "alert", 2);
+                }
+            }
+            let processJson2 = {
+                KNIFE_CONTEXT: []
+            };
+        
+            //刀具參數上傳
+            $("[name*='KnifeCheck']").each(function (e) {
+                var Id = $(this).val();
+                let txtMachineLocation = "#txtMachineLocation_" + Id;
+                let cncParamNo = "#CncParamNo_" + Id;
+                let INCLINATION = "#txtInclination_" + Id;
+                let KNIFE_R = "#txtToolR_" + Id;
+                let TILT = "#txtTilt_" + Id;
+                let VERTICAL_TILT = "#txtVertical_Tilt_" + Id;
+
+                let inputData =
+                {
+                    "NC_KNIFE_LOCATION": $("#MachineToolEditForm@(itemName)").find(txtMachineLocation).val(),
+                    "NC_KNIFE_REMARK_EN": $("#MachineToolEditForm@(itemName)").find(cncParamNo).val(),
+                    "INCLINATION": $("#MachineToolEditForm@(itemName)").find(INCLINATION).val(),
+                    "KNIFE_R": $("#MachineToolEditForm@(itemName)").find(KNIFE_R).val(),
+                    "TILT": $("#MachineToolEditForm@(itemName)").find(TILT).val(),
+                    "VERTICAL_TILT": $("#MachineToolEditForm@(itemName)").find(VERTICAL_TILT).val()
+                }            
+                processJson2.KNIFE_CONTEXT.push(inputData);//刀具資料集
+            }); 
+
+            //刀具資料集        
+            targetUrl = "@Url.Action("AddCncProgramRequest", "MasterCam")";
+            postData = {
+                "CncProgLogId": cncProgLogId,
+                "RequestKey": "KNIFE_CONTEXT", 
+                "RequestValues": JSON.stringify(processJson2)
+            };
+            data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status != "success") {
+                alert(data.msg, "alert", 2);
+            }
+
+            //設計圖上傳
+            if (JmoFileIdCncProgramLog != -1) {
+                targetUrl = "@Url.Action("AddCncProgramRequest", "MasterCam")";
+                postData = {
+                    "CncProgLogId": cncProgLogId,
+                    "RequestKey": "product_url",
+                    "RequestValues": JmoFileIdCncProgramLog
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status != "success") {
+                    alert(data.msg, "alert", 2);
+                } else {
+                    alert("編程參數 成功", "success", 2);
+                    $("#Save@(itemName)").show();
+                }
+            } else {
+                alert("查無JMO檔");
+            }
+        }
+    }
+
+    function Save@(itemName)() {   
+        $("#loaderWrpper").fadeIn();
+        let targetUrl = "@Url.Action("AddCncProgramResponsest", "MasterCam")";
+        let postData = {
+            "CncProgLogId": cncProgLogId,
+            "CncProgId": $("#cboCncProgramCncProgramLog").val(),
+            "MachineId": $("#cboProcessMachineCncProgramLog").val(),
+            "MoProcessId": $("#cboMoProcessCncProgramLog").val()
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            let tmSetting = {
+                format: "HH:mm",
+                autoswitch: true,
+                meridians: false,
+                mousewheel: false,
+                init_animation: "fadeIn",
+                setCurrentTime: false,
+                customClass: "custom-timedropper"
+            }
+            $(".td-wrap").remove();
+            $("#txtWorkBeginTimeViewCncProgramWorkLog").timeDropper(tmSetting);
+            $("#txtWorkEndTimeViewCncProgramWorkLog").timeDropper(tmSetting);
+
+            $("#CncParameterLog").removeClass("active");
+            $("#tabViewCncParameterLog").removeClass("active");
+            $("#CncProgramWorkLog").addClass("active");
+            $("#tabViewCncProgramWorkLog").addClass("active");
+            $("#ViewCncProgramWorkLog").click();
+            InitNcDataViewCncProgramWorkLog(cncProgLogId);
+            InitDxfDataViewCncProgramWorkLog(cncProgLogId);
+            InitMessageDataViewCncProgramWorkLog(cncProgLogId);
+
+
+        } else {
+            alert(data.msg, "alert", 2);
+        }
+        $("#loaderWrpper").fadeOut();
+    }
+
+    
+    function GetMoProcessParameter(MoProcessId) {
+        //#regine //取得生產模式與製程
+        let targetUrl = "@Url.Action("GetMoProcessParameter", "MasterCam")";
+        let postData = {
+            "MoProcessId": MoProcessId
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {                
+                ModeId@(itemName) = item.ModeId;
+                ProcessId@(itemName) = item.ProcessId;
+            });   
+        }else {
+            alert(data.msg, "alert", 0);
+        }        
+    }
+    //#endregine
+</script>
+)

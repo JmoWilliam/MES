@@ -1,0 +1,262 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewProcessForBatchExcel";
+    string itemNameText = "查看製程資訊(EXCEL模式使用)";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtProcessNoQ@(itemName)" name="txtContactQ@(itemName)"
+                                               placeholder="請輸入製程代碼" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtProcessNameQ@(itemName)" name="txtContactQ@(itemName)"
+                                               placeholder="請輸入製程名稱" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">代碼</th>
+                                        <th scope="col" style="min-width: 250px;">名稱</th>
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+        let modeId@(itemName);
+        let cell@(itemName);
+        let type@(itemName);
+        let spreadsheet@(itemName);
+
+        function Pop@(itemName)(modeId, cell, type, spreadsheet) {
+            modeId@(itemName) = modeId;
+            cell@(itemName) = cell;
+            type@(itemName) = type;
+            spreadsheet@(itemName) = spreadsheet;
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetModeProcess", "Routing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ProcessNo": $("#txtProcessNoQ@(itemName)").val(),
+                "ProcessName": $("#txtProcessNameQ@(itemName)").val(),
+                "ProdMode": modeId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        if (item.ParameterNo != null) return;
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessNo}" style="max-width: 150px;">${item.ProcessNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessName}" style="max-width: 150px;">${item.ProcessName}</td>
+                                        <td class="text-center">
+                                            ${JudgeType(`${item.ProcessId}`, `${item.ProcessNo}`, `${item.ProcessName}`)}
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            function JudgeType(processId, processNo, processName) {
+                let innerHtml = '';
+                switch (type@(itemName)) {
+                    case "radio":
+                        innerHtml += `<label class="control control-solid control-solid-info control--radio">
+                                        <input type="radio" data-process-no="${processNo}" data-process-name="${processName}" value="${processId}" />
+                                        <span class="control__indicator"></span>
+                                      </label>`;
+                        break;
+                    case "checkbox":
+                        innerHtml += `<label class="control control-solid control-solid-info control--checkbox">
+                                        <input type="checkbox" data-process-no="${processNo}" data-process-name="${processName}" value="${processId}" />
+                                        <span class="control__indicator"></span>
+                                      </label>`;
+                        break;
+                }
+
+                return innerHtml;
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            switch (type@(itemName)){
+                case "radio":
+                    $(".radio-mode").show();
+                    $(".checkbox-mode").hide();
+
+                    $("input[type='radio']").click(function () {
+                        if ("[data-process-no][data-process-name]:checked") {
+                            let processId = $(this).val();
+                            let processNo = $(this).data("process-no");
+                            let processName = $(this).data("process-name");
+                            if (processId) {
+                                let cellNo = cell@(itemName).substring(1);
+                                spreadsheet@(itemName).setValue("A" + cellNo, processNo);
+                                spreadsheet@(itemName).setValue("B" + cellNo, processName);
+                                spreadsheet@(itemName).setValue("C" + cellNo, processName);
+                                spreadsheet@(itemName).setValue("D" + cellNo, "");
+                                spreadsheet@(itemName).setValue("E" + cellNo, "N");
+                                spreadsheet@(itemName).setValue("F" + cellNo, "");
+                                spreadsheet@(itemName).setValue("G" + cellNo, "Y");
+                                spreadsheet@(itemName).setValue("H" + cellNo, "Y");
+                            }
+                        }
+
+                        ReloadRoutingInfo();
+                        ResetRoutingInfo();
+                        Close@(itemName)();
+                    });
+                    break;
+                case "checkbox":
+                    $(".radio-mode").hide();
+                    $(".checkbox-mode").show();
+
+                    $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                        if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                            $("input[type='checkbox'][data-process-no][data-process-name]").not(":disabled").prop("checked", true);
+                        } else {
+                            $("input[type='checkbox'][data-process-no][data-process-name]").not(":disabled").prop("checked", false);
+                        }
+                    });
+                    break;
+            }
+        }
+
+        function Save@(itemName)() {
+            ReloadRoutingInfo();
+
+            if ($("input[type='checkbox'][data-process-no][data-process-name]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-process-no][data-process-name]:checked"), function (i) {
+                    let maxSortNumber = 1;
+
+                    let maxSortItem = routingProcessJson.routingProcessInfo.reduce((maxItem, currentItem) => {
+                        return currentItem.SortNumber > maxItem.SortNumber ? currentItem : maxItem;
+                    }, routingProcessJson.routingProcessInfo[0]);
+
+                    if (maxSortItem) {
+                        if (maxSortItem.SortNumber == null) {
+                            maxSortNumber = 1;
+                        }
+                        else {
+                            maxSortNumber = maxSortItem.SortNumber;
+                        }
+                    }
+
+                    let processNo = $(this).data("process-no");
+                    let processName = $(this).data("process-name");
+                    let processAlias = $(this).data("process-name");
+
+                    let inputInfo =
+                    {
+                        ProcessNo: processNo,
+                        ProcessName: processName,
+                        ProcessAlias: processAlias,
+                        SortNumber: maxSortNumber + 1,
+                        ProcessCheckStatus: "N",
+                        ProcessCheckType: "",
+                        DisplayStatus: "Y",
+                        NecessityStatus: "Y"
+                    };
+                    routingProcessJson.routingProcessInfo.push(inputInfo);
+                });
+            }
+
+            ResetRoutingInfo();
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+                )

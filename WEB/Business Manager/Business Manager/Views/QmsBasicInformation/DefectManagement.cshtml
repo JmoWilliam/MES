@@ -1,0 +1,431 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DefectManagement";
+    string itemNameText = "異常資料管理";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .treegrid-body {
+             min-height: 50vh;
+             width: 100%;
+         }
+
+         @@media only screen and (max-width: 1200px) {
+             .treegrid-body {
+                 min-height: 70vh;
+             }
+         }
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-1">
+                    <div class="col-12 col-sm-12 col-md-12">
+                        <div style="float: right">
+                            <a class="btn btn-info auth-add-group" href="javascript:PopViewAddNgGroup();"><i class="fas fa-plus"></i>新增群組</a>
+                            <a class="btn btn-info auth-add-class" href="javascript:PopViewAddNgClass();"><i class="fas fa-plus"></i>新增類別</a>
+                            <a class="btn btn-info auth-add-cause" href="javascript:PopViewAddNgCause();"><i class="fas fa-plus"></i>新增原因</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="custom-treegrid">
+                            <div class="treegrid-body" id="treegrid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewAddNgGroup")
+@Html.Partial("ViewAddNgClass")
+@Html.Partial("ViewAddNgCause")
+
+@Html.Resource("js",
+    @<script>
+        let config;
+        let dataset;
+        let treeGrid;
+        let departmentData = [];
+
+        let currentValue;
+
+        let currentFilterId = "";
+        let currentFilterValue = "";
+        let currentFilterType = "";
+
+        let inputEvent = document.createEvent("HTMLEvents");
+        inputEvent.initEvent("input", true, true);
+        let changeEvent = document.createEvent("HTMLEvents");
+        changeEvent.initEvent("change", true, true);
+
+        $(function () {
+            Query@(itemName)();
+            GetDepartment@(itemName)();
+            config = {
+                columns: [
+                    {
+                        width: 300,
+                        id: "name",
+                        header: [{ text: "名稱" }, { content: "inputFilter" }],
+                        resizable: true,
+                        editable: false,
+                    },
+                    {
+                        width: 100,
+                        id: "code",
+                        header: [{ text: "代碼" }, { content: "inputFilter" }],
+                        resizable: true,
+                        editable: true,
+                    },
+                    {
+                        width: 175,
+                        id: "call",
+                        header: [{ text: "名字" }, { content: "inputFilter" }],
+                        resizable: true,
+                        editable: true,
+                    },
+                    {
+                        width: 125,
+                        id: "status",
+                        header: [{ text: "狀態碼" }, { content: "selectFilter" }],
+                        resizable: true,
+                        editable: true,
+                        editorType: "combobox",
+                        options: ["Active", "Stop"],
+                        align: "center",
+                        htmlEnable: 1,
+                        template: function (text, row, col) {
+                            var innerHtml = "";
+                            if (text == "Active") {
+                                innerHtml = '<span class="dhx_demo-exam-grid__status" style="color: green;">' + text + '</span>';
+                            }
+
+                            if (text == "Stop") {
+                                innerHtml = '<span class="dhx_demo-exam-grid__status" style="color: red;">' + text + '</span>';
+                            }
+
+                            return innerHtml;
+                        }
+                    },
+                    {
+                        width: 200,
+                        id: "owner",
+                        header: [{ text: "權責單位" }, { content: "selectFilter" }],
+                        resizable: true,
+                        editable: true,
+                        editorType: "combobox",
+                        options: departmentData,
+                        align: "center",
+                        template: function (text, row, col) {
+                            return text ? text : "-";
+                        }
+                    },
+                    {
+                        width: 250,
+                        id: "reason",
+                        header: [{ text: "描述", align: "center" }, { content: "inputFilter" }],
+                        resizable: true,
+                        editable: true,
+                        align: "center",
+                        htmlEnable: true,
+                        tooltip: true,
+                    },
+                    {
+                        width: 100,
+                        id: "controls",
+                        sortable: 0,
+                        htmlEnable: 1,
+                        header: [{ text: "操作", rowspan: 2, align: "center" }],
+                        resizable: true,
+                        editable: false,
+                        align: "center",
+                        template: function (text, row, col) {
+                            return '<div class="dhx_demo-exam-grid__controls"><a class="active-link dhx_button auth-delete"><i class="fas fa-trash-alt gantt_grid_fa-delete"></i></a></div>'
+                        }
+                    },
+                ],
+                rowCss: function (row) {
+                    let cssclass = "";
+
+                    test(row.id);
+
+                    return cssclass;
+
+                    function test(str) {
+                        switch (true) {
+                            case /NgGroup/.test(str):
+                                cssclass = "group";
+                                break;
+                            case /c/.test(str):
+                                cssclass = "";
+                                break;
+                            default:
+                                cssclass = "";
+                                break;
+                        }
+                    }
+                },
+                leftSplit: 1,
+                data: dataset,
+                editable: true,
+                dragMode: false,
+                keyNavigation: true,
+                selection: "row",
+                width: 1250
+            };
+
+            ResetTreeGrid@(itemName)();
+
+            $(window).resize(function () {
+                treeGrid.destructor();
+                ResetTreeGrid@(itemName)();
+            });
+        })
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let targetUrl = "@Url.Action("GetDefect", "QmsBasicInformation")";
+            let data = DataAccess.Get(targetUrl, "", false);
+            if (data.status == "success") {
+                dataset = data.result["dataset"];
+            }
+        }
+
+        function ResetTreeGrid@(itemName)(id, parent) {
+            config.data = dataset;
+            treeGrid = new dhx.TreeGrid("treegrid", config);
+            treeGrid.collapseAll();/*收合*/
+
+            //展開上次修改位置
+            if (id) TreeGridExpand@(itemName)(id, parent);
+
+            //恢復搜尋欄
+            if (currentFilterId != "") RecoveryFilter@(itemName)();
+
+            //初始化監聽器
+            InitializationEvents@(itemName)();
+        }
+
+        function TreeGridExpand@(itemName)(id, parent) {
+            if (id.indexOf('NgGroup') == -1) {
+                setTimeout(function () {
+                    treeGrid.scrollTo(parent, "name");
+                }, 500)
+                if (id.indexOf('NgClass') != -1) {
+                    treeGrid.expand(parent);
+                }
+                else {
+                    let key;
+                    $.each(dataset, function (i, item) {
+                        if (item.id == parent) {
+                            key = item.parent;
+                            return false;
+                        }
+                    });
+                    treeGrid.expand(key);
+                    treeGrid.expand(parent);
+                }
+            }
+            else {
+                setTimeout(function () {
+                    try {
+                        treeGrid.scrollTo(id, "name");
+                    }
+                    catch{ }
+                }, 500);
+            }
+        }
+
+        function RecoveryFilter@(itemName)() {
+            setTimeout(function () {
+                var headerFilter = treeGrid.getHeaderFilter(currentFilterId);
+                switch (currentFilterType) {
+                    case "input":
+                        var element = headerFilter.querySelector("input");
+                        $("#" + element.id + "").val(currentFilterValue);
+                        element.dispatchEvent(inputEvent);
+                    case "select":
+                        //...
+                }
+            }, 600);
+        }
+
+        function InitializationEvents@(itemName)() {
+            treeGrid.events.on("cellClick", function (row, column, event) {
+                if ($(event.target).hasClass("auth-delete") || $(event.target).parent().hasClass("auth-delete")) {
+                    Delete@(itemName)(row);
+                }
+            });
+
+            treeGrid.events.on("cellDblClick", function (row, column, e) {
+                let clickId = row.id
+                let parent = row.parent;
+                if (column.id == "owner") {
+                    if (clickId.indexOf('NgCause') == -1) {
+                        Return@(itemName)(clickId, parent);
+                    }
+                }
+            });
+
+            treeGrid.events.on("beforeEditEnd", function (value, row, column) {
+                columnId = column.id;
+                currentValue = row[columnId];
+            });
+
+            treeGrid.events.on("afterEditEnd", function (value, row, column) {
+                if (currentValue == value) {
+                    return false;
+                }
+                Save@(itemName)(row, value);
+            });
+
+            treeGrid.events.on("filterChange", function (value, colId, filter) {
+                currentFilterType = filter.split("Filter")[0];
+                currentFilterId = colId;
+                currentFilterValue = value;
+            });
+        }
+
+        function GetDepartment@(itemName)() {
+            let targetUrl = "@Url.Action("GetDepartment", "BasicInformation")";
+            let postData = {
+                "Status": "A"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                departmentData = [];
+                $.each(data.result, function (i, item) {
+                    departmentData.push(item.DepartmentWithNo);
+                });
+            }
+        }
+
+        function Save@(itemName)(editJson, editData,id) {
+            let postData;
+            let targetUrl;
+            let editId = editJson.id;
+            let parent = editJson.parent;
+
+            let Status = "";
+            if (editJson.status == "Active") Status = "A";
+            else Status = "S";
+
+            let DepartmentNo = editJson.owner.split('_')[0];
+
+            if (editId.indexOf("NgGroup") != -1) {
+                let GroupId = editId.split('NgGroup')[1];
+                targetUrl = "@Url.Action("UpdateNgGroup", "QmsBasicInformation")";
+                postData = {
+                    "GroupId": GroupId,
+                    "GroupNo": editJson.code,
+                    "GroupName": editJson.call,
+                    "GroupDesc": editJson.reason,
+                    "Status": Status
+                };
+            }
+            else if (editId.indexOf("NgClass") != -1) {
+                var ClassId = editId.split('NgClass')[1];
+                targetUrl = "@Url.Action("UpdateNgClass", "QmsBasicInformation")";
+                postData = {
+                    "GroupId": editJson.parent.split('NgGroup')[1],
+                    "ClassId": ClassId,
+                    "ClassNo": editJson.code,
+                    "ClassName": editJson.call,
+                    "ClassDesc": editJson.reason,
+                    "Status": Status
+                };
+            }
+            else if (editId.indexOf("NgCause") != -1) {
+                var CauseId = editId.split('NgCause')[1];
+                targetUrl = "@Url.Action("UpdateNgCause", "QmsBasicInformation")";
+
+                postData = {
+                    "ClassId": editJson.parent.split('NgClass')[1],
+                    "CauseId": CauseId,
+                    "CauseNo": editJson.code,
+                    "CauseName": editJson.call,
+                    "CauseDesc": editJson.reason,
+                    "DepartmentNo": DepartmentNo,
+                    "Status": Status
+                };
+            }
+            DataAccess.Update(targetUrl, postData, false, true);
+            Return@(itemName)(editId, parent);
+        }
+
+        function Delete@(itemName)(deleteJson) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let deleteId = deleteJson.id;
+                    let deleteParent = deleteJson.parent;
+                    if (deleteId.indexOf('NgGroup') != -1) {
+                        let GroupId = deleteJson.id.split('NgGroup')[1];
+                        targetUrl = "@Url.Action("DeleteNgGroup", "QmsBasicInformation")";
+                        postData = {
+                            "GroupId": GroupId
+                        };
+                    }
+                    else if (deleteId.indexOf('NgClass') != -1) {
+                        let ClassId = deleteJson.id.split('NgClass')[1];
+                        targetUrl = "@Url.Action("DeleteNgClass", "QmsBasicInformation")";
+                        postData = {
+                            "ClassId": ClassId
+                        };
+                    }
+                    else if (deleteId.indexOf('NgCause') != -1) {
+                        let CauseId = deleteJson.id.split('NgCause')[1];
+                        targetUrl = "@Url.Action("DeleteNgCause", "QmsBasicInformation")";
+                        postData = {
+                            "CauseId": CauseId
+                        };
+                    }
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        ComboBoxs.Default("#cboNgGroupNoViewAddNgClass", "@Url.Action("GetNgGroup", "QmsBasicInformation")", {}, "", "CHOOSE", "", "NgGroupWithText", "GroupId");
+                        ComboBoxs.Default("#cboNgGroupNoViewAddNgCause", "@Url.Action("GetNgGroup", "QmsBasicInformation")", {}, "", "CHOOSE", "", "NgGroupWithText", "GroupId");
+                        ComboBoxs.Default("#cboNgClassNoViewAddNgCause", "@Url.Action("GetNgClass", "QmsBasicInformation")", { "GroupId": $("#cboNgGroupNo@(itemName)").val(), "Status": "A" }, "", "CHOOSE", "", "NgClassWithText", "ClassId");
+                        Return@(itemName)(deleteId,deleteParent);
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)(id, parent) {
+            treeGrid.destructor();
+            Query@(itemName)();
+            ResetTreeGrid@(itemName)(id, parent);
+        }
+    </script>
+        )

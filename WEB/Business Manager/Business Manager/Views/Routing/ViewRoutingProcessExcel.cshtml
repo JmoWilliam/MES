@@ -1,0 +1,325 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRoutingProcessExcel";
+    string itemNameText = "製程管理EXCEL模式";
+}
+
+@Html.Resource("css",
+    @<style>
+         .sp-container {
+             overflow: scroll;
+         }
+    </style>
+                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="sp-container">
+                    <select class="form-control" id="cboEditMode@(itemName)">
+                        <option value="Y">系統模式</option>
+                        <option value="N">自定義模式</option>
+                    </select>
+                    <div style="height: 750px; width: 100vw;" id="spreadsheet@(itemName)"></div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewProcessForBatchExcel")
+
+@Html.Resource("js",
+    @<script>
+        let routingId@(itemName);
+        let spreadsheet@(itemName);
+        let defaultCell@(itemName) = [];
+        let defaultDataset@(itemName) = `{"sheets":[{"name":"批次建立製程","data":[{"cell":"A1","css":"dhx_generated_class_u1725438317617","format":"text","value":"製程編號"},{"cell":"B1","css":"dhx_generated_class_u1725507135282","format":"text","value":"製程名稱"},{"cell":"C1","css":"dhx_generated_class_u1725438317619","format":"text","value":"製程別名"},{"cell":"D1","css":"dhx_generated_class_u1725438317620","format":"text","value":"製程順序"},{"cell":"E1","css":"dhx_generated_class_u1725438317621","format":"text","value":"支援工程檢"},{"cell":"F1","css":"dhx_generated_class_u1725438317622","format":"text","value":"工程檢頻率"},{"cell":"G1","css":"dhx_generated_class_u1725438317623","format":"text","value":"顯示在流程卡"},{"cell":"H1","css":"dhx_generated_class_u1725867493576","format":"text","value":"必要過站"}],"cols":[{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120},{"width":120}],"rows":[{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32},{"height":32}]}],"styles":{"dhx_generated_class_u1725438317617":{"background":"#FFCDD2","font-weight":"bold","white-space":"nowrap"},"dhx_generated_class_u1725507135282":{"white-space":"nowrap","background":"#F9E6AD"},"dhx_generated_class_u1725438317619":{"font-weight":"bold","background":"#BCE4CE","white-space":"nowrap"},"dhx_generated_class_u1725438317620":{"font-weight":"bold","background":"#BDF0E9","white-space":"nowrap"},"dhx_generated_class_u1725438317621":{"font-weight":"bold","background":"#B3E5FC","white-space":"nowrap"},"dhx_generated_class_u1725438317622":{"font-weight":"bold","background":"#AEC1FF","white-space":"nowrap"},"dhx_generated_class_u1725438317623":{"font-weight":"bold","background":"#C5C0DA","white-space":"nowrap"},"dhx_generated_class_u1725867493576":{"background":"#92E7DC"}},"formats":[{"name":"Common","id":"common","mask":"","example":"1500.31"},{"name":"Number","id":"number","mask":"#,##0.00","example":"1500.31"},{"name":"Percent","id":"percent","mask":"#,##0.00%","example":"15.0031"},{"name":"Currency","id":"currency","mask":"$#,##0.00","example":"1500.31"},{"name":"Date","id":"date","mask":"mm-dd-yy","example":"44490","dateFormat":"%d/%m/%Y"},{"name":"Time","id":"time","mask":"h:mm:ss am/pm","example":"0.5625","timeFormat":12},{"name":"Text","id":"text","mask":"","example":"some text"}]}`;
+        let routingProcessJson =
+        {
+            "routingProcessInfo": []
+        };
+
+        function Pop@(itemName)(RoutingId) {
+            routingId@(itemName) = RoutingId;
+
+            for (let i = 0; i < 26; i++) {
+                defaultCell@(itemName).push(String.fromCharCode(65 + i) + "1");
+            }
+
+            ResetSpreadsheet@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#spreadsheet@(itemName)").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("spreadsheet@(itemName)", {
+                menu: false,
+                //rowsCount: 10,
+                colsCount: 7,
+                exportModulePath: "https://bm.zy-tech.com.tw/Scripts/json2excel-master/worker.js",
+                importModulePath: "https://bm.zy-tech.com.tw/Scripts/excel2json-master/worker.js",
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-plus",
+                tooltip: "新增製程",
+                id: "AddProcess"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-arrow-alt-square-up",
+                tooltip: "上傳資料",
+                id: "Upload"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-sort-amount-down-alt",
+                tooltip: "順序整理",
+                id: "Sort"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-sync-alt",
+                tooltip: "重新載入",
+                id: "Reload"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-excel",
+                tooltip: "匯入EXCEL",
+                id: "Import"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-download",
+                tooltip: "匯出EXCEL",
+                id: "Export"
+            });
+
+            spreadsheet@(itemName).parse(defaultDataset@(itemName));
+
+            spreadsheet@(itemName).setFormat("A1:Z99", "text");
+
+            let processCheckStatusArray = ["Y", "N"];
+            let displayStatusArray = ["Y", "N"];
+            let necessityStatusArray = ["Y", "N"];
+            spreadsheet@(itemName).setValidation("E2:E99", processCheckStatusArray);
+            spreadsheet@(itemName).setValidation("G2:G99", displayStatusArray);
+            spreadsheet@(itemName).setValidation("H2:G99", necessityStatusArray);
+
+            let processCheckTypeArray = ["1", "2"];
+            spreadsheet@(itemName).setValidation("F2:F99", processCheckTypeArray);
+
+            spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                let editMode = $("#cboEditMode@(itemName)").val();
+                if (editMode == "Y" && ((cell.indexOf("A") != -1 && cell != "A1") || (cell.indexOf("B") != -1 && cell != "B1"))) {
+                    PopViewProcess@(itemName)('radio', cell);
+                }
+            });
+
+            spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                if (id == "AddProcess") {
+                    PopViewProcess@(itemName)('checkbox');
+                }
+                else if (id == "Upload") {
+                    Upload@(itemName)();
+                }
+                else if (id == "Sort") {
+                    ReloadRoutingInfo();
+                    ResetRoutingInfo();
+                }
+                else if (id == "Reload") {
+                    swal.fire({
+                        titleText: "確定要重整EXCEL嗎?\n這會導致目前資料遺失!!",
+                        text: "此動作無法復原，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            ResetSpreadsheet@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Import") {
+                    spreadsheet@(itemName).load("", "xlsx");
+                }
+                else if (id == "Export") {
+                    spreadsheet@(itemName).export.xlsx("batch-" + '@DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")');
+                }
+            });
+
+            spreadsheet@(itemName).events.on("afterAction", (actionName, config) => {
+                if (actionName === "groupAction") {
+                    spreadsheet@(itemName).sortCells("A2:Z99", -1);
+                    ReloadRoutingInfo();
+                    ResetRoutingInfo();
+                    return false;
+                }
+            });
+        }
+
+        function PopViewProcess@(itemName)(type, cell) {
+            PopViewProcessForBatchExcel(ProdMode, cell, type, spreadsheet@(itemName));
+        }
+
+        function ReloadRoutingInfo() {
+            routingProcessJson.routingProcessInfo = [];
+            let data = spreadsheet@(itemName).serialize().sheets[0].data;
+            let dataIndex = [];
+            $.each(data, function (i, item) {
+                if (defaultCell@(itemName).indexOf(item.cell) == -1) {
+                    initIndex = item.cell.substring(1);
+                    processNo = spreadsheet@(itemName).getValue("A" + initIndex.toString());
+                    if (processNo != null) {
+                        if (dataIndex.indexOf(initIndex) == -1) {
+                            dataIndex.push(initIndex);
+                        }
+                    }
+                    else {
+                        return false;
+                    }
+                }
+            });
+
+            $.each(dataIndex, function (i, item) {
+                let processNo = spreadsheet@(itemName).getValue("A" + item);
+                let processName = spreadsheet@(itemName).getValue("B" + item);
+                let processAlias = spreadsheet@(itemName).getValue("C" + item);
+                let sortNumber = spreadsheet@(itemName).getValue("D" + item);
+                let processCheckStatus = spreadsheet@(itemName).getValue("E" + item);
+                let processCheckType = spreadsheet@(itemName).getValue("F" + item);
+                let displayStatus = spreadsheet@(itemName).getValue("G" + item);
+                let necessityStatus = spreadsheet@(itemName).getValue("H" + item);
+
+                let inputInfo =
+                {
+                    ProcessNo: processNo,
+                    ProcessName: processName,
+                    ProcessAlias: processAlias,
+                    SortNumber: sortNumber,
+                    ProcessCheckStatus: processCheckStatus,
+                    ProcessCheckType: processCheckType,
+                    DisplayStatus: displayStatus,
+                    NecessityStatus: necessityStatus
+                };
+                routingProcessJson.routingProcessInfo.push(inputInfo);
+            });
+
+            routingProcessJson.routingProcessInfo.sort((a, b) => {
+                a.SortNumber - b.SortNumber
+                if (a.SortNumber == null && b.SortNumber == null) {
+                    return 0;
+                }
+                if (a.SortNumber == null) {
+                    return 1;
+                }
+                if (b.SortNumber == null) {
+                    return -1;
+                }
+
+                return a.SortNumber - b.SortNumber;
+            });
+        }
+
+        function ResetRoutingInfo() {
+            let initIndex = 2;
+            $.each(routingProcessJson.routingProcessInfo, function (i, item) {
+                spreadsheet@(itemName).setValue("A" + initIndex.toString(), item.ProcessNo);
+                spreadsheet@(itemName).setValue("B" + initIndex.toString(), item.ProcessName);
+                spreadsheet@(itemName).setValue("C" + initIndex.toString(), item.ProcessAlias);
+                spreadsheet@(itemName).setValue("D" + initIndex.toString(), i + 1);
+                spreadsheet@(itemName).setValue("E" + initIndex.toString(), item.ProcessCheckStatus);
+                spreadsheet@(itemName).setValue("F" + initIndex.toString(), item.ProcessCheckType);
+                spreadsheet@(itemName).setValue("G" + initIndex.toString(), item.DisplayStatus);
+                spreadsheet@(itemName).setValue("H" + initIndex.toString(), item.NecessityStatus);
+                initIndex++;
+            });
+        }
+
+        function Upload@(itemName)() {
+            swal.fire({
+                titleText: "上傳建立製程資料",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonText: "確認",
+                cancelButtonText: "取消"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ReloadRoutingInfo();
+                    ResetRoutingInfo();
+                    if (routingProcessJson.routingProcessInfo.length > 0) {
+                        let targetUrl = "@Url.Action("AddBatchRoutingProcess", "Routing")";
+                        let postData = {
+                            "RoutingId": routingId@(itemName),
+                            "UploadJson": JSON.stringify(routingProcessJson)
+                        };
+
+                        let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                        if (data) {
+                            Swal.fire(
+                                "批量新增成功", //標題
+                                "請確認資料是否正確!!", //訊息內容(可省略)
+                                "success",
+                            );
+
+                            if (data.result.length > 0) {
+                                ResetSpreadsheet@(itemName)();
+                                let initIndex = 2;
+                                $.each(data.result, function (i, item) {
+                                    spreadsheet@(itemName).setValue("A" + initIndex.toString(), item.ProcessNo);
+                                    spreadsheet@(itemName).setValue("B" + initIndex.toString(), item.ProcessName);
+                                    spreadsheet@(itemName).setValue("C" + initIndex.toString(), item.ProcessAlias);
+                                    spreadsheet@(itemName).setValue("D" + initIndex.toString(), item.SortNumber);
+                                    spreadsheet@(itemName).setValue("E" + initIndex.toString(), item.ProcessCheckStatus);
+                                    spreadsheet@(itemName).setValue("F" + initIndex.toString(), item.ProcessCheckType);
+                                    spreadsheet@(itemName).setValue("G" + initIndex.toString(), item.DisplayStatus);
+                                    spreadsheet@(itemName).setValue("H" + initIndex.toString(), item.NecessityStatus);
+                                    initIndex++;
+                                });
+                            }
+
+                            QueryRoutingProcess(routingId@(itemName));
+                            Close@(itemName)();
+                        }
+                    }
+                    else {
+                        alert("尚未維護任何資料!!", alert);
+                        return false;
+                    }
+                }
+            });
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+                        )

@@ -1,0 +1,158 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRdDesign";
+    string itemNameText = "研發設計圖資料";
+    string authority = ViewBag.authority;
+}
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="query@(itemName)">
+                    <div class="col-12">
+                        <div class="col-12">
+                            <form autocomplete="off" id="queryForm@(itemName)">
+                                <fieldset>
+                                    <div class="form-row align-items-center mb-2">
+                                        <div class="col-3">
+                                            <input class="form-control" id="txtCustomerMtlItemNoQ@(itemName)" placeholder="請輸入部番(客戶品號)" />
+                                        </div>
+                                        <div class="col-3">
+                                            <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </div>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">客戶品號(部番)</th>
+                                        <th scope="col" style="min-width: 200px;">客戶圖號</th>
+                                        <th scope="col" style="min-width: 175px;">客戶版次<code>(系統版次)</code></th>                                       
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success save-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 5
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+        $(document).ready(function () {
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)(MtlItemId) {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName), MtlItemId);
+        }
+
+        function InitData@(itemName)(objPage, MtlItemId) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetRdDesign", "Drawing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "CustomerMtlItemNo": $("#txtCustomerMtlItemNoQ@(itemName)").val(),
+                "MtlItemId": MtlItemId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-id="${item.DesignId}" value="${item.DesignId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtCustomerMtlItemNo@(itemName)" data-id="${item.DesignId}" value="${item.CustomerMtlItemNo}" />
+                                          <input type="hidden" name="txtCustomerDwgNo@(itemName)" data-id="${item.DesignId}" value="${item.CustomerDwgNo}" />
+                                          <input type="hidden" name="txtEdition@(itemName)" data-id="${item.DesignId}" value="${item.Edition}" />
+                                        </td>                                      
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CustomerMtlItemNo}" style="max-width: 200px;">${item.CustomerMtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CustomerDwgNo}" style="max-width: 200px;">${item.CustomerDwgNo}</td>
+                                        ${JudgeEdition(`${item.Edition}`, `${item.Version}`)}
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+                function JudgeEdition(edition, version) {
+                    let innerHtml = '';
+                    if (edition != "") {
+                        innerHtml += `<td style="max-width: 175px;">${edition}<code>(${version})</code></td>`;
+                    }
+                    else {
+                        innerHtml += `<td></td>`;
+                    }
+                    return innerHtml;
+                }
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-id]:checked") {
+                    let DesignId = $(this).data("id");
+                    let CustomerMtlItemNo = $(`input[name='txtCustomerMtlItemNo@(itemName)'][data-id='${DesignId}']`).val();
+                    let CustomerDwgNo = $(`input[name='txtCustomerDwgNo@(itemName)'][data-id='${DesignId}']`).val();
+                    let Edition = $(`input[name='txtEdition@(itemName)'][data-id='${DesignId}']`).val();
+
+                    //#region //出貨檢 - 品號圖面資訊
+                    $("#txtDesignIdQcNotice").val(DesignId);
+                    $("#desCustomerMtlItemNoQcNotice").html(CustomerMtlItemNo);
+                    $("#desCustomerDwgNoQcNotice").html(CustomerDwgNo);
+                    $("#desEditionQcNotice").html(Edition);
+                    $("#Design_info").show();
+                    //$("#RdDesignInfo").show();
+                    //#endregion
+                }
+                $("#modal@(itemName)").modal('hide');
+            });
+        }
+
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+        )

@@ -1,0 +1,398 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MtlPrinciple";
+    string itemNameText = "品號原則";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+        .row {
+            justify-content: center;
+        }
+
+        .col-12 {
+            margin-bottom: 10px;
+        }
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset id="data@(itemName)">
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPrincipleResult@(itemName)">編碼結果</label>
+                                    <div class="col-12">
+                                        <input id="txtPrincipleResult@(itemName)" type="text" class="form-control"
+                                               readonly="readonly" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let principleId;
+        let BuildId;
+        let ConditionId;
+
+        $(document).ready(function () {
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            InitData@(itemName)(1);
+        }
+
+        function InitData@(itemName)(principleId) {
+            let innerHtml = '';
+            let selectId = "";
+
+            let targetUrl = "@Url.Action("GetPrinciple", "PdmBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PrincipleId": principleId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    if (item.MtlPrincipleBuild != "null") {
+                        let mtlPrincipleBuildJson = JSON.parse(item.MtlPrincipleBuild);
+                        $.each(mtlPrincipleBuildJson.data, function (j, item2) {
+                            selectId = `cbo${item2.ElementNo}${item2.BuildId}@(itemName)`;
+                            innerHtml += `<div class="row">
+                                            <div class="col-lg-12 col-md-12 ">
+                                                <div class="form-group row">
+                                                    <label class="form-label col-12" for="cbo${item2.ElementNo}${item2.BuildId}@(itemName)">${item2.ElementName}</label>
+                                                    <div class="col-12">
+                                                        <select class="form-control"
+                                                            data-build-id="${item2.BuildId}" data-sort-number="${item2.SortNumber}" data-surfix="${item2.Surfix}" data-digits="${item2.Digits}"
+                                                            id="${selectId}" name="${selectId}"
+                                                            onchange="CheckCondition@(itemName)(this)">
+                                                                <option value="-1">請選擇${item2.ElementName}</option>`;
+
+                            $.each(item2.MtlPrincipleBuildData.data, function (k, item3) {
+                                innerHtml += `                  <option value="${item3.DataNo}">${item3.DataNo}-${item3.DataName}</option>`;
+                            });
+                                
+                            innerHtml += `              </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                          </div>`;
+
+                        });
+                    }
+                });
+                $("#data@(itemName)").append(innerHtml);
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $(`#${selectId}`).select2({
+                width: "100%"
+            });
+        }
+
+        function CheckCondition@(itemName)(e) {
+            let principleValue = $("#" + e.id).val();
+            let buildId = $(e).data("build-id");
+
+            let targetUrl = "@Url.Action("GetPrincipleCondition", "PdmBasicInformation")";
+            let postData = {
+                "BuildId": buildId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            let selectId = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        selectId = `cbo${item2.ElementNo}${item2.BuildId}@(itemName)`;
+                        if (data.result.length > 1 && item.Value == "none") {
+                            //需先選擇下一步要走哪個方向
+                            if (i == 0) {
+                                innerHtml += `<div class="row">
+                                                <div class="col-lg-12 col-md-12 ">
+                                                    <div class="form-group row">
+                                                        <label class="form-label col-12" for="cbo${item2.ElementNo}${item2.BuildId}@(itemName)">${item2.ElementName}</label>
+                                                        <div class="col-12">
+                                                            <select class="form-control"
+                                                                data-build-id="${item2.BuildId}"
+                                                                id="${selectId}" name="${selectId}"
+                                                                onchange="SetCondition@(itemName)(this)">
+                                                                    <option value="-1">請選擇路線</option>`;
+                            }
+
+                            innerHtml += `                          <option value="${item.ToPrinciple}">${item.ElementName}</option>`;
+
+                            if (i == data.result.length - 1) {
+                                innerHtml += `              </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                              </div>`;
+                            }
+                        }
+                        else if (item.Value == principleValue){
+                            //單純往下展下一個Principle
+                            InitData@(itemName)(item.ToPrinciple);
+                        }
+                    });
+                }
+                else {
+                   //沒有Condition狀況
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            @*if (value == -1) {
+                RemoveElement@(itemName)(selectId);
+                RemoveConditionElement@(itemName)(selectId);
+                return false;
+            }
+
+            let toPrinciple = $("#" + selectId + "").data("to-principle");
+
+            if (toPrinciple != null) {
+                RemoveElement@(itemName)(selectId);
+                RemoveConditionElement@(itemName)(selectId);
+            }
+
+            GetPrincipleResult@(itemName)(selectId);
+
+            let targetUrl = "@Url.Action("GetPrinciple", "PdmBasicInformation")";
+            let postData = {
+                "BuildId": $("#" + selectId + "").data("build-id"),
+                "Value": $("#" + selectId + "").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                let innerHtml = '';
+                if (data.result.length > 0) {
+                    if (data.result[0].TotalCount > 1) {
+                        $.each(data.result, function (i, item) {
+                            if (i == 0) {
+                                selectId = "cboCondition" + item.ElementNo + item.BuildId + '@(itemName)';
+                                innerHtml += `<div data-type="condition" data-sort-number="${item.SortNumber}" class="col-12">
+                                                <select class="form-control"  data-type="condition" data-to-principle="${item.ToPrinciple}" data-principle-id="${item.PrincipleId}" data-build-id="${item.BuildId}" data-sort-number="${item.SortNumber}" id="${selectId}" name="${selectId}" onchange="NextPrinciple('${selectId}')">
+                                                    <option value="-1">請選擇${item.ElementName}</option>`;
+                            }
+                            innerHtml += `<option value="${item.ToPrinciple}">${item.ConditionDesc}</option>`;
+                        });
+                        innerHtml += `</select>
+                                    </div>`;
+                        $("#data@(itemName)").append(innerHtml);
+                        $("#" + selectId + "").select2({
+                            width: "100%"
+                        });
+                    }
+                    else {
+                        NextPrinciple(selectId, data.result[0]["ToPrinciple"]);
+                    }
+                }
+            }*@
+        }
+
+        function NextPrinciple(selectId,toPrinciple) {
+            let value = $("#" + selectId + "").val();
+            if (value == -1) {
+                RemoveElement@(itemName)(selectId)
+                return false;
+            }
+
+            RemoveElement@(itemName)(selectId);
+
+            let targetUrl = "@Url.Action("GetPrinciple", "PdmBasicInformation")";
+            let principleId = 0;
+            if (toPrinciple) {
+                principleId = parseInt(toPrinciple);
+            }
+            else {
+                principleId = $("#" + selectId + "").val();
+            }
+            let postData = {
+                "OrderBy": "",
+                "PrincipleId": principleId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                console.log(data);
+                let dataNoArray = [];
+                let innerHtml = '';
+                let selectId;
+                let selectIdArray = [];
+                let buildIdArray = []; //用於判斷是否有重複的input
+                $.each(data.result, function (i, item) {
+                    if (item.DataId != -1) { //select
+                        if (i == 0) {
+                            selectId = "cbo" + item.ElementNo + item.BuildId + '@(itemName)';
+                            selectIdArray.push(selectId);
+                            innerHtml += '<div data-to-principle="' + item.ToPrinciple + '" data-sort-number="' + item.SortNumber + '" class="col-12">\
+                                            <select class="form-control" data-surfix="'+ item.Surfix + '" data-to-principle="' + item.ToPrinciple + '" data-principle-id="' + item.PrincipleId + '"\
+                                                data-build-id="' + item.BuildId + '" data-sort-number="' + item.SortNumber + '"\
+                                                id="' + selectId + '" name="cbo' + item.ElementNo + item.BuildId + '@(itemName)"\
+                                                onchange="CheckCondition@(itemName)(\'' + selectId + '\')">\
+                                                    <option value="-1">請選擇' + item.ElementName + '</option>';
+                        }
+                        if (dataNoArray.indexOf(item.DataNo) == -1) {
+                            innerHtml += '          <option value="' + item.DataNo + '">' + item.PrincipleWithText + '</option>';
+                            dataNoArray.push(item.DataNo);
+                        }
+                        if (i == data.result.length - 1 || data.result[i+1]["DataId"] == -1) {
+                            innerHtml += '  </select>\
+                                          </div>';
+                        }
+                    }
+                    else { //input
+                        if (buildIdArray.indexOf(item.BuildId) == -1) {
+                            selectId = "txt" + item.ElementNo + item.BuildId + '@(itemName)';
+                            innerHtml += '<div data-sort-number="' + item.SortNumber + '" class="col-12">\
+                                             <input type="text" data-surfix="'+ item.Surfix + '" data-principle-id="'+ item.PrincipleId + '" data-build-id="' + item.BuildId + '" data-condition-value="' + item.Value + '" data-sort-number="' + item.SortNumber + '" class="form-control" id="' + selectId + '" name="' + selectId + '"\
+                                               placeholder="請輸入' + item.ElementName + '(字數:' + item.Digits + ')"\
+                                               data-msg-required="' + item.ElementName + '" data-rule-required="true"\
+                                               data-msg-minlength="必須為 '+ item.Digits + ' 個字元" maxlength="' + item.Digits + '"\
+                                               minlength="' + item.Digits + '"\
+                                               onInput="CheckInputCondition(\'' + selectId + '\',\'' + item.SortNumber + '\')"/>\
+                                          </div>';
+                            if (item.Value == "none") {
+                                buildIdArray.push(item.BuildId);
+                            }
+                        }
+                    }
+                });
+                $("#data@(itemName)").append(innerHtml);
+
+                $.each(selectIdArray, function (j, item2) {
+                    $("#" + item2 + "").select2({
+                        width: "100%"
+                    });
+                });
+            }
+        }
+
+        let timer;
+        function CheckInputCondition(selectId,sortNumber) {
+            clearTimeout(timer)
+            timer = setTimeout(function () {
+                GetPrincipleResult@(itemName)(selectId);
+                if ($("#" + selectId + "").data("condition-value") == "none" && $("div[data-sort-number='" + sortNumber + "'][data-type='condition']").text() == "") {
+                    let targetUrl = "@Url.Action("GetPrinciple", "PdmBasicInformation")";
+                    let postData = {
+                        "BuildId": $("#" + selectId + "").data("build-id"),
+                    };
+
+                    let data = DataAccess.Get(targetUrl, postData, false);
+                    if (data.status == "success") {
+                        let innerHtml = '';
+                        if (data.result[0].TotalCount > 1) {
+                            $.each(data.result, function (i, item) {
+                                if (i == 0) {
+                                    selectId = "cboCondition" + item.ElementNo + item.BuildId + '@(itemName)';
+                                    innerHtml += '<div data-type="condition" data-sort-number="' + item.SortNumber + '" class="col-12">';
+                                    innerHtml += '<select class="form-control" data-type="condition" class="form-control" data-to-principle="' + item.ToPrinciple + '" data-principle-id="' + item.PrincipleId + '" data-build-id="' + item.BuildId + '" data-sort-number="' + item.SortNumber + '" id="' + selectId + '" name="' + selectId + '" onchange="NextPrinciple(\'' + selectId + '\')">';
+                                    innerHtml += '<option value="-1">請選擇' + item.ElementName + '</option>';
+                                }
+                                innerHtml += '<option value="' + item.ToPrinciple + '">' + item.ConditionDesc + '</option>';
+                            });
+                            innerHtml += '      </select>\
+                                        </div>';
+                            $("#data@(itemName)").append(innerHtml);
+                            $("#" + selectId + "").select2({
+                                width: "100%"
+                            });
+                        }
+                        else {
+                            NextPrinciple(selectId);
+                        }
+                    }
+                }
+            }, 500);
+        }
+
+        function RemoveElement@(itemName)(selectId) {
+            let sortNumber = $("#" + selectId + "").data("sort-number");
+            for (let i = sortNumber + 1; i <= 10; i++) {
+                let deleteElement = $("div[data-sort-number='" + i + "']").text();
+                if (typeof (deleteElement) != "undefined") {
+                    $("div[data-sort-number='" + i + "']").remove();
+                }
+                else {
+                    break;
+                }
+            }
+        }
+
+        function RemoveConditionElement@(itemName)(selectId) {
+            let sortNumber = $("#" + selectId + "").data("sort-number");
+            let deleteConditionElement = $("div[data-sort-number='" + sortNumber + "'][data-type='condition']").text();
+            if (typeof (deleteConditionElement) != "undefined") {
+                $("div[data-sort-number='" + sortNumber + "'][data-type='condition']").remove();
+            }
+        }
+
+        function GetPrincipleResult@(itemName)(selectId) {
+            let principleResult = "";
+            for (let i = 1; i <= 10; i++) {
+                let thisSelect = $("select[data-sort-number='" + i + "']");
+                let thisInput = $("input[data-sort-number='" + i + "']");
+                if (typeof (thisSelect.val()) != "undefined" && thisSelect.data("type") != "condition") {
+                    //console.log("sort:" + i.toString());
+                    //console.log(thisSelect.val());
+                    let surfix = thisSelect.data("surfix");
+                    if (surfix != null) {
+                        principleResult += thisSelect.val() + surfix;
+                    }
+                    else {
+                        principleResult += thisSelect.val();
+                    }
+                }
+                if (typeof (thisInput.val()) != "undefined" && thisInput.val() != "") {
+                    //console.log("sort:" + i.toString());
+                    //console.log(thisInput.val());
+                    let surfix = thisInput.data("surfix");
+                    //console.log(surfix);
+                    if (surfix != null) {
+                        principleResult += thisInput.val() + surfix;
+                    }
+                    else {
+                        principleResult += thisInput.val();
+                    }
+                }
+            }
+            $("#txtPrincipleResult@(itemName)").val(principleResult);
+        }
+    </script>
+    )

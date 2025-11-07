@@ -1,0 +1,392 @@
+﻿@using Business_Manager.Helpers
+@{
+    string subItemName = "RoleUser";
+    string itemName = "AuthorityUserFunctionDetail";
+    string itemNameText = "人員權限設定";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<div class="authority-content member-set">
+    <div class="select-block col-3 member-set-block">
+        <div class="title-block mt-2 mb-3">
+            <h2>已選會員列表</h2>
+            <a class="add-member" href="javascript:PopViewAuthorityUser();"><i class="fas fa-plus"></i>新增會員</a>
+        </div>
+        <div class="search-block mb-15">
+            <input type="text" class="search-term" id="txtSearchKey@(subItemName)" name="txtSearchKey@(subItemName)"
+                   placeholder="搜尋會員"
+                   maxlength="30" />
+            <button type="button" class="search-button" onclick="Query@(subItemName)()">
+                <i class="fa fa-search"></i>
+            </button>
+        </div>
+        <div id="userList@(subItemName)"></div>
+    </div>
+    <div class="select-block col-3 second-select-list" id="anchorSystem@(itemName)">
+        <input type="hidden" id="txtMemberId@(itemName)" />
+        <div class="search-block mb-15">
+            <input type="text" class="search-term" id="txtSearchKey@(itemName)" name="txtSearchKey@(itemName)"
+                   placeholder="搜尋 > 模組名稱"
+                   maxlength="100" />
+            <button type="button" class="search-button" onclick="Query@(itemName)()"><i class="fas fa-search"></i></button>
+        </div>
+        <div class="authority-num-title">
+            權限群組
+            <span>已授予數量/權限數量總計</span>
+        </div>
+        <ul class="select-menu"></ul>
+    </div>
+    <div class="select-content col-6">
+        <div class="close-content">
+            <i class="fas fa-times"></i>
+        </div>
+        <label class="control control-solid control-solid-info control--checkbox">
+            只顯示已授予的權限
+            <input type="checkbox" id="cbxGrant@(itemName)" />
+            <span class="control__indicator"></span>
+        </label>
+        <input type="hidden" id="txtModuleId@(itemName)" />
+        <input type="hidden" id="txtModuleName@(itemName)" />
+        <div class="select-area"></div>
+    </div>
+</div>
+
+@Html.Partial("ViewAuthorityUser")
+
+@Html.Resource("js",
+    @<script>
+
+        $("#txtSearchKey@(subItemName)").keydown(function (event) {
+            if (event.keyCode == 13) Query@(subItemName)();
+        });
+
+        $("#txtSearchKey@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) Query@(itemName)();
+        });
+
+        function Query@(subItemName)() {
+            InitData@(subItemName)();
+
+            $(".member-set .second-select-list").hide();
+        }
+
+        function InitData@(subItemName)() {
+            let innerHtml = '';
+
+            $(".member-set .select-content").removeClass("box-show");
+
+            let targetUrl = "@Url.Action("GetRoleUser", "EipSystemSetting")";
+            let postData = {
+                "RoleId": $("#RoleId").val(),
+                "SearchKey": $("#txtSearchKey@(subItemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    innerHtml += `<div class="member-each">
+                                    <div class="${(item.Status == `S` ? `text-strikethrough` : ``)}">
+                                      <span><strong>${item.MemberEmail}</strong></span>
+                                      <span class="name">${item.MemberName}</span>
+                                    </div>
+                                    <div>
+                                      <a href="javascript:Delete@(subItemName)(${item.MemberId});"><i class="fas fa-trash"></i></a>
+                                      <a class="cog-select" href="#anchorSystem@(itemName)" data-data-id="${item.MemberId}"><i class="fas fa-cog"></i></a>
+                                    </div>
+                                  </div>`;
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#userList@(subItemName)").html(innerHtml);
+
+            $(".member-set .cog-select").on("click", function () {
+                $(".member-set .second-select-list").show();
+
+                if (isMobile) {
+                    $("html, body").animate({
+                        scrollTop: $($(this).attr("href")).offset().top
+                    }, 500);
+                }
+
+                Person@(itemName)($(this).data("data-id"));
+
+                return false;
+            });
+        }
+
+        function Person@(itemName)(memberId) {
+            $("#txtMemberId@(itemName)").val(memberId);
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            $(".member-set .select-content").removeClass("box-show");
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetUserAuthority", "EipSystemSetting")";
+            let postData = {
+                "MemberId": $("#txtMemberId@(itemName)").val(),
+                "SearchKey": $("#txtSearchKey@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    innerHtml += `<li class="has-sub" data-system-id="${item.SystemId}">
+                                    <a href="javascript:void(0);">
+                                      ${item.SystemName}
+                                      <span class="authority-num">${item.UserTotalFunction}/${item.TotalFunction}</span>
+                                      <i class="fas fa-plus" aria-hidden="true"></i>
+                                    </a>
+                                    <ul>
+                                      ${Module@(itemName)(item.ModuleData)}
+                                    </ul>
+                                  </li>`;
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $(".member-set .select-menu").html(innerHtml);
+
+            $(".member-set .select-menu li.has-sub > a").on("click", function () {
+                var element = $(this).parent("li");
+
+                if (element.hasClass("open")) {
+                    element.removeClass("open");
+                    element.find("li").removeClass("open");
+                    element.find("ul").slideUp(200);
+                } else {
+                    element.addClass("open");
+                    element.children("ul").slideDown(200);
+                    element.siblings("li").children("ul").slideUp(200);
+                    element.siblings("li").removeClass("open");
+                    element.siblings("li").find("li").removeClass("open");
+                    element.siblings("li").find("ul").slideUp(200);
+                }
+            });
+
+            $(".member-set .has-sub-sec > a.select-tab").on("click", function () {
+                $(".member-set .select-tab").removeClass("active");
+                $(".member-set .select-content").removeClass("box-show");
+
+                InitDetailData@(itemName)($(this).data("module-id"), $(this).data("module-name"));
+
+                $(this).addClass("active");
+                $(".member-set .select-content").addClass("box-show");
+            });
+
+            $("#cbxGrant@(itemName)").off("change").on("change", function () {
+                InitDetailData@(itemName)($("#txtModuleId@(itemName)").val(), $("#txtModuleName@(itemName)").val());
+            });
+
+            function Module@(itemName)(source) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    $.each(json.data, function (i, item) {
+                        if (item.TotalModuleFunction > 0) {
+                            html += `<li class="has-sub-sec">
+                                       <a class="select-tab" href="javascript:void(0);" data-module-id="${item.ModuleId}" data-module-name="${item.ModuleName}">
+                                         ${item.ModuleName}
+                                         <span class="authority-num">${item.UserTotalModuleFunction}/${item.TotalModuleFunction}</span>
+                                       </a>
+                                     </li>`;
+                        }
+                    });
+                }
+
+                return html;
+            }
+        }
+
+        function InitDetailData@(itemName)(moduleId, moduleName) {
+            $("#txtModuleId@(itemName)").val(moduleId);
+            $("#txtModuleName@(itemName)").val(moduleName);
+
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetUserDetailAuthority", "EipSystemSetting")";
+            let postData = {
+                "ModuleId": moduleId,
+                "MemberId": $("#txtMemberId@(itemName)").val(),
+                "RoleId": $("#RoleId").val(),
+                "SearchKey": $("#txtSearchKey@(itemName)").val(),
+                "Grant": $("#cbxGrant@(itemName)").is(":checked")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                innerHtml += '<h2 class="mt-2 mb-3">' + moduleName + '</h2>';
+
+                $.each(data.result, function (i, item) {
+                    if (item.Roles) {
+
+                        innerHtml += `<label class="control control-solid control-solid-info control--checkbox">
+                                        ${item.FunctionName}<code>(${item.FunctionCode})</code>
+                                        <input type="checkbox" name="cbxFunctionId@(itemName)" hidden
+                                            data-function-id="${item.FunctionId}" ${(parseInt(item.TotalFunctionDetail) > 0 && parseInt(item.TotalFunctionDetail) == parseInt(item.UserTotalFunctionDetail) ? `checked` : ``)} />
+                                        <span class="control__indicator" hidden></span>
+                                      </label>
+                                    ${RoleDetail@(itemName)(item.FunctionId, item.Roles)}`;
+                    }
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $(".member-set .select-content .select-area").html(innerHtml);
+
+            @*$("input[name=cbxFunctionId@(itemName)]").change(function (e) {
+                let functionId = $(e.target).data("function-id");
+
+                if ($(e.target).is(":checked")) {
+                    $(`input[name=cbxFnDetailId@(itemName)][data-function-id=${functionId}]`).each(function (i, d) {
+                        if (!$(d).is(":checked")) $(d).prop("checked", true).trigger("change");
+                    });
+                }
+                else {
+                    $(`input[name=cbxFnDetailId@(itemName)][data-function-id=${functionId}]`).each(function (i, d) {
+                        if ($(d).is(":checked")) $(d).prop("checked", false).trigger("change");
+                    });
+                }
+            });*@
+
+            $("input[name=cbxRoleId@(itemName)]").change(function (e) {
+                let roleId = $(e.target).data("role-id");
+
+                if ($(e.target).is(":checked")) {
+                    $(`input[name=cbxFnDetailId@(itemName)][data-role-id=${roleId}]`).each(function (i, d) {
+                        if (!$(d).is(":checked")) $(d).prop("checked", true).trigger("change");
+                    });
+                }
+                else {
+                    $(`input[name=cbxFnDetailId@(itemName)][data-role-id=${roleId}]`).each(function (i, d) {
+                        if ($(d).is(":checked")) $(d).prop("checked", false).trigger("change");
+                    });
+                }
+
+                Save@(itemName)(roleId, $(e.target).is(":checked"));
+            });
+
+            $("input[name=cbxFnDetailId@(itemName)]").change(function (e) {
+                let roleId = $(e.target).data("role-id");
+                let fndetailId = $(e.target).data("fndetail-id");
+
+                if ($(e.target).is(":checked")) {
+                    if ($(`input[name=cbxFnDetailId@(itemName)][data-role-id=${roleId}]:checked`).length == $(`input[name=cbxFnDetailId@(itemName)][data-role-id=${roleId}]`).length) {
+                        $(`input[name=cbxRoleId@(itemName)][data-role-id=${roleId}]`).prop("checked", true);
+                    }
+                } else {
+                    $(`input[name=cbxRoleId@(itemName)][data-role-id=${roleId}]`).prop("checked", false);
+                }
+
+                @*Save@(itemName)(roleId, $(e.target).is(":checked"));*@
+            });
+        }
+
+        function RoleDetail@(itemName)(functionId, source) {
+            let html = '';
+
+            if (source) {
+                let json = JSON.parse(source);
+                $.each(json.data, function (i, item) {
+                    if (!!item.FnRoles) {
+                        html += `<label class="control control-solid control--checkbox">${item.RoleName}
+                                    <input type="checkbox" name="cbxRoleId@(itemName)" data-role-id="${item.RoleId}" ${item.FnRoles.data.filter(f => f.DetailAuthority == 1).length == item.FnRoles.data.length ? `checked` : ``} />
+                                    <span class="control__indicator"></span>
+                                </label>
+                                <div class="action-group">
+                                    ${FunctionDetail@(itemName)(item.RoleId, item.FnRoles)}
+                                </div>`;
+
+                    }
+                });
+            }
+
+            return html;
+        }
+
+        function FunctionDetail@(itemName)(roleId, source) {
+            let html = '';
+
+            if (source) {
+                //let json = JSON.parse(source);
+                $.each(source.data, function (i, item) {
+                    html += `<div class="action">
+                                <label class="control control-solid control-solid-info control--checkbox">
+                                    ${item.FnDetailName} <code>(${item.FnDetailCode})</code>
+                                    <input type="checkbox" name="cbxFnDetailId@(itemName)" readonly disabled
+                                        data-fndetail-id="${item.FnDetailId}" data-role-id="${roleId}" ${(parseInt(item.DetailAuthority) == 1 ? `checked` : ``)} />
+                                    <span class="control__indicator" readonly disabled></span>
+                                </label>
+                                </div>`;
+                });
+            }
+            return html;
+        }
+
+        function Delete@(subItemName)(memberId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteRoleUser", "EipSystemSetting")";
+                    let postData = {
+                        "MemberId": memberId,
+                        "RoleId": $("#RoleId").val()
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(subItemName)();
+                    }
+                }
+            });
+        }
+
+        function Save@(itemName)(roleId, checked) {
+            let targetUrl = "@Url.Action("UpdateUserFunctionDetail", "EipSystemSetting")";
+            let postData = {
+                "UserList": $("#txtMemberId@(itemName)").val(),
+                "RoleId": roleId,
+                "Checked": checked,
+                "SearchKey": $("#txtSearchKey@(itemName)").val()
+            };
+
+            let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (data) {
+                $.each(data.result, function (i, item) {
+                    $(`.authority-set .select-tab[data-module-id=${item.ModuleId}] > .authority-num`).html(`${item.RoleTotalModuleFunction}/${item.TotalModuleFunction}`);
+                    $(`.authority-set .has-sub[data-system-id=${item.SystemId}] > a > .authority-num`).html(`${item.RoleTotalFunction}/${item.TotalFunction}`);
+                });
+            } else {
+                InitDetailData@(itemName)($("#txtModuleId@(itemName)").val(), $("#txtModuleName@(itemName)").val());
+            }
+        }
+    </script>
+        )

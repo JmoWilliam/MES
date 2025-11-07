@@ -1,0 +1,215 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "IFrameOrderStockReport";
+    string itemNameText = "品號訂單歷史查詢";
+    string authority = ViewBag.authority;
+
+    string MtlItemNo = Request["MtlItemNo"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+         .form-group .select2-selection__rendered {
+             line-height: 29px !important;
+         }
+
+         .form-group .select2-container .select2-selection--single {
+             height: 39px !important;
+         }
+
+         .form-group .select2-selection__arrow {
+             height: 34px !important;
+         }
+
+         .table-deposit {
+             margin: 0;
+             padding: 0;
+             max-height: 30vh;
+             margin-bottom: .75rem;
+             display: none;
+         }
+
+             .table-deposit th {
+                 background-color: #d7ecfa !important;
+             }
+
+             .table-deposit th, .table-deposit td {
+                 padding: 5px 0;
+                 text-align: center;
+             }
+
+         .active-icon {
+             background-color: #d7ecfa;
+             color: black;
+         }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+<input type="hidden" id="MtlItemNo@(itemName)" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-header">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-row align-items-center mb-1">
+                            <div class="col-lg-3 col-6">
+                                <label class="form-label" for="txtSaleOrderQ@(itemName)">訂單</label>
+                                <input type="text" class="form-control query-search" id="txtSaleOrderQ@(itemName)" name="txtSaleOrderQ@(itemName)" placeholder="請輸入訂單" />
+                            </div>
+                            <div class="col-lg-3 col-6 mt-4">
+                                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 175px;">訂單編號</th>
+                                        <th scope="col" style="min-width: 175px;">機種</th>
+                                        <th scope="col" style="min-width: 175px;">機種名</th>
+                                        <th scope="col" style="min-width: 100px;">客戶名稱</th>
+                                        <th scope="col" style="min-width: 175px;">預交日</th>
+                                        <th scope="col" style="min-width: 100px;">訂單數</th>
+                                        <th scope="col" style="min-width: 100px;">已交數</th>
+                                        <th scope="col" style="min-width: 100px;">出貨狀態</th>
+                                        <th style="padding: 0; min-width: 800px;">
+                                            <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col" style="min-width: 150px;">工單</th>
+                                                        <th scope="col" style="min-width: 150px;">計畫數</th>
+                                                        <th scope="col" style="min-width: 150px;">已領數(套)</th>
+                                                        <th scope="col" style="min-width: 100px;">完工數</th>
+                                                        <th scope="col" style="min-width: 100px;">生產狀態</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 20
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        $(document).ready(function () {
+            let mtlItemNo = $("#MtlItemNo@(itemName)").val("@MtlItemNo");
+            console.log(mtlItemNo);
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetItemOrderReport", "MesReport")";
+            let postData = {
+                "MtlItemNo": "@(MtlItemNo)",
+                "SaleNo": $("#txtSaleOrderQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? data.result.length : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td class="tbody-customized">${_row}</td>                                        
+                                        <td class="tbody-customized">${item.SoInfo}</td>
+                                        <td class="tbody-customized">${item.MtlItemNo}</td>
+                                        <td class="tbody-customized">${item.MtlItemName}</td>
+                                        <td class="tbody-customized">${item.CustomerShortName}</td>
+                                        <td class="tbody-customized">${item.PromiseDate}</td>
+                                        <td class="tbody-customized">${item.SoQty}</td>
+                                        <td class="tbody-customized">${item.SiQty}</td>
+                                        <td class="tbody-customized">${item.SoStatus}</td>
+                                        <td style="padding: 0;">
+                                          <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                            <tbody>
+                                              ${DetailData@(itemName)(item.ComponentData)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+         function DetailData@(itemName)(source) {
+            let html = '';
+            if (source) {
+                let json = JSON.parse(source);
+
+                for (let x = 0; x < json.data.length; x++) {
+                    html += `<tr>
+                               <td style="min-width: 150px;">${json.data[x].WipInfo}</td>
+                               <td style="min-width: 150px;">${json.data[x].PlanQty}</td>
+                               <td style="min-width: 150px;">${json.data[x].RequisitionSetQty}</td>
+                               <td style="min-width: 100px;">${json.data[x].StockInQty}</td>
+                               <td style="min-width: 100px;">${json.data[x].Status}</td>
+                            </tr>`;
+                }
+            }
+            return html;
+        }
+</script>
+)

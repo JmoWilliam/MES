@@ -1,0 +1,241 @@
+﻿@using Business_Manager.Helpers
+
+@{
+    string itemName = "BarcodeMergeHistory";
+    string itemNameText = "條碼拆併盤歷程查詢";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .container {
+             margin-left: 0 !important;
+         }
+
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             vertical-align: middle !important;
+         }
+
+         .baseline .baseline-list {
+             padding-bottom: 9.6px !important;
+         }
+
+             .baseline .baseline-list:after {
+                 border: none !important;
+                 top: 27px !important;
+             }
+
+         .txt-skyblue {
+             font-size: 87.5%;
+         }
+    </style>
+                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-header">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-row align-items-center mb-2">
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtFromBarcodeNoQ@(itemName)">來源條碼</label>
+                                <input type="text" class="form-control" id="txtFromBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)" placeholder="請輸入條碼" />
+                            </div>
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtToBarcodeNoQ@(itemName)">目標條碼</label>
+                                <input type="text" class="form-control" id="txtToBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)" placeholder="請輸入條碼" />
+                            </div>
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtWoErpFullNoQ@(itemName)">製令</label>
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)" placeholder="請輸入製令" />
+                            </div>
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtTransferStartDateQ@(itemName)">開始時間</label>
+                                <input type="text" class="form-control" id="txtTransferStartDateQ@(itemName)" name="txtTransferStartDateQ@(itemName)"
+                                       placeholder="請輸入轉移開始時間"
+                                       data-msg-required="請輸入轉移開始時間" data-rule-required="true"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <div class="col-lg-2 col-6">
+                                <label class="form-label" for="txtTransferEndDateQ@(itemName)">結束時間</label>
+                                <input type="text" class="form-control" id="txtTransferEndDateQ@(itemName)" name="txtTransferEndDateQ@(itemName)"
+                                       placeholder="請輸入轉移結束時間"
+                                       data-msg-required="請輸入轉移開始時間" data-rule-required="true"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                            </div>
+                            <div class="col-lg-2 col-6 mt-4">
+                                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 130px;">來源條碼</th>
+                                        <th scope="col" style="min-width: 130px;">目標條碼</th>
+                                        <th scope="col" style="min-width: 100px;">轉移數量</th>
+                                        <th scope="col" style="min-width: 165px;">轉移時間</th>
+                                        <th scope="col" style="min-width: 165px;">當下製令</th>
+                                        <th scope="col" style="min-width: 135px;">當下製程</th>
+                                        <th scope="col" style="min-width: 150px;">操作人員</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        $(function () {
+            Suites.DateDropper("#txtTransferStartDateQ@(itemName), #txtTransferEndDateQ@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtTransferEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 90);
+            Suites.SetDateDropper("#txtTransferStartDateQ@(itemName)", currentDate);
+
+            Query@(itemName)();
+
+            $("#txtFromBarcodeNoQ@(itemName), #txtToBarcodeNoQ@(itemName), #txtWoErpFullNoQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#txtTransferStartDateQ@(itemName), #txtTransferEndDateQ@(itemName)").change(function () {
+                Query@(itemName)();
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetBarcodeTransfer", "MesReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "FromBarcodeNo": $("#txtFromBarcodeNoQ@(itemName)").val().toUpperCase(),
+                "ToBarcodeNo": $("#txtToBarcodeNoQ@(itemName)").val().toUpperCase(),
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val(),
+                "TransferStartDate": $("#txtTransferStartDateQ@(itemName)").val(),
+                "TransferEndDate": $("#txtTransferEndDateQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.FromBarcodeNo}" style="min-width: 130px;">
+                                            ${item.FromBarcodeNo}
+                                            <br>
+                                            ${JudgeFromItemValue@(itemName)(`${item.FromBarcodeItemValue}`)}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.FromBarcodeNo}" style="min-width: 130px;">
+                                            ${item.ToBarcodeNo}
+                                            <br>
+                                            ${JudgeToItemValue@(itemName)(`${item.ToBarcodeItemValue}`)}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TransactionQty}" style="min-width: 100px;">${item.TransactionQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TransactionDate}" style="min-width: 165px;">${item.TransactionDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})" style="min-width: 165px;">${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessAlias}" style="min-width: 135px;">${item.ProcessAlias}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserNo}${item.UserName}" style="min-width: 150px;"><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                      </tr>`;
+
+                        function JudgeFromItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null") {
+                                let itemValueJson = JSON.parse(itemValue);
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<code>${item2.ItemValue}</code><br>`;
+                                });
+                            }
+
+                            return innerHtml;
+                        }
+
+                        function JudgeToItemValue@(itemName)(itemValue) {
+                            let innerHtml = '';
+                            if (itemValue != "null") {
+                                let itemValueJson = JSON.parse(itemValue);
+                                $.each(itemValueJson["data"], function (k, item2) {
+                                    innerHtml += `<code>${item2.ItemValue}</code><br>`;
+                                });
+                            }
+
+                            return innerHtml;
+                        }
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+    </script>
+        )

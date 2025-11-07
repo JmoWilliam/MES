@@ -1,0 +1,127 @@
+﻿@using Business_Manager.Helpers
+@using System.Web;
+@{
+    string itemName = "Login";
+    string itemNameText = "產品生產履歷資料收集系統-登入";
+
+    ViewBag.Title = itemNameText;
+
+    var preUrl = Url.Action("Index", "ProductionHistory");
+
+    if (Request["preUrl"] != null)
+    {
+        preUrl = Uri.UnescapeDataString(Request["preUrl"]);
+    }
+
+    HttpCookie Login = Request.Cookies.Get("Login");
+
+    if (Login != null)
+    {
+        var redirectUrl = "http://" + Request.Url.Authority + preUrl;
+        var uri = new Uri(redirectUrl);
+        var newQueryString = HttpUtility.ParseQueryString(uri.Query);
+
+        string pagePathWithoutQueryString = uri.GetLeftPart(UriPartial.Path).Replace("http://", "").Replace(Request.Url.Authority, "");
+        redirectUrl = newQueryString.Count > 0 ? String.Format("{0}?{1}", pagePathWithoutQueryString, newQueryString) : pagePathWithoutQueryString;
+
+        Response.Redirect(redirectUrl);
+    }
+}
+
+@Html.Resource("css",
+@<link href="@Url.Content("~/Content/mes_scan.min.css")?20220623v1" rel="stylesheet" />
+                                                                )
+@Html.Resource("css",
+@<style>
+     .container_full {
+         margin-top: 0;
+     }
+</style>
+                                                                )
+<div class="container" id="MesLogin">
+    <div class="login-content">
+        <div class="login-form">
+            <div class="logo">
+                <a>
+                    <img src="@Url.Content("~/Content/images/logo.png")" />
+                </a>
+            </div>
+            <div class="input-group mb-1 mt-2" style="">
+                <label class="input-group-addon" for="basic-addon" style="">
+                    <i class="fas fa-key mr-1" style="width:22px;"></i>
+                    <span style="padding-left: 5px;">系統金鑰</span>
+                </label>
+                @*<input type="text" class="form-control form-control-add" id="txtSystemKeyLogin" placeholder="請輸入系統金鑰" value="4FA65FBFEADF57BF4E1F265DF0F86306442D4F25BCB1DBEAD9EA0E6182FD9DCB">*@
+                <input type="text" class="form-control form-control-add" id="txtSystemKeyLogin" placeholder="請輸入系統金鑰" value="92A3AC6CE2A2940A3BC5AFAEA2F1CA1A6C4232930F2B1045BF5635EAD80D9E49" readonly>
+            </div>
+            <div class="input-group mb-1 mt-2" style="">
+                <label class="input-group-addon" for="basic-addon" style="">
+                    <i class="fa fa-id-card mr-1" style="width:22px;"></i>
+                    <span style="padding-left: 5px;">員工編號</span>
+                </label>
+                <input type="text" class="form-control form-control-add" id="txtAccount" placeholder="請輸入員工編號">
+            </div>
+            <button type="button" id="btnMesLogin" class="btn-sure btn btn-success btn-flat mb-2 mt-3 weight-600" style="font-size:1rem;">確認</button>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+
+        $(document).ready(function () {
+            //登入初始
+            $("#txtSystemKeyLogin").focus();
+        });
+
+        $("#btnMesLogin").click(function () {
+            Login();
+        })
+
+        $("#txtSystemKeyLogin").keydown(DelayTrigger(function (e) {
+            if ($("#txtSystemKeyLogin").val()) {
+                $("#txtAccount").focus();
+            }
+        }, 500));
+
+        $("#txtAccount").keydown(DelayTrigger(function (e) {
+            if ($("#txtSystemKeyLogin").val() && $("#txtAccount").val()) {
+                Login();
+            }
+        }, 30000));
+
+        $("#txtAccount").keydown(function (event) {
+            if (event.keyCode == 13) {
+                Login();
+                return false;
+            }
+        });
+
+        $(window).keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        function Login() {
+            let userNo = $("#txtAccount").val();
+            let targetUrl = "@Url.Action("ProductionHistoryLogin", "ProductionHistory")";
+            let postData = {
+                "SystemKey": $("#txtSystemKeyLogin").val(),
+                "UserNo": userNo.toUpperCase()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                let UserId = -1;
+                $.each(data.result, function (i, item) {
+                    UserId = item.UserId;
+                });
+                window.location.href = "@Url.Action("Index", "ProductionHistory")?UserId=" + UserId;
+            } else {
+                $("#txtAccount").val("");
+                alert(data.msg, "alert", 0);
+            }
+        }
+    </script>
+                        )

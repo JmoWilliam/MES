@@ -1,0 +1,609 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DeliveryPlanning";
+    string itemNameText = "出貨明細排程管理";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .thead-customized {
+             min-width: 75px !important;
+             background-color: #ffeeba !important;
+             position: relative !important;
+             z-index: 1 !important;
+             border: none !important;
+         }
+
+         .tbody-customized {
+             border: none !important;
+         }
+
+         .popover-label {
+             font-size: 14px;
+             color: #53505F;
+             padding: 7px 15px;
+             text-align: left;
+         }
+    </style>
+                                        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboDeliveryStatusQ@(itemName)">出貨狀態</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDeliveryStatusQ@(itemName)" name="cboDeliveryStatusQ@(itemName)">
+                                    <option value="">全部</option>
+                                    <option value="tracked" selected>待追蹤</option>
+                                    <option value="triTrade">三角貿易</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtDoErpFullNoQ@(itemName)">出貨單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtDoErpFullNoQ@(itemName)" value="" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboSoIds@(itemName)">訂單單號</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSoIds@(itemName)" name="cboSoIds@(itemName)" multiple></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboCustomerIdQ@(itemName)">客戶名稱</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCustomerIdQ@(itemName)" name="cboCustomerIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboSalesmenIdQ@(itemName)">業務人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboSalesmenIdQ@(itemName)" name="cboSalesmenIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">品號/品名/客戶品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)" placeholder="請輸入品號/品名/客戶品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">排定交貨日 <input type="checkbox" id="cbxUseDate@(itemName)" /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 text-right">
+                        <a class="btn btn-info" href="javascript:PopViewDeliveryFinalizeOrder();"><i class="far fa-clipboard-check"></i>出貨定版</a>
+                        <a class="btn btn-info" href="javascript:PopViewPendingOrders();"><i class="far fa-clipboard-check"></i>待處理訂單</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">出貨單號</th>
+                                        <th scope="col" style="min-width: 200px;">訂單單號</th>
+                                        <th scope="col" style="min-width: 190px;">預定出貨日期</th>
+                                        <th scope="col" style="min-width: 200px;">客戶名稱</th>
+                                        <th scope="col" style="min-width: 200px;">品號</th>
+                                        <th scope="col" style="min-width: 300px;">品名</th>
+                                        <th scope="col" style="min-width: 200px;">出貨數量</th>
+                                        <th scope="col" style="min-width: 200px;">贈品數量</th>
+                                        <th scope="col" style="min-width: 200px;">備品數量</th>
+                                        <th scope="col" style="min-width: 300px;">備註</th>
+                                        <th class="text-center" scope="col" style="min-width: 230px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalErpAccounting">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">訂單帳務</h5>
+                <button class="close" type="button" onclick="CloseErpAccounting()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblErpAccountingData">
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalPendingOrders">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">待處理訂單列表</h5>
+                <button class="close" type="button" onclick="ClosePendingOrders@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblErpAccountingData">
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewDeliveryFinalizeOrder")
+
+@Html.Partial("ViewDeliveryOrderDateLog")
+
+@Html.Partial("ViewPendingOrders")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let timePSDeliverySchedule = new dhx.Timepicker();
+        let popupPSDeliverySchedule = new dhx.Popup();
+        let dateInputPSDeliverySchedule;
+
+        $(document).ready(function () {
+            let currentDate = new Date();
+            Suites.DatePicker("txtEndDateQ@(itemName)", currentDate);
+            currentDate.setDate(currentDate.getDate() - 7);
+            Suites.DatePicker("txtStartDateQ@(itemName)", currentDate);
+
+            ComboBoxs.Default("#cboSoIds@(itemName)", "@Url.Action("GetSoErpFullNo", "SaleOrder")", { "DeliveryStatus": $("#cboDeliveryStatusQ@(itemName)").val() }, "", "ALL", "", "SoErpFullNo", "SoId");
+            ComboBoxs.Default("#cboCustomerIdQ@(itemName)", "@Url.Action("GetCustomer", "ScmBasicInformation")", { "Status": "A", "TransferStatus": "A" }, "", "ALL", "", "CustomerWithNo", "CustomerId");
+            ComboBoxs.Default("#cboSalesmenIdQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Departments": "106,107,110" }, "", "ALL", "", "UserWithNo", "UserId");
+
+            $("#cboSoIds@(itemName), #cboCustomerIdQ@(itemName), #cboSalesmenIdQ@(itemName), #cboDeliveryStatusQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            $("#cboDeliveryStatusQ@(itemName)").change(function () {
+                ComboBoxs.Default("#cboSoIds@(itemName)", "@Url.Action("GetSoErpFullNo", "SaleOrder")", { "DeliveryStatus": $("#cboDeliveryStatusQ@(itemName)").val()}, "", "ALL", "", "SoErpFullNo", "SoId");
+            });
+
+            Query@(itemName)();
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-so-detail-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-so-detail-id]").not(":disabled").prop("checked", false);
+                }
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetDoDetail", "Delivery")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "DeliveryStatus": $("#cboDeliveryStatusQ@(itemName)").val(),
+                "DoErpFullNo": $("#txtDoErpFullNoQ@(itemName)").val(),
+                "SoIds": $("#cboSoIds@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "CustomerId": $("#cboCustomerIdQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "SalesmenId": $("#cboSalesmenIdQ@(itemName)").val(),
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : "")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        let doDate = new Date(item.DoDate).setHours(0, 0, 0, 0);
+                        let today = new Date().setHours(0, 0, 0, 0);
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DoErpPrefix}-${item.DoErpNo}(${item.DoSequence})" style="max-width: 250px;">${item.DoErpPrefix}-${item.DoErpNo}<code>(${item.DoSequence})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoErpPrefix}-${item.SoErpNo}(${item.SoSequence})" style="max-width: 200px;">${item.SoErpPrefix}-${item.SoErpNo}<code>(${item.SoSequence})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DoDate}">${item.DoDate} <a class="auth-add"href="javascript:EditDate@(itemName)(${item.DoDetailId}, ${item.SoDetailId}, '${item.DoDate}');"><i class="fas fa-clock"></i></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CustomerName}" style="max-width: 200px;">${item.CustomerNo} ${item.CustomerShortName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 300px;">${item.MtlItemName}</td>
+                                        <td class="text-right">
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">撿貨數/出貨單數量</p>
+                                            <span class="text-danger">${item.PickRegularQty}</span>
+                                            /
+                                            <span style="font-weight: bold;">${item.DoQty} ${doDate >= today && item.DoStatus != `S` ? `<a class="auth-add"href="javascript:EditDoQty@(itemName)(${item.DoDetailId}, '${item.DoQty}');"><i class="fas fa-edit"></i></a>` : ``}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">撿貨數/贈品數量</p>
+                                            <span class="text-danger">${item.PickFreebieQty}</span>
+                                            /
+                                            <span style="font-weight: bold;">${item.FreebieQty}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <p class="mb-0 font-weight-bold" style="font-size: 95%;">撿貨數/備品數量</p>
+                                            <span class="text-danger">${item.PickSpareQty}</span>
+                                            /
+                                            <span style="font-weight: bold;">${item.SpareQty}</span>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DoDetailRemark}">${item.DoDetailRemark}</td>
+                                        <td class="text-center active-content">
+                                          <a class="active-link auth-update" href="javascript:PopViewDeliveryOrderDateLog(${item.DoDetailId});"><i class="fas fa-history"></i><span>交期紀錄</span></a>
+                                          <a class="active-link auth-delete" href="javascript:Delete@(itemName)(${item.DoDetailId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function EditDate@(itemName)(DoDetailId, SoDetailId, DoDate) {
+            Swal.fire({
+                html: `
+                    <div class="card card-shadow">
+                        <div class="card-header">
+                            <h2 class="card-title" style="text-align: left;">修改排定交貨日</h2>
+                        </div>
+                        <div class="card-body">
+                            <form autocomplete="off" id="editForm@(itemName)">
+                                <fieldset>
+                                    <input type="hidden" id="DoDetailId" name="SoDetailId" value="-1" />
+                                    <input type="hidden" id="SoDetailId" name="SoDetailId" value="-1" />
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="txtPcPromiseDate@(itemName)">交貨時間 <span class="text-danger">*</span></label>
+                                                <div class="col-12">
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" id="txtPcPromiseDate@(itemName)" name="txtPcPromiseDate@(itemName)" value="${DoDate}"
+                                                                readonly />
+                                                        <input type="text" class="form-control timedropper" id="txtPcPromiseTime@(itemName)" name="txtPcPromiseTime@(itemName)"
+                                                               data-msg-required="請輸入交貨時間" data-rule-required="true"
+                                                               data-msg-maxlength="必須少於 8 個字元" maxlength="8" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboCauseType@(itemName)">原因類別</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboCauseType@(itemName)" name="cboCauseType@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboDepartmentId@(itemName)">責任部門</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboDepartmentId@(itemName)" name="cboDepartmentId@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboSupervisorId@(itemName)">責任主管</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboSupervisorId@(itemName)" name="cboSupervisorId@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-12 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 form-label popover-label" for="txtCauseDescription@(itemName)">延遲原因</label>
+                                                <div class="col-12">
+                                                    <textarea class="form-control" id="txtCauseDescription@(itemName)" name="txtCauseDescription@(itemName)" placeholder="請輸入延遲原因"
+                                                              data-msg-maxlength="必須少於 255 個字元" maxlength="255" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-success text-right" onclick="SaveDate@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                                </fieldset>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: 900,
+            });
+            $("#SoDetailId").val(SoDetailId ? SoDetailId : 0);
+            $("#DoDetailId").val(DoDetailId ? DoDetailId : 0);
+
+            let doDate = new Date(DoDate);
+            Suites.DatePicker("txtPcPromiseDate@(itemName)", doDate);
+            Suites.TimePicker("txtPcPromiseTime@(itemName)", "00:00");
+
+            ComboBoxs.Default("#cboCauseType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "Delivery.CauseType" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.Default("#cboDepartmentId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A" }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+            ComboBoxs.Default("#cboSupervisorId@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "NA", "", "UserWithNo", "UserId");
+
+            $("#cboCauseType@(itemName),#cboDepartmentId@(itemName),#cboSupervisorId@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function SaveDate@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let SoDetailId = parseInt($("#SoDetailId").val());
+                let DoDetailId = parseInt($("#DoDetailId").val());
+
+                let targetUrl = "@Url.Action("AddDeliveryOrderDateLog", "Delivery")";
+                let postData = {
+                    "SoDetailId": SoDetailId,
+                    "DoDetailId": DoDetailId,
+                    "PcPromiseDate": $("#txtPcPromiseDate@(itemName)").val(),
+                    "PcPromiseTime": $("#txtPcPromiseTime@(itemName)").val(),
+                    "CauseType": $("#cboCauseType@(itemName)").val(),
+                    "DepartmentId": $("#cboDepartmentId@(itemName)").val(),
+                    "SupervisorId": $("#cboSupervisorId@(itemName)").val(),
+                    "CauseDescription": $("#txtCauseDescription@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Swal.close();
+                    Query@(itemName)();
+                }
+            }
+        }
+
+        function Delete@(itemName)(DoDetailId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteDeliveryFinalize", "Delivery")";
+                    let postData = {
+                        "DoDetailId": DoDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function EditDoQty@(itemName)(DoDetailId, DoQty) {
+            Swal.fire({
+                html: `
+                    <div class="card card-shadow">
+                        <div class="card-header">
+                            <h2 class="card-title" style="text-align: left;">修改出貨數量</h2>
+                        </div>
+                        <div class="card-body">
+                            <form autocomplete="off" id="editForm@(itemName)">
+                                <fieldset>
+                                    <input type="hidden" id="DoDetailId" name="SoDetailId" value="-1" />
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="txtDoQty@(itemName)">出貨數量 <span class="text-danger">*</span></label>
+                                                <div class="col-12">
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" id="txtDoQty@(itemName)" name="txtDoQty@(itemName)" value="${DoQty}" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboCauseType@(itemName)">原因類別</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboCauseType@(itemName)" name="cboCauseType@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboDepartmentId@(itemName)">責任部門</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboDepartmentId@(itemName)" name="cboDepartmentId@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 col-form-label popover-label" for="cboSupervisorId@(itemName)">責任主管</label>
+                                                <div class="col-12">
+                                                    <select class="form-control" id="cboSupervisorId@(itemName)" name="cboSupervisorId@(itemName)"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-lg-12 col-md-12">
+                                            <div class="form-group row">
+                                                <label class="col-12 form-label popover-label" for="txtCauseDescription@(itemName)">延遲原因</label>
+                                                <div class="col-12">
+                                                    <textarea class="form-control" id="txtCauseDescription@(itemName)" name="txtCauseDescription@(itemName)" placeholder="請輸入延遲原因"
+                                                              data-msg-maxlength="必須少於 255 個字元" maxlength="255" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-success text-right" onclick="SaveDoQty@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                                </fieldset>
+                            </form>
+                        </div>
+                    </div>
+                `,
+                showCloseButton: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                width: 900,
+            });
+            $("#DoDetailId").val(DoDetailId ? DoDetailId : 0);
+
+            ComboBoxs.Default("#cboCauseType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "Delivery.CauseType" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.Default("#cboDepartmentId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { "Status": "A" }, "", "NA", "", "DepartmentWithNo", "DepartmentId");
+            ComboBoxs.Default("#cboSupervisorId@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "NA", "", "UserWithNo", "UserId");
+
+            $("#cboCauseType@(itemName),#cboDepartmentId@(itemName),#cboSupervisorId@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+        }
+
+        function SaveDoQty@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let DoDetailId = parseInt($("#DoDetailId").val());
+
+                let targetUrl = "@Url.Action("AddDeliveryQtyLog", "Delivery")";
+                let postData = {
+                    "DoDetailId": DoDetailId,
+                    "DoQty": $("#txtDoQty@(itemName)").val(),
+                    "CauseType": $("#cboCauseType@(itemName)").val(),
+                    "DepartmentId": $("#cboDepartmentId@(itemName)").val(),
+                    "SupervisorId": $("#cboSupervisorId@(itemName)").val(),
+                    "CauseDescription": $("#txtCauseDescription@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Swal.close();
+                    Query@(itemName)();
+                }
+            }
+        }
+
+        function PopViewPendingOrders@(itemName)() {
+
+        }
+
+        function ClosePendingOrders@(itemName)() {
+            $("#modalClosePendingOrders").modal("hide");
+        }
+    </script>
+                                )

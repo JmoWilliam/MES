@@ -1,0 +1,847 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewSoDetailTemp";
+    string itemNameText = "客戶採購單轉訂單暫存資料";
+    string authority = ViewBag.authority;
+}
+
+<script src="@Url.Content("~/Scripts/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.js")"></script>
+<link href="@Url.Content("~/Content/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.css")" rel="stylesheet" />
+
+
+@Html.Resource("css",
+    @<style>
+    </style>
+         )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog" style="max-width: 1680px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body"></div>
+        </div>
+    </div>
+</div>
+
+<div id="template@(itemName)" style="display: none;">
+    <form autocomplete="off" id="editForm@(itemName)">
+        <input type="hidden" id="SoDetailTempIds@(itemName)" name="txtSoDetailTempIds@(itemName)" value="" />
+        <input type="hidden" id="CompanyId@(itemName)" name="txtCompanyId@(itemName)" value="" />
+        <input type="hidden" id="HiddenDatas@(itemName)" name="txtHiddenDatas@(itemName)" value="" />
+        <div style="height: 75%; width: 100%;" id="spreadsheet@(itemName)"></div>
+    </form>
+</div>
+
+<!--選擇項目-->
+<div class="modal fade" id="modalSelect@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">選擇項目</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="modalForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label id="popItemName@(itemName)" class="col-12 col-md-3 col-lg-3 col-form-label text-right"></label>
+                            <div id="popItem@(itemName)" class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group"></div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" id="btnOK@(itemName)" class="btn btn-primary"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="virtualCbox@(itemName)" style="display: none;"></div>
+
+@Html.Resource("js",
+    @<script>
+        let excelCtrls@(itemName) = new ComponentControl@(itemName)(); //取得excel自定義控制方法
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let targetSelector@(itemName);
+
+        let soId@(itemName); //單頭 Id
+
+        let spreadsheet@(itemName); //excel套件
+
+        let data@(itemName) = []; //暫存的資料列
+
+        let row@(itemName); //起始row數
+
+        let identify@(itemName); //資料唯一識別欄位名稱
+
+        let message@(itemName); //暫存訊息的欄位
+
+        let cellSelector@(itemName) = []; //要設定的下拉選單
+
+        let hiddenData@(itemName) = []; //暫存隱藏的資料列
+
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfo: [] //要送出的表單資料
+        }
+
+        let configs = {
+            menu: true,
+            rowsCount: 200,
+            colsCount: 30,
+            toolbarBlocks: [
+                "undo",
+                "colors",
+                "decoration",
+                "align",
+                //"lock",
+                //"clear",
+                //"rows",
+                //"columns",
+                //"help",
+                "format",
+                //"file"
+            ],
+            formats: [ //自定義 data format
+                { name: "Number", id: "numberValue", mask: "#,##0.000000" },
+                { name: "Number", id: "intValue", mask: "" },
+                { name: "Text", id: "text", mask: "" },
+            ]
+        }
+
+        let columns@(itemName) = [
+            { column: "A", title: "MainKey", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "B", title: "PoErpPrefixNo", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "C", title: "TD003", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "D", title: "TD004", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "E", title: "TD005", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "F", title: "TD006", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "G", title: "TD009", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "H", title: "TD008", dataType: "number", format: "numberValue", type: "show", validation: { switch: true, msg: "值有誤" } },
+            { column: "I", title: "TD010", dataType: "number", format: "numberValue", type: "show", validation: { switch: true, msg: "值有誤" } },
+            { column: "J", title: "TD011", dataType: "number", format: "numberValue", type: "show", validation: { switch: true, msg: "值有誤" } },
+
+            { column: "K", title: "CustomerMtlItemNo", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "L", title: "CustomerMtlItemName", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "M", title: "MtlItemNo", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "N", title: "MtlItemName", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "O", title: "SaleUomNo", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+
+            { column: "P", title: "ProductTypeName", dataType: "text", format: "text", type: "show", validation: { switch: true, msg: "值有誤" } },
+            { column: "Q", title: "FreebieOrSpareQty", dataType: "number", format: "intValue", type: "show", validation: { switch: true, msg: "值有誤" } },
+            { column: "R", title: "PromiseDate", dataType: "text", format: "date", type: "show", validation: { switch: false, msg: "" } },
+            { column: "S", title: "ProjectName", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "T", title: "SoDetailRemark", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+
+            { column: "W", title: "CustomerMtlItemId", dataType: "number", format: "number", type: "hidden", validation: { switch: false, msg: "" } },
+            { column: "X", title: "CompanyId", dataType: "number", format: "number", type: "hidden", validation: { switch: false, msg: "" } },
+            { column: "Y", title: "ProductType", dataType: "number", format: "number", type: "hidden", validation: { switch: false, msg: "" } },
+            { column: "Z", title: "Project", dataType: "text", format: "text", type: "hidden", validation: { switch: false, msg: "" } },
+        ];
+
+        let excelData =
+        {
+            sheets: [
+                {
+                    name: "第一頁",
+                    id: "sheet_1",
+                    cols: [{ width: 175 }, { width: 150 }, { width: 75 }, { width: 250 }, { width: 250 },
+                        { width: 150 }, { width: 120 }, { width: 120 }, { width: 120 }, { width: 120 },
+                        { width: 250 }, { width: 250 }, { width: 250 }, { width: 250 }, { width: 120 },
+                        { width: 120 }, { width: 120 }, { width: 150 }, { width: 200 }, { width: 250 }],
+                    data: [
+                        {
+                            cell: "A1",
+                            value: "採購單身序號*",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "B1",
+                            value: "採購單別-單號",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "C1",
+                            value: "序號",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "D1",
+                            value: "採購品號",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "E1",
+                            value: "採購品名",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "F1",
+                            value: "規格",
+                            css: "title-desc"
+                        },
+                        {
+                            cell: "G1",
+                            value: "採購單位",
+                            css: "title-desc"
+                        },
+                        {
+                            cell: "H1",
+                            value: "採購數量*",
+                            css: "design-value-blue"
+                        },
+                        {
+                            cell: "I1",
+                            value: "採購單價*",
+                            css: "design-value-red"
+                        },
+                        {
+                            cell: "J1",
+                            value: "採購金額*",
+                            css: "design-value-red"
+                        },
+                        {
+                            cell: "K1",
+                            value: "客戶品號",
+                            css: "title-mes"
+                        },
+                        {
+                            cell: "L1",
+                            value: "客戶品名",
+                            css: "title-mes"
+                        },
+                        {
+                            cell: "M1",
+                            value: "品號*",
+                            css: "title-mes"
+                        },
+                        {
+                            cell: "N1",
+                            value: "品名",
+                            css: "title-mes"
+                        },
+                        {
+                            cell: "O1",
+                            value: "單位",
+                            css: "title-desc"
+                        },
+
+                        {
+                            cell: "P1",
+                            value: "類型*",
+                            css: "select-mes"
+                        },
+                        {
+                            cell: "Q1",
+                            value: "贈/備品數量*",
+                            css: "design-value-blue"
+                        },
+                        {
+                            cell: "R1",
+                            value: "預計出貨日*",
+                            css: "select-mes"
+                        },
+                        {
+                            cell: "S1",
+                            value: "專案連結",
+                            css: "select-mes"
+                        },
+                        {
+                            cell: "T1",
+                            value: "訂單單身備註",
+                            css: "title-mes"
+                        }
+                    ]
+                }
+            ],
+            styles: {
+                "title-class": {
+                    background: "rgba(146,231,220,1)",
+                    color: "#000"
+                },
+                "design-value-blue": {
+                    background: "#BCE4CE",
+                    color: "blue"
+                },
+                "design-value-red": {
+                    background: "#BCE4CE",
+                    color: "red"
+                },
+                "title-desc": {
+                    background: "rgba(197,192,218,1)",
+                    color: "#000"
+                },
+                "title-mes": {
+                    background: "rgba(146,220,231,1)",
+                    color: "#000"
+                },
+                "select-mes": {
+                    background: "rgba(225,200,200,1)",
+                    color: "#000"
+                }
+            }
+        };
+
+        function Expand@(itemName)(config) {
+            InitParameter@(itemName)(config);
+
+            $("#editData@(itemName) .card-body").html($("#template@(itemName)").html());
+
+            $("#editData@(itemName) #SoDetailTempIds@(itemName)").prop("id", `txtSoDetailTempIds@(itemName)`);
+            $("#editData@(itemName) #CompanyId@(itemName)").prop("id", `txtCompanyId@(itemName)`);
+            $("#editData@(itemName) #HiddenDatas@(itemName)").prop("id", `txtHiddenDatas@(itemName)`);
+
+            Switch(`#editData@(itemName)`, `#modal@(itemName)`);
+            $(".advanced-block").slideDown("slow");
+
+            InitSpreadsheet@(itemName)();
+            InitData@(itemName)(objPage@(itemName));
+            @*if (parseInt(soId@(itemName)) > 0) {
+                InitData@(itemName)(objPage@(itemName));
+            } else {
+                //alert("資料錯誤，請重新操作!", "alert");
+            }*@
+        }
+
+        function Pop@(itemName)(config) {
+            InitParameter@(itemName)(config);
+
+            $("#modal@(itemName) .modal-body").html($("#template@(itemName)").html());
+
+            $("#modal@(itemName) #SoDetailTempIds@(itemName)").prop("id", `txtSoDetailTempIds@(itemName)`);
+            $("#modal@(itemName) #CompanyId@(itemName)").prop("id", `txtCompanyId@(itemName)`);
+            $("#modal@(itemName) #HiddenDatas@(itemName)").prop("id", `txtHiddenDatas@(itemName)`);
+
+            Switch(`#modal@(itemName)`, `#editData@(itemName)`);
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            InitSpreadsheet@(itemName)();
+            InitData@(itemName)(objPage@(itemName));
+            @*if (parseInt(soId@(itemName)) > 0) {
+                InitData@(itemName)(objPage@(itemName));
+            } else {
+                //alert("資料錯誤，請重新操作!", "alert");
+            }*@
+        }
+
+        function InitParameter@(itemName)(config) {
+            //#region 初始化參數
+            data@(itemName) = [];
+            targetSelector@(itemName) = config.targetSelector;
+            soId@(itemName) = config.soId;
+            row@(itemName) = config.row;
+            identify@(itemName) = config.identify;
+            message@(itemName) = config.message;
+
+            $("#txtCompanyId@(itemName)").val(config.companyId);
+            $("#virtualCbox@(itemName)").html("");
+            if (!!config.cellSelector) {
+                cellSelector@(itemName) = config.cellSelector;
+                $.each(cellSelector@(itemName), function (i, s) {
+                    let name = s.element.replace('.', '').replace('#', '');
+                    let id = "v" + s.element.replace('.', '').replace('#', '');
+                    switch (s.type) {
+                        case "txt":
+                            break;
+                        case "cbo":
+                            $("#virtualCbox@(itemName)").append(`<select class="form-control" id="tempId@(itemName)"></select>`);
+                            $("#tempId@(itemName)").prop({ "id": id, "name": name });
+                            if (s.element == "#cboProductType@(itemName)") ComboBoxs.Default(`#${id}`, "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "SoDetail.ProductType" }, "", "NA", "", "TypeName", "TypeNo");
+                            if (s.element == "#cboProject@(itemName)") ComboBoxs.WithText(`#${id}`, "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Project" }, "", "CHOOSE", "請選擇專案", "ProjectName", "Project");
+                            break;
+                        case "date":
+                            $("#virtualCbox@(itemName)").append(`<input type="text" class="form-control" id="tempId@(itemName)" />`);
+                            $("#tempId@(itemName)").prop({ "id": id, "name": name });
+                            break;
+                    }
+                });
+            }
+            //#endregion
+
+            //#region 加入訊息欄位
+            if (!!message@(itemName) && !!excelData && !!excelData.sheets) {
+                $.each(excelData.sheets, function (i, item) {
+                    item.cols.push({ width: 300 });
+                    item.data.push({ cell: `${message@(itemName)}1`, value: "訊息", css: "", format: "" });
+                });
+            }
+            //#endregion
+        }
+
+        function InitSpreadsheet@(itemName)() {
+            $("#spreadsheet@(itemName)").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("spreadsheet@(itemName)", configs);
+
+            //#region 自定義按鈕
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-excel",
+                tooltip: "匯入Excel",
+                id: "Import"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-save",
+                tooltip: "儲存",
+                id: "Save"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-trash-alt",
+                tooltip: "刪除",
+                id: "Delete"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-download",
+                tooltip: "下載當前EXCEL",
+                id: "Download"
+            });
+            //#endregion
+
+            //#region 自定義樣式
+            $("#spreadsheet@(itemName)").css("height", "650px");
+            //#endregion
+
+            //#region 載入新工作表後偵測
+            spreadsheet@(itemName).events.on("afterSheetChange", function (sheet) {
+                console.log('載入新工作表後偵測');
+            });
+            //#endregion
+
+            //#region 將焦點設定在儲存格上後觸發
+            spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                console.log(`將焦點設定在儲存格上後觸發 ${cell}`);
+                data@(itemName) = spreadsheet@(itemName).serialize().sheets[0].data;
+                excelCtrls@(itemName).InitCellControls@(itemName)(cell);
+            });
+            //#endregion
+
+            //#region 編輯結束後
+            spreadsheet@(itemName).events.on("afterEditEnd", function (cell, value) {
+                console.log('編輯結束後');
+                data@(itemName) = spreadsheet@(itemName).serialize().sheets[0].data;
+            });
+            //#endregion
+
+            //#region 功能列 按鈕觸發事件
+            spreadsheet@(itemName).toolbar.events.on("click", function (id, e) {
+                console.log('功能列 按鈕觸發事件');
+                if (id == "Save") {
+                    Save@(itemName)();
+                }
+                else if (id == "Delete") {
+                    swal.fire({
+                        titleText: "確定要刪除採購單暫存資料?",
+                        text: "此動作無法復原，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            excelCtrls@(itemName).Delete();
+                        }
+                    });
+                }
+                else if (id == "Transfer") {
+                    Transfer@(itemName)();
+                }
+                else if (id == "Download") {
+                    ExportXlsx@(itemName)();
+                }
+                else if (id == "Import") {
+                    ImportExcel@(itemName)();
+                }
+                else if (id == "CheckData") {
+                    CheckData@(itemName)();
+                }
+            });
+            //#endregion
+
+            excelCtrls@(itemName).InitFirstRow(); //初始化第一列
+            excelCtrls@(itemName).LockFirstRow(); //鎖定第一列
+        }
+
+        function ComponentControl@(itemName)() {
+            addMethod(this, "LockFirstRow", function () {
+                $.each(excelData.sheets, function (i, sheet) {
+                    spreadsheet@(itemName).lock(`${sheet.data.map(m => m.cell).slice(0, 1)}:${sheet.data.map(m => m.cell).slice(-1)}`);
+                });
+            });
+            addMethod(this, "InitFirstRow", function () {
+                spreadsheet@(itemName).parse(excelData); //產生第一列欄位名稱
+            });
+
+            addMethod(this, "InitSpreadsheet", function () {
+                InitSpreadsheet@(itemName)(); //初始化excel套件
+            });
+
+            addMethod(this, "ReLoadSpreadsheetData", function () {
+                ReLoadSpreadsheetData@(itemName)();
+                return spreadsheetJson@(itemName).spreadsheetInfo;
+            });
+
+            addMethod(this, "Save", function () {
+                if (!ReLoadSpreadsheetData@(itemName)()) {
+                    if (spreadsheetJson@(itemName).spreadsheetInfo.length <= 0) { return false; } //alert("沒有任何資料變更!", "alert");
+                    let targetUrl = '@Url.Action("UpdateSoDetailTempBatch", "SaleOrder")';
+                    let postData = {
+                        "SoId": soId@(itemName),
+                        "CompanyId": $("#txtCompanyId@(itemName)").val(),
+                        "SpreadsheetData": JSON.stringify(spreadsheetJson@(itemName))
+                    };
+
+                    let data = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (data) {
+                        InitSpreadsheet@(itemName)();
+                        InitData@(itemName)(objPage@(itemName));
+                    }
+                }
+            });
+
+            addMethod(this, "Delete", function () {
+                let targetUrl = "@Url.Action("DeleteSoDetailTemp", "SaleOrder")";
+                let postData = {
+                    "SoId": soId@(itemName),
+                    "CompanyId": $("#txtCompanyId@(itemName)").val(),
+                };
+                let result = DataAccess.Delete(targetUrl, postData, false, true);
+                if (result) {
+                    InitSpreadsheet@(itemName)();
+                    InitData@(itemName)(objPage@(itemName));
+                }
+            });
+
+            addMethod(this, "InitCellControls@(itemName)", function (cell) {
+                let c = cell.split("");
+
+                if (c.length > 0 && !!cellSelector@(itemName)) {
+                    let n = c[0];
+                    let r = c[1];
+                    let v = spreadsheet@(itemName).getValue(cell);
+
+                    let s = cellSelector@(itemName).find(f => f.txtColumn == n);
+                    if (!!s && r >= row@(itemName)) {
+                        let id = s.element.replace(',', '').replace('#', '');
+                        let e = $(`#v${id}`).clone();
+
+                        e.prop("id", id);
+                        e.val()
+                        $("#popItem@(itemName) .input-group").html(e);
+                        $("#popItem@(itemName) .input-group").append(`<div class="input-group-append">
+                            <button type="button" class="btn btn-outline-danger" id="clearCell@(itemName)" name="clearCell@(itemName)"><i class="fas fa-eraser"></i></button></div>`);
+
+                        switch (s.type) {
+                            case "txt":
+                                break;
+                            case "cbo":
+                                $(s.element).prop("selectedIndex", $(`${s.element} option:contains(${v})`).prop("index"));
+                                $(s.element).select2({
+                                    dropdownAutoWidth: true,
+                                    width: "100%"
+                                });
+                                break;
+                            case "date":
+                                Suites.DatePicker(id, !!v ? new Date(v) : new Date());
+                                break;
+                        }
+
+                        let colName = excelData.sheets.map(m => m.data).reduce((a, b) => { return a.conact(b); }).find(f => f.cell == n + 1);
+                        if (!!colName) $("#popItemName@(itemName)").text(colName.value);
+
+                        $("#modalSelect@(itemName)").modal("show");
+
+                        $("#btnOK@(itemName)").off("click").on("click", function () {
+                            $(`#${id}`).trigger("change");
+                        });
+
+                        $(`#${id}`).off("change").on("change", function () {
+                            //add cell 選項名稱
+                            switch (s.type) {
+                                case "txt":
+                                case "date":
+                                    spreadsheet@(itemName).setValue(cell, !!this.value ? this.value : '');
+                                    break;
+                                case "cbo":
+                                    spreadsheet@(itemName).setValue(cell, !!this.value ? this.options[this.selectedIndex].text : '');
+                                    break;
+                            }
+
+                            hiddenData@(itemName) = JSON.parse($(`#txtHiddenDatas@(itemName)`).val());
+
+                            //取得識別欄位資訊
+                            let mainColInfo = columns@(itemName).find(f => f.column == identify@(itemName));
+                            let mainKey = data@(itemName).find(f => f.cell == identify@(itemName) + r);
+                            if (!!(mainColInfo && s.idColumn)) {
+                                //add cell 選項值
+                                let col = columns@(itemName).find(f => f.column == s.idColumn);
+                                if (!!(col && mainKey)) {
+                                    let hiddenData = hiddenData@(itemName).find(f => f[mainColInfo.title] == mainKey.value);
+                                    $.extend(true, hiddenData, { [col.title]: !!this.value ? this.value : '' });
+                                }
+                            }
+
+                            $(`#txtHiddenDatas@(itemName)`).val(JSON.stringify(hiddenData@(itemName)));
+                            $("#modalSelect@(itemName)").modal("hide");
+                        });
+
+                        $(`#clearCell@(itemName)`).off("click").on("click", function () {
+                            spreadsheet@(itemName).setValue(cell, '');
+
+                            hiddenData@(itemName) = JSON.parse($(`#txtHiddenDatas@(itemName)`).val());
+
+                            //取得識別欄位資訊
+                            let mainColInfo = columns@(itemName).find(f => f.column == identify@(itemName));
+                            let mainKey = data@(itemName).find(f => f.cell == identify@(itemName) + r);
+                            if (!!(mainColInfo && s.idColumn)) {
+                                //add cell 選項值
+                                let col = columns@(itemName).find(f => f.column == s.idColumn);
+                                if (!!(col && mainKey)) {
+                                    let hiddenData = hiddenData@(itemName).find(f => f[mainColInfo.title] == mainKey.value);
+                                    $.extend(true, hiddenData, { [col.title]: '' });
+                                }
+                            }
+
+                            $(`#txtHiddenDatas@(itemName)`).val(JSON.stringify(hiddenData@(itemName)));
+                            $("#modalSelect@(itemName)").modal("hide");
+                        });
+                    }
+                }
+            });
+        }
+
+        function InitData@(itemName)(objPage) {
+            let targetUrl = "@Url.Action("GetSoDetailTemp", "SaleOrder")";
+            let postData = {
+                //"OrderBy": "",
+                //"PageIndex": (objPage.pageIndex + 1),
+                //"PageSize": objPage.pageSize,
+                "SoId": soId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        i++;
+                        let hiddenData = {};
+                        let mkName = '';
+                        $.each(columns@(itemName), function (j, col) {
+
+                            //是識別欄位
+                            if (col.column == identify@(itemName)) {
+                                mkName = col.title;
+                                if (hiddenData@(itemName).filter(f => f[col.title] == item[col.title]).length < 1) {
+                                    hiddenData = { [col.title]: item[col.title] };
+                                    hiddenData@(itemName).push(hiddenData);
+                                }
+                            }
+
+                            //是隱藏欄位
+                            if (col.type == 'hidden') {
+                                hiddenData = hiddenData@(itemName).find(f => f[mkName] == item[col.title]);
+                                $.extend(true, hiddenData, { [col.title]: item[col.title] });
+                                return; //跳過隱藏屬性的欄位                                
+                            }
+
+                            if (!!col.format) spreadsheet@(itemName).setFormat(col.column + (i + 1), col.format); //設定 data format
+
+                            //是下拉選單
+                            let s = cellSelector@(itemName).find(f => f.txtColumn == col.column);
+                            if (!!s) {
+                                switch (s.type) {
+                                    case "txt":
+                                    case "date":
+                                        spreadsheet@(itemName).setValue(col.column + (i + 1), item[col.title]);
+                                        break;
+                                    case "cbo":
+                                        let cboCol = columns@(itemName).find(f => f.column == s.idColumn);
+                                        if (!!cboCol) {
+                                            let id = s.element.replace(',', '').replace('#', '');
+                                            spreadsheet@(itemName).setValue(s.txtColumn + (i + 1), !!item[cboCol.title] ? $(`#v${id} option[value='${item[cboCol.title]}']`).text() : '');
+                                        }
+                                        break;
+                                }
+                            }
+                            else {
+                                spreadsheet@(itemName).setValue(col.column + (i + 1), item[col.title]);
+                            }
+                        });
+                    });
+
+                    $(`#txtHiddenDatas@(itemName)`).val(JSON.stringify(hiddenData@(itemName)));
+                    data@(itemName) = spreadsheet@(itemName).serialize().sheets[0].data;
+                }
+            }
+        }
+
+        function ReLoadSpreadsheetData@(itemName)() {
+            let errorFlag = false;
+            let errorMsg = [];
+
+            if (!spreadsheet@(itemName)) return true;
+
+            spreadsheetJson@(itemName).spreadsheetInfo = [];
+            data@(itemName) = spreadsheet@(itemName).serialize().sheets[0].data;
+
+            let rows = [...new Set(data@(itemName).map(m => parseInt(m.cell.replace(/^\D+/g, ''))))];
+
+            let idx = 1;
+
+            let dataList = [];
+
+            //逐列取值
+            $.each(rows, function (i, row) { //row
+                if (row == 1) return; //表頭跳過
+
+                let mainKey = data@(itemName).find(f => f.cell == identify@(itemName) + row);
+                if (!mainKey) return; //跳過沒有序號欄位的row
+
+                if (!mainKey.value) return; //跳過沒有序號的row
+
+                if (spreadsheetJson@(itemName).spreadsheetInfo.some(s => s.Mainkey == mainKey.value))
+                    return; //跳過重複序號的row
+
+                //取得識別欄位資訊
+                let mainColInfo = columns@(itemName).find(f => f.column == identify@(itemName));
+
+                let obj = {};
+                let msg = [];
+                $.each(columns@(itemName), function (i, col) {
+                    let cell = data@(itemName).find(f => f.cell == col.column + row);
+
+                    if (col.validation.switch && !cell) {
+                         msg.push(`${col.column + row}${col.validation.msg}`);
+                    }
+
+                    if (!!(cell && cell.value)) {
+                        obj[col.title] = cell.value.toString();
+
+                        if (col.column == identify@(itemName)) {
+                            obj["Row"] = idx;
+                            dataList.push(cell.value);
+                        }
+                    }
+                    else {
+                        switch (col.dataType) {
+                            case "text":
+                                obj[col.title] = '';
+                                break;
+                            case "number":
+                                obj[col.title] = '0';
+                                break;
+                        }
+                    }
+
+                    //加入隱藏的表單資料
+                    if (col.type == "hidden") {
+                        if (!!$(`#txtHiddenDatas@(itemName)`).val().length) {
+                            let hiddenData = JSON.parse($(`#txtHiddenDatas@(itemName)`).val()).find(f => f[mainColInfo.title] == mainKey.value);
+                            if (!!hiddenData) Object.assign(obj, hiddenData);
+                        }
+                    }
+                });
+
+                if (msg.length > 0) {
+                    let strMsg = msg.join('; ');
+                    spreadsheet@(itemName).setValue(message@(itemName) + row, strMsg);
+                    spreadsheet@(itemName).setStyle(message@(itemName) + row, { background: "red", color: "#fff" });
+                    errorMsg.push(strMsg);
+                    errorFlag = true;
+                }
+                else {
+                    spreadsheet@(itemName).setValue(message@(itemName) + row, "");
+                    spreadsheet@(itemName).setStyle(message@(itemName) + row, { background: "#fff", color: "#000" });
+                }
+
+                spreadsheetJson@(itemName).spreadsheetInfo.push(obj);
+                idx++;
+            });
+
+            if (!!targetSelector@(itemName)) ElementSetValue(targetSelector@(itemName), dataList, "change");
+            if (errorMsg.length > 0) alert(errorMsg.join("<br />"), "error", 0);
+            return errorFlag;
+        }
+
+        function Save@(itemName)() {
+            swal.fire({
+                titleText: "確定要更新採購單資料?",
+                text: "此動作將自動(生成/更新)訂單單身，請確認是否執行?",
+                icon: "question",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    excelCtrls@(itemName).Save();
+                }
+            });
+        }
+
+        function ExportXlsx@(itemName)() {
+            spreadsheet@(itemName).export.xlsx(); // exports data into a .xlsx file
+        };
+
+        function ExportJson() {
+            spreadsheet@(itemName).export.json(); // exports data into a .json file
+        };
+
+        function ImportExcel@(itemName)() {
+            //移除焦點設定在儲存格上後觸發
+            spreadsheet@(itemName).events.detach("afterFocusSet");
+            spreadsheet@(itemName).load("", "xlsx").then(function () {
+                excelCtrls@(itemName).LockFirstRow(); //鎖定第一列
+                //將焦點設定在儲存格上後觸發
+                @*spreadsheet@(itemName).events.on("afterFocusSet", function (cell) { });*@
+            });
+        }
+
+        @*function Return@(itemName)() {
+            InitData@(itemName)(objPage@(itemName));
+        }*@
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+        )

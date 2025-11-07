@@ -1,0 +1,188 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewAqcConfirmDetailBatch";
+    string itemNameText = "批量確認管理";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <form autocomplete="off" id="editForm@(itemName)">
+                            <div class="table-custom">
+                                <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center" scope="col" style="min-width: 125px;">全選 <input type="checkbox" name="all" onclick="check_all(this,'cbxBarcode@(itemName)')" style="margin:3px" /></th>
+                                            <th scope="col" style="min-width: 75px;">#</th>
+                                            <th scope="col" style="min-width: 100px;">類型</th>
+                                            <th scope="col" style="min-width: 200px;">項目</th>
+                                            <th scope="col" style="min-width: 200px;">進度狀態</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()" ><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)() {
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+
+            let targetUrl = "@Url.Action("GetAqDetail", "Abnormalquality")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "AbnormalqualityId": $("#AbnormalqualityId").val(),
+                "AqBarcodeId": $("#AqBarcodeId").val(),
+                "AqBarcodeStatus":2
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                            <td class="text-center active-content">
+                                                <input type="checkbox" id="cbxBarcode@(itemName)${item.AqBarcodeId}" name="cbxBarcode@(itemName)" value="${item.AqBarcodeId}" />
+                                            </td>
+                                            <td>${i+1}</td>
+                                            <td>${QcTypeDetail != `IQC` ? `條碼` : `品號</br>批號`}</td>
+                                            <td class="ellipsis" data-toggle="tooltip" title="${QcTypeDetail != `IQC` ? item.BarcodeNo : `${GrMtlItemNo}</br>${GrLotNumber}`}" style="max-width: 200px;">${QcTypeDetail != `IQC` ? item.BarcodeNo : `${GrMtlItemNo}</br>${GrLotNumber}`}</td>
+                                            <td class="text-center ellipsis" data-toggle="tooltip" title="${item.AqBarcodeStatus}" style="max-width: 200px;">${StatusName(`AqBarcode.AqBarcodeStatus`, item.AqBarcodeStatus)}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                        <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                          <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料
+                                        </td>
+                                      </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Save@(itemName)() {
+
+            if ($(objForm@(itemName)).valid()) {
+
+                let BarcodeListY = [];
+                let BarcodeListN = [];
+
+                $.each($("input[name='cbxBarcode@(itemName)']"), function () {
+                    console.log($(this))
+                        if ($(this).is(":checked")) {
+                            BarcodeListY.push($(this).val());
+                        }
+                        else {
+                            if (!$(this).is(":disabled")) {
+                                BarcodeListN.push($(this).val());
+                            }
+                        }
+                });
+                if (BarcodeListY.length <= 0) {
+                    console.log("條碼清單不能為空")
+                    alert("條碼清單不能為空，請選擇條碼");
+                    return;
+                }
+                
+                let targetUrl = "@Url.Action("UpdateAqcConfirmDetailBatch", "Abnormalquality")";
+                let postData = {
+                    "AbnormalqualityId": $("#AbnormalqualityId").val(),
+                    "AqBarcodeIdList": BarcodeListY.join(",")
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    Return@(itemName)();
+                }
+                else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+        }
+
+        function check_all(obj, cName) {
+            var checkboxs = document.getElementsByName(cName);
+            for (var i = 0; i < checkboxs.length; i++) { checkboxs[i].checked = obj.checked; }
+        }
+        
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+            QueryAqcConfirmDetail();
+            Close@(itemName)()
+        }
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+                )

@@ -1,0 +1,444 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QcMachineModePlanning";
+    string itemNameText = "量測機型管理";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+<style>
+    .active-ul {
+        background: #f6e8ec;
+        color: #ca577a;
+    }
+
+    .active-btn {
+        background: #efabc4 !important;
+    }
+
+    .title-btn {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 15px;
+    }
+</style>
+
+<div id="step3" class="col-12" style="margin: 0 auto; display: none;">
+    <!--步驟三標題-->
+    <div class="title-measure">
+        <div>
+            <span class="caption">量測單</span>
+            <span id="desQcRecordId@(itemName)" class="detail"></span>
+            <span class="caption">
+                (品名<span id="desMtlItemName@(itemName)" class="detail"></span>)
+            </span>
+        </div>
+        <a href="javascript: CheckGoods@(itemName)('S')" class="btn">
+            <i class="far fa-ruler"></i>開始
+        </a>
+
+    </div>
+    <!--步驟三內容-->
+    <div class="step-content">
+        <!--左側 機型-->
+        <div class="menu-block">
+            <p class="title" style="">機型</p>
+            <ul id="ulData@(itemName)">
+            </ul>
+        </div>
+        <!--右側列表-->
+        <div class="table-block">
+            <div id="qmmData@(itemName)" class="row">
+            </div>
+        </div>
+    </div>
+
+    <div class="button-container">
+        <div class="btn btn-prev disabled" onclick="Prev@(itemName)();">返回</div>
+    </div>
+</div>
+
+<!--新增排程-->
+<div class="modal fade" @*data-backdrop="static" data-keyboard="false"*@ id="modalAddPlanning@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    新增機台排程
+                    <span class="sub-title">機台: <span class="sub-text" id="desMachineName@(itemName)"></span></span>
+                    <span class="sub-title">此次預估量測時間: <span class="sub-text" id="desEstimatedMeasurementTime@(itemName)"></span></span>
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-12 col-md-12">
+                        <input type="hidden" id="txtQrpId@(itemName)"/>
+                        <input type="hidden" id="txtQmmDetailId@(itemName)"/>
+                        <div class="form-group row">
+                            <label class="form-label col-12" for="txtSort@(itemName)">編列順序<span class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <input type="number" class="form-control" id="txtSort@(itemName)" name="txtSort@(itemName)"
+                                        placeholder="請輸入編列順序" value="" required />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Planning@(itemName)()"><i class="fas fa-share-square"></i> 排定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        $(document).ready(function () {
+            $("#txtSort@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Planning@(itemName)();
+                    return false;
+                }
+            });
+        });
+
+        function Pop@(itemName)() {
+            $("#desQcRecordId@(itemName)").html(qcRecordId);
+            $("#desMtlItemName@(itemName)").html(mtlItemName);
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            GetQcRecordPlanning@(itemName)();
+        }
+
+        function Prev@(itemName)() {
+            $("#step2").show();
+            $("#step3").hide();
+            PrevAction();
+            GetQcRecordPlanningQcRecordPlanning();
+        }
+
+        function GetQcRecordPlanning@(itemName)() {
+            let targetUrl = "@Url.Action("GetQcRecordPlanning", "QcDataManagement")";
+
+            let postData = {
+                "QcRecordId": qcRecordId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            let qcMachineModeId;
+            let estimatedMeasurementTime;
+            let qrpId;
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (i == 0) {
+                            qcMachineModeId = item.QcMachineModeId;
+                            estimatedMeasurementTime = item.EstimatedMeasurementTime;
+                            qrpId = item.QrpId;
+                        }
+
+                        innerHtml += `<li data-qrp-id="${item.QrpId}" data-estimated-measurementtime="${item.EstimatedMeasurementTime}" data-qc-machine-mode-id="${item.QcMachineModeId}" ${i == 0 ? `class="active-ul"` : ``}>
+                                        <a href="javascript: ChangeQmmDetail@(itemName)('${item.QcMachineModeId}', '${item.EstimatedMeasurementTime}', '${item.QrpId}')">
+                                            ${item.QcMachineModeName}
+                                            <span>${item.EstimatedMeasurementTime}</span>
+                                        </a>
+                                        ${item.ConfirmStatus == `N` ? `<a class="pl-confirm" href="javascript: UpdateConfirmStatus@(itemName)('${item.QrpId}', 'Y');">確認排程</a>` : `<a class="pl-re-confirm" href="javascript:UpdateConfirmStatus@(itemName)('${item.QrpId}', 'N');">取消確認</a>`}
+                                      </li>`;
+                    });
+                }
+            }
+            $("#ulData@(itemName)").html(innerHtml);
+
+            GetQmmDetail@(itemName)(qcMachineModeId, estimatedMeasurementTime, qrpId);
+        }
+
+        function GetQmmDetail@(itemName)(QcMachineModeId, EstimatedMeasurementTime, QrpId) {
+            let targetUrl = "@Url.Action("GetQmmDetail", "QcDataManagement")";
+
+            let postData = {
+                "QcMachineModeId": QcMachineModeId,
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<div style="min-width: 45%;" class="col-md-6  col-sm-12 col-12">
+                                        <div class="table-custom" style="">
+                                            <div class="table-custom-title">
+                                                ${item.MachineName}
+                                                <div class="title-btn">
+                                                    <input type="date" class="form-control" name="txtPlanningDate@(itemName)" data-qmm-detail-id="${item.QmmDetailId}" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                                                    <a data-qmm-detail-id="${item.QmmDetailId}" href="javascript: PopModalAddPlanning@(itemName)('${item.MachineName}', '${item.QmmDetailId}');"><i class="fas fa-plus-circle"></i></a>
+                                                </div>
+                                            </div>
+                                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)" name="tblDate@(itemName)">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col" style="min-width: 75px;" class="text-center">順序</th>
+                                                        <th scope="col" style="min-width: 100px;">量測單號</th>
+                                                        <th scope="col" style="min-width: 200px;">品名</th>
+                                                        <th scope="col" style="min-width: 135px;">預計開始時間</th>
+                                                        <th scope="col" style="min-width: 135px;">預計結束時間</th>
+                                                        <th scope="col" class="col-sticky" style="min-width: 75px;">操作</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody data-qmm-detail-id="${item.QmmDetailId}" class="ui-sortable">
+                                                    ${GetQcMachineModePlanning@(itemName)(item.QmmDetailId, '@DateTime.Now.ToString("yyyy-MM-dd")')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="pagination" id="pageTemplateDesignSignFlow"></div>
+                                    </div>`;
+                    });
+                }
+            }
+
+            $("#qmmData@(itemName)").html(innerHtml);
+
+            $(`#tblData@(itemName) tbody`).sortable({
+                cancel: ".disabled-sort",
+                handle: ".sort-handle",
+                update: function (event, ui) {
+                    let qrpId = $("#txtQrpId@(itemName)").val();
+                    let estimatedMeasurementTime = $("#desEstimatedMeasurementTime@(itemName)").html();
+
+                    let targetUrl = "@Url.Action("UpdateQcMachineModePlanningSort", "QcDataManagement")";
+                    let postData = {
+                        "PlanningSort": $(this).sortable("toArray", { attribute: 'id' }).join()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                    else {
+                        return false;
+                    }
+                }
+            });
+
+            $(`input[name="txtPlanningDate@(itemName)"][data-qmm-detail-id]`).change(function () {
+                let planningDate = $(this).val();
+                let qmmDetailId = $(this).data("qmm-detail-id");
+                let innerHtml = GetQcMachineModePlanning@(itemName)(qmmDetailId, planningDate);
+                $(`tbody[data-qmm-detail-id="${qmmDetailId}"]`).html(innerHtml);
+            });
+        }
+
+        function GetQcMachineModePlanning@(itemName)(QmmDetailId, StartDate) {
+            let targetUrl = "@Url.Action("GetQcMachineModePlanning", "QcDataManagement")";
+
+            let postData = {
+                "QmmDetailId": QmmDetailId,
+                "StartDate": StartDate
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr id="${item.QmmpId}">
+                                        <td data-toggle="tooltip" title="${item.Sort}" style="max-width: 100px;" class="text-center active-content auth-update">
+                                            <a class="active-link sort-handle ui-sortable-handle" href="javascript:void(0);">
+                                                <i class="fas fa-arrows-alt"></i>
+                                                <span>${item.Sort}</span>
+                                            </a>
+                                        </td>
+                                        <td data-toggle="tooltip" title="H001A" style="max-width: 100px;">
+                                            <span class="stack-title">量測單號</span>${item.QcRecordId}
+                                        </td>
+                                        <td data-toggle="tooltip" title="H001A" style="max-width: 200px;">
+                                            <span class="stack-title">品名</span>${item.MtlItemName}
+                                        </td>
+                                        <td data-toggle="tooltip" title="" style="max-width: 200px;">
+                                            <span class="stack-title">預計開始時間</span>
+                                            <span>${item.EstimatedStartDate}</span>
+                                        </td>
+                                        <td data-toggle="tooltip" title="" style="max-width: 200px;">
+                                            <span class="stack-title">預計結束時間</span>
+                                            <span>${item.EstimatedEndDate}</span>
+                                        </td>
+                                        <td data-toggle="tooltip" title="修改/移除" class="active-content col-sticky">
+                                            <span class="stack-title">操作</span>
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.QmmpId}');" title="移除" style=""><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml = `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fbf7f6;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                 </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+
+            return innerHtml;
+        }
+
+        function PopModalAddPlanning@(itemName)(MachineName, QmmDetailId) {
+            let activeObj = $(".active-ul");
+            let qrpId = activeObj.data("qrp-id");
+            let estimatedMeasurementTime = activeObj.data("estimated-measurementtime");
+            $("#desMachineName@(itemName)").html(MachineName);
+            $("#desEstimatedMeasurementTime@(itemName)").html(estimatedMeasurementTime);
+            $("#txtQmmDetailId@(itemName)").val(QmmDetailId);
+            $("#txtQrpId@(itemName)").val(qrpId);
+            $("#txtSort@(itemName)").val("");
+            GetQcMachineModePlanningSort@(itemName)(QmmDetailId);
+            $("#modalAddPlanning@(itemName)").modal("show");
+        }
+
+        function GetQcMachineModePlanningSort@(itemName)(QmmDetailId) {
+            let targetUrl = "@Url.Action("GetQcMachineModePlanningSort", "QcDataManagement")";
+            let postData = {
+                "QmmDetailId": QmmDetailId,
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#txtSort@(itemName)").val(parseInt(item.Count) + 1);
+                    });
+                }
+            }
+        }
+
+        function Planning@(itemName)() {
+            let qrpId = $("#txtQrpId@(itemName)").val();
+            let qmmDetailId = $("#txtQmmDetailId@(itemName)").val();
+            let estimatedMeasurementTime = $("#desEstimatedMeasurementTime@(itemName)").html();
+            let sort = $("#txtSort@(itemName)").val();
+
+            let targetUrl = "@Url.Action("AddQcMachineModePlanning", "QcDataManagement")";
+            let postData = {
+                "QrpId": qrpId,
+                "QmmDetailId": qmmDetailId,
+                "Sort": sort,
+            };
+
+            let data = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (data) {
+                $("#modalAddPlanning@(itemName)").modal("hide");
+                Return@(itemName)();
+            }
+        }
+
+        function Delete@(itemName)(QmmpId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let qrpId = $("#txtQrpId@(itemName)").val();
+                    let estimatedMeasurementTime = $("#desEstimatedMeasurementTime@(itemName)").html();
+
+                    let targetUrl = "@Url.Action("DeleteQcMachineModePlanning", "QcDataManagement")";
+                    let postData = {
+                        "QmmpId": QmmpId,
+                    };
+
+                    let data = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (data) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function InitStep3() {
+            $("#step1").hide();
+            $("#step2").hide();
+            $("#step3").show();
+            $("#desQcRecordId@(itemName)").html(qcRecordId);
+            $("#desMtlItemName@(itemName)").html(mtlItemName);
+            InitData@(itemName)();
+        }
+
+        function ChangeQmmDetail@(itemName)(QcMachineModeId, EstimatedMeasurementTime, QrpId) {
+            $(".active-ul").removeClass("active-ul");
+            $(`li[data-qc-machine-mode-id="${QcMachineModeId}"]`).addClass("active-ul");
+            GetQmmDetail@(itemName)(QcMachineModeId, EstimatedMeasurementTime, QrpId);
+        }
+
+        function CheckGoods@(itemName)(status) {
+            let targetUrl = "@Url.Action("UpdateCheckGoodsByPlanning", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": qcRecordId,
+                "CheckQcMeasureData": status,
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                InitData@(itemName)();
+            }
+        }
+
+        function UpdateConfirmStatus@(itemName)(QrpId, ConfirmStatus) {
+            swal.fire({
+                titleText: "確認要更改狀態嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdatePlanningConfirmStatus", "QcDataManagement")";
+                    let postData = {
+                        "QrpId": QrpId,
+                        "ConfirmStatus": ConfirmStatus,
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        InitData@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            let qrpId = $("#txtQrpId@(itemName)").val();
+            let estimatedMeasurementTime = $("#desEstimatedMeasurementTime@(itemName)").html();
+
+            let oriQcMachineModeId = $('[class="active-ul"]').data("qc-machine-mode-id");
+            GetQcRecordPlanning@(itemName)();
+            GetQmmDetail@(itemName)(oriQcMachineModeId, estimatedMeasurementTime, qrpId);
+
+            $(".active-ul").removeClass("active-ul");
+            $(`li[data-qc-machine-mode-id="${oriQcMachineModeId}"]`).addClass("active-ul");
+        }
+    </script>
+  )

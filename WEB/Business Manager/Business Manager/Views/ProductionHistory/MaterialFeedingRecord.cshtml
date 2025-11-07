@@ -1,0 +1,581 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "MaterialFeedingRecord";
+    string itemNameText = "投料記錄";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+}
+
+@Html.Resource("css",
+    @<style>
+        .container {
+            margin-left: 0 !important;
+        }
+
+        .table-custom td, .table-custom th {
+            padding: 3px 5px !important; /* 减小左右内边距为5px（原为8px） */
+            vertical-align: middle !important;
+        }
+
+        .custom-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 1px 4px; /* 减小内边距（原4px 8px） */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px; /* 减小字体大小（原14px） */
+            height: 26px; /* 固定按钮高度，确保一致性 */
+        }
+
+        .custom-btn-primary {
+            background-color: #A239F2;
+            color: white;
+        }
+
+        .custom-btn-gray {
+            background-color: #848584;
+            color: white;
+        }
+
+        .custom-btn:hover {
+            opacity: 0.85;
+        }
+
+        .mr-1 {
+            margin-right: 1px;
+        }
+
+        .mr-2 {
+            margin-right: 2px; /* 略微减小右侧间距（原8px） */
+        }
+
+        .editable-input, .editable-select {
+            width: 100%; /* 占满整个单元格宽度 */
+            padding: 2px 4px;
+            height: 26px; /* 与按钮高度一致 */
+            box-sizing: border-box; /* 确保padding和border不增加总宽度 */
+        }
+
+        editable-input, .editable-select {
+            width: 100%; /* 占满整个单元格宽度 */
+            padding: 2px 4px;
+            height: 26px; /* 与按钮高度一致 */
+            box-sizing: border-box; /* 确保padding和border不增加总宽度 */
+        }
+
+        .custom-btn-success {
+            background-color: #28a745; /* 成功绿 */
+            color: white;
+        }
+
+
+    </style>
+                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="button-block mb-1">
+            <button type="button" class="btn btn-secondary" onclick="javascript:location.href='/ProductionHistory/MaterialFeedReg';"><i class="fas fa-undo"></i>返回</button>
+
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                        <fieldset>
+                            <div class="form-row align-items-center mb-2">
+                                <div class="col-lg-2 col-2" style="width: 115px">
+                                    <label class="form-label" for="txtMachineIdQ@(itemName)">機台ID</label>
+                                    <input type="text" class="form-control" style="width: 115px" id="txtMachineIdQ@(itemName)" name="txtMachineIdQ@(itemName)" placeholder="請輸入機台ID" />
+                                </div>
+                                <div class="col-lg-2 col-2">
+                                    <label class="form-label" for="txtMoIdQ@(itemName)">制令ID</label>
+                                    <input type="text" class="form-control" style="width: 115px" id="txtMoIdQ@(itemName)" name="txtMoIdQ@(itemName)" placeholder="請輸入制令ID" />
+                                </div>
+                                <div class="col-lg-2 col-2">
+                                    <label class="form-label" for="txtFeedDateQ@(itemName)">投料日期</label>
+                                    <input type="text" class="form-control" style="width: 115px" id="txtFeedDateQ@(itemName)" name="txtFeedDateQ@(itemName)"
+                                           data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                </div>
+                                <div class="col-lg-2 col-2 mt-4">
+                                    <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 40px;">#</th>
+                                        <th class="text-center" scope="col" style="min-width: 75px;">操作</th>
+                                        <th scope="col" style="min-width: 85px;">制令</th>
+                                        <th scope="col" style="min-width: 100px;">材料編號</th>
+                                        <th scope="col" style="min-width: 70px;">投料數量</th>
+                                        <th scope="col" style="min-width: 90px;">單位</th>
+                                        <th scope="col" style="min-width: 130px;">備註</th>
+                                        <th scope="col" style="min-width: 100px;">材料名称</th>
+                                        <th scope="col" style="min-width: 100px;">材料规格</th>
+                                        <th scope="col" style="min-width: 100px;">机台</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link href="@Url.Content("~/Content/dhtmlx/suite.commercial/7.3.8/suite.min.css")" rel="stylesheet" />
+<script src="@Url.Content("~/Scripts/locales.js")"></script>
+<script src="@Url.Content("~/Scripts/dhtmlx/suite.commercial/7.3.8/suite.min.js")"></script>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let editingRowId = null; // 跟踪当前编辑行ID
+        let originalRowData = {}; // 存储原始行数据，用于取消编辑时恢复
+        let materialOptions = []; // 存储材料选项数据
+        let uomOptions = {};//存储单位选项数据
+
+        $(document).ready(function () {
+            // 生成当前日期字符串
+            let currentDate = new Date();
+
+            Suites.DatePicker("txtFeedDateQ@(itemName)", currentDate);
+
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let statusList = [];
+            $.each($("input[name='cbxStatusQ@(itemName)']:checked"), function () {
+                statusList.push($(this).val());
+            });
+
+            let targetUrl = "@Url.Action("GetMaterialFeedingRecord", "ProductionHistory")";
+            let postData = {
+                      "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MachineId": $("#txtMachineIdQ@(itemName)").val(),
+                "MoId": $("#txtMoIdQ@(itemName)").val(),
+                "FeedDate": $("#txtFeedDateQ@(itemName)").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr id="row_${item.MatFeedRegId}">
+                                        <td>${_row}</td>
+                                        <td class="text-center p-1" style="min-width: 130px;">
+                                        <button type="button" class="custom-btn custom-btn-primary mr-1" id="editBtn_${item.MatFeedRegId}" onclick="Editdate@(itemName)(${item.MatFeedRegId})">
+                                            <i class="fa fa-edit mr-1"></i><span id="editBtnText_${item.MatFeedRegId}">编辑</span>
+                                        </button>
+                                        <button type="button" class="custom-btn custom-btn-gray mr-1" onclick="Invalidate@(itemName)(${item.MatFeedRegId})">
+                                            <i class="fa fa-ban mr-1"></i>作废
+                                        </button>
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpPrefix}" style="max-width: 220px;">${item.WoErpPrefix}(${item.MoId})</td>
+                                        <td class="ellipsis material-cell" id="material_${item.MatFeedRegId}" data-value="${item.MaterialId}" data-moid="${item.MoId}" style="max-width: 240px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis quantity-cell" id="quantity_${item.MatFeedRegId}" data-value="${item.MatInRegQty}" style="max-width: 80px;">${item.MatInRegQty}</td>
+                                        <td class="ellipsis unit-cell" id="unit_${item.MatFeedRegId}" data-value="${item.UomId}" style="max-width: 90px;">${item.UomNo} ${item.UomName}</td>
+                                        <td class="ellipsis remarks-cell" id="remarks_${item.MatFeedRegId}" data-value="${item.Remarks}" style="max-width: 130px;">${item.Remarks}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 220px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 220px;">${item.MtlItemSpec}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MachineName}" style="max-width: 220px;">${item.MachineName}(${item.MachineId})</td>
+
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="10" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Editdate@(itemName)(MatFeedRegId) {
+
+            $("#MatFeedRegId").val(MatFeedRegId ? MatFeedRegId : 0);
+            // 切换编辑/保存状态
+            console.log(112, editingRowId);
+            console.log(113, MatFeedRegId);
+            if (editingRowId === MatFeedRegId) {
+
+                saveRow(MatFeedRegId);
+            } else {
+                startEdit(MatFeedRegId);
+            }
+
+        }
+
+        function startEdit(MatFeedRegId) {
+            // 如果已有正在编辑的行，先保存或恢复
+            if (editingRowId !== null) {
+                // 获取当前编辑行的元素
+                let materialCell = $(`#material_${editingRowId}`);
+                let quantityCell = $(`#quantity_${editingRowId}`);
+                let remarksCell = $(`#remarks_${editingRowId}`);
+                let unitCell = $(`#unit_${editingRowId}`);
+
+                // 获取编辑后的值
+                let materialSelect = $(`#materialSelect_${editingRowId}`);
+                let newMaterialId = materialSelect ? materialSelect.val() : originalRowData[editingRowId].materialId;
+                let newMaterialNo = materialSelect ? materialSelect.find(`option[value='${newMaterialId}']`).text() : originalRowData[editingRowId].materialNo;
+
+                let newQuantity = quantityCell.find('input').val();
+                let newRemarks = remarksCell.find('input').val();
+                let unitSelect = $(`#unitSelect_${editingRowId}`);
+                let newUnitId = unitSelect ? unitSelect.val() : originalRowData[editingRowId].unitId;
+                let newUnitText = unitSelect ? unitSelect.find(`option[value='${newUnitId}']`).text() : originalRowData[editingRowId].unitText;
+
+                // 检查是否有实际修改
+                const hasChanges = (
+                    newMaterialId !== originalRowData[editingRowId].materialId ||
+                    newQuantity !== originalRowData[editingRowId].quantity ||
+                    newRemarks !== originalRowData[editingRowId].remarks ||
+                    newUnitId !== originalRowData[editingRowId].unitId
+                );
+
+                // 如果是从当前行切换到其他行，恢复原始数据
+                if (editingRowId !== MatFeedRegId) {
+                    materialCell.text(originalRowData[editingRowId].materialNo);
+                    materialCell.attr('data-value', originalRowData[editingRowId].materialId);
+                    quantityCell.text(originalRowData[editingRowId].quantity);
+                    quantityCell.attr('data-value', originalRowData[editingRowId].quantity);
+                    remarksCell.text(originalRowData[editingRowId].remarks);
+                    remarksCell.attr('data-value', originalRowData[editingRowId].remarks);
+                    unitCell.text(originalRowData[editingRowId].unitText);
+                    unitCell.attr('data-value', originalRowData[editingRowId].unitId);
+
+                    // 恢复按钮状态
+                    let editBtn = $(`#editBtn_${editingRowId}`);
+                    let editBtnText = $(`#editBtnText_${editingRowId}`);
+                    let editBtnIcon = editBtn.find('i');
+                    editBtn.removeClass('custom-btn-success').addClass('custom-btn-primary');
+                    editBtnIcon.removeClass('fa-save').addClass('fa-edit');
+                    editBtnText.text('编辑');
+                }
+
+                // 删除原始数据备份
+                delete originalRowData[editingRowId];
+            }
+
+            // 获取行数据
+            let row = $(`#row_${MatFeedRegId}`);
+            let materialCell = $(`#material_${MatFeedRegId}`);
+            let quantityCell = $(`#quantity_${MatFeedRegId}`);
+            let remarksCell = $(`#remarks_${MatFeedRegId}`);
+            let unitCell = $(`#unit_${MatFeedRegId}`); // 获取单位单元格
+            let moId = materialCell.attr('data-moid'); // 获取制令ID
+
+            originalRowData[MatFeedRegId] = {
+                materialId: materialCell.attr('data-value'),
+                materialNo: materialCell.text(),
+                quantity: $(`#quantity_${MatFeedRegId}`).text(),
+                remarks: $(`#remarks_${MatFeedRegId}`).text(),
+                unitId: unitCell.attr('data-value'), // 新增：保存原始单位ID
+                unitText: unitCell.text() // 新增：保存原始单位文本
+            };
+
+            originalQuantity = originalRowData[MatFeedRegId].quantity;
+            originalRemarks = originalRowData[MatFeedRegId].remarks;
+            originalMaterialId = originalRowData[MatFeedRegId].materialId;
+            originalMaterialNo = originalRowData[MatFeedRegId].materialNo;
+            originalUnitId = originalRowData[MatFeedRegId].unitId; // 新增：原始单位ID
+            originalUnitText = originalRowData[MatFeedRegId].unitText; // 新增：原始单位文本
+
+            // 切换按钮为保存状态（保持custom-btn基础样式）
+            let editBtn = $(`#editBtn_${MatFeedRegId}`);
+            let editBtnText = $(`#editBtnText_${MatFeedRegId}`);
+            let editBtnIcon = editBtn.find('i');
+            // 移除原有主题类，添加保存状态的主题类（仍保留custom-btn基础样式）
+            editBtn.removeClass('custom-btn-primary').addClass('custom-btn-success');
+            editBtnIcon.removeClass('fa-edit').addClass('fa-save');
+            editBtnText.text('保存');
+
+            // 将材料编号转换为下拉选择框
+            materialCell.html('');
+            let materialSelect = $('<select>').addClass('form-control editable-select').attr('id', `materialSelect_${MatFeedRegId}`).css('width', '190px');
+            materialCell.append(materialSelect);
+
+            // 将投料数量转换为输入框
+            quantityCell.html(`<input type="number" class="form-control editable-input" style="width: 70px" value="${originalRowData[MatFeedRegId].quantity}">`);
+
+            // 将備註转换为输入框
+            remarksCell.html(`<input type="text" class="form-control editable-input" style="width: 120px" value="${originalRowData[MatFeedRegId].remarks}">`);
+
+            // 将单位转换为下拉选择框（新增部分）
+            unitCell.html('');
+            let unitSelect = $('<select>').addClass('form-control editable-select').attr('id', `unitSelect_${MatFeedRegId}`).css('width', '80px');
+            unitCell.append(unitSelect);
+            // 加载单位数据
+            loadUomOptions(unitSelect, originalUnitId);
+
+            editingRowId = MatFeedRegId;
+
+            // 加载材料选项数据
+            loadMaterialOptions(moId, materialSelect, originalMaterialId);
+        }
+
+
+        function saveRow(MatFeedRegId) {
+            if (editingRowId === null) return;
+
+            // 获取当前行的各单元格元素
+            let materialCell = $(`#material_${MatFeedRegId}`);
+            let quantityCell = $(`#quantity_${MatFeedRegId}`);
+            let remarksCell = $(`#remarks_${MatFeedRegId}`);
+            let unitCell = $(`#unit_${MatFeedRegId}`);
+            let editBtn = $(`#editBtn_${MatFeedRegId}`);
+            let editBtnText = $(`#editBtnText_${MatFeedRegId}`);
+            let editBtnIcon = editBtn.find('i');
+
+            // 获取编辑后的值
+            let materialSelect = $(`#materialSelect_${MatFeedRegId}`);
+            let newMaterialId = materialSelect.val();
+            let newMaterialNo = materialSelect.find(`option[value='${newMaterialId}']`).text();
+
+            let newQuantity = quantityCell.find('input').val();
+            let newRemarks = remarksCell.find('input').val();
+            let unitSelect = $(`#unitSelect_${MatFeedRegId}`);
+            let newUnitId = unitSelect.val();
+            let newUnitText = unitSelect.find(`option[value='${newUnitId}']`).text();
+
+            // 更新单元格显示
+            materialCell.text(newMaterialNo);
+            materialCell.attr('data-value', newMaterialId);
+            quantityCell.text(newQuantity);
+            quantityCell.attr('data-value', newQuantity);
+            remarksCell.text(newRemarks);
+            remarksCell.attr('data-value', newRemarks);
+            unitCell.text(newUnitText);
+            unitCell.attr('data-value', newUnitId);
+
+            // 切换按钮回编辑状态
+            editBtn.removeClass('custom-btn-success').addClass('custom-btn-primary');
+            editBtnIcon.removeClass('fa-save').addClass('fa-edit');
+            editBtnText.text('编辑');
+
+            // 检查是否有实际修改
+            const hasChanges = (
+                newMaterialId !== originalMaterialId ||
+                newQuantity !== originalQuantity ||
+                newRemarks !== originalRemarks ||
+                newUnitId !== originalUnitId
+            );
+
+            // 如果有修改，提交更新
+            if (hasChanges) {
+                submitUpdate(MatFeedRegId, newMaterialId, newQuantity, newUnitId, newRemarks);
+            }
+
+            // 重置编辑状态
+            editingRowId = null;
+            delete originalRowData[MatFeedRegId];
+        }
+
+        // 提交更新到服务器（修改函数参数以包含单位）
+        function submitUpdate(MatFeedRegId, materialId, quantity, unitId, remarks) {
+            console.log(111, remarks);
+            let targetUrl = "@Url.Action("UpdateMaterialFeedingRecord", "ProductionHistory")";
+            let postData = {
+                "MatFeedRegId": MatFeedRegId,
+                "MaterialId": materialId, // 新增：提交材料ID
+                "MatInRegQty": quantity,
+                "UomId": unitId,// 新增：提交单位ID
+                "Remarks": remarks
+            };
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result.status == "success") {
+                alert("更新成功", "success", 1500);
+            } else {
+                alert(result.msg, "error", 3000);
+                // 如果更新失败，恢复原始数据
+                $(`#quantity_${MatFeedRegId}`).text(originalRowData[MatFeedRegId].quantity);
+                $(`#remarks_${MatFeedRegId}`).text(originalRowData[MatFeedRegId].remarks);
+                $(`#unit_${MatFeedRegId}`).text(originalRowData[MatFeedRegId].unitText);
+                $(`#unit_${MatFeedRegId}`).attr('data-value', originalRowData[MatFeedRegId].unitId);
+                $(`#remarks_${MatFeedRegId}`).text(originalRowData[MatFeedRegId].remarks);
+                // 恢复编辑状态
+                editingRowId = MatFeedRegId;
+                originalRowData[MatFeedRegId] = {
+                    quantity: quantity,
+                    remarks: remarks,
+                    unitId: unitId
+                };
+            }
+        }
+
+        function Invalidate@(itemName)(MatFeedRegId) {
+            if (!confirm("确定要作废这条投料记录吗？")) {
+                return;
+            }
+            let targetUrl = "@Url.Action("UpdateStatusMaterialFeedingRecord", "ProductionHistory")";
+            let postData = {
+                "MatFeedRegId": MatFeedRegId,
+                "Status": "S" // 设置状态为"S"表示作废
+            };
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+            if (result) {
+                alert("作废成功", "success", 1500);
+                Query@(itemName)();
+            }
+
+
+        }
+
+        function loadMaterialOptions(moId, selectElement, defaultValue) {
+            // 先检查是否已有缓存数据
+            if (materialOptions[moId]) {
+                renderMaterialOptions(materialOptions[moId], selectElement, defaultValue);
+                return;
+            }
+
+            // 调用函数获取材料数据
+            let targetUrl = "@Url.Action("GetWorOrderMaterial", "ProductionHistory")";
+            let postData = {
+                "MoId": moId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                // 缓存数据
+                materialOptions[moId] = data.result;
+                renderMaterialOptions(data.result, selectElement, defaultValue);
+            } else {
+                alert(data.msg, "alert", 0);
+                // 如果获取失败，添加默认选项
+                let defaultOption = $('<option>').val(defaultValue).text(originalRowData[editingRowId].materialNo);
+                if (defaultValue) defaultOption.attr('selected', 'selected');
+                selectElement.append(defaultOption);
+            }
+        }
+         
+        function renderMaterialOptions(options, selectElement, defaultValue) {
+            // 清空选择框
+            selectElement.empty();
+            console.log(222, defaultValue);
+            // 添加所有材料选项
+            let hasDefaultValue = false;
+            $.each(options, function (i, item) {
+                let isSelected = item.MtlItemId == defaultValue;
+
+                let option = $('<option>').val(item.MtlItemId).text(item.MtlItemNo);
+
+                if (isSelected) {
+                    option.attr('selected', 'selected');
+                    hasDefaultValue = true;
+                }
+
+                selectElement.append(option);
+            });
+
+        }
+
+        function loadUomOptions(selectElement, defaultValue) {
+            // 检查是否已有缓存数据
+            if (uomOptions[defaultValue]) {
+                renderUomOptions(uomOptions[defaultValue], selectElement, defaultValue);
+                return;
+            }
+
+            // 调用URL获取单位数据（根据你的实际URL调整）
+            let targetUrl = "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")";
+            let postData = {
+                "Status": "A" // 只获取状态为"A"的有效单位
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                // 缓存数据
+                uomOptions[defaultValue] = data.result;
+                renderUomOptions(data.result, selectElement, defaultValue);
+            } else {
+                alert(data.msg, "alert", 0);
+                // 如果获取失败，添加默认选项
+                let defaultOption = $('<option>').val(defaultValue).text('默认单位');
+                if (defaultValue) defaultOption.attr('selected', 'selected');
+                selectElement.append(defaultOption);
+            }
+        }
+
+        // 渲染单位选项
+        function renderUomOptions(options, selectElement, defaultValue) {
+            // 清空选择框
+            selectElement.empty();
+
+            // 添加所有单位选项
+            let hasDefaultValue = false;
+            $.each(options, function (i, item) {
+                let isSelected = item.UomId == defaultValue;
+                let option = $('<option>').val(item.UomId).text(`${item.UomNo} ${item.UomName}`);
+
+                if (isSelected) {
+                    option.attr('selected', 'selected');
+                    hasDefaultValue = true;
+                }
+
+                selectElement.append(option);
+            });
+
+            // 如果选项中没有默认值，添加一个
+            if (!hasDefaultValue && defaultValue) {
+                let defaultOption = $('<option>').val(defaultValue).text('默认单位');
+                defaultOption.attr('selected', 'selected');
+                selectElement.append(defaultOption);
+            }
+        }
+
+    </script>
+                )

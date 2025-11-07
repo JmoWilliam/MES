@@ -1,0 +1,115 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewSteward";
+    string itemNameText = "事務員資料維護";
+}
+
+@Html.Resource("css",
+    @<style>
+        td {
+            vertical-align: middle;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboUsers@(itemName)">事務員 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboUsers@(itemName)" name="cboUsers@(itemName)"
+                                            data-msg-required="請選擇事務員" data-rule-required="true"></select>
+                                    <div class="input-group-append">
+                                        <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboStaffs@(itemName)">維護人員 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboStaffs@(itemName)" name="cboStaffs@(itemName)"
+                                            data-msg-required="請選擇維護人員" data-rule-required="true" multiple></select>
+                                    <div class="input-group-append">
+                                        <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right read-hide">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        function Pop@(itemName)() {
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            ComboBoxs.Default("#cboUsers@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": "@Session["CompanyId"]" }, "", "CHOOSE-NUMBER", "", "UserWithDepartment", "UserId");
+            ComboBoxs.Default("#cboStaffs@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "CompanyId": "@Session["CompanyId"]" }, "", "CHOOSE-NUMBER", "", "UserWithNo", "UserId");
+
+            $("#cboUsers@(itemName), #cboStaffs@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            let popConfig = {
+                targetSelector: "#cboUsers@(itemName)",
+                popFunction: "PopViewUser",
+                objectUserId: "#cboUsers@(itemName)",
+                type: "radio"
+            };
+            InitPopView(popConfig);
+
+            let popStaffConfig = {
+                targetSelector: "#cboStaffs@(itemName)",
+                popFunction: "PopViewUser",
+                objectUserId: "#cboStaffs@(itemName)",
+                type: "checkbox"
+            };
+            InitPopView(popStaffConfig);
+        }
+
+        function Save@(itemName)(userId) {
+
+            let targetUrl = "@Url.Action("AddOrderMealSteward", "EbpBasicInformation")";
+            let postData = {
+                "UserId": $(`[name='cboUsers@(itemName)']`).val(),
+                "Staffs": $(`[name='cboStaffs@(itemName)']`).val().join(",")
+            };
+
+            let result = DataAccess.Add(targetUrl, postData, false, true);
+
+            if (result) {
+                Close@(itemName)();
+                QueryOrderMealSteward();
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

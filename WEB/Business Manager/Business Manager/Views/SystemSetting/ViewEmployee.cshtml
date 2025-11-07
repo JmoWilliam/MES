@@ -1,0 +1,272 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "ViewEmployee";
+    string itemNameText = "內部員工";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<!--清單-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        @*<a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)"><i class="fal fa-search"></i>搜尋</a>*@
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right" style="display: flex; justify-content: flex-end;">
+                        <a style="margin-right: 5px;" class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 200px;">所屬部門</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 200px;">性別</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 200px;">職務</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 200px;">職務分類</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 200px;">內部員工狀態</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 200px;">電子郵件</th>
+                                        <th class="text-center col-sticky" scope="col" style="max-width: 200px; min-width: 200px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增修改-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container custom-form-container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label">所屬部門 / 性別 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboDepartmentId@(itemName)" name="cboDepartmentId@(itemName)"
+                                            data-msg-required="請選擇所屬部門" data-rule-required="true"></select>
+                                    <select class="form-control" id="cboGender@(itemName)" name="cboGender@(itemName)"
+                                            data-msg-required="請選擇性別" data-rule-required="true"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label">職務 / 職務分類 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="txtJob@(itemName)" name="txtJob@(itemName)" placeholder="請輸入職務" />
+                                    <input type="text" class="form-control" id="txtJobType@(itemName)" name="txtJobType@(itemName)" placeholder="請輸入職務分類" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtEmail@(itemName)">電子郵件 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="email" class="form-control" id="txtEmail@(itemName)" name="txtEmail@(itemName)" placeholder="請輸入電子郵件" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="cboEmployeeStatus@(itemName)">內部員工狀態 <span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboEmployeeStatus@(itemName)" name="cboEmployeeStatus@(itemName)"
+                                            data-msg-required="請選擇內部員工狀態" data-rule-required="true"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        function Expand@(itemName)() {
+            if (parseInt($("#UserId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+
+                Query@(itemName)();
+            } else {
+                alert("細節資料展開失敗，請聯繫資訊人員!", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetUserEmployee", "SystemSetting")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "UserId": $("#UserId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DepartmentName}" style="max-width: 200px; min-width: 200px;">${item.DepartmentName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.GenderName}" style="max-width: 200px; min-width: 200px;">${item.GenderName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Job}" style="max-width: 200px; min-width: 200px;">${item.Job}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.JobType}" style="max-width: 200px; min-width: 200px;">${item.JobType}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.EmployeeStatusName}" style="max-width: 200px; min-width: 200px;">${item.EmployeeStatusName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Email}" style="max-width: 200px; min-width: 200px;">${item.Email}</td>
+                                        <td class="text-center active-content col-sticky" style="min-width: 200px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.UserId}');"><i class="fas fa-edit"></i></a>
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.UserId}');"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(UserId) {
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            ComboBoxs.Default("#cboDepartmentId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", {}, "", "NA", "", "DepartmentName", "DepartmentId");                 //部門
+            ComboBoxs.Default("#cboGender@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "UserEmployee.Gender" }, "", "NA", "", "TypeName", "TypeNo");    //性別
+            ComboBoxs.Default("#cboEmployeeStatus@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "UserEmployee.EmployeeStatus" }, "", "NA", "", "StatusName", "StatusNo");    //內部員工狀態
+
+            if (UserId > 0) {
+                let targetUrl = "@Url.Action("GetUserEmployee", "SystemSetting")";
+                let postData = {
+                    "UserId": UserId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        console.log(item.UserId);
+                        $("#UserId@(itemName)").val(item.UserId);
+                        $("#cboDepartmentId@(itemName)").val(item.DepartmentId);
+                        $("#cboGender@(itemName)").val(item.Gender);
+                        $("#txtJob@(itemName)").val(item.Job);
+                        $("#txtJobType@(itemName)").val(item.JobType);
+                        $("#txtEmail@(itemName)").val(item.Email);
+                        $("#cboEmployeeStatus@(itemName)").val(item.EmployeeStatus);
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            }
+
+            $("#cboDepartmentId@(itemName), #cboGender@(itemName)").select2({
+                width: "100%"
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("UpdateUserEmployee", "SystemSetting")";
+                let postData = {
+                    "UserId": $("#UserId").val(),
+                    "DepartmentId": $("#cboDepartmentId@(itemName)").val(),
+                    "Gender": $("#cboGender@(itemName)").val(),
+                    "Job": $("#txtJob@(itemName)").val(),
+                    "JobType": $("#txtJobType@(itemName)").val(),
+                    "Email": $("#txtEmail@(itemName)").val(),
+                    "EmployeeStatus": $("#cboEmployeeStatus@(itemName)").val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function Delete@(itemName)(UserId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteUserEmployee", "SystemSetting")";
+                    let postData = {
+                        "UserId": UserId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+        }
+    </script>
+)

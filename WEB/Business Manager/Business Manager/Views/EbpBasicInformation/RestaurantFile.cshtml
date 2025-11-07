@@ -1,0 +1,238 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "RestaurantFile";
+    string itemNameText = "資料上傳";
+    string authority = ViewBag.authority;
+}
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<!--新增/編輯-->
+<div class="row" id="editData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="tab-content">
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12">
+                                    <div class="form-group row">
+                                        @*<label class="form-label col-12" for="txtRestaurantFile@(itemName)">檔案上傳</label>*@
+                                        <div class="col-12">
+                                            <input type="file" id="RestaurantFile@(itemName)" name="RestaurantFile@(itemName)" />
+                                            <input type="hidden" id="txtRestaurantFile@(itemName)" name="txtRestaurantFile@(itemName)" />
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <table class="table table-bordered table-striped table-sticky" id="tblRestaurantFile@(itemName)">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col" style="max-width: 150px;">檔名</th>
+                                                    <th scope="col" style="max-width: 150px;">上傳日</th>
+                                                    <th scope="col" style="max-width: 150px;">操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            @*<div class="card-footer text-right">
+                <button type="button" id="btnSave" class="btn btn-success" onclick="Save@(itemName)()" style="display:none;"><i class="fas fa-save"></i>儲存</button>
+            </div>*@
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+@<script>
+
+    let objForm@(itemName) = "#editForm@(itemName)";
+
+    function Expand@(itemName)(RestaurantId) {
+        if (parseInt($("#RestaurantId").val()) > 0) {
+            $(".advanced-block").slideDown("slow");
+            InitRestaurantFile@(itemName)(RestaurantId);
+            //InitRestaurantMealRestaurantMeal(RestaurantId);
+        }
+    }
+
+    $(document).ready(function () {
+
+        $("#txtRestaurantFile@(itemName)").change(function () {
+            Save@(itemName)();
+        });
+    });
+
+    //附檔上傳
+    function InitRestaurantFile@(itemName)(RestaurantId) {
+        let innerHtml = '';
+        let targetUrl = "@Url.Action("GetRestaurantFile", "EbpBasicInformation")";
+        let postData = {
+            "RestaurantId": RestaurantId
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {
+                innerHtml += `<tr>${RestaurantFile@(itemName)(item.FileId, item.FileName)}
+                            <td class="ellipsis" data-toggle="tooltip" title="${item.CreateDate}" style="max-width: 200px;">${item.CreateDate}</td>
+                            <td class="text-center col-sticky">
+                                <a class="active-link auth-delete" title="刪除" href="javascript:DeleteRestaurantFile@(itemName)('${item.FileId}');"><i class="fas fa-trash-alt"></i></a>
+                            </td>
+                            </tr>`;
+            });
+            function RestaurantFile@(itemName)(FileId, FileName) {
+                let innerHtml = '';
+                if (FileName != null) {
+                    innerHtml += `<td class="active-content ellipsis" data-toggle="tooltip" title="${FileName}" style="max-width: 250px;">
+                                  <a class="active-link mr-1" href="/Web/GetFile?fileId=${FileId}"><i class="fas fa-download"></i></a>${FileName}</td>`;
+                }
+                else {
+                    innerHtml += `<td class="text-center" colspan="3" style="background-color: #fff3cd;">
+                                  <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                  </td>`;
+                }
+                return innerHtml;
+            }
+        }else {
+            alert(data.msg, "alert", 0);
+        }
+        $("#tblRestaurantFile@(itemName) tbody").html(innerHtml);
+        TableComponentInit();
+
+        //附檔上傳
+        let RestaurantFileConfig = {
+            fileSelector: "#RestaurantFile@(itemName)",
+            targetSelector: "#txtRestaurantFile@(itemName)",
+            required: false,
+            uploadPath: "/EbpBasicInformation/RestaurantSpec",
+            maxFileCount: 10,
+            //allowedFileExtensions:['txt','jpg'],
+            defaultFile: $("#txtRestaurantFile@(itemName)").val()
+        };
+        Suites.FileUpload(RestaurantFileConfig);
+
+    }
+
+    function DeleteRestaurantFile@(itemName)(FileDoc) {
+        swal.fire({
+            titleText: "確認要刪除嗎?",
+            text: "此動作無法復原，請確認是否要執行!",
+            icon: "warning",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let targetUrl = "@Url.Action("DeleteRestaurantFile", "EbpBasicInformation")";
+                let postData = {
+                    "FileDoc": FileDoc
+                };
+                let result = DataAccess.Delete(targetUrl, postData, false, true);
+                if (result) {
+                    InitRestaurantFile@(itemName)($("#RestaurantId").val());
+                    $("#txtRestaurantFile@(itemName)").val("");
+
+                    //附檔上傳
+                    let RestaurantFileConfig = {
+                        fileSelector: "#RestaurantFile@(itemName)",
+                        targetSelector: "#txtRestaurantFile@(itemName)",
+                        required: false,
+                        uploadPath: "/EbpBasicInformation/RestaurantSpec",
+                        maxFileCount: 10,
+                        //allowedFileExtensions:['txt','jpg'],
+                        defaultFile: $("#txtRestaurantFile@(itemName)").val()
+                    };
+                    Suites.FileUpload(RestaurantFileConfig);
+                }
+            }
+        });
+    }
+
+    function Edit@(itemName)(RestaurantId) {
+        $("#txtRestaurantFile@(itemName)").val("");
+        InitRestaurantFile@(itemName)(RestaurantId);
+
+        //Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+        $("#RestaurantId").val(RestaurantId ? RestaurantId : 0);
+
+        $(objForm@(itemName) + " fieldset").attr("disabled", false);
+        $(objForm@(itemName) + " select").attr("disabled", false);
+
+        $(".btn-outline-danger").show();
+        $(".nav-item > a.nav-link i").eq(0).click();
+
+        if (RestaurantId > 0) {
+            InitRestaurantFile@(itemName)(RestaurantId);
+        }
+    }
+
+    function Save@(itemName)() {
+        if ($(objForm@(itemName)).valid()) {
+
+            let RestaurantId = parseInt($("#RestaurantId").val());
+            //ExpandRestaurantMeal(RestaurantId);
+
+            if (RestaurantId <= 0) {
+                let targetUrl = "@Url.Action("AddRestaurantFile", "EbpBasicInformation")";
+                let postData = {
+                    "RestaurantId": RestaurantId,
+                    "FileList": $("#txtRestaurantFile@(itemName)").val()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+                if (result) {
+                    InitRestaurantFile@(itemName)(RestaurantId);
+                }
+            } else {
+                let targetUrl = "@Url.Action("UpdateRestaurantFile", "EbpBasicInformation")";
+                let postData = {
+                    "RestaurantId": RestaurantId,
+                    "FileList": $("#txtRestaurantFile@(itemName)").val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                if (result) {
+                    InitRestaurantFile@(itemName)(RestaurantId);
+                }
+            }
+        }
+    }
+</script>
+)

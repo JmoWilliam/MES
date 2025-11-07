@@ -1,0 +1,324 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "IFrameDemandTrack";
+    string itemNameText = "需求追蹤";
+
+    ViewBag.Title = itemNameText;
+
+    string DemandId = Request["DemandId"] ?? "";
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+}
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/dhtmlx/diagram.commercial/5.0.0/diagram.min.css")" rel="stylesheet" />
+)
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/demand.min.css")?@dateCache" rel="stylesheet" />
+)
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="" />
+
+<div class="demand-track-container">
+    <div class="track-header">
+        <h2>需求進度追蹤儀表板</h2>
+        <a href="javascript:Refresh@(itemName)();">進度更新</a>
+    </div>
+    <div class="track-diagram">
+        <section class="demand-chart-container">
+            <div class="demand-flow" id="diagram"></div>
+        </section>
+    </div>
+    <div class="track-panel">
+        <div class="panel-container">
+            <div class="panel-header">
+                <h3 id="desFlowName@(itemName)"></h3>
+            </div>
+            <div class="panel-body">
+                <div class="panel-sidebar">
+                    <div class="panel-block">
+                        <div class="block-title">使用者/角色 <a class="auth-user-setting" href="javascript:void(0);" onclick="PopViewDemandFlowUserSetting()"><i class="fas fa-cog"></i></a></div>
+                        <div class="block-user-group" id="dataDemandFlowUser@(itemName)">
+                            <div class="user-group-list"><span class="user-group-title">ZY00764 胡秉丞</span></div>
+                            <div class="user-group-list">
+                                <span class="user-group-title">研發</span>
+                                <div class="user-group-detail">
+                                    <div>ZY00037 陳榮輝</div>
+                                    <div>ZY00047 黃馨滿</div>
+                                    <div>ZY00308 嚴仟喻</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-detail">
+                    <div class="panel-block">
+                        <div class="block-title">綁定項目</div>
+                        <div class="block-list" id="dataDemandItemNo@(itemName)">
+                            <div class="block-list-item">
+                                <div class="item-text">1. <a href="javascript:void(0);">3ME4M333-2111-008</a></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-block">
+                        <div class="block-title">進度Log</div>
+                        <div class="block-list" id="dataDemandNotificationLog@(itemName)">
+                            <div class="block-list-item">
+                                <div class="item-time">2023-07-01 09:15:20</div>
+                                <div class="item-text">接獲需求，請盡速安排時間完成品號建立</div>
+                            </div>
+                            <div class="block-list-item">
+                                <div class="item-time">2023-07-03 14:05:33</div>
+                                <div class="item-text">已建立3ME4M333-2111-008</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewUser")
+@Html.Partial("ViewDemandFlowUserSetting")
+
+@Html.Resource("js",
+    @<script src="@Url.Content("~/Scripts/dhtmlx/diagram.commercial/5.0.0/diagram.min.js")"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        let Datas@(itemName) = new DataControl@(itemName)();
+        let trackDiagram@(itemName);
+        let diagramData@(itemName);
+        let settingId@(itemName);
+
+        $(document).ready(function () {
+            Datas@(itemName).GetAuthorityVerify@(itemName)();
+            Datas@(itemName).GetDemandFlowSettingDiagram@(itemName)();
+        });
+
+        function Refresh@(itemName)() {
+            Datas@(itemName).GetAuthorityVerify@(itemName)();
+            Datas@(itemName).GetDemandFlowSettingDiagram@(itemName)();
+            Datas@(itemName).GetDemandFlowSetting@(itemName)(settingId@(itemName));
+        }
+
+        function DataControl@(itemName)() {
+            addMethod(this, "GetAuthorityVerify@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetAuthorityVerify", "SystemSetting")";
+                let postData = {
+                    "FunctionCode": "DemandPlatform"
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $("#pageAuthority").val(JSON.stringify(data.result));
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "GetDemandFlowSettingDiagram@(itemName)", function () {
+                let targetUrl = "@Url.Action("GetDemandFlowSettingDiagram", "Demand")";
+                let postData = {
+                    "DemandId": "@DemandId"
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    diagramData@(itemName) = data.dataShapes.concat(data.dataLines);
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                if (diagramData@(itemName)) LoadDiagram@(itemName)();
+            });
+
+            addMethod(this, "GetDemandFlowSetting@(itemName)", function (SettingId) {
+                $(".track-panel").removeClass("active");
+
+                settingId@(itemName) = SettingId;
+
+                let targetUrl = "@Url.Action("GetDemandFlowSetting", "Demand")";
+                let postData = {
+                    "SettingId": SettingId,
+                    "DemandId": "@DemandId"
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            $("#desFlowName@(itemName)").html(item.FlowName);
+                        });
+
+                        Datas@(itemName).GetDemandFlowUser@(itemName)();
+                        Datas@(itemName).GetDemandItemNo@(itemName)();
+                        Datas@(itemName).GetDemandNotificationLog@(itemName)();
+
+                        $(".track-panel").addClass("active");
+
+                        PageAuthorityControl();
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            });
+
+            addMethod(this, "GetDemandFlowUser@(itemName)", function () {
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetDemandFlowUser", "Demand")";
+                let postData = {
+                    "SettingId": settingId@(itemName)
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<div class="user-group-list">
+                                            <span class="user-group-title">${item.RoleUserName}</span>
+                                            ${RoleUserList(item.RoleUser)}
+                                          </div>`;
+                        });
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#dataDemandFlowUser@(itemName)").html(innerHtml);
+
+                function RoleUserList(source) {
+                    let html = '';
+
+                    if (source) {
+                        let json = JSON.parse(source);
+
+                        html += `<div class="user-group-detail">`;
+
+                        for (let x = 0; x < json.data.length; x++) {
+                            html += `<div>${json.data[x].UserNo} ${json.data[x].UserName}</div>`;
+                        }
+
+                        html += `</div>`;
+                    }
+
+                    return html;
+                }
+            });
+
+            addMethod(this, "GetDemandItemNo@(itemName)", function () {
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetDemandItemNo", "Demand")";
+                let postData = {
+                    "SettingId": settingId@(itemName)
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<div class="block-list-item">
+                                            <div class="item-text">${i + 1}. <a href="javascript:void(0);">${item.ItemNo}</a></div>
+                                          </div>`;
+                        });
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#dataDemandItemNo@(itemName)").html(innerHtml);
+            });
+
+            addMethod(this, "GetDemandNotificationLog@(itemName)", function () {
+                let innerHtml = '';
+
+                let targetUrl = "@Url.Action("GetDemandNotificationLog", "Demand")";
+                let postData = {
+                    "SettingId": settingId@(itemName)
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            innerHtml += `<div class="block-list-item">
+                                            <div class="item-time">${item.LogDate}</div>
+                                            <div class="item-text">${item.LogContent}</div>
+                                          </div>`;
+                        });
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                $("#dataDemandNotificationLog@(itemName)").html(innerHtml);
+            });
+        }
+
+        function LoadDiagram@(itemName)() {
+            dhx.i18n.setLocale("diagram", diagramLocales);
+
+            let flowTemplate = ({ id, flowName, flowImage, flowUser, flowStatus }) => (`
+                <section class="flow-card ${FlowStatus(flowStatus)}">
+                    <a class="flow-link" href="javascript:Datas@(itemName).GetDemandFlowSetting@(itemName)(${id});"></a>
+                    <img src="${flowImage}" />
+                    <span class="flow-name">${flowName}</span>
+                    <span class="flow-user">${flowUser}</span>
+                </section>
+            `);
+
+            if (trackDiagram@(itemName)) trackDiagram@(itemName).destructor();
+            trackDiagram@(itemName) = new dhx.Diagram("diagram", {
+                defaultShapeType: "template",
+                lineConfig: {
+                    lineGap: 25
+                },
+                scale: window.screen.width >= 1024 ? 1 : 0.85
+            });
+
+            trackDiagram@(itemName).addShape("template", {
+                template: flowTemplate,
+                defaults: {
+                    height: 130,
+                    width: 130
+                }
+            });
+
+            trackDiagram@(itemName).data.parse(diagramData@(itemName));
+
+            function FlowStatus(status) {
+                let statusClass = "";
+
+                switch (status) {
+                    case "B":
+                        statusClass = "flow-backlog";
+                        break;
+                    case "I":
+                        statusClass = "flow-in-progress";
+                        break;
+                    case "C":
+                        statusClass = "flow-complete";
+                        break;
+                }
+
+                return statusClass;
+            }
+        }
+    </script>
+)

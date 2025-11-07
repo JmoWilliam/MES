@@ -1,0 +1,382 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "NumerousOrder";
+    string itemNameText = "批量點餐系統";
+
+    ViewBag.Title = itemNameText;
+}
+
+<div class="body-web">
+    <header>
+        <div class="header-content" style="max-width:850px;">
+            <div class="header-title">
+                <div class="page-title">
+                    <a href="@Url.Action("NumerousMenu", "FoodOrdering")">
+                        <i class="fas fa-long-arrow-left"></i>
+                    </a>結算
+                </div>
+                <div class="display-date">
+                    <i class="far fa-calendar-star"></i>
+                    <span id="desDate@(itemName)"></span>
+                </div>
+                <a href="@Url.Action("Index", "FoodOrdering")" style="color:#ed836b;">
+                    <i class="far fa-home-lg"></i>
+                    <span>回首頁</span>
+                </a>
+            </div>
+        </div>
+    </header>
+    <div class="numerous-content cart-list">
+        <!--開合選單-->
+        <div class="collapse-menu" id="userCart"> </div>
+        <div class="amount-content" id="">
+            <div class="total">
+                <p>
+                    <span>總計</span>
+                    <span>
+                        <span style="margin-right:20px;" id="orderQty@(itemName)"></span>
+                        <span class="price" id="orderPrice@(itemName)"></span>
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!--餐車是空的顯示方式-->
+    <div class="numerous-content cart-empty">
+        <div style="padding:50px 0;">
+            <div class="icon-check" style="overflow: hidden; margin: 0 auto;position: relative;">
+                @*<i class="far fa-transporter-empty"></i>*@
+                <img src="~/Areas/EBP/Content/images/food-ordering/empty-icon.png" alt="Alternate Text" />
+            </div>
+            <p class="modal-text" style="font-size:22px;">您的餐車是空的！</p>
+        </div>
+    </div>
+
+</div>
+<!--彈窗：取消品項-->
+<div class="modal fade" id="cancel-item" tabindex="-1" role="dialog" aria-labelledby="add-object-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="exampleModalCenterTitle" style="font-weight:700;text-align:center"></h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="display:none;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="icon-check">
+                    <i class="far fa-exclamation-circle"></i>
+                </div>
+                <p class="modal-text">您確定要刪除嗎？</p>
+            </div>
+            <div class="modal-footer">
+                <div class="btn-block">
+                    <a data-dismiss="modal" aria-label="Close" class="link">關閉</a>
+                    <a class="link" href="javascript: DeleteConirm();">確定</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--彈窗：送出餐點-->
+<div class="modal fade" id="meal-finish" tabindex="-1" role="dialog" aria-labelledby="add-object-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="exampleModalCenterTitle" style="font-weight:700;text-align:center">完成</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="display:none;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="icon-check">
+                    <i class="far fa-check-circle"></i>
+                </div>
+                <p class="modal-text">您的餐點已送出！</p>
+            </div>
+            <div class="modal-footer">
+                <div class="btn-block">
+                    <a href="/EBP/FoodOrdering/Index" class="link">回到首頁</a>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="nav cart-list">
+    <div class="nav-content" style="flex:1;">
+        <div class="col-12">
+            <a class="btn-right" style="background:#ed836b" href="javascript: Save();">
+                <i class="fas fa-shopping-cart" style="margin-right:5px"></i>送出餐點
+            </a>
+        </div>
+    </div>
+</footer>
+
+@Html.Resource("js",
+    @<script>
+        let cartJson;
+
+        $(document).ready(function () {
+            Init();
+        });
+
+        function Init() {
+            $(".cart-list").hide();
+            $(".cart-empty").hide();
+
+            if (sessionStorage.getItem("lotCart")) {
+                cartJson = JSON.parse(sessionStorage.getItem("lotCart"));
+
+                WeekDay(cartJson.mealDate, "#desDate@(itemName)");
+
+                if (cartJson.userInfo.length <= 0) {
+                    //購物車不存在餐點資料
+                    $(".cart-empty").show();
+                } else {
+                    $(".cart-list").show();
+                    LoadCart(cartJson);
+                }
+            } else {
+                //cookie不存在購物車資料
+                $(".cart-empty").show();
+            }
+        }
+
+        function LoadCart(json) {
+            let html = '';
+
+            for (var i = 0; i < json.userInfo.length; i++) {
+                html += `<div class="collapse-panel">
+                            <div class="collapse-heading">
+                                <a href="javascript:void(0);" class="collapse-triger">
+                                ${UserDetail(json.userInfo[i].userId)}
+                                <span class="right">
+                                    <span>${UserQty(json.userInfo[i].mealInfo)}份餐點</span>
+                                    <span style="margin-left:50px;">$ ${TotalCaculate(json.userInfo[i].mealInfo)}</span>
+                                </span>
+                                 </a>
+                                <span class="collapse-controls">
+                                    <a class="fa fa-angle-down" href="#"></a>
+                                </span>
+                            </div>
+                        <div class="collapse-body">`;
+                for (var j = 0; j < json.userInfo[i].mealInfo.length; j++) {
+                    html += `    <div class="detail-block">
+                                <div class="item-block">
+                                    <div class="text-block" style="width:70%;">
+                                        <p class="name">${json.userInfo[i].mealInfo[j].mealName}</p>
+                                        <p class="content">${MealDetail(json.userInfo[i].mealInfo[j].categoryInfo)}</p>
+                                        @*<p class="content">${json.userInfo[i].mealInfo[j].remark}</p>*@
+                                        <p class="content">${TypeName(`UmoDetail.Pickup`, json.userInfo[i].mealInfo[j].pickup)}</p>
+                                    </div>
+                                     <div class="count-block">
+                                        <span class="qty">${json.userInfo[i].mealInfo[j].qty}份 </span>
+                                    </div>
+                                    <div class="count-block">
+                                        <span class="price">$ ${Caculate(json.userInfo[i].mealInfo[j].price, json.userInfo[i].mealInfo[j].categoryInfo)}</span>
+                                    </div>
+                                    <a href="javascript: DeleteCart(${i}, ${j});">
+                                        <i class="far fa-times" style="color:#a8a8a8;font-size:22px;"></i>
+                                    </a>
+                                </div>
+                            </div>`;
+                }
+                html += `    <div class="amount-content">
+                                <div class="detail">
+                                    <p>
+                                        <span>餐點合計</span>
+                                        <span class="price">$ ${TotalCaculate(json.userInfo[i].mealInfo)}</span>
+                                    </p>
+                                    <p>
+                                        <span class="price red" style="line-height: 2;">當日首筆訂單享有優惠折扣，實際金額以公告內容為主</span>
+                                    </p>
+                                </div>
+                                <div class="total">
+                                    <p>
+                                        <span>總計</span>
+                                        <span class="price">$ ${TotalCaculate(json.userInfo[i].mealInfo)}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                </div>`;
+            }
+
+            $("#userCart").html(html);
+
+            OrderQty(json);
+            OrderPrice(json);
+
+            //開合選單
+            $('.collapse-heading').click(function () {
+                $('.collapse-body').slideUp();
+                $('.collapse-controls').removeClass('open');
+                $('.collapse-heading').removeClass('open');
+                if ($(this).next('.collapse-body').css('display') == 'block') {
+                    $('.collapse-body').slideUp('');
+                }
+                else {
+                    $(this).next('.collapse-body').slideDown();
+                    $(this).children('.collapse-controls').addClass('open');
+                    $(this).addClass('open');
+                }
+            });
+        }
+
+        //工號+人名
+        function UserDetail(userId) {
+            let html = ``;
+
+            let targetUrl = "@Url.Action("GetUser", "BasicInformation", new { Area = "" })";
+            let postData = {
+                "UserId": userId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    html += item.UserNo + ' ' + item.UserName;
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            return html;
+       }
+
+        //列出餐點子類別內容
+        function MealDetail(category) {
+            let html = ``;
+
+            for (var i = 0; i < category.length; i++) {
+                for (var j = 0; j < category[i].mcDetailInfo.length; j++) {
+                    html += category[i].mcDetailInfo[j].mcDetailName;
+
+                    if (j < category[i].mcDetailInfo.length - 1) {
+                        html += `、`;
+                    }
+                }
+
+                if (i < category.length - 1) {
+                    html += `、`;
+                }
+            }
+
+            return html;
+        }
+
+        //計算餐點加購金額
+        function Caculate(price, category) {
+            let totalPrice = parseInt(price);
+
+            for (var i = 0; i < category.length; i++) {
+                for (var j = 0; j < category[i].mcDetailInfo.length; j++) {
+                    totalPrice += parseInt(category[i].mcDetailInfo[j].mcDetailPrice);
+                }
+            }
+            return totalPrice;
+        }
+
+        //計算個人-總金額
+        function TotalCaculate(mealInfo) {
+            let totalCaculate = 0;
+
+            for (var j = 0; j < mealInfo.length; j++) {
+                totalCaculate += Caculate(mealInfo[j].price, mealInfo[j].categoryInfo);
+            }
+            return totalCaculate;
+        }
+
+        //個人總份數
+        function UserQty(mealInfo) {
+            let userQty = 0;
+
+            for (var j = 0; j < mealInfo.length; j++) {
+                userQty += parseInt(mealInfo[j].qty);
+            }
+
+            return userQty;
+        }
+
+        //訂單總份數
+        function OrderQty(json) {
+            let orderQty = 0;
+
+            for (var i = 0; i < json.userInfo.length; i++) {
+                for (var j = 0; j < json.userInfo[i].mealInfo.length; j++) {
+                    orderQty += parseInt(json.userInfo[i].mealInfo[j].qty);
+                }
+            }
+            $("#orderQty@(itemName)").html(`${orderQty} 份`);
+        }
+
+        //訂單總金額
+        function OrderPrice(json) {
+            let orderPrice = 0;
+            for (var i = 0; i < json.userInfo.length; i++) {
+                orderPrice += TotalCaculate(json.userInfo[i].mealInfo);
+            }
+            $("#orderPrice@(itemName)").html(`$${orderPrice}`);
+        }
+
+        //delete觸發彈跳視窗
+        let deleteUser = -1;
+        let deleteMeal = -1;
+        function DeleteCart(userIndex, mealIndex) {
+            $("#cancel-item").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            deleteUser = userIndex;
+            deleteMeal = mealIndex;
+        }
+
+        //點選(x)刪除購物車中之餐點
+        function DeleteConirm() {
+            cartJson.userInfo[deleteUser].mealInfo.splice(deleteMeal, 1);
+
+            if (cartJson.userInfo[deleteUser].mealInfo.length <= 0) {
+                cartJson.userInfo.splice(deleteUser, 1);
+            }
+
+            sessionStorage.setItem('lotCart', JSON.stringify(cartJson))
+
+            $("#cancel-item").modal('hide');
+
+            Init();
+        }        
+
+        function Save() {
+            let targetUrl = "@Url.Action("AddLotCart", "FoodOrdering")";
+            let postData = {
+                "LotCart": JSON.stringify(cartJson)
+            };
+
+            let result = DataAccess.Get(targetUrl, postData, false);
+
+            if (result.status == "success") {
+                sessionStorage.removeItem("lotCart"); //送出餐點後，清空sessionStorage
+
+                //觸發彈跳視窗
+                $("#meal-finish").modal({
+                    backdrop: "static",
+                    keyboard: false,
+                    show: true
+                });
+            } else {
+                swal.fire({
+                    title: result.msg,
+                    icon: "error",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                });
+            }
+        }
+    </script>
+)

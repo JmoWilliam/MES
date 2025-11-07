@@ -1,0 +1,481 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "QcDeliveryReportModify";
+    string itemNameText = "出貨報告查詢(修改)";
+    string authority = ViewBag.authority;
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         #loading {
+             display: none;
+             position: fixed;
+             top: 50%;
+             left: 50%;
+             transform: translate(-50%, -50%);
+             padding: 20px;
+             border-radius: 5px;
+             z-index: 1000;
+         }
+
+         .tag-group {
+             display: flex;
+             align-items: center;
+             gap: 12px;
+             background-color: #ebebeb;
+             border-radius: 4px;
+             cursor: text;
+             line-height: 1;
+             padding: 0.35rem 0.5rem;
+             margin: 0.15rem 0.375rem 0.15rem 0;
+             white-space: nowrap;
+             color: #0580ff;
+             font-weight: 700;
+         }
+    </style>
+                            )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <div class="col-6">
+                                <label class="container">上傳日期-起 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <label class="container">上傳日期-迄<span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                        @*<div class="form-group row">
+                                <div class="col-6">
+                                    <label class="container">訂單客戶</label>
+                                    <select class="form-control" id="cboCustomerIdQ@(itemName)" name="cboCustomerIdQ@(itemName)"></select>
+                                </div>
+                            </div>*@
+                        <div class="form-group row">
+                            <div class="col-6">
+                                <label class="container">品號</label>
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                       data-msg-extraRegex="請輸入品號" placeholder="請輸入品號" />
+                            </div>
+                            <div class="col-6">
+                                <label class="container">品名</label>
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                       data-msg-extraRegex="請輸入品名" placeholder="請輸入品名" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-6">
+                                <label class="container">製令</label>
+                                <input type="text" class="form-control" id="txtMoIdErpNoQ@(itemName)" name="txtMoIdErpNoQ@(itemName)"
+                                       data-msg-extraRegex="請輸入製令或製令編號" placeholder="請輸入製令或製令編號" />
+                            </div>
+                            <div class="col-6">
+                                <label class="container">上傳人員</label>
+                                <input type="text" class="form-control" id="txtUserNoQ@(itemName)" name="txtUserNoQ@(itemName)"
+                                       data-msg-extraRegex="請輸入工號" placeholder="請輸入工號" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalUploadExcel@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">上傳出貨報告(Excel)</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="uploadExcelForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <div class="col-6">
+                                <label class="container">選擇報告類型<code>*</code><span class="text-danger"></span></label>
+                                <select class="form-control" id="cboFileType@(itemName)">
+                                    <option>請選擇</option>
+                                    <option value="SuMode">舜宇模仁表格</option>
+                                    <option value="Standard">新版制式表格</option>
+                                </select>
+                            </div>
+                        </div>
+                        @*<div class="form-group row">
+                            <div class="col-6">
+                                <label class="container">製令</label>
+                                <input type="text" class="form-control" id="txtMoIdErpNo@(itemName)" name="txtMoIdErpNo@(itemName)"
+                                       data-msg-extraRegex="請輸入製令或製令編號" placeholder="請輸入製令或製令編號" />
+                            </div>
+                            <div class="col-6">
+                                <label class="container">批號</label>
+                                <input type="text" class="form-control" id="txtBatchNo@(itemName)" name="txtBatchNo@(itemName)"
+                                       data-msg-extraRegex="請輸入批號" placeholder="請輸入批號" />
+                            </div>
+                        </div>*@
+                        @*<div class="form-group row">
+                                <div class="col-12 col-md-12 col-lg-12">
+                                    <input type="file" accept=".xlsx" id="fileUploadFile@(itemName)" name="fileUploadFile@(itemName)" />
+                                    <input type="hidden" id="txtUploadFile@(itemName)" name="txtUploadFile@(itemName)" />
+                                </div>
+                            </div>*@
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboQcRecordFile@(itemName)">選擇修改後Excel檔案<code>(共夾上傳方式)</code><span class="text-danger"></span></label>
+                                    <div class="col-12">
+                                        <div style="display: flex;" class="btn-group btn-group-inv@(itemName)">
+                                            <select id="cboQcRecordFile@(itemName)" name="cboQcRecordFile@(itemName)" class="form-control"></select>
+                                            <a class="btn btn-success pop-view" href="javascript: PopViewLocalFile@(itemName)('QcRecordFile', 'Y');"><i class="fal fa-search"></i></a>
+                                            <a class="btn pop-view" style="background-color: #ef3f5f !IMPORTANT;" href="javascript: RemoveQcRecordFile@(itemName)();"><i style="color: white;" class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl id="QcRecordFileHelp" class="help-block qc-help">
+                                            <dt>檔案預覽</dt>
+                                            <dd style="display: none;" id="desQcRecordFile@(itemName)" class="absolute-path"></dd>
+                                            <dd id="desQcRecordFilePreview@(itemName)" class="cad-preview"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer text-center">
+                <button type="button" class="btn btn-success" onclick="javascript:UploadFile@(itemName)()"><i class="fas fa-save"></i>上傳</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalUploadExcel@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>上傳
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom customization">
+                            <table class="table table-bordered table-striped table-sticky" type="hidden" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 50px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">製令單號</th>
+                                        <th scope="col" style="min-width: 150px;">品號</th>
+                                        <th scope="col" style="min-width: 250px;">品名</th>
+                                        <th scope="col" style="min-width: 150px;">訂單客戶</th>
+                                        <th scope="col" style="min-width: 80px;">數量</th>
+                                        <th scope="col" style="min-width: 150px;">上傳日期</th>
+                                        <th scope="col" style="min-width: 100px;">上傳人員</th>
+                                        <th scope="col" style="min-width: 120px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loadingdiv" id="loading" style="display: none">
+    <img src="~/assets/images/loading.gif" style="width: 75px;" />
+</div>
+
+@Html.Partial("ViewLocalFile")
+
+@Html.Resource("js",
+@<script>
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 10
+    };
+
+    ComboBoxs.Default("#cboCustomerIdQ@(itemName)", "@Url.Action("GetCustomer", "ScmBasicInformation")", { "Status": "A", "TransferStatus": "A" }, "", "ALL", "", "CustomerWithNo", "CustomerId");
+    ComboBoxs.Default("#cboQcRecordFile@(itemName)", "@Url.Action("GetUploadWhitelist", "BasicInformation")", { "ListNo": "QC" }, "", "NA", "", "FolderPath", "ListId");
+
+    if (!isMobile) {
+        $("#cboCustomerIdQ@(itemName)").select2({
+            dropdownAutoWidth: true,
+            width: "100%"
+        });
+        $("#cboQcRecordFile@(itemName)").select2({
+            width: "100%"
+
+        });
+    }
+
+    let FileJson@(itemName) = {
+        FileInfo: []
+    };
+
+    $(document).ready(function () {
+        let currentDate = new Date();
+        Suites.DatePicker("txtEndDateQ@(itemName)", currentDate);
+        currentDate.setDate(currentDate.getDate() - 7);
+        Suites.DatePicker("txtStartDateQ@(itemName)", currentDate);
+
+        let uploadConfigFile = {
+            fileSelector: "#fileUploadFile@(itemName)",
+            targetSelector: "#txtUploadFile@(itemName)",
+            required: false,
+            uploadPath: "/QcReportDA/QcDeliveryReportModify",
+            maxFileCount: 1,
+            defaultFile: $("#txtUploadFile@(itemName)").val()
+        };
+        Suites.FileUpload(uploadConfigFile);
+    });
+
+    $("#cboQcRecordFile@(itemName)").change(function () {
+        PopViewLocalFile@(itemName)("QcRecordFile", "Y");
+    });
+
+    function Query@(itemName)() {
+        objPage@(itemName).pageIndex = 0;
+        let innerHtml = '';
+        $("#txtUploadFile@(itemName)").val("");
+        uploadFileJson.uploadFileInfo = [];
+
+            let targetUrl = "@Url.Action("GetModifyMeasureData", "QcReport")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage@(itemName).pageIndex + 1),
+                "PageSize": objPage@(itemName).pageSize,
+                "StartDate": $("#txtStartDateQ@(itemName)").val(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val(),
+                "BatchNo": $("#txtBatchNoQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "MoIdErpNo": $("#txtMoIdErpNoQ@(itemName)").val(),
+                "UserNo": $("#txtUserNoQ@(itemName)").val(),
+                "CustomerId": $("#cboCustomerIdQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.data != "") {
+                    $.each(data.result, function (i, item) {
+                        let _row = (i + 1) + ".";
+                        innerHtml += `<tr>
+                                    <td>${_row}</td>
+                                    <td class="ellipsis data-toggle="tooltip" title="${item.MoErpNo}" style="min-width: 100px;">${item.MoErpNo}</td>
+                                    <td class="ellipsis data-toggle="tooltip" title="${item.MtlItemNo}" style="min-width: 100px;">${item.MtlItemNo}</td>
+                                    <td class="ellipsis data-toggle="tooltip" title="${item.MtlItemName}" style="min-width: 100px;">${item.MtlItemName}</td>
+                                    <td class="ellipsis data-toggle="tooltip" title="${item.CustomerShortName}" style="min-width: 100px;">${item.CustomerShortName}</td>
+                                    <td class="ellipsis data-toggle="tooltip" title="${item.Quantity}" style="min-width: 100px;">${item.Quantity}</td>
+                                    <td class="ellipsis data-toggle="tooltip" title="${item.CreateDate}" style="min-width: 100px;">${item.CreateDate}</td>
+                                    <td class="ellipsis data-toggle="tooltip" title="${item.UserNo}${item.UserName}" style="min-width: 150px;"><i class="fas fa-user"></i>&nbsp;<code>${item.UserNo}</code>&nbsp;${item.UserName}</td>
+                                    <td class="text-center">
+                                        <a class="btn file-excel auth-excel" href="javascript:Excel@(itemName)('${item.CreateDate}', '${item.CustomerId}', '${item.MoErpNo}', '${item.MtlItemNo}', '${item.MtlItemName}', '${item.UserNo}');"><i class="fas fa-file-excel"></i>下載</a>
+                                    </td>
+                                </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                <td class="text-center" colspan="12" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                                </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            $("#modalQuery@(itemName)").modal("hide");
+    }
+
+    $("#txtUploadFile@(itemName)").change(function () {
+        UploadFileJson@(itemName)();
+    });
+
+    $("#cboQcRecordFile@(itemName)").change(function () {
+        PopViewLocalFile@(itemName)("QcRecordFile", "Y");
+    });
+
+    function UploadFileJson@(itemName)() {
+
+            let fileIdList = $("#txtUploadFile@(itemName)").val();
+
+            if (fileIdList == "") {
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("GetFileInfo", "QcDataManagement")";
+            let postData = {
+                "FileIdList": fileIdList
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+
+                        let inputFileInfo =
+                        {
+                            "FileId": item.FileId,
+                            "FileFullName": item.FileFullName
+                        };
+                        console.log(inputFileInfo);
+                        FileJson@(itemName).FileInfo.push(inputFileInfo);
+                    });
+                }
+            }
+    }
+
+    function UploadFileold@(itemName)() {
+            let result;
+            $.ajax({
+                url: "@Url.Action("UploadModifyMeasureDataForMold", "QcReport")",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    "MoIdErpNo": $("#txtMoIdErpNo@(itemName)").val(),
+                    "BatchNo": $("#txtBatchNo@(itemName)").val(),
+                    "FileJsonString": JSON.stringify(FileJson@(itemName)),
+                    "UserNo": '@Session["UserNo"]'
+                },
+
+                async: false,  // 設置為非同步
+                beforeSend: function () {
+                    $('#loading').css("display", "block");
+                    $("body").css("overflow", "hidden");
+                },
+                success: function (data) {
+                    result = data;
+                    if (result.status == "success") {
+                        Swal.fire({
+                            title: "上傳成功!",
+                            text: "請於出貨報告查詢(修改)頁面下載對外出貨報告",
+                            icon: "success"
+                        });
+
+                    }
+                    else {
+                        return false;
+                    }
+                    alert(result.msg, 5000);
+                },
+                error: function (error) {
+                    alert(result.msg);
+                    return false;
+                },
+                complete: function () {
+                    $('#loading').css("display", "none");
+                    $("body").css("overflow", "auto");
+                }
+            });
+            $("#modalUploadExcel@(itemName)").modal("hide");
+            $("#txtUploadFile@(itemName)").val("");
+            FileJson@(itemName).FileInfo = [];
+        }
+
+    function Excel@(itemName)(UploadDate, CustomerId, MoErpNo, MtlItemNo, MtlItemName, UserNo) {
+        let targetUrl = "@Url.Action("DeliveryReportOutputForExcel", "QcReport")";
+        let postData = {
+            "SearchDate": UploadDate,
+            "CustomerId": CustomerId,
+            "MoErpNo": MoErpNo,
+            "MtlItemNo": MtlItemNo,
+            "MtlItemName": MtlItemName,
+            "UserNo": UserNo,
+            "reportType": "M"
+        };
+
+        let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+        if (data) {
+            alert("匯出成功!!!!", "success")
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+    }
+
+    function RemoveQcRecordFile@(itemName)() {
+        $("#QcRecordFileHelp").hide();
+        ComboBoxs.Default("#cboQcRecordFile@(itemName)", "@Url.Action("GetUploadWhitelist", "BasicInformation")", { "ListNo": "QC" }, "", "NA", "", "FolderPath", "ListId");
+        uploadFileJson.uploadFileInfo = [];
+    }
+
+    function PopViewLocalFile@(itemName)(fileType, multipleType) {
+        let listId = $(`#cbo${fileType}@(itemName)`).val();
+        let folderHtmlPath = `#cbo${fileType}@(itemName)`;
+        let fileHtmlPath = `#des${fileType}@(itemName)`;
+        let filePreviewHtmlPath = `#des${fileType}Preview@(itemName)`;
+        let helpHtmlPath = `#${fileType}Help`;
+        PopViewLocalFile(listId, multipleType, folderHtmlPath, fileHtmlPath, filePreviewHtmlPath, helpHtmlPath, "QC");
+    }
+
+    function UploadFile@(itemName)() {
+        console.log($("#cboFileType@(itemName)").val());
+        console.log(uploadFileJson);
+        let targetUrl = "@Url.Action("UploadModifyMeasureDataForMold", "QcReport")";
+        let postData = {
+            "MoIdErpNo": $("#txtMoIdErpNo@(itemName)").val(),
+            "BatchNo": $("#txtBatchNo@(itemName)").val(),
+            "FileType": $("#cboFileType@(itemName)").val(),
+            "QcRecordFileByNas": JSON.stringify(uploadFileJson)
+        }
+
+        let data = DataAccess.EditContinued(targetUrl, postData, false);
+        alert(data.msg, "alert", 0);
+        if (data.status == "success") {
+            RemoveQcRecordFile@(itemName)();
+            $("#desQcRecordFilePreview@(itemName)").val();
+        }
+    }
+
+
+</script>)

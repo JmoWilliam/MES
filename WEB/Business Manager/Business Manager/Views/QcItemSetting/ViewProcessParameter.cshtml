@@ -1,0 +1,151 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewProcessParameter";
+    string itemNameText = "生產製程";
+    string authority = ViewBag.authority;
+}
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="queryForm@(itemName)">
+                    <div class="col-12">
+                        <div class="col-12">
+                            <form autocomplete="off" id="queryForm@(itemName)">
+                                <fieldset>
+                                    <div class="form-row align-items-center mb-2">
+                                        <label class="form-label col-auto" for="txtProdModeQ@(itemName)">生產模式<span class="text-danger">*</span></label>
+                                        <div class="col-5">
+                                            <select id="cboProdModeQ@(itemName)" name="cboProdModeQ@(itemName)" class="form-control" title="輸入生產模式"></select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </div>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">生產模式</th>
+                                        <th scope="col" style="min-width: 200px;">製程</th>                                        
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 200px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success save-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 5
+        };
+
+        $(document).ready(function () {
+            if (!isMobile) {
+                $("#cboProdModeQ@(itemName)").select2({
+                    width: "100%"
+                });                
+            }
+            ComboBoxs.Default("#cboProdModeQ@(itemName)", "@Url.Action("GetProdMode", "MesBasicInformation")", {}, "", "ALL", "", "txtProdModeWithText", "ModeId");           
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetProcessParameter", "MesBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ModeId": $("#cboProdModeQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                                      
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";                        
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>                                       
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ModeName}" style="max-width: 200px;">${item.ModeName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProcessName}" style="max-width: 200px;">${item.ProcessName}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-processparameter-id="${item.ParameterId}" value="${item.ParameterId}" />
+                                            <span class="control__indicator"></span>
+                                          </label> 
+                                          <input type="hidden" name="txtProcessParameter@(itemName)" data-ProcessParameter-id="${item.ParameterId}" value="${item.ParameterId}" /> 
+                                          <input type="hidden" name="txtProcessName@(itemName)" data-ProcessName-id="${item.ParameterId}" value="${item.ProcessName}" /> 
+                                          <input type="hidden" name="txtModeName@(itemName)" data-ModeName-id="${item.ParameterId}" value="${item.ModeName}" /> 
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();           
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {                
+                if ("[data-processparameter-id]:checked") {
+                    let ParameterId = $(this).data("processparameter-id");
+                    let rdParameterId = $(`input[name='txtProcessParameter@(itemName)'][data-ProcessParameter-id='${ParameterId}']`).val();
+                    let rdProcessName = $(`input[name='txtProcessName@(itemName)'][data-ProcessName-id='${ParameterId}']`).val();
+                    let rdModeName = $(`input[name='txtModeName@(itemName)'][data-ModeName-id='${ParameterId}']`).val();
+
+                    $("#txtParameterIdQQcNotice").val(rdParameterId);
+                    $("#txtProcessNameQQcNotice").val(rdProcessName);
+                    $("#txtModeNameQQcNotice").val(rdModeName);
+
+                }                
+            });
+        }
+
+        function Save@(itemName)() {
+            $("#modalViewProcessParameter").modal('hide');
+        }
+
+        function Close@(itemName)() {
+            $("#modalViewProcessParameter").modal('hide');
+        }
+    </script>
+)

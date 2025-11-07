@@ -1,0 +1,1057 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "MaterialRequisition";
+    string itemNameText = "製令領退料單資料管理";
+    string authority = ViewBag.authority;
+
+    string RequestMrFullErpNo = Request["MrFullErpNo"] ?? "";
+
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+    </style>
+                                                )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--搜尋-->
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">MES領退料單單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtRequesitionNoQ@(itemName)" name="txtRequesitionNoQ@(itemName)"
+                                       placeholder="請輸入MES領退料單單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMrErpFullNoQ@(itemName)">ERP領退料單單號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMrErpFullNoQ@(itemName)" name="txtMrErpFullNoQ@(itemName)"
+                                       placeholder="請輸入ERP領退料單單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtWoErpFullNoQ@(itemName)">製令</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtWoErpFullNoQ@(itemName)" name="txtWoErpFullNoQ@(itemName)"
+                                       placeholder="請輸入製令單號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                       placeholder="請輸入品號">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNameQ@(itemName)">品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                       placeholder="請輸入品名">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboCreateUserQ@(itemName)">建立單據人員</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCreateUserQ@(itemName)" name="cboCreateUserQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">已拋轉</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboTransferStatusQ@(itemName)" name="cboConfirmStatusQ@(itemName)">
+                                    <option value="">請選擇</option>
+                                    <option value="Y">是</option>
+                                    <option value="N">否</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">已核單</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboConfirmStatusQ@(itemName)" name="cboConfirmStatusQ@(itemName)">
+                                    <option value="">請選擇</option>
+                                    <option value="Y">是</option>
+                                    <option value="N">否</option>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--列表-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 200px;">MES領退料單單號</th>
+                                        <th scope="col" style="max-width: 200px;">ERP領退料單單號</th>
+                                        <th scope="col" style="max-width: 150px;">單據性質</th>
+                                        <th scope="col" style="max-width: 200px;">備註</th>
+                                        <th scope="col" style="max-width:100px;">拋轉狀態</th>
+                                        <th scope="col" style="max-width:100px;">確認碼</th>
+                                        <th scope="col" style="max-width:150px;">建單者</th>
+                                        <th scope="col" style="max-width:150px;">確認者</th>
+                                        <th scope="col" style="max-width:200px;">單據日期</th>
+                                        <th class="text-center" scope="col" style="max-width: 525px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增/編輯-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="MrId" name="MrId" value="-1" />
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtRequesitionNo@(itemName)">MES領料單號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtRequesitionNo@(itemName)" name="txtRequesitionNo@(itemName)"
+                                               data-rule-required="true"
+                                               value=""
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-4 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtDocType@(itemName)">單據性質<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboDocType@(itemName)" name="cboDocType@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboMrErpPrefix@(itemName)">ERP領料單別</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboMrErpPrefix@(itemName)" name="cboMrErpPrefix@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtMrErpNo@(itemName)">ERP領料單號</label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtMrErpNo@(itemName)" name="txtMrErpNo@(itemName)"
+                                               value=""
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtDocDate@(itemName)">單據開立日期<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtDocDate@(itemName)" name="txtDocDate@(itemName)"
+                                               placeholder="請輸入單據開立日期"
+                                               data-msg-required="請輸入單據開立日期" data-rule-required="true"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtMrDate@(itemName)">領退料日期<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtMrDate@(itemName)" name="txtMrDate@(itemName)"
+                                               placeholder="請輸入領退料日期"
+                                               data-msg-required="請輸入領退料日期" data-rule-required="true"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" style="display: none;">
+                            <div class="col-lg-4 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtJournalStatus@(itemName)">產生分錄碼<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboJournalStatus@(itemName)" name="cboJournalStatus@(itemName)" required>
+                                            <option value="Y">產生分錄碼</option>
+                                            <option value="N" selected>不產生分錄碼</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPriorityType@(itemName)">產生依序<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboPriorityType@(itemName)" name="cboPriorityType@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" style="display: none;">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtNegativeStatus@(itemName)">庫存不足照領<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboNegativeStatus@(itemName)" name="cboNegativeStatus@(itemName)">
+                                            <option value="Y">是</option>
+                                            <option value="N" selected>否</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtSignupStatus@(itemName)">簽核狀態碼<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboSignupStatus@(itemName)" name="cboSignupStatus@(itemName)" required disabled></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboTransferStatus@(itemName)">單據拋轉狀態<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboTransferStatus@(itemName)" name="cboTransferStatus@(itemName)" disabled>
+                                            <option value="Y">已拋轉</option>
+                                            <option value="N" selected>未拋轉</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboConfirmStatus@(itemName)">單據簽核狀態<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboConfirmStatus@(itemName)" name="cboConfirmStatus@(itemName)" disabled>
+                                            <option value="Y">已核單</option>
+                                            <option value="N" selected>未核單</option>
+                                            <option value="V">已報廢</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" style="display: none;">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtSourceType@(itemName)">來源別<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboSourceType@(itemName)" name="cboSourceType@(itemName)" required disabled></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboProductionLine@(itemName)">生產線別</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboProductionLine@(itemName)" name="cboProductionLine@(itemName)"></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboContractManufacturer@(itemName)">加工廠商</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboContractManufacturer@(itemName)" name="cboContractManufacturer@(itemName)"  disabled></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                  placeholder="請輸入備註"
+                                                  data-msg-required="請輸入備註"
+                                                  data-msg-maxlength="必須少於 50 個字元" maxlength="50"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--其他分頁-->
+<div class="advanced-block">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav flag-tabs nav-fill" role="tablist">
+                <li class="flag-item">
+                    <a class="flag-link  active" data-toggle="tab" href="#tabMaterialDetail">
+                        <i class="fas fa-sliders-h"></i> 設定領退料單
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane active" id="tabMaterialDetail">
+            @Html.Partial("MaterialDetail")
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            let RequestMrFullErpNo = "@RequestMrFullErpNo";
+            if (RequestMrFullErpNo) {
+                $("#txtMrErpFullNoQ@(itemName)").val(RequestMrFullErpNo);
+            }
+
+            Query@(itemName)();
+
+            if (!isMobile) {
+                $("#cboDocTypeQ@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboSignupStatusQ@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboSourceTypeQ@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboPriorityTypeQ@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboCreateUserQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            //單據性質
+            ComboBoxs.WithText("#cboDocTypeQ@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialRequisition.DocType" }, "", "NA", "", "TypeName", "TypeNo");
+
+            //簽核狀態碼
+            ComboBoxs.WithText("#cboSignupStatusQ@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "MaterialRequisition.SignupStatus" }, "", "NA", "", "StatusName", "StatusNo");
+
+            //來源別
+            ComboBoxs.WithText("#cboSourceTypeQ@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialRequisition.SourceType" }, "0", "NA", "", "TypeName", "TypeNo");
+
+            //產生依序
+            ComboBoxs.WithText("#cboPriorityTypeQ@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialRequisition.PriorityType" }, "3", "NA", "", "TypeName", "TypeNo");
+
+            //建立單據者
+            ComboBoxs.WithText("#cboCreateUserQ@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { "Status": "A" }, "", "NA", "", "UserName", "UserNo");
+
+            $("#txtRequesitionNoQ@(itemName), #txtMrErpFullNoQ@(itemName), #txtWoErpFullNoQ@(itemName), #txtMtlItemNoQ@(itemName), #txtMtlItemNameQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            if (!objPage) objPage = objPage@(itemName);
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetMaterialRequisition", "Inventory")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "RequesitionNo": $("#txtRequesitionNoQ@(itemName)").val().trim(),
+                "MrErpFullNo": $("#txtMrErpFullNoQ@(itemName)").val().trim(),
+                "TransferStatus": $("#cboTransferStatusQ@(itemName)").val(),
+                "ConfirmStatus": $("#cboConfirmStatusQ@(itemName)").val(),
+                "UserNo": $("#cboCreateUserQ@(itemName)").val(),
+                "WoErpFullNo": $("#txtWoErpFullNoQ@(itemName)").val().trim(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val().trim(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val().trim()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.RequesitionNo}" style="max-width: 220px; min-width: 165px;">${item.RequesitionNo}</td>
+                                        ${JudgeMrErpFullNo(`${item.MrErpPrefix}`, `${item.MrErpNo}`)}
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DocTypeNo}" style="max-width: 150px;">${item.DocTypeNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="max-width: 200px; min-width: 65px;">${item.Remark}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TransferStatus == `Y` ? `已拋轉` : `未拋轉`}" style="max-width: 200px; min-width:100px;">${item.TransferStatus == `Y` ? `已拋轉` : `未拋轉`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ConfirmStatusNo}" style="min-width: 85px;">${item.ConfirmStatusNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CreateUserNo}${item.CreateUserName}" style="min-width: 150px;"><i class="fas fa-user"></i>&nbsp;<code>${item.CreateUserNo}</code>&nbsp;${item.CreateUserName}</td>
+                                        ${JudgeConfirmUserNo(`${item.ConfirmUserNo}`, `${item.ConfirmUserName}`)}
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DocDate}" style="max-width: 200px;">${item.DocDate}</td>
+                                        <td class="text-center active-content" style="min-width: 525px;">
+                                            <a class="active-link auth-read" href="javascript:ViewMrDetail@(itemName)('${item.MrId}');"><i class="fas fa-caret-circle-down"></i></a>
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.MrId}');"><i class="fas fa-edit"></i></a>
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.MrId}');"><i class="fas fa-trash-alt"></i></a>
+                                            ${JudgeTransferStatus@(itemName)(`${item.TransferStatus}`, `${item.MrId}`, `${item.ConfirmStatus}`)}
+                                            ${JudgeConfirm(`${item.ConfirmStatus}`, `${item.MrId}`, `${item.ConfirmUserNo}`, `${item.DocType}`, `${item.TransferStatus}`)}
+                                            ${JudgeTransferStatus2@(itemName)(`${item.TransferStatus}`, `${item.MrId}`)}
+                                        </td>
+                                      </tr>`;
+
+                        innerHtml += `<tr data-mr-id="${item.MrId}" style="display: none;">
+                                        <td colspan="15" style="background-color: #96bfbf;">
+                                          <table style="width: 100%; margin: auto; border: 1px solid #d7d7e1;">
+                                            <thead>
+                                             <tr>
+                                                <th class="thead-customized" scope="col">#</th>
+                                                <th class="thead-customized" scope="col">製令</th>
+                                                <th class="thead-customized" scope="col">材料品號</th>
+                                                <th class="thead-customized" scope="col">材料品名</th>
+                                                <th class="thead-customized" scope="col">庫別</th>
+                                                <th class="thead-customized" scope="col">預計領退料量</th>
+                                                <th class="thead-customized" scope="col">實際領退料量</th>
+                                                <th class="thead-customized" scope="col">單位</th>
+                                                <th class="thead-customized" scope="col">需領用量</th>
+                                                <th class="thead-customized" scope="col">已領用量</th>
+                                              </tr>
+                                           </thead>
+                                            <tbody></tbody>
+                                          </table>
+                                        </td>
+                                      </tr>`;
+
+                        $("#cboTransferStatus@(itemName)").val(item.TransferStatus);
+                        $("#cboConfirmStatus@(itemName)").val(item.ConfirmStatus);
+                    });
+
+                    function JudgeTransferStatus@(itemName)(transferStatus, mrId, confirmStatus) {
+                        let innerHtml = '';
+                        if (confirmStatus == "Y" || confirmStatus == "V") {
+                            innerHtml += `<a class="active-link auth-update active-disable" href="javascript:void();"><i class="far fa-arrow-alt-square-up"></i> 拋轉</a>`;
+                        }
+                        else if (confirmStatus == "N") {
+                            innerHtml += `<a class="active-link auth-update" href="javascript:TransferErp@(itemName)('${mrId}');"><i class="far fa-arrow-alt-square-up"></i> 拋轉</a>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeTransferStatus2@(itemName)(transferStatus, mrId) {
+                        let innerHtml = '';
+                        if (transferStatus == "Y") {
+                            innerHtml += `<a class="active-link auth-doc-download" href="javascript:DownloadWord@(itemName)('${mrId}');"><i class="fas fa-print"></i> 單據下載</a>`;
+                        }
+                        else {
+                            innerHtml += `<a class="active-link auth-doc-download active-disable" href="javascript:void();"><i class="fas fa-print"></i> 單據下載</a>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeConfirm(confirmStatus, mrId, confirmUserNo, docType, transferStatus) {
+                        let innerHtml = '';
+                        if (transferStatus == "N") {
+                            innerHtml += `<a class="active-link auth-confirm active-disable" href="javascript:void();"><i class="fas fa-check"> 核單</i></a>
+                                          <a class="active-link auth-reconfirm active-disable" href="javascript:void();"><i class="fas fa-undo-alt"> 反確認</i></a>
+                                          <a class="active-link auth-void active-disable" href="javascript:void();"><i class="fas fa-ban"> 作廢</i></a>`;
+                        }
+                        else {
+                            if (docType == "56") {
+                                if (confirmStatus == "N") {
+                                    innerHtml += `<a class="active-link auth-confirm" href="javascript:Confirm@(itemName)('${mrId}');"><i class="fas fa-check"> 核單</i></a>
+                                                  <a class="active-link auth-reconfirm active-disable" href="javascript:void();"><i class="fas fa-undo-alt"> 反確認</i></a>
+                                                  <a class="active-link auth-void" href="javascript:Void@(itemName)('${mrId}');"><i class="fas fa-ban"> 作廢</i></a>`;
+                                }
+                                else {
+                                    innerHtml += `<a class="active-link auth-confirm active-disable" href="javascript:void();"><i class="fas fa-check"> 核單</i></a>
+                                              <a class="active-link auth-reconfirm" href="javascript:ReConfirm@(itemName)('${mrId}');"><i class="fas fa-undo-alt"> 反確認</i></a>
+                                              <a class="active-link auth-void active-disable" href="javascript:void();"><i class="fas fa-ban"> 作廢</i></a>`;
+                                }
+                            }
+                            else {
+                                switch (confirmStatus)
+                                {
+                                    case "V": {
+                                        innerHtml += `<a class="active-link auth-confirm active-disable" href="javascript:void();"><i class="fas fa-check"> 核單</i></a>
+                                                      <a class="active-link auth-reconfirm active-disable" href="javascript:void();"><i class="fas fa-undo-alt"> 反確認</i></a>
+                                                      <a class="active-link auth-void active-disable" href="javascript:void();"><i class="fas fa-ban"> 作廢</i></a>`;
+                                        break;
+                                    }
+                                    case "N": {
+                                        innerHtml += `<a class="active-link auth-confirm" href="javascript:Confirm@(itemName)('${mrId}');"><i class="fas fa-check"> 核單</i></a>
+                                                      <a class="active-link auth-reconfirm active-disable" href="javascript:void();"><i class="fas fa-undo-alt"> 反確認</i></a>
+                                                      <a class="active-link auth-void" href="javascript:Void@(itemName)('${mrId}');"><i class="fas fa-ban"> 作廢</i></a>`;
+                                        break;
+                                    }
+                                    case "Y": {
+                                        innerHtml += `<a class="active-link auth-confirm active-disable" href="javascript:void();"><i class="fas fa-check"> 核單</i></a>
+                                                      <a class="active-link auth-reconfirm" href="javascript:ReConfirm@(itemName)('${mrId}');"><i class="fas fa-undo-alt"> 反確認</i></a>
+                                                      <a class="active-link auth-void active-disable" href="javascript:void();"><i class="fas fa-ban"> 作廢</i></a>`;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        return innerHtml;
+                    }
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="15" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+                function JudgeMrErpFullNo(mrErpPrefix, mrErpNo) {
+                    let innerHtml = '';
+                    if (mrErpPrefix != "null") {
+                        innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${mrErpPrefix}-${mrErpNo}" style="max-width: 200px;">${mrErpPrefix}-${mrErpNo}</td>`;
+                    }
+                    else {
+                        innerHtml += `<td></td>`;
+                    }
+                    return innerHtml;
+                }
+
+                function JudgeConfirmUserNo(confirmUserNo, confirmUserName) {
+                    let innerHtml = '';
+                    if (confirmUserNo != "null") {
+                        innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${confirmUserNo}${confirmUserName}" style="min-width: 150px;"><i class="fas fa-user"></i>&nbsp;<code>${confirmUserNo}</code>&nbsp;${confirmUserName}</td>`;
+                    }
+                    else {
+                        innerHtml += `<td style="min-width: 150px;"></td>`;
+                    }
+                    return innerHtml;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(mrId) {
+            $("#MrId").val(mrId ? mrId : 0);
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            $("#cboDocType@(itemName)").prop("disabled", false);
+            $("#cboMrErpPrefix@(itemName)").prop("disabled", false);
+
+            let nowYear = new Date().getFullYear().toString();
+            let nowMonth = (new Date().getMonth()+1).toString().padStart(2,"0");
+            let nowDay = new Date().getDate().toString().padStart(2, "0");
+            let nowHour = new Date().getHours().toString().padStart(2, "0");;
+            let nowMinutes = new Date().getMinutes().toString().padStart(2, "0");;
+            let nowSeconds = new Date().getSeconds().toString().padStart(2, "0");;
+            $("#txtRequesitionNo@(itemName)").val(nowYear + nowMonth + nowDay + nowHour + nowMinutes + nowSeconds);
+
+            Suites.DateDropper("#txtDocDate@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtDocDate@(itemName)", currentDate);
+            $("#txtMrDate@(itemName)").val($("#txtDocDate@(itemName)").val());
+
+            if (!isMobile) {
+                $("#cboMrErpPrefix@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboDocType@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboSignupStatus@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboSourceType@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboPriorityType@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboProductionLine@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboContractManufacturer@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            //ERP領料單別
+            ComboBoxs.Default("#cboMrErpPrefix@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MrErpPrefix", "Condition": "54" }, "5401", "NA", "", "MrErpPrefix", "MQ001");
+
+            //單據性質
+            ComboBoxs.WithText("#cboDocType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialRequisition.DocType" }, "54", "NA", "", "TypeName", "TypeNo");
+
+            //簽核狀態碼
+            ComboBoxs.Default("#cboSignupStatus@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "MaterialRequisition.SignupStatus" }, "0", "NA", "", "StatusName", "StatusNo");
+
+            //來源別
+            ComboBoxs.WithText("#cboSourceType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialRequisition.SourceType" }, "0", "NA", "", "TypeName", "TypeNo");
+
+            //確認邏輯
+            ComboBoxs.Default("#cboPriorityType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "MaterialRequisition.PriorityType" }, "1", "NA", "", "TypeName", "TypeNo");
+
+            //生產線別
+            ComboBoxs.WithText("#cboProductionLine@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "ProduceLineNo" }, "", "NA", "", "ProduceLineName", "ProduceLineNo");
+
+            //加工廠商
+            ComboBoxs.WithText("#cboContractManufacturer@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Processor" }, "", "NA", "", "ProcessorName", "ProcessorNo");
+
+            $("#cboDocType@(itemName)").change(function () {
+                let DocType = $("#cboDocType@(itemName)").val();
+                ComboBoxs.Default("#cboMrErpPrefix@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MrErpPrefix", "Condition": "" + DocType + "" }, "", "NA", "", "MrErpPrefix", "MQ001");
+
+                if (DocType == "55" || DocType == "57") {
+                    $("#cboContractManufacturer@(itemName)").prop("disabled", false);
+                }
+                else {
+                    ComboBoxs.WithText("#cboContractManufacturer@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Processor" }, "", "NA", "", "ProcessorName", "ProcessorNo");
+                    $("#cboContractManufacturer@(itemName)").prop("disabled", true);
+                }
+            });
+
+            $("#cboTransferStatus@(itemName)").val("N");
+            $("#cboConfirmStatus@(itemName)").val("N");
+
+            $("#cboContractManufacturer@(itemName)").prop("disabled", true);
+
+            if (mrId > 0) {
+                let confirmStatus = "";
+                $("#cboDocType@(itemName)").prop("disabled", true);
+                $("#cboMrErpPrefix@(itemName)").prop("disabled", true);
+                let requesitionNo = $("#txtRequesitionNo@(itemName)").val();
+                let targetUrl = "@Url.Action("GetMaterialRequisition", "Inventory")";
+                let postData = {
+                    "MrId": mrId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        confirmStatus = item.ConfirmStatus;
+                        $("#txtRequesitionNo@(itemName)").val(item.RequesitionNo);
+                        ComboBoxs.Default("#cboMrErpPrefix@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "MrErpPrefix", "Condition": "" + item.DocType + "" }, "", "NA", "", "MrErpPrefix", "MQ001");
+                        $("#cboMrErpPrefix@(itemName)").val(item.MrErpPrefix);
+                        $("#txtMrErpNo@(itemName)").val(item.MrErpNo);
+                        $("#txtMrDate@(itemName)").val(item.MrDate);
+                        $("#txtDocDate@(itemName)").val(item.DocDate);
+                        $("#cboDocType@(itemName)").val(item.DocType);
+                        $("#cboJournalStatus@(itemName)").val(item.JournalStatus);
+                        $("#cboSignupStatus@(itemName)").val(item.SignupStatus);
+                        $("#cboSourceType@(itemName)").val(item.SourceType);
+                        $("#cboPriorityType@(itemName)").val(item.PriorityType);
+                        $("#cboNegativeStatus@(itemName)").val(item.NegativeStatus);
+                        $("#txtRemark@(itemName)").val(item.Remark);
+                        $("#cboProductionLine@(itemName)").val(item.ProductionLine);
+                        $("#cboTransferStatus@(itemName)").val(item.TransferStatus);
+                        $("#cboConfirmStatus@(itemName)").val(item.ConfirmStatus);
+
+                        if (item.DocType == "55" || item.DocType == "57") {
+                            ComboBoxs.WithText("#cboContractManufacturer@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Processor" }, "", "NA", "", "ProcessorName", "ProcessorNo");
+                            $("#cboContractManufacturer@(itemName)").prop("disabled", false);
+                            $("#cboContractManufacturer@(itemName)").val(item.ContractManufacturer);
+                        }
+                        else {
+                            ComboBoxs.WithText("#cboContractManufacturer@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Processor" }, "", "NA", "", "ProcessorName", "ProcessorNo");
+                            $("#cboContractManufacturer@(itemName)").prop("disabled", true);
+                            $("#cboContractManufacturer@(itemName)").val("");
+                        }
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                ExpandMaterialDetail(mrId, requesitionNo, confirmStatus);
+            }
+
+            $("#txtDocDate@(itemName)").change(function(){
+                $("#txtMrDate@(itemName)").val($("#txtDocDate@(itemName)").val());
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let MrId = parseInt($("#MrId").val());
+
+                if (MrId <= 0) {
+                    let targetUrl = "@Url.Action("AddMaterialRequisition", "Inventory")";
+                    let postData = {
+                        "RequesitionNo": $("#txtRequesitionNo@(itemName)").val(),
+                        "MrErpPrefix": $("#cboMrErpPrefix@(itemName)").val(),
+                        "MrDate": $("#txtMrDate@(itemName)").val(),
+                        "DocDate": $("#txtDocDate@(itemName)").val(),
+                        "DocType": $("#cboDocType@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                        "JournalStatus": $("#cboJournalStatus@(itemName)").val(),
+                        "SignupStatus": $("#cboSignupStatus@(itemName)").val(),
+                        "SourceType": $("#cboSourceType@(itemName)").val(),
+                        "PriorityType": $("#cboPriorityType@(itemName)").val(),
+                        "NegativeStatus": $("#cboNegativeStatus@(itemName)").val(),
+                        "ProductionLine": $("#cboProductionLine@(itemName)").val(),
+                        "ContractManufacturer": $("#cboContractManufacturer@(itemName)").val()
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        let mrId;
+                        let mrErpNo;
+                        $.each(data.result, function (i, item) {
+                            mrId = item.MrId;
+                            mrErpNo = item.MrErpNo
+                        });
+                        let requesitionNo = $("#txtRequesitionNo@(itemName)").val();
+                        $("#txtMrErpNo@(itemName)").val(mrErpNo);
+                        $("#MrId").val(mrId);
+                        ExpandMaterialDetail(mrId, requesitionNo, "N");
+
+                        $("#cboDocType@(itemName)").prop("disabled", true);
+                        $("#cboMrErpPrefix@(itemName)").prop("disabled", true);
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateMaterialRequisition", "Inventory")";
+                    let postData = {
+                        "MrId": MrId,
+                        "MrErpPrefix": $("#cboMrErpPrefix@(itemName)").val(),
+                        "RequesitionNo": $("#txtRequesitionNo@(itemName)").val(),
+                        "MrDate": $("#txtMrDate@(itemName)").val(),
+                        "DocDate": $("#txtDocDate@(itemName)").val(),
+                        "DocType": $("#cboDocType@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                        "JournalStatus": $("#cboJournalStatus@(itemName)").val(),
+                        "SignupStatus": $("#cboSignupStatus@(itemName)").val(),
+                        "SourceType": $("#cboSourceType@(itemName)").val(),
+                        "PriorityType": $("#cboPriorityType@(itemName)").val(),
+                        "NegativeStatus": $("#cboNegativeStatus@(itemName)").val(),
+                        "ProductionLine": $("#cboProductionLine@(itemName)").val(),
+                        "ContractManufacturer": $("#cboContractManufacturer@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        $("#cboDocType@(itemName)").prop("disabled", true);
+                        $("#cboMrErpPrefix@(itemName)").prop("disabled", true);
+                        ReturnMaterialDetail();
+                    }
+                }
+            }
+        }
+
+        function ViewMrDetail@(itemName)(MrId) {
+            if ($("tr[data-mr-id='" + MrId + "']").is(':visible')) {
+                $("tr[data-mr-id='" + MrId + "']").hide();
+                return;
+            }
+
+            $("tr[data-mr-id]").hide();
+            $("tr[data-mr-id='" + MrId + "']").show();
+
+            let targetUrl = "@Url.Action("GetMrDetail", "Inventory")";
+            let postData = {
+                "MrId": MrId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${i + 1}.</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})" style="max-width: 200px;">${item.WoErpPrefix}-${item.WoErpNo}(${item.WoSeq})</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 300px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryNo} ${item.InventoryName}" style="max-width: 175px;">${item.InventoryNo} ${item.InventoryName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Quantity}" style="min-width: 150px;">${item.Quantity}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ActualQuantity}" style="min-width: 150px;">${item.ActualQuantity}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UomNo}" style="min-width: 150px;">${item.UomNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${Math.round(item.DemandRequisitionQty)}" style="min-width: 150px;">${Math.round(item.DemandRequisitionQty)}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.RequisitionQty}" style="min-width: 150px;">${item.RequisitionQty}</td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="15" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+                $("tr[data-mr-id='" + MrId + "'] tbody").html(innerHtml);
+                TableComponentInit();
+            }
+        }
+
+        function Delete@(itemName)(mrId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作會將MES及ERP單據都刪除，請確認後再執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMaterialRequisition", "Inventory")";
+                    let postData = {
+                        "MrId": mrId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Confirm@(itemName)(mrId) {
+            swal.fire({
+                titleText: "確認領退料單",
+                text: "目前核單者工號為'@Session["UserNo"]'，請確認正確後再進行核單!!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("ConfirmMaterialRequisition", "Inventory")";
+                    let postData = {
+                        "MrId": mrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    Query@(itemName)();
+                    Edit@(itemName)(mrId);
+                    ReturnMaterialDetail();
+                }
+            });
+        }
+
+        function ReConfirm@(itemName)(mrId) {
+            swal.fire({
+                titleText: "反確認領退料單",
+                text: "目前反確認者工號為'@Session["UserNo"]'，請確認正確後再進行反確認!!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateMrReConfirm", "Inventory")";
+                    let postData = {
+                        "MrId": mrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                        Edit@(itemName)(mrId);
+                        ReturnMaterialDetail();
+                    }
+                }
+            });
+        }
+
+        function Void@(itemName)(mrId) {
+            swal.fire({
+                titleText: "領退料單作廢",
+                text: "目前作廢者工號為'@Session["UserNo"]'，請確認正確後再進行作廢!!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateMrVoid", "Inventory")";
+                    let postData = {
+                        "MrId": mrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                        ReturnMaterialDetail();
+                    }
+                }
+            });
+        }
+
+        function TransferErp@(itemName)(mrId) {
+            swal.fire({
+                titleText: "拋轉領退料單據到ERP",
+                text: "目前拋單者工號為'@Session["UserNo"]'，請確認正確後再進行拋單!!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateMrTransfer", "Inventory")";
+                    let postData = {
+                        "MrId": mrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        InitData@(itemName)();
+                        Edit@(itemName)(mrId);
+                        ReturnMaterialDetail();
+                    }
+                }
+            });
+        }
+
+        function DownloadWord@(itemName)(MrId) {
+            let targetUrl = "@Url.Action("MaterialRequisitionDocDownload", "Inventory")";
+            let postData = {
+                "MrId": MrId
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+
+            Return@(itemName)();
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            ResetForm(objForm@(itemName));
+            InitData@(itemName)();
+        }
+
+    </script>
+        )

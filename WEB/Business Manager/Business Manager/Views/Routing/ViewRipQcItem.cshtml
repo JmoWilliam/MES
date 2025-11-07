@@ -1,0 +1,300 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRipQcItem";
+    string itemNameText = "查看途程製程加工細節";
+}
+
+@Html.Resource("css",
+    @<style>
+        .qcitem-info {
+            border: 1px solid rgba(0,0,0,.125);
+            border-radius: 0.25rem;
+            padding: 10px;
+            box-shadow: 0 0 4px rgb(139 110 110 / 60%);
+            margin-bottom: 10px;
+        }
+
+        .tag-group {
+            display: inline-block;
+            background-color: #ebebeb;
+            border-radius: 4px;
+            cursor: text;
+            line-height: 1;
+            padding: 0.35rem 0.5rem;
+            margin: 0.15rem 0.375rem 0.15rem 0;
+            white-space: nowrap;
+            color: #0580ff;
+            font-weight: 700;
+        }
+    </style>
+                                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">途程名稱: <span class="sub-text" id="desRoutingName@(itemName)"></span></span>
+                    <span class="sub-title">途程品號: <span class="sub-text" id="desMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">加工站別: <span class="sub-text" id="desProcessName@(itemName)"></span></span>
+                    <span style="display: none;" class="sub-title">加工站別ID: <span class="sub-text" id="desProcessId@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtItemNoQ@(itemName)" name="txtItemNoQ@(itemName)"
+                                               placeholder="請輸入屬性代碼" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtItemNameQ@(itemName)" name="txtItemNameQ@(itemName)"
+                                               placeholder="請輸入屬性名稱" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        <button type="button" class="btn btn-info auth-add" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="max-width:200px; min-width: 100px;">屬性代碼</th>
+                                        <th scope="col" style="max-width:200px; min-width: 100px;">屬性名稱</th>
+                                        <th scope="col" style="max-width:250px; min-width: 100px;">屬性描述</th>
+                                        <th class="text-center" scope="col" style="min-width: 250px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+                <div class="row" id="editData@(itemName)" style="display: none;">
+                    <div class="col-12">
+                        <form class="container" autocomplete="off" id="editForm@(itemName)">
+                            <input type="hidden" id="ItemProcessId" value="-1" />
+                            <fieldset>
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtQcItemId@(itemName)">加工參數 <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="hidden" id="txtQcItemId@(itemName)" name="txtQcItemId@(itemName)" value="-1" />
+                                            <div class="input-group-append">
+                                                <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tag-class">
+                                    <div class="qcitem-info">
+                                        <span><code>加工參數:</code></span>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary list-mode" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)()" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success edit-mode" onclick="Save@(itemName)()" style="display: none;"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewQcItem")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let itemProcessId@(itemName);
+        let processId@(itemName);
+
+        let qcItemJson =
+        {
+            qcItemInfo: []
+        };
+
+        function Pop@(itemName)(ItemProcessId, RoutingName, MtlItemNo, ProcessId, ProcessName) {
+            itemProcessId@(itemName) = ItemProcessId;
+            processId@(itemName) = ProcessId;
+            $("#desRoutingName@(itemName)").html(RoutingName);
+            $("#desMtlItemNo@(itemName)").html(MtlItemNo);
+            $("#desProcessName@(itemName)").html(ProcessName);
+            $("#desProcessId@(itemName)").html(ProcessId);
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetRipQcItem", "Routing")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ItemProcessId": itemProcessId@(itemName),
+                "ItemNo": $("#txtItemNoQ@(itemName)").val(),
+                "ItemName": $("#txtItemNameQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td scope="col" style="min-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ItemNo}" style="max-width:200px; min-width: 100px;">${item.ItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ItemName}" style="max-width:200px; min-width: 100px;">${item.ItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ItemDesc}" style="max-width:250px; min-width: 100px;">${item.ItemDesc}</td>
+                                        <td class="text-center active-content" scope="col" style="min-width: 250px;">
+                                            <!--刪除-->
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.ItemProcessId}', '${item.QcItemId}');">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)() {
+            Switch("#editData@(itemName), .add-group@(itemName), .edit-mode", "#listData@(itemName), .edit-group@(itemName), .list-mode");
+            let popConfig = {
+                targetSelector: "#txtQcItemId@(itemName)",
+                popFunction: "PopViewQcItem",
+                processId: $("#desProcessId@(itemName)").text(),
+                itemProcessId: itemProcessId@(itemName)
+            };
+            InitPopView(popConfig);
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("AddRipQcItem", "Routing")";
+                let postData = {
+                    "RipQcItemData": JSON.stringify(qcItemJson)
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function Delete@(itemName)(itemProcessId, qcItemId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteRipQcItem", "Routing")";
+                    let postData = {
+                        "ItemProcessId": itemProcessId,
+                        "QcItemId": qcItemId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function DeleteTag@(itemName)(tagId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.each(qcItemJson.qcItemInfo, function (i, item) {
+                        let tempNumber = item.TempNumber;
+                        if (tempNumber == tagId) {
+                            qcItemJson.qcItemInfo.splice(i, 1);
+                            return false;
+                        }
+                    });
+                    ResetQcItemViewQcItem();
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            qcItemJson.qcItemInfo = [];
+            $(".qcitem-info").empty();
+            Query@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+    )

@@ -1,0 +1,662 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "DeliveryHistory";
+    string itemNameText = "出貨歷史查詢";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .customization .table {
+             border-collapse: collapse !important;
+         }
+
+             .customization .table.table-striped tbody tr:nth-of-type(odd) td:not(.col-sticky) {
+                 background-color: transparent;
+             }
+
+         .customer-border td {
+             border-top: 5px solid #6d94d9 !important;
+         }
+    </style>
+        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">出貨日期 <input type="checkbox" id="cbxUseDate@(itemName)" checked /></label>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtStartDateQ@(itemName)" name="txtStartDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control" id="txtEndDateQ@(itemName)" name="txtEndDateQ@(itemName)"
+                                       data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))"
+                                       readonly />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboCustomerIdsQ@(itemName)">訂單客戶</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboCustomerIdsQ@(itemName)" name="cboCustomerIdsQ@(itemName)" multiple></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboDcIdsQ@(itemName)">出貨客戶</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDcIdsQ@(itemName)" name="cboDcIdsQ@(itemName)" multiple></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtSoErpFullNoQ@(itemName)">訂單(+序號)</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtSoErpFullNoQ@(itemName)" name="txtSoErpFullNoQ@(itemName)"
+                                       data-msg-extraRegex="請輸入訂單" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtItemValueQ@(itemName)">刻字碼</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtItemValueQ@(itemName)" name="txtItemValueQ@(itemName)"
+                                       data-msg-extraRegex="請輸入刻字碼" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNoQ@(itemName)">品號</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                       data-msg-extraRegex="請輸入品號" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtMtlItemNameQ@(itemName)">品名</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                       data-msg-extraRegex="請輸入品名" />
+                            </div>
+                        </div>
+
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="PopView@(itemName)" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="PopViewTitle" class="modal-title">出貨條碼列印</h5>
+                <button class="close" type="button" onclick="ClosePopView()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body ">
+                <form class="container" autocomplete="off" id="syncForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtCartonBarcode@(itemName)">箱號 <span class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtCartonBarcode@(itemName)" name="txtCartonBarcode@(itemName)" placeholder="請輸入箱號" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="executeButton" type="button" class="btn btn-primary" onclick="" style="margin: auto;"><i class="fas fa-sync-alt"></i>執行</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);">
+                            <i class="fal fa-search"></i>搜尋
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <button type="button" class="btn btn-info auth-pdf" onclick="OpenPopView('PickingCarton');"><i class="fas fa-sync-alt"></i>&nbsp;出貨條碼PDF</button>
+                        <a class="btn file-excel auth-excel" href="javascript:Excel@(itemName)();"><i class="fas fa-file-excel"></i>匯出</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom customization">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th class="text-center" scope="col" style="min-width: 75px;">狀態</th>
+                                        <th scope="col" style="min-width: 125px;">出貨時間</th>
+                                        <th scope="col" style="min-width: 125px;">出貨客戶</th>
+                                        <th scope="col" style="min-width: 200px;">品名</th>
+                                        <th class="text-right" scope="col" style="min-width: 150px;">出貨<br>【正常品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 150px;">出貨<br>【贈品】數量</th>
+                                        <th class="text-right" scope="col" style="min-width: 150px;">出貨<br>【備品】數量</th>
+                                        <th scope="col" style="min-width: 200px;">批號查詢</th>
+                                        <th scope="col" style="min-width: 200px;">生管備註</th>
+                                        <th scope="col" style="min-width: 125px;">訂單狀況</th>
+                                        <th scope="col" style="min-width: 200px;">訂單</th>
+                                        <th scope="col" style="min-width: 200px;">訂單備註</th>
+                                        <th scope="col" style="min-width: 200px;">客戶採單</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewLetteringInfo")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        $(document).ready(function () {
+            let currentDate = new Date();
+            Suites.DatePicker("txtStartDateQ@(itemName)", currentDate);
+            Suites.DatePicker("txtEndDateQ@(itemName)", currentDate);
+
+            ComboBoxs.Default("#cboCustomerIdsQ@(itemName)", "@Url.Action("GetCustomer", "ScmBasicInformation")", { "Status": "A", "TransferStatus": "A" }, "", "ALL", "", "CustomerWithNo", "CustomerId");
+            ComboBoxs.Default("#cboDcIdsQ@(itemName)", "@Url.Action("GetDeliveryCustomer", "ScmBasicInformation")", { "Status": "A" }, "", "ALL", "", "DcShortName", "DcId");
+
+            $("#cboCustomerIdsQ@(itemName), #cboDcIdsQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+
+            $('#txtCartonBarcode@(itemName)').on('keydown', function (event) {
+                if (event.key === 'Enter') { // 檢查是否按下 Enter 鍵
+                    event.preventDefault(); // 阻止預設行為
+                    PrintPickingCartonPdf@(itemName)()
+                }
+            });
+
+
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetDeliveryHistory", "Delivery")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : ""),
+                "CustomerIds": $("#cboCustomerIdsQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "DcIds": $("#cboDcIdsQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "SoErpFullNo": $("#txtSoErpFullNoQ@(itemName)").val(),
+                "ItemValue": $("#txtItemValueQ@(itemName)").val(),
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    let nextCustomer = "";
+                    let nextDateTime = "";
+                    let currentCustomer = "";
+                    let currentDateTime = "";
+                    let styleIndex = 0;
+                    let bgColor = ["#f5cdcd", "#ffe0c1", "#fff0a9", "#deebb1", "#c9dfce", "#d6edd6", "#c7e4ed", "#c7d1f3", "#e3c1f3", "#e1b9d1"];
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        nextCustomer = item.DcShortName;
+                        nextDateTime = item.DoDate;
+
+                        if ((nextCustomer != currentCustomer && currentCustomer != "") || (nextDateTime != currentDateTime && currentDateTime != "")) {
+                            styleIndex++;
+                            if (styleIndex > 9) styleIndex = 0;
+                        }
+
+                        innerHtml += `${(nextCustomer != currentCustomer && currentCustomer != "") || (nextDateTime != currentDateTime && currentDateTime != "") ? `<tr class="customer-border" style="background: ${bgColor[styleIndex]} !important;">` : `<tr style="background: ${bgColor[styleIndex]} !important;">`}
+                                        <td>${_row}</td>
+                                        <td class="text-center">
+                                            ${item.Status == `N` ? `<span class= "badge badge-pill badge-danger">${item.DoStatus}</span>` : ``}
+                                            ${item.Status == `P` ? `<span class= "badge badge-pill badge-info">${item.DoStatus}</span>` : ``}
+                                            ${item.Status == `R` ? `<span class= "badge badge-pill badge-success">${item.DoStatus}</span>` : ``}
+                                            ${item.Status == `S` ? `<span class= "badge badge-pill badge-secondary">${item.DoStatus}</span>` : ``}
+                                        </td>
+                                        <td>${item.DoDate}</td>
+                                        <td>${item.DcShortName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 200px;">
+                                            <a href="javascript:void(0);" onclick="Detail@(itemName)('MtlItem', ${item.DoDetailId})"><i class="fas fa-info-circle"></i></a>
+                                            ${item.MtlItemName}
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desMtlItemNo" value="${item.MtlItemNo}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desMtlItemName" value="${item.MtlItemName}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desMtlItemSpec" value="${item.MtlItemSpec}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" id="desCustomerMtlItemNo" name="desCustomerMtlItemNo" value="${item.CustomerMtlItemNo}" />
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="javascript:void(0);" onclick="Detail@(itemName)('RegularQty', ${item.DoDetailId}, '${item.DoDate}', '${item.DcShortName}', '${item.MtlItemName}')"><i class="fas fa-info-circle"></i></a>
+                                            ${item.PickRegularQty != item.RegularQty ? `<span class="text-danger">${item.PickRegularQty}</span>` : `<span class="text-success">${item.PickRegularQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.RegularQty}</span>
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickRegularQty" value="${item.PickRegularQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickRegularBarcodeQty" value="${item.PickRegularBarcodeQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickRegularNonBarcodeQty" value="${item.PickRegularNonBarcodeQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickRegularSubstituteQty" value="${item.PickRegularSubstituteQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desRegularQty" value="${item.RegularQty}" />
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="javascript:void(0);" onclick="Detail@(itemName)('FreebieQty', ${item.DoDetailId}, '${item.DoDate}', '${item.DcShortName}', '${item.MtlItemName}')"><i class="fas fa-info-circle"></i></a>
+                                            ${item.PickFreebieQty != item.FreebieQty ? `<span class="text-danger">${item.PickFreebieQty}</span>` : `<span class="text-success">${item.PickFreebieQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.FreebieQty}</span>
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickFreebieQty" value="${item.PickFreebieQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickFreebieBarcodeQty" value="${item.PickFreebieBarcodeQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickFreebieNonBarcodeQty" value="${item.PickFreebieNonBarcodeQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickFreebieSubstituteQty" value="${item.PickFreebieSubstituteQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desFreebieQty" value="${item.FreebieQty}" />
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="javascript:void(0);" onclick="Detail@(itemName)('SpareQty', ${item.DoDetailId}, '${item.DoDate}', '${item.DcShortName}', '${item.MtlItemName}')"><i class="fas fa-info-circle"></i></a>
+                                            ${item.PickSpareQty != item.SpareQty ? `<span class="text-danger">${item.PickSpareQty}</span>` : `<span class="text-success">${item.PickSpareQty}</span>`}
+                                            /
+                                            <span style="font-weight: bold;">${item.SpareQty}</span>
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickSpareQty" value="${item.PickSpareQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickSpareBarcodeQty" value="${item.PickSpareBarcodeQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickSpareNonBarcodeQty" value="${item.PickSpareNonBarcodeQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desPickSpareSubstituteQty" value="${item.PickSpareSubstituteQty}" />
+                                            <input type="hidden" data-do-detail="${item.DoDetailId}" name="desSpareQty" value="${item.SpareQty}" />
+                                        </td>
+                                        <td class="p-0" style="text-align: center;">
+                                        ${item.LotManagement != `N` ? `
+                                          <button type="button" class="btn btn-primary" onclick="OpenLotList@(itemName)(${item.DoDetailId})">批號列表</button>
+                                        `: `非批號模式`}
+                                        </td>
+
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PcDoDetailRemark}" style="max-width: 200px;">${item.PcDoDetailRemark}</td>
+                                        <td>${item.OrderSituation}</td>
+                                        <td>${item.SoErpFullNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoDetailRemark}" style="max-width: 200px;">${item.SoDetailRemark}</td>
+                                        <td>${item.CustomerPurchaseOrder}</td>
+                                      </tr>
+                                      ${(nextCustomer != currentCustomer && currentCustomer != "") || (nextDateTime != currentDateTime && currentDateTime != "") ? `<tr class="customer-border" data-do-detail="${item.DoDetailId}" style="background: ${bgColor[styleIndex]} !important; display: none;">` : `<tr data-do-detail="${item.DoDetailId}" style="background: ${bgColor[styleIndex]} !important; display: none;">`}
+                                      </tr>
+                                      <tr data-do-detail-lot="${item.DoDetailId}" style="display: none;">
+                                        <td colspan="14">
+                                          <table style="width: 100%; margin: auto; border: 1px solid #d7d7e1;background: ${bgColor[styleIndex]} !important;">
+                                            <thead>
+                                             <tr>
+                                                <th colspan="4" style="background: ${bgColor[styleIndex]} !important;"></th>
+                                                <th colspan="1" class="thead-customized" style="background: ${bgColor[styleIndex]} !important;" scope="col">#</th>
+                                                <th colspan="1" class="thead-customized" style="background: ${bgColor[styleIndex]} !important;" scope="col">批號</th>
+                                                <th colspan="1" class="thead-customized" style="background: ${bgColor[styleIndex]} !important;" scope="col">正常品</th>
+                                                <th colspan="1" class="thead-customized" style="background: ${bgColor[styleIndex]} !important;" scope="col">贈品</th>
+                                                <th colspan="1" class="thead-customized" style="background: ${bgColor[styleIndex]} !important;" scope="col">備品</th>
+                                              </tr>
+                                           </thead>
+                                            <tbody  class="lotShow">
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                       </tr>
+                                        `;
+
+                        currentCustomer = item.DcShortName;
+                        currentDateTime = item.DoDate;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="14" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Excel@(itemName)() {
+            let targetUrl = "@Url.Action("DeliveryHistoryExcelDownload", "Delivery")";
+            let postData = {
+                "StartDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtStartDateQ@(itemName)").val() : ""),
+                "EndDate": ($("#cbxUseDate@(itemName)").is(":checked") ? $("#txtEndDateQ@(itemName)").val() : ""),
+                "CustomerIds": $("#cboCustomerIdsQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "DcIds": $("#cboDcIdsQ@(itemName) option:selected").toArray().map(item => item.value).join(),
+                "SoErpFullNo": $("#txtSoErpFullNoQ@(itemName)").val(),
+                "ItemValue": $("#txtItemValueQ@(itemName)").val()
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+
+        function Detail@(itemName)(Type, DoDetailId, DoDate, DcShortName, MtlItemName) {
+            let innerHtml = ``;
+
+            if ($(`tr[data-do-detail='${DoDetailId}']:hidden`).length > 0) {
+                switch (Type) {
+                    case "MtlItem":
+                        innerHtml += `<td colspan="2"></td>
+                                      <td colspan="11">
+                                        <dl class="row mb-0">
+                                          <dt class="col-sm-2 text-right">品號</dt>
+                                          <dd class="col-sm-10 text-primary" style="font-weight: bold;">${$(`input[name='desMtlItemNo'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-2 text-right">品名</dt>
+                                          <dd class="col-sm-10 text-primary" style="font-weight: bold;">${$(`input[name='desMtlItemName'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-2 text-right">規格</dt>
+                                          <dd class="col-sm-10 text-primary" style="font-weight: bold;">${$(`input[name='desMtlItemSpec'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-2 text-right">客戶品號</dt>
+                                          <dd class="col-sm-10 text-primary" style="font-weight: bold;">${$(`input[name='desCustomerMtlItemNo'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                        </dl>
+                                      </td>`;
+                        break;
+                    case "RegularQty":
+                        innerHtml += `<td colspan="4"></td>
+                                      <td colspan="9">
+                                        <dl class="row mb-0">
+                                          <dt class="col-sm-3 text-right">撿貨數量【正常品】</dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickRegularQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">有條碼數量【正常品】
+                                            <a class="active-icon" href="javascript:PopViewLetteringInfo(1, ${DoDetailId}, '${DoDate}', '${DcShortName}', '${MtlItemName}')"><i class="fas fa-qrcode"></i></a>
+                                          </dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickRegularBarcodeQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">無條碼數量【正常品】</dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickRegularNonBarcodeQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">替代品數量【正常品】</dt>
+                                          <dd class="col-sm-9 text-danger" style="font-weight: bold;">${$(`input[name='desPickRegularSubstituteQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                        </dl>
+                                      </td>`;
+                        break;
+                    case "FreebieQty":
+                        innerHtml += `<td colspan="5"></td>
+                                      <td colspan="8">
+                                        <dl class="row mb-0">
+                                          <dt class="col-sm-3 text-right">撿貨數量【贈品】</dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickFreebieQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">有條碼數量【贈品】
+                                            <a class="active-icon" href="javascript:PopViewLetteringInfo(2, ${DoDetailId}, '${DoDate}', '${DcShortName}', '${MtlItemName}')"><i class="fas fa-qrcode"></i></a>
+                                          </dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickFreebieBarcodeQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">無條碼數量【贈品】</dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickFreebieNonBarcodeQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">替代品數量【贈品】</dt>
+                                          <dd class="col-sm-9 text-danger" style="font-weight: bold;">${$(`input[name='desPickFreebieSubstituteQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                        </dl>
+                                      </td>`;
+                        break;
+                    case "SpareQty":
+                        innerHtml += `<td colspan="6"></td>
+                                      <td colspan="7">
+                                        <dl class="row mb-0">
+                                          <dt class="col-sm-3 text-right">撿貨數量【備品】</dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickSpareQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">有條碼數量【備品】
+                                            <a class="active-icon" href="javascript:PopViewLetteringInfo(3, ${DoDetailId}, '${DoDate}', '${DcShortName}', '${MtlItemName}')"><i class="fas fa-qrcode"></i></a>
+                                          </dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickSpareBarcodeQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">無條碼數量【備品】</dt>
+                                          <dd class="col-sm-9 text-primary" style="font-weight: bold;">${$(`input[name='desPickSpareNonBarcodeQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                          <dt class="col-sm-3 text-right">替代品數量【備品】</dt>
+                                          <dd class="col-sm-9 text-danger" style="font-weight: bold;">${$(`input[name='desPickSpareSubstituteQty'][data-do-detail='${DoDetailId}'`).val()}</dd>
+                                        </dl>
+                                      </td>`;
+                        break;
+                }
+
+                $(`tr[data-do-detail-lot]`).hide();
+
+                $(`tr[data-do-detail]`).hide();
+                $(`tr[data-do-detail='${DoDetailId}']`).html(innerHtml);
+                $(`tr[data-do-detail='${DoDetailId}']`).show();
+            } else {
+                $(`tr[data-do-detail]`).hide();
+            }
+        }
+
+        function DailyDeliveryWipUnLinkDetail(CompanyNo, StartDate, EndDate) {
+            let targetUrl = "@Url.Action("DailyDeliveryWipUnLinkDetailExcelDownload", "Delivery")";
+            let postData = {
+                "CompanyNo": CompanyNo,
+                "StartDate": StartDate,
+                "EndDate": EndDate
+            };
+
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+        }
+
+        function OpenPopView(Type) {
+            let PopViewTitle = ""
+            $("#PopView@(itemName)").modal("show");
+
+            switch (Type) {
+                case "PickingCarton":
+                    PopViewTitle = `出貨條碼PDF輸出`;
+                    $('#executeButton').attr('onclick', 'PrintPickingCartonPdf@(itemName)(\'One\')');
+                    break;
+            }
+            $("#PopViewTitle").text(PopViewTitle)
+        }
+
+        function PrintPickingCartonPdf@(itemName)(){
+            
+            let CartonBarcode = $("#txtCartonBarcode@(itemName)").val()
+
+            let targetUrl = "@Url.Action("PrintPickingCartonPdf", "Delivery")";
+            let postData = {
+                "CartonBarcode": CartonBarcode,
+            };
+            FileAccess.AjaxDownload(targetUrl, postData, false);
+
+            alert("PDF輸出成功","success",1000)
+
+            ClosePopView()
+
+            return
+        }
+
+        function ClosePopView() {
+            $("#PopView@(itemName)").modal("hide");
+            $("#txtCartonBarcode@(itemName)").val("")
+            $("#PopViewTitle").text("")
+        }
+
+        let SaveLotListObj = []
+        function OpenLotList@(itemName)(DoDetailId) {
+            let innerHtml = '';
+
+            const index = SaveLotListObj.findIndex((v) => Object.keys(v)[0] == DoDetailId);
+            if (index !== -1) {
+                LotListObj = SaveLotListObj[index]
+                for (var key in SaveLotListObj[index]) {
+                    if (key == DoDetailId) {
+                        let num = 0
+                        for (key1 in SaveLotListObj[index][key]) {
+                            let _row = (num + 1) + ".";
+                            let LotNumber = SaveLotListObj[index][key][key1].LotNumber
+                            let ItemQty1 = SaveLotListObj[index][key][key1].ItemQty1
+                            let ItemQty2 = SaveLotListObj[index][key][key1].ItemQty2
+                            let ItemQty3 = SaveLotListObj[index][key][key1].ItemQty3
+                            let OutInventoryLot = SaveLotListObj[index][key][key1].OutInventory
+                            let InInventoryLot = SaveLotListObj[index][key][key1].InInventory
+                            innerHtml += `
+                                            <td colspan="5"></td>
+                                            <td>${_row}</td>
+                                            <td class="col-sticky">${LotNumber}</td>
+                                            <td class="col-sticky">${ItemQty1}</td>
+                                            <td class="col-sticky">${ItemQty2}</td>
+                                            <td class="col-sticky">${ItemQty3}</td>
+                                            `;
+                            num++
+                        }
+                    }
+                }
+            }
+            else {
+                GetDeliveryLotList@(itemName)(DoDetailId)
+
+                if (!$.isEmptyObject(LotListObj[DoDetailId])) {
+                    for (var key in LotListObj) {
+                        if (key == DoDetailId) {
+                            let num = 0
+                            for (key1 in LotListObj[key]) {
+                                let _row = (num + 1) + ".";
+                                let LotNumber = LotListObj[key][key1].LotNumber
+                                let ItemQty1 = LotListObj[key][key1].ItemQty1
+                                let ItemQty2 = LotListObj[key][key1].ItemQty2
+                                let ItemQty3 = LotListObj[key][key1].ItemQty3
+                                innerHtml += `<tr>
+                                                <td colspan="4"></td>
+                                                <td colspan="1">${_row}</td>
+                                                <td colspan="1" >${LotNumber}</td>
+                                                <td colspan="1" >${ItemQty1}</td>
+                                                <td colspan="1" >${ItemQty2}</td>
+                                                <td colspan="1" >${ItemQty3}</td>
+                                               </tr>`;
+                                num++
+                            }
+                        }
+                    }
+                }
+                else {
+                    innerHtml += `
+                                    <td class="text-center" colspan="20" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                   `;
+                }
+            }
+
+        
+
+            innerHtml = innerHtml
+
+            $(`tr[data-do-detail-lot]`).hide();
+            $(`tr[data-do-detail]`).hide();
+
+            $(".lotShow").html(innerHtml)
+            $(`tr[data-do-detail-lot='${DoDetailId}']`).show();
+        }
+
+        function GetDeliveryLotList@(itemName)(DoDetailId) {
+            LotListObj = {}
+
+            let OutInventory = $(`select[name='cboTsnOutInventory@(itemName)'][data-do-detail-id=${DoDetailId}]`).val()
+            let InInventory = $(`select[name='cboTsnInInventory@(itemName)'][data-do-detail-id=${DoDetailId}]`).val()
+
+            let targetUrl = "@Url.Action("GetDeliveryLotList", "PickingSystem")";
+            let postData = {
+                "DoDetailId": DoDetailId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+
+                    $.each(data.result, function (i, item) {
+                        let LotNumber = item.LotNumber;
+                        let ItemQty = item.ItemQty;
+                        let DoDetailId = item.DoDetailId;
+                        let ItemType = item.ItemType;
+
+                        if ($.isEmptyObject(LotListObj[DoDetailId])) {
+                            LotListObj[DoDetailId] = {
+                                [LotNumber]: {
+                                    "LotNumber": LotNumber,
+                                    "ItemQty1": ItemType == 1 ? ItemQty : 0,
+                                    "ItemQty2": ItemType == 2 ? ItemQty : 0,
+                                    "ItemQty3": ItemType == 3 ? ItemQty : 0,
+                                    "OutInventory": OutInventory,
+                                    "InInventory": InInventory,
+                                }
+                            }
+                        }
+                        else {
+                            if ($.isEmptyObject(LotListObj[DoDetailId][LotNumber])) {
+                                LotListObj[DoDetailId][LotNumber] = {
+                                    "LotNumber": LotNumber,
+                                    "ItemQty1": ItemType == 1 ? ItemQty : 0,
+                                    "ItemQty2": ItemType == 2 ? ItemQty : 0,
+                                    "ItemQty3": ItemType == 3 ? ItemQty : 0,
+                                    "OutInventory": OutInventory,
+                                    "InInventory": InInventory,
+                                }
+                            }
+                            else {
+                                if (ItemType == 1) {
+                                    LotListObj[DoDetailId][LotNumber].ItemQty1 = LotListObj[DoDetailId][LotNumber].ItemQty1 + ItemQty
+                                }
+                                else if (ItemType == 2) {
+                                    LotListObj[DoDetailId][LotNumber].ItemQty2 = LotListObj[DoDetailId][LotNumber].ItemQty2 + ItemQty
+                                }
+                                else if (ItemType == 3) {
+                                    LotListObj[DoDetailId][LotNumber].ItemQty3 = LotListObj[DoDetailId][LotNumber].ItemQty3 + ItemQty
+                                }
+                            }
+                        }
+                    });
+                }
+                else {
+
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+    </script>
+)

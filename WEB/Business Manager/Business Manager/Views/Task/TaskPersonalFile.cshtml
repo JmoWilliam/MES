@@ -1,0 +1,129 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TaskPersonalFile";
+    string itemNameText = "個人任務檔案";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<form autocomplete="off" id="queryForm@(itemName)">
+    <fieldset>
+        <div class="form-row align-items-center mb-2">
+            <div class="col-auto">
+                <select class="form-control" id="cboTaskIdQ@(itemName)" name="cboTaskIdQ@(itemName)"></select>
+            </div>
+            <div class="col-auto">
+                <input type="text" class="form-control" id="txtFileNameQ@(itemName)" name="txtFileNameQ@(itemName)" placeholder="請輸入檔案名稱" />
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+            </div>
+        </div>
+    </fieldset>
+</form>
+<div class="table-custom">
+    <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+        <thead>
+            <tr>
+                <th scope="col" style="min-width: 75px;">#</th>
+                <th scope="col" style="min-width: 200px;">任務名稱</th>
+                <th scope="col" style="min-width: 300px;">檔案名稱</th>
+                <th scope="col" style="min-width: 200px;">閱覽檔案等級</th>
+                <th scope="col" style="min-width: 200px;">檔案類型</th>
+                <th scope="col" style="min-width: 200px;">上傳時間</th>
+                <th scope="col" style="min-width: 200px;">任務成員</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        function Expand@(itemName)() {
+            ComboBoxs.Default("#cboTaskIdQ@(itemName)", "@Url.Action("GetUserPersonalTask", "Task")", {}, "", "ALL", "", "TaskName", "PersonalTaskId");
+
+            if (!isMobile) {
+                $("#cboProjectIdQ@(itemName), #cboTaskIdQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetPersonalTaskFile", "Task")";
+            let postData = {
+                "PersonalTaskId": $("#cboTaskIdQ@(itemName)").val(),
+                "FileName": $("#txtFileNameQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let _row = (i + 1) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TaskName}" style="max-width: 200px;">
+                                          <span class="stack-title">任務名稱</span>${item.TaskName}
+                                          ${item.SourceType == `T` ? `<a href="javascript:PopViewTaskStructure(${item.SourceId});"><i class="fas fa-project-diagram"></i></a>` : ``}
+                                        </td>
+                                        <td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileName}${item.FileExtension}" style="max-width: 300px;">
+                                          <span class="stack-title">檔案名稱</span>
+                                          <a class="active-link proj-auth-file-download" href="${DownloadUrl@(itemName)(item.SourceId, item.SourceType, item.FileId)}" target="_blank"><i class="fas fa-download"></i><span>檔案下載</span></a>
+                                          ${item.FileName}${item.FileExtension}
+                                        </td>
+                                        <td><span class="stack-title">閱覽檔案等級</span>${item.LevelName}</td>
+                                        <td><span class="stack-title">檔案類型</span>${TypeName(`ProjectFile.FileType`, item.FileType)}</td>
+                                        <td><span class="stack-title">上傳時間</span>${item.CreateDate}</td>
+                                        <td style="max-width: 200px;"><span class="stack-title">任務成員</span>${item.TaskUser}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+
+            function DownloadUrl@(itemName)(id, source, file) {
+                let url = '';
+
+                switch (source) {
+                    case "P":
+                        url = `/Project/DownloadProjectFile?FileId=${file}&ProjectId=${id}`;
+                        break;
+                    case "T":
+                        url = `/Task/DownloadTaskFile?FileId=${file}&TaskId=${id}&TaskType=Personal`;
+                        break;
+                    default:
+                        url = "javascript:void(0);"
+                        break;
+                }
+
+                return url;
+            }
+        }
+    </script>
+)

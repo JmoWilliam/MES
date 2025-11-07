@@ -1,0 +1,203 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewPendingOrders";
+    string itemNameText = "待處理訂單列表";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .modal-xl {
+             max-width: 1680px;
+         }
+
+         .customization .table {
+             border-collapse: collapse !important;
+         }
+
+         .customer-border td {
+             border-top: 5px solid #6d94d9 !important;
+         }
+
+         .customization .table.table-striped tbody tr:nth-of-type(odd) td:not(.col-sticky) {
+             background-color: transparent;
+         }
+    </style>
+                                        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtSoErpFullNo@(itemName)">訂單單號</label>
+                                        <input type="text" class="form-control" id="txtSoErpFullNo@(itemName)" name="txtSoErpFullNo@(itemName)" placeholder="請輸入訂單單號"
+                                               data-msg-extraRegex="請輸入訂單單號" />
+                                    </div>
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtSearchKey@(itemName)">品號/品名</label>
+                                        <input type="text" class="form-control" id="txtSearchKey@(itemName)" name="txtSearchKey@(itemName)" placeholder="請輸入品號/品名"
+                                               data-msg-extraRegex="請輸入品號/品名" />
+                                    </div>
+                                    <div class="col-lg-2 col-3 mt-4">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>查詢</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="new-delivery">
+                            <div class="table-custom">
+                                <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" style="min-width: 50px;">#</th>
+                                            <th scope="col" style="min-width: 200px;">訂單編號</th>
+                                            <th scope="col" style="min-width: 125px;">訂單日期</th>
+                                            <th scope="col" style="min-width: 150px;">客戶名稱</th>
+                                            <th scope="col" style="min-width: 200px;">品號</th>
+                                            <th scope="col" style="min-width: 200px;">品名</th>
+                                            <th scope="col" style="min-width: 150px;">規格</th>
+                                            <th scope="col" style="min-width: 115px;">排定數量</th>
+                                            <th scope="col" style="min-width: 115px;">未交數量</th>
+                                            <th scope="col" style="min-width: 135px;">已定未出數量</th>
+                                            <th scope="col" style="min-width: 115px;">總暫出數量</th>
+                                            <th scope="col" style="min-width: 115px;">總銷貨數量</th>
+                                            <th scope="col" style="min-width: 150px;">排定出貨日期</th>
+                                            <th scope="col" style="min-width: 150px;">業務名稱</th>
+                                            <th scope="col" style="min-width: 115px;">單價</th>
+                                            <th scope="col" style="min-width: 145px;">金額</th>
+                                            <th scope="col" style="min-width: 145px;">未交總金額</th>
+                                            <th scope="col" style="min-width: 115px;">庫存數量</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-center" colspan="15" style="background-color: #fff3cd;">
+                                                <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pagination" id="page@(itemName)"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        $(document).ready(function () {
+            $("#txtSoErpFullNo@(itemName), #txtSearchKey@(itemName)").on("keydown", function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+        });
+
+        function Pop@(itemName)() {
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetPendingOrders", "Delivery")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "SoErpFullNo": $("#txtSoErpFullNo@(itemName)").val().trim(),
+                "SearchKey": $("#txtSearchKey@(itemName)").val().trim(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.TotalCount;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoErpFullNo}(${item.SoSeq})" style="max-width: 250px;">${item.SoErpFullNo}<code>(${item.SoSeq})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.OrderDate}" style="max-width: 125px;">${item.OrderDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CustomerShortName}" style="max-width: 150px;">${item.CustomerShortName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 150px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 150px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 150px;">${item.MtlItemSpec}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoQty}" style="max-width: 115px;">${item.SoQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SoQty - item.SiQty}" style="max-width: 115px;">${item.SoQty - item.SiQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TotalDoQty}" style="max-width: 135px;">${item.TotalDoQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.TempShippingQty}" style="max-width: 115px;">${item.TempShippingQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SiQty}" style="max-width: 115px;">${item.SiQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PcPromiseDate}" style="max-width: 150px;">${item.PcPromiseDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UserName}" style="max-width: 150px;">${item.UserName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UnitPrice}" style="max-width: 115px;">${item.UnitPrice} <code>${item.Currency}</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Amount}" style="max-width: 145px;">${item.Amount} <code>${item.Currency}</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.NotSiAmount}" style="max-width: 145px;">${item.NotSiAmount} <code>${item.Currency}</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryQty}" style="max-width: 115px;">${item.InventoryQty}</td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="20" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+                )

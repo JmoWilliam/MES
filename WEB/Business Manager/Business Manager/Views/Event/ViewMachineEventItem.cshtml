@@ -1,0 +1,267 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMachineEventItem";
+    string itemNameText = "查看各機台事件";
+}
+
+@Html.Resource("css",
+    @<style>
+        .source-user {
+            font-size: 1rem;
+            color: #4d80c4;
+        }
+
+        .source-contact {
+            font-size: 1rem;
+            color: #27b390;
+        }
+
+            .source-user i, .source-contact i {
+                margin-right: 5px;
+            }
+
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+
+                                    <label class="col-12 col-md-2 col-lg-2 col-form-label" for="">選擇車間<span class="text-danger">*</span></label>
+                                    <div class="col-12 col-md-3 col-lg-3">
+                                        <select class="form-control" id="cboShopIdQ@(itemName)" name="cboShopIdQ@(itemName)"></select>
+                                    </div>
+                                    @*<div class="col-12 col-md-3 col-lg-3" style="margin-top:auto;margin-bottom:3px;">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>*@
+                                </div>
+                                <div class="form-row align-items-center mb-2 machineinfo">
+
+                                    <label class="col-12 col-md-2 col-lg-2 col-form-label" for="">選擇機台<span class="text-danger">*</span></label>
+                                    <div class="col-12 col-md-3 col-lg-3">
+                                        <select class="form-control" id="cboMachineIdQ@(itemName)" name="cboMachineIdQ@(itemName)"></select>
+                                    </div>
+                                    <div class="col-12 col-md-3 col-lg-3" style="margin-top:auto;margin-bottom:3px;">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 250px;">車間名</th>
+                                        <th scope="col" style="min-width: 250px;">機台名</th>
+                                        <th scope="col" style="min-width: 175px;">機台描述</th>
+                                        <th scope="col" style="min-width: 175px;">事件名</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 100px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let machineEventItemId@(itemName);
+        let machineEventName@(itemName);
+        let shopId@(itemName);
+        let shopName@(itemName);
+        let machineId@(itemName);
+        let machineName@(itemName);
+        let machineDesc@(itemName);
+        let targetSelector@(itemName);
+
+        
+           //設定車間條件，選擇機台+機台描述
+        $(document).ready(function (ShopId) {
+            $(".machineinfo").hide();//第二階段製程(查詢)隱藏
+            ComboBoxs.Default("#cboShopIdQ@(itemName)", "@Url.Action("GetWorkShop", "MesBasicInformation")", {}, "", "NA", "", "ShopName", "ShopId");
+            $("#cboShopIdQ@(itemName)").change(function () {
+                var ShopId = $("#cboShopIdQ@(itemName)").val();
+                $(".machineinfo").show();//第二階段打開
+                ComboBoxs.Default("#cboMachineIdQ@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineNameDesc", "MachineId");
+            });
+
+            ComboBoxs.Default("#cboMachineIdQ@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", { "ShopId": ShopId }, "", "NA", "", "MachineNameDesc", "MachineId");
+
+            $("#cboShopIdQ@(itemName),#cboMachineIdQ@(itemName)").select2({
+                width: "100%"
+            });
+            Query@(itemName)();
+
+        });
+
+
+
+
+
+        function Pop@(itemName)(config) {
+            machineEventItemId@(itemName) = config.objectMachineEventItemId;
+            machineEventName@(itemName) = config.objectMachineEventName;
+            shopId@(itemName) = config.objectShopId;
+            shopName@(itemName) = config.objectShopName;
+            machineId@(itemName) = config.objectMachineId;
+            machineName@(itemName) = config.objectMachineName;
+            machineDesc@(itemName) = config.objectMachineDesc;
+            targetSelector@(itemName) = config.targetSelector;
+
+            @*if (!isMobile) {
+                $("#cboShopIdQ@(itemName), #cboMachineIdQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+
+            ComboBoxs.Default("#cboShopIdQ@(itemName)", "@Url.Action("GetWorkShop", "MesBasicInformation")", {}, "", "NA", "", "ShopName", "ShopId");
+            ComboBoxs.Default("#cboMachineIdQ@(itemName)", "@Url.Action("GetMachine", "MesBasicInformation")", {  }, "", "NA", "", "MachineNameDesc", "MachineId");*@
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetMachineEventSetting", "MesBasicInformation")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ShopId": $("#cboShopIdQ@(itemName)").val(),
+                "MachineId": $("#cboMachineIdQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.ShopName}</td>
+                                        <td>${item.MachineName}</td>
+                                        <td>${item.MachineDesc}</td>
+                                        <td>${item.MachineEventName}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-machine-event-item-id="${item.MachineEventItemId}" value="${item.MachineEventItemId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" id="txtMachineEventItemId@(itemName)" data-machine-event-item-id="${item.MachineEventItemId}" value="${item.MachineEventItemId}"/>
+                                          <input type="hidden" id="txtMachineEventName@(itemName)" data-machine-event-item-id="${item.MachineEventItemId}" value="${item.MachineEventName}"/>
+                                          <input type="hidden" id="txtShopId@(itemName)" data-machine-event-item-id="${item.MachineEventItemId}" value="${item.ShopId}"/>
+                                          <input type="hidden" id="txtShopName@(itemName)" data-machine-event-item-id="${item.MachineEventItemId}" value="${item.ShopName}"/>
+                                          <input type="hidden" id="txtMachineId@(itemName)" data-machine-event-item-id="${item.MachineEventItemId}" value="${item.MachineId}"/>
+                                          <input type="hidden" id="txtMachineName@(itemName)" data-machine-event-item-id="${item.MachineEventItemId}" value="${item.MachineName}"/>
+                                          <input type="hidden" id="txtMachineDesc@(itemName)" data-machine-event-item-id="${item.MachineEventItemId}" value="${item.MachineDesc}"/>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="13" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-machine-event-item-id]:checked") {
+                    let machineEventItemId = $(this).data("machine-event-item-id");
+
+                    if (machineEventItemId) {
+                        let machineEventName = $(`input[id="txtMachineEventName@(itemName)"][data-machine-event-item-id="${machineEventItemId}"]`).val();
+                        let shopId = $(`input[id="txtShopId@(itemName)"][data-machine-event-item-id="${machineEventItemId}"]`).val();
+                        let shopName = $(`input[id="txtShopName@(itemName)"][data-machine-event-item-id="${machineEventItemId}"]`).val();
+                        let machineId = $(`input[id="txtMachineId@(itemName)"][data-machine-event-item-id="${machineEventItemId}"]`).val();
+                        let machineName = $(`input[id="txtMachineName@(itemName)"][data-machine-event-item-id="${machineEventItemId}"]`).val();
+                        let machineDesc = $(`input[id="txtMachineDesc@(itemName)"][data-machine-event-item-id="${machineEventItemId}"]`).val();
+
+                        if (machineEventItemId@(itemName)) ElementSetValue(machineEventItemId@(itemName), machineEventItemId, "change");
+                        if (machineEventName@(itemName)) ElementSetValue(machineEventName@(itemName), machineEventName, "change");
+                        if (shopId@(itemName)) ElementSetValue(shopId@(itemName), shopId, "change");
+                        if (shopName@(itemName)) ElementSetValue(shopName@(itemName), shopName, "change");
+                        if (machineId@(itemName)) ElementSetValue(machineId@(itemName), machineId, "change");
+                        if (machineName@(itemName)) ElementSetValue(machineName@(itemName), machineName, "change");
+                        if (machineDesc@(itemName)) ElementSetValue(machineDesc@(itemName), machineDesc, "change");
+
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

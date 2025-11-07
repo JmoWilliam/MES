@@ -1,0 +1,195 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewBomSubstitution";
+    string itemNameText = "替代料查詢";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">目前元件品號 <span class="sub-text" id="desMtlItemNo@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-lg-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 100px;">取替代件</th>
+                                        <th scope="col" style="min-width: 200px;">品號</th>
+                                        <th scope="col" style="min-width: 200px;">品名</th>
+                                        <th scope="col" style="min-width: 200px;">規格</th>
+                                        <th scope="col" style="min-width: 100px;">需領用量</th>
+                                        <th scope="col" style="min-width: 100px;">數量</th>
+                                        <th scope="col" style="min-width: 150px;">取替代件順序</th>
+                                        <th scope="col" style="min-width: 150px;">庫別</th>
+                                        <th scope="col" style="min-width: 150px;">庫存數量</th>
+                                        <th scope="col" style="min-width: 200px;" class="col-sticky" >操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(MtlItemNo, BillOfMaterialsMtlItemId, BomDetailMtlItemId, WoDetailId, DemandRequisitionQty) {
+            //alert("改版中~~~敬啟期待上線~ (≧∇≦)b")
+            //return
+            $("#desMtlItemNo@(itemName)").text(MtlItemNo)
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)(BillOfMaterialsMtlItemId, BomDetailMtlItemId, WoDetailId, DemandRequisitionQty);
+
+            $(window).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)(BillOfMaterialsMtlItemId, BomDetailMtlItemId, WoDetailId, DemandRequisitionQty) {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName), BillOfMaterialsMtlItemId, BomDetailMtlItemId, WoDetailId, DemandRequisitionQty);
+        }
+
+        function InitData@(itemName)(objPage, BillOfMaterialsMtlItemId, BomDetailMtlItemId, WoDetailId, DemandRequisitionQty) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetBomSubstitution", "Production")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemId": BillOfMaterialsMtlItemId,
+                "BomDetailMtlItemId": BomDetailMtlItemId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${TypeName("BomSubstitution.SubstituteStatus", item.SubstituteStatus)}</td>
+                                        <td>${item.BomSubstitutionMtlItemNo}</td>
+                                        <td>${item.BomSubstitutionMtlItemName}</td>
+                                        <td>${item.BomSubstitutionMtlItemSpec}</td>
+                                        <td>${item.Quantity * DemandRequisitionQty}</td>
+                                        <td>${item.Quantity}</td>
+                                        <td>${item.SortNumber}</td>
+                                        <td>${item.InventoryNo}-${item.InventoryName}</td>
+                                        <td>${GetStorehouseAvailableQty(item.BomSubstitutionMtlItemNo, item.InventoryNo)}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" name="chkMtlItemId@(itemName)" data-mtl-item-id="${item.SubstitutionId}" value="${item.SubstitutionId}"/>
+                                            <span class="control__indicator ${item.TransferStatus == `N` ? `trLock` : `` }"></span>
+                                          </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-mtl-item-id]:checked") {
+                    let substitutionId = $(this).data("mtl-item-id");
+                    
+                    if (substitutionId) {
+                        swal.fire({
+                            title: "確認要將該元件替換成替代料嗎?",
+                            text: "此動作無法復原，請確認是否要執行!",
+                            icon: "warning",
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            reverseButtons: true
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                let targetUrl = "@Url.Action("UpdateWoDetailChangeSubstitution", "Production")";
+                                let postData = {
+                                    "WoDetailId": WoDetailId,
+                                    "SubstitutionId": substitutionId
+                                };
+
+                                let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                                if (result) {
+                                    Close@(itemName)();
+                                    QueryWoDetail()
+                                }
+                            }
+                            else {
+
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+
+            Query@(itemName)();
+        }
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

@@ -1,0 +1,928 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProjectManagement";
+    string itemNameText = "專案資料管理";
+    string authority = ViewBag.authority;
+
+    string dateCache = DateTime.Now.ToString("MMddmmss");
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css", @<link href="@Url.Content("~/Content/project.min.css")?@dateCache" rel="stylesheet" />)
+@Html.Resource("css", @<link href="@Url.Content("~/Content/dhtmlx/gantt.commercial/7.1.12/dhtmlxgantt.css")" rel="stylesheet" />)
+@Html.Resource("css",
+    @<style>
+         .btn_hide {
+             display: none;
+         }
+
+         .gantt_row .fa-edit {
+             color: #A3f;
+         }
+
+         .gantt_row .copy-task {
+             color: #24a757;
+         }
+
+         .gantt_row .add-link-task {
+             color: #07F
+         }
+
+         .gantt_row .delete-task {
+             color: #ff477a;
+         }
+
+         .gantt_layout_outer_scroll_vertical {
+             overflow-y: auto;
+         }
+
+         .gantt-container .dropdown-menu {
+             padding: 2px 0;
+             position: absolute;
+             overflow: visible;
+         }
+
+         .gantt-container .dropdown-item {
+             padding: 2px 0;
+             font-size: 14px;
+             text-align: center;
+             line-height: 22px;
+         }
+
+             .gantt-container .dropdown-item:focus, .gantt-container .dropdown-item:hover {
+                 background-color: #ffec92;
+             }
+
+             .gantt-container .dropdown-item.active, .gantt-container .dropdown-item:active {
+                 color: #ffe5d4;
+             }
+    </style>)
+
+<input type="hidden" id="pageAuthority" value="@(authority)" />
+<input type="hidden" id="projectAuthority" value="" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalQuery@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">搜尋</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboDepartmentIdQ@(itemName)">所屬部門</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboDepartmentIdQ@(itemName)" name="cboDepartmentIdQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtProjectNoQ@(itemName)">專案代碼</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtProjectNoQ@(itemName)" name="txtProjectNoQ@(itemName)" placeholder="請輸入專案代碼" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="txtProjectNameQ@(itemName)">專案名稱</label>
+                            <div class="col-12">
+                                <input type="text" class="form-control" id="txtProjectNameQ@(itemName)" name="txtProjectNameQ@(itemName)" placeholder="請輸入專案名稱" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboProjectAttributeQ@(itemName)">專案屬性</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboProjectAttributeQ@(itemName)" name="cboProjectAttributeQ@(itemName)"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboProjectStatusQ@(itemName)">專案狀態</label>
+                            <div class="col-12">
+                                <select class="form-control" id="cboProjectStatusQ@(itemName)" name="cboProjectStatusQ@(itemName)"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6">
+                        <a class="btn btn-primary" data-backdrop="static" data-keyboard="false" data-toggle="modal" data-target="#modalQuery@(itemName)" href="javascript:void(0);"><i class="fal fa-search"></i>搜尋</a>
+                    </div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">所屬部門</th>
+                                        <th scope="col" style="min-width: 150px;">專案代碼</th>
+                                        <th scope="col" style="min-width: 200px;">專案名稱</th>
+                                        <th scope="col" style="min-width: 350px;">專案描述</th>
+                                        @*<th class="text-center" scope="col" style="min-width: 100px;">專案屬性</th>*@
+                                        <th class="text-left" scope="col" style="min-width: 100px;">專案管理者</th>
+                                        <th class="text-center" scope="col" style="min-width: 125px;">工作天模式</th>
+                                        <th class="text-center" scope="col" style="min-width: 150px;">專案狀態</th>
+                                        <th class="text-left" scope="col" style="min-width: 350px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="tab">
+                    <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-toggle="tab" href="#tabProject">
+                                <i class="fas fa-project-diagram"></i> 專案資料
+                            </a>
+                        </li>
+                        <li class="nav-item proj-auth-user-manage">
+                            <a class="nav-link" data-toggle="tab" href="#tabProjectUser">
+                                <i class="fas fa-users-class"></i> 專案成員
+                            </a>
+                        </li>
+                        <li class="nav-item proj-auth-file-manage">
+                            <a class="nav-link" data-toggle="tab" href="#tabProjectFile">
+                                <i class="fas fa-file-alt"></i> 專案檔案
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="tabProject">
+                        <div class="card card-shadow">
+                            <div class="card-body">
+                                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                                    <fieldset>
+                                        <input type="hidden" id="ProjectId" name="ProjectId" value="-1" />
+                                        <div class="row">
+                                            <div class="col-12 col-md-4 col-lg-4">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="cboCompanyType@(itemName)">公司別 <span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <select class="form-control" id="cboCompanyType@(itemName)" name="cboCompanyType@(itemName)"
+                                                                data-msg-required="請選擇公司別" data-rule-required="true"></select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-4 col-lg-4">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="cboProjectType@(itemName)">專案分類 <span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <select class="form-control" id="cboProjectType@(itemName)" name="cboProjectType@(itemName)"
+                                                                data-msg-required="請選擇專案分類" data-rule-required="true"></select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-4 col-lg-4">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="txtProjectNo@(itemName)">專案代碼 <span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <div class="input-group">
+                                                            <input type="text" class="form-control" id="txtProjectNo@(itemName)" name="txtProjectNo@(itemName)"
+                                                                   data-msg-required="請輸入樣板名稱" data-rule-required="true"
+                                                                   data-msg-maxlength="必須少於 10 個字元" maxlength="10"
+                                                                   readonly />
+                                                            <div class="input-group-append">
+                                                                <a class="btn btn-danger add-mode" href="javascript:void(0);" onclick="Generate@(itemName)()"><i class="fas fa-random"></i></a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12 col-md-6 col-lg-6">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="txtProjectName@(itemName)">專案名稱 <span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <input type="text" class="form-control" id="txtProjectName@(itemName)" name="txtProjectName@(itemName)" placeholder="請輸入專案名稱"
+                                                               data-msg-required="請輸入專案名稱" data-rule-required="true"
+                                                               data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-6 col-lg-6">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="cboProjectAttribute@(itemName)">專案屬性 <span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <select class="form-control" id="cboProjectAttribute@(itemName)" name="cboProjectAttribute@(itemName)"></select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-12 col-form-label" for="txtProjectDesc@(itemName)">專案描述 <span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="txtProjectDesc@(itemName)" name="txtProjectDesc@(itemName)" rows="2" placeholder="請輸入專案描述"
+                                                          data-msg-required="請輸入樣板描述" data-rule-required="true"
+                                                          data-msg-maxlength="必須少於 300 個字元" maxlength="300"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-12 col-form-label" for="cboDepartmentId@(itemName)">所屬部門</label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboDepartmentId@(itemName)" name="cboDepartmentId@(itemName)"></select>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12 col-md-6 col-lg-6">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="cboWorkTimeStatus@(itemName)">工作天模式 <span class="text-danger">*</span></label>
+                                                    <div class="col-12">
+                                                        <select class="form-control" id="cboWorkTimeStatus@(itemName)" name="cboWorkTimeStatus@(itemName)"
+                                                                data-msg-required="請選擇工作天模式" data-rule-required="true"></select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-6 col-lg-6">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="txtWorkTimeInterval@(itemName)">工作時段</label>
+                                                    <div class="col-12">
+                                                        <input type="text" class="form-control" id="txtWorkTimeInterval@(itemName)" name="txtWorkTimeInterval@(itemName)" placeholder="請輸入工作時段"
+                                                               data-msg-maxlength="必須少於 100 個字元" maxlength="100" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12 mt-2">
+                                                <div class="alert alert-info border-0">
+                                                    <ul style="padding-inline-start: 20px;">
+                                                        <li>請依照格式進行填寫；EX：<code>09:00-17:00</code></li>
+                                                        <li>如需多時段，請用<mark><code>,</code></mark>分隔；EX：<code>08:00-12:00,13:00-17:00</code></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12 col-md-6 col-lg-6">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="txtCustomerRemark@(itemName)">客戶備註</label>
+                                                    <div class="col-12">
+                                                        <textarea class="form-control" id="txtCustomerRemark@(itemName)" name="txtCustomerRemark@(itemName)" rows="2" placeholder="請輸入客戶備註"
+                                                                  data-msg-maxlength="必須少於 500 個字元" maxlength="500"></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-6 col-lg-6">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label" for="txtProjectRemark@(itemName)">專案備註</label>
+                                                    <div class="col-12">
+                                                        <textarea class="form-control" id="txtProjectRemark@(itemName)" name="txtProjectRemark@(itemName)" rows="2" placeholder="請輸入專案備註"
+                                                                  data-msg-maxlength="必須少於 500 個字元" maxlength="500"></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </form>
+                            </div>
+                            <div class="card-footer text-center text-lg-right">
+                                <button type="button" class="btn btn-success no-edit proj-auth-project-update" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="tabProjectUser">
+                        @Html.Partial("ProjectUser")
+                    </div>
+                    <div class="tab-pane" id="tabProjectFile">
+                        @Html.Partial("ProjectFile")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="advanced-block">
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav flag-tabs nav-fill" role="tablist">
+                <li class="flag-item">
+                    <a class="flag-link" data-toggle="tab" href="#tabProjectTask">
+                        <i class="fas fa-check-square"></i> 任務
+                    </a>
+                </li>
+
+                <!--專案未啟動的甘特圖-->
+                <li class="flag-item project-planning">
+                    <a class="flag-link" data-toggle="tab" href="#tabProjectTaskGanttPlanned">
+                        <i class="fas fa-check-square"></i> 任務甘特圖
+                    </a>
+                </li>
+
+                <!--專案啟動後的甘特圖-->
+                <li class="flag-item project-in-progress" style="display:none;">
+                    <a class="flag-link" data-toggle="tab" href="#tabProjectTaskGantt">
+                        <i class="fas fa-check-square"></i> 任務甘特圖
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane" id="tabProjectTask">
+            @Html.Partial("ProjectTask")
+        </div>
+        <div class="tab-pane" id="tabProjectTaskGanttPlanned">
+            @Html.Partial("ProjectTaskGanttPlanned")
+        </div>
+        <div class="tab-pane" id="tabProjectTaskGantt">
+            @Html.Partial("ProjectTaskGantt")
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewUser")
+@Html.Partial("ViewProjectTaskPlanned")
+@Html.Partial("ViewProjectTask")
+@Html.Partial("ViewProjectTaskUser")
+@Html.Resource("js", @<script src="@Url.Content("~/Scripts/dhtmlx/gantt.commercial/7.1.12/dhtmlxgantt.js")"></script>)
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            pageIndex: 0,
+            pageSize: 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let viewMode;
+        let projectStatus;
+        let canEdit = false;
+        let canCopy = false;
+        let canAdd = false;
+        let canDelete = false;
+
+        $(document).ready(function () {
+            ComboBoxs.Default("#cboDepartmentIdQ@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { Status: "A" }, "", "ALL", "", "DepartmentWithNo", "DepartmentId");
+            ComboBoxs.WithText("#cboProjectAttributeQ@(itemName)", "@Url.Action("GetType", "BasicInformation")", { TypeSchema: "Project.ProjectAttribute" }, "", "CHOOSE", "全部", "TypeName", "TypeNo");
+            ComboBoxs.WithText("#cboProjectStatusQ@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { StatusSchema: "Project.ProjectStatus" }, "", "CHOOSE", "全部", "StatusName", "StatusNo");
+
+            if (!isMobile) {
+                $("#cboDepartmentIdQ@(itemName), #cboProjectAttributeQ@(itemName), #cboProjectStatusQ@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            Query@(itemName)();
+
+            $("#editData@(itemName) a[data-toggle='tab']").on("shown.bs.tab", function (e) {
+                InitParameter@(itemName)($(this));
+            });
+
+            $(".advanced-block a[data-toggle='tab']").on("shown.bs.tab", function (e) {
+                InitParameter@(itemName)($(this));
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetProject", "Project")";
+            let postData = {
+                OrderBy: "a.ProjectId DESC",
+                PageIndex: (objPage.pageIndex + 1),
+                PageSize: objPage.pageSize,
+                DepartmentId: $("#cboDepartmentIdQ@(itemName)").val(),
+                ProjectNo: $("#txtProjectNoQ@(itemName)").val(),
+                ProjectName: $("#txtProjectNameQ@(itemName)").val(),
+                ProjectAttribute: $("#cboProjectAttributeQ@(itemName)").val(),
+                ProjectStatus: $("#cboProjectStatusQ@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td><span class="stack-title">所屬部門</span>${item.LogoIcon == -1 ? `` : `<img class="company-logo" src="/Web/GetFile?fileId=${item.LogoIcon}" />`}${item.DepartmentNo} ${item.DepartmentName}</td>
+                                        <td><span class="stack-title">專案代碼</span>${item.ProjectNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProjectName}" style="max-width: 200px;"><span class="stack-title">專案名稱</span>${item.ProjectName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProjectDesc}" style="max-width: 350px;"><span class="stack-title">專案描述</span>${item.ProjectDesc}</td>
+                                        <td class="text-left"><span class="stack-title">專案管理者</span>${item.Gender == `M` ? `<span class="gender-male"><i class="fas fa-male"></i></span>` : item.Gender == `F` ? `<span class="gender-female"><i class="fas fa-female"></i></span>` : ``}${item.UserNo} ${item.UserName}</td>
+                                        <td class="text-center"><span class="stack-title">工作天模式</span>${StatusName(`Boolean`, item.WorkTimeStatus)}</td>
+                                        <td class="text-center"><span class="stack-title">專案狀態</span>${StatusName(`Project.ProjectStatus`, item.ProjectStatus)}</td>
+                                        <td class="text-left active-content">
+                                          <span class="stack-title">操作</span>
+                                          <a class="active-link auth-read" href="javascript:Read@(itemName)(${item.ProjectId});"><i class="fas fa-eye"></i></a>
+                                          ${item.AuthUpdate == 1 ?
+                                                `<a class="active-link" href="javascript:Edit@(itemName)(${item.ProjectId});"><i class="fas fa-edit"></i></a>` : ``}
+                                          ${item.AuthDelete == 1 && item.ProjectStatus == `P` ?
+                                                `<a class="active-link" href="javascript:Delete@(itemName)(${item.ProjectId});"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                          ${item.ProjectStatus == `P` ? `<a class="btn btn-sm btn btn-primary auth-project-start-up" href="javascript:StartUp@(itemName)(${item.ProjectId},${item.TeamId});"><i class="fas fa-play"></i>專案啟動</a>` : ``}
+                                          ${item.ProjectStatus == `I` ? `<a class="btn btn-sm btn-warning auth-project-reset" href="javascript:Reset@(itemName)(${item.ProjectId});"><i class="fas fa-undo-alt"></i>專案重置</a>` : ``}
+                                          ${item.TeamId < 0 || (item.SubTask > item.SubChannel) ? `<a class="btn btn-sm btn-info auth-add" hidden href="javascript:AddProjectMamo@(itemName)(${item.ProjectId});"><i class="far fa-comments"></i>建立MAMO資料</a>` : ``}
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="9" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(projectId) {
+            $("#ProjectId").val(projectId ? projectId : 0);
+
+            $("#cboCompanyType@(itemName)").attr("disabled", false);
+            $("#cboProjectType@(itemName)").attr("disabled", false);
+            $(".add-mode").show();
+
+            $(objForm@(itemName) + " input").attr("disabled", false);
+            $(objForm@(itemName) + " textarea").attr("disabled", false);
+            $(objForm@(itemName) + " select").attr("disabled", false);
+            $(".no-edit").show();
+
+            $("#editData@(itemName) .nav-tabs > .nav-item").first().find("a").trigger("click");
+
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            ComboBoxs.Default("#cboDepartmentId@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { Status: "A" }, "", "CHOOSE-NUMBER", "請選擇所屬部門", "DepartmentWithNo", "DepartmentId");
+            ComboBoxs.WithText("#cboCompanyType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { TypeSchema: "Project.CompanyType" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.WithText("#cboProjectType@(itemName)", "@Url.Action("GetType", "BasicInformation")", { TypeSchema: "Project.ProjectType" }, "", "NA", "", "TypeName", "TypeNo");
+            ComboBoxs.WithText("#cboProjectAttribute@(itemName)", "@Url.Action("GetType", "BasicInformation")", { TypeSchema: "Project.ProjectAttribute" }, "P", "", "", "TypeName", "TypeNo");
+            ComboBoxs.Default("#cboWorkTimeStatus@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { StatusSchema: "Boolean" }, "N", "NA", "", "StatusName", "StatusNo");
+
+            if (projectId > 0) {
+                $("#cboCompanyType@(itemName)").attr("disabled", true);
+                $("#cboProjectType@(itemName)").attr("disabled", true);
+                $(".add-mode").hide();
+
+                SetProjectAuthority@(itemName)(projectId);
+
+                let targetUrl = "@Url.Action("GetProject", "Project")";
+                let postData = {
+                    ProjectId: projectId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    let authTask = false;
+                    $.each(data.result, function (i, item) {
+                        $("#cboDepartmentId@(itemName)").val(item.DepartmentId);
+                        $("#cboCompanyType@(itemName)").val(item.CompanyType);
+                        $("#cboProjectType@(itemName)").val(item.ProjectType);
+                        $("#txtProjectNo@(itemName)").val(item.ProjectNo);
+                        $("#txtProjectName@(itemName)").val(item.ProjectName);
+                        $("#txtProjectDesc@(itemName)").val(item.ProjectDesc);
+                        $("#cboProjectAttribute@(itemName)").val(item.ProjectAttribute);
+                        $("#cboWorkTimeStatus@(itemName)").val(item.WorkTimeStatus);
+                        $("#txtWorkTimeInterval@(itemName)").val(item.WorkTimeInterval);
+                        $("#txtCustomerRemark@(itemName)").val(item.CustomerRemark);
+                        $("#txtProjectRemark@(itemName)").val(item.ProjectRemark);
+
+                        projectStatus = item.ProjectStatus;
+                        switch (projectStatus) {
+                            case "P":
+                                $(".project-planning").show();
+                                $(".project-in-progress").hide();
+                                break;
+                            case "I":
+                            case "C":
+                                $(".project-planning").hide();
+                                $(".project-in-progress").show();
+                                break;
+                        }
+
+                        authTask = item.AuthTask == 1;
+                    });
+
+                    if ($("#editData@(itemName) .nav-tabs > .nav-item > .nav-link").first().hasClass("active")) {
+                        InitParameter@(itemName)($("#editData@(itemName) .nav-tabs > .nav-item").first().find("a"));
+                    } else {
+                        $("#editData@(itemName) .nav-tabs > .nav-item").first().find("a").trigger("click");
+                    }
+
+                    if (authTask) {
+                        if ($(".advanced-block .flag-tabs > .flag-item > .flag-link").first().hasClass("active")) {
+                            InitParameter@(itemName)($(".advanced-block .flag-tabs > .flag-item").first().find("a"));
+                        } else {
+                            $(".advanced-block .flag-tabs > .flag-item").first().find("a").trigger("click");
+                        }
+                    }
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+            } else {
+                $("[class^='proj-auth-']").show();
+            }
+
+            if (!isMobile) {
+                $("#cboDepartmentId@(itemName), #cboCompanyType@(itemName), #cboProjectType@(itemName), #cboProjectAttribute@(itemName), #cboWorkTimeStatus@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+        }
+
+        function Read@(itemName)(projectId) {
+            Edit@(itemName)(projectId);
+            $(objForm@(itemName) + " input").attr("disabled", true);
+            $(objForm@(itemName) + " textarea").attr("disabled", true);
+            $(objForm@(itemName) + " select").attr("disabled", true);
+            $(".no-edit").hide();
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let projectId = parseInt($("#ProjectId").val());
+
+                if (projectId <= 0) {
+                    let targetUrl = "@Url.Action("AddProject", "Project")";
+                    let postData = {
+                        DepartmentId: $("#cboDepartmentId@(itemName)").val(),
+                        CompanyType: $("#cboCompanyType@(itemName)").val(),
+                        ProjectType: $("#cboProjectType@(itemName)").val(),
+                        ProjectNo: $("#txtProjectNo@(itemName)").val(),
+                        ProjectName: $("#txtProjectName@(itemName)").val(),
+                        ProjectDesc: $("#txtProjectDesc@(itemName)").val(),
+                        ProjectAttribute: $("#cboProjectAttribute@(itemName)").val(),
+                        WorkTimeStatus: $("#cboWorkTimeStatus@(itemName)").val(),
+                        WorkTimeInterval: $("#txtWorkTimeInterval@(itemName)").val(),
+                        CustomerRemark: $("#txtCustomerRemark@(itemName)").val(),
+                        ProjectRemark: $("#txtProjectRemark@(itemName)").val()
+                    };
+
+                    let result = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (result) {
+                        $("#ProjectId").val(result.result.ProjectId);
+                        SetProjectAuthority@(itemName)(result.result.ProjectId);
+
+                        if ($("#editData@(itemName) .nav-tabs > .nav-item > .nav-link").first().hasClass("active")) {
+                            InitParameter@(itemName)($("#editData@(itemName) .nav-tabs > .nav-item").first().find("a"));
+                        } else {
+                            $("#editData@(itemName) .nav-tabs > .nav-item").first().find("a").trigger("click");
+                        }
+
+                        if ($(".advanced-block .flag-tabs > .flag-item > .flag-link").first().hasClass("active")) {
+                            InitParameter@(itemName)($(".advanced-block .flag-tabs > .flag-item").first().find("a"));
+                        } else {
+                            $(".advanced-block .flag-tabs > .flag-item").first().find("a").trigger("click");
+                        }
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateProject", "Project")";
+                    let postData = {
+                        ProjectId: projectId,
+                        DepartmentId: $("#cboDepartmentId@(itemName)").val(),
+                        ProjectName: $("#txtProjectName@(itemName)").val(),
+                        ProjectDesc: $("#txtProjectDesc@(itemName)").val(),
+                        ProjectAttribute: $("#cboProjectAttribute@(itemName)").val(),
+                        WorkTimeStatus: $("#cboWorkTimeStatus@(itemName)").val(),
+                        WorkTimeInterval: $("#txtWorkTimeInterval@(itemName)").val(),
+                        CustomerRemark: $("#txtCustomerRemark@(itemName)").val(),
+                        ProjectRemark: $("#txtProjectRemark@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        SetProjectAuthority@(itemName)(projectId);
+
+                        if ($("#editData@(itemName) .nav-tabs > .nav-item > .nav-link").first().hasClass("active")) {
+                            InitParameter@(itemName)($("#editData@(itemName) .nav-tabs > .nav-item").first().find("a"));
+                        } else {
+                            $("#editData@(itemName) .nav-tabs > .nav-item").first().find("a").trigger("click");
+                        }
+
+                        if ($(".advanced-block .flag-tabs > .flag-item > .flag-link").first().hasClass("active")) {
+                            InitParameter@(itemName)($(".advanced-block .flag-tabs > .flag-item").first().find("a"));
+                        } else {
+                            $(".advanced-block .flag-tabs > .flag-item").first().find("a").trigger("click");
+                        }
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(projectId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteProject", "Project")";
+                    let postData = {
+                        ProjectId: projectId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName), .unit-block, .advanced-block");
+            Query@(itemName)();
+        }
+
+        function Generate@(itemName)() {
+            let targetUrl = "@Url.Action("GetProjectNo", "Project")";
+            let postData = {
+                CompanyType: $("#cboCompanyType@(itemName)").val(),
+                ProjectType: $("#cboProjectType@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $("#txtProjectNo@(itemName)").val(data.result);
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function InitParameter@(itemName)(selector) {
+            let initFnString = "Expand";
+            let content = selector.attr("href").split('#tab')[1].split('@(itemName)')[0];
+
+            switch (content) {
+                case "ProjectUser":
+                    initFnString += "ProjectUser";
+                    break;
+                case "ProjectFile":
+                    initFnString += "ProjectFile";
+                    break;
+                case "ProjectTask":
+                    initFnString += "ProjectTask";
+                    viewMode = "ProjectTask";
+                    break;
+                case "ProjectTaskGanttPlanned":
+                    initFnString += "ProjectTaskGanttPlanned";
+                    viewMode = "ProjectTaskGanttPlanned";
+                    break;
+                case "ProjectTaskGantt":
+                    initFnString += "ProjectTaskGantt";
+                    viewMode = "ProjectTaskGantt";
+                    break;
+            }
+
+            let initFn = window[initFnString];
+            if (initFn && typeof (initFn) == "function") {
+                initFn();
+            }
+        }
+
+        function SetProjectAuthority@(itemName)(projectId) {
+            let targetUrl = "@Url.Action("SetProjectAuthority", "Project")";
+            let postData = {
+                ProjectId: projectId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $("#projectAuthority").val(JSON.stringify(data.result));
+                ProjectAuthorityControl();
+                canEdit = data.result.filter(f => f.AuthorityCode == 'task-update' && f.Authority == 1).length > 0;
+                canCopy = data.result.filter(f => f.AuthorityCode == 'task-copy' && f.Authority == 1).length > 0;
+                canAdd = data.result.filter(f => f.AuthorityCode == 'task-add' && f.Authority == 1).length > 0;
+                canDelete = data.result.filter(f => f.AuthorityCode == 'task-delete' && f.Authority == 1).length > 0;
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function StartUp@(itemName)(projectId, teamId) {
+            swal.fire({
+                titleText: "確認要啟動專案嗎?",
+                text: "啟動後會通知所有成員，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateProjectStartUp", "Project")";
+                    let postData = {
+                        ProjectId: projectId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        @*if (!!teamId) AddProjectMamo@(itemName)(projectId);*@
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Reset@(itemName)(projectId) {
+            swal.fire({
+                titleText: "確認要重置專案嗎?",
+                html: "重置後所有任務回報紀錄時間皆會初始化<br />請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateProjectReset", "Project")";
+                    let postData = {
+                        ProjectId: projectId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function AddProjectMamo@(itemName)(projectId) {
+            alert("此功能已停用", "warning", 0);
+            return false;
+            swal.fire({
+                titleText: "確認要建立MAMO資料嗎?",
+                html: "系統將建立MAMO團隊、頻道及成員相關資料<br />請確認是否要執行!",
+                icon: "info",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("AddProjectMamo", "Project")";
+                    let postData = {
+                        ProjectId: projectId
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                    if (result) {
+                        alert("MAMO資料建立完成!", "success", 0);
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function ToHalfChar(str) {
+            var result = ''; for (i = 0; i < str.length; i++) {
+                code = str.charCodeAt(i); //擷取當前字元的unicode編碼
+                if (code >= 65281 && code <= 65373) { //在這個unicode編碼範圍中的是所有的英文字母已經各種字元
+                    result += String.fromCharCode(str.charCodeAt(i) - 65248);//把全形字元的unicode編碼轉換為對應半形字元的unicode碼
+                }
+                else if (code == 12288) { //空格
+                    result += String.fromCharCode(str.charCodeAt(i) - 12288 + 32);
+                }
+                else {
+                    result += str.charAt(i);
+                }
+            } return result;
+        }
+
+        function DatePicker@(itemName)(calendar, popup, dateInput) {
+            dhx.i18n.setLocale("calendar", calendarLocales);
+            dhx.i18n.setLocale("timepicker", timepickerLocales);
+
+            calendar.destructor();
+            calendar = new dhx.Calendar(null, calendarSetting);
+
+            popup.destructor();
+            popup = new dhx.Popup();
+            popup.attach(calendar);
+
+            calendar.events.on("change", function () {
+                dateInput.value = calendar.getValue();
+                dateInput.dispatchEvent(eventChange);
+                popup.hide();
+            });
+
+            let func = function () {
+                popup.show(dateInput);
+            };
+
+            dateInput.removeEventListener("click", func, false);
+            dateInput.addEventListener("click", func, false);
+        }
+
+        @*function DatePicker@(itemName)(calendar, popup, targetSelector) {
+            dhx.i18n.setLocale("calendar", calendarLocales);
+            dhx.i18n.setLocale("timepicker", timepickerLocales);
+
+            calendar.destructor();
+            calendar = new dhx.Calendar(null, calendarSetting);
+
+            popup.destructor();
+            popup = new dhx.Popup();
+            popup.attach(calendar);
+
+            let dateInput = $(`#${targetSelector}`)[0];
+            //let inputData = dateInput.value;
+            //let defaultDate = new Date(inputData);
+            //if (defaultDate == "Invalid Date") defaultDate = new Date();
+
+            // set default date
+            //if (defaultDate) {
+            //    calendar.setValue(defaultDate);
+            //    dateInput.value = calendar.getValue();
+            //}
+
+            // when calendar value changed, it trigger update input value and hide popup
+            calendar.events.on("change", function () {
+                dateInput.value = calendar.getValue();
+                dateInput.dispatchEvent(eventChange);
+                popup.hide();
+            });
+
+
+            // on input click we show popup
+            let func = function () {
+                popup.show(dateInput);
+            };
+            dateInput.removeEventListener("click", func, false);
+            dateInput.addEventListener("click", func, false);
+        }*@
+</script>
+                                    )

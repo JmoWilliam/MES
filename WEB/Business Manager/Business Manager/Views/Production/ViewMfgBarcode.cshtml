@@ -1,0 +1,291 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMfgBarcode";
+    string itemNameText = "終止製令條碼流程";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">製令: <span class="sub-text" id="desWoErpFullNo@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtBarcodeNoQ@(itemName)" name="txtBarcodeNoQ@(itemName)"
+                                               placeholder="請輸入條碼" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 250px;">條碼</th>
+                                        <th scope="col" style="min-width: 100px;">數量</th>
+                                        <th scope="col" style="min-width: 200px;">條碼狀態</th>
+                                        <th scope="col" style="min-width: 200px;">在製狀態</th>
+                                        <th class="text-center checkbox-mode" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success checkbox-mode" onclick="PopModalRemark@(itemName)()"><i class="fas fa-arrow-alt-right"></i>下一步</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--備註-->
+<div class="modal fade" id="modalRemark@(itemName)">
+    <div class="modal-dialog modal-lg" style="padding-top:7%;">
+        <div class="modal-content working-content" style="min-width:350px;">
+            <div class="modal-header" style="align-items: center;">
+                <h5 class="modal-title">
+                    備註
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id=" ">
+                    <div class="col-12">
+                        <form autocomplete="off" id="editForm@(itemName)">
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 ">
+                                    <div class="form-group row">
+                                        <label class="form-label col-12" for="txtRemark@(itemName)">備註<span class="text-danger">*</span></label>
+                                        <div class="col-12">
+                                            <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                      placeholder="請輸入備註"
+                                                      data-msg-required="請輸入備註"
+                                                      data-msg-maxlength="必須少於 255 個字元" maxlength="255" required></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-right text-lg-right">
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-paper-plane"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+        //let objForm@(itemName) = "#queryForm@(itemName)";
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let moId@(itemName);
+        function Pop@(itemName)(woErpPrefix, woErpNo, moId) {
+            moId@(itemName) = moId;
+            $("#desWoErpFullNo@(itemName)").html(woErpPrefix + "-" + woErpNo)
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            $("#cbxSelectAll@(itemName)").prop("checked", true);
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetBarcode", "Production")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MoId": moId@(itemName),
+                "BarcodeNo": $("#txtBarcodeNoQ@(itemName)").val(),
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeNo}" style="min-width: 250px;">${item.BarcodeNo}
+                                            <br>
+                                            ${JudgeItemValue@(itemName)(`${item.ItemValue}`)}
+                                        </td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.BarcodeQty}" style="max-width: 150px;">${item.BarcodeQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CurrentProdStatusName}" style="max-width: 150px;">${item.CurrentProdStatusName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StatusName}" style="max-width: 150px;">${item.StatusName}</td>
+                                        <td class="text-center">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                ${JudgeStatusNo@(itemName)(`${item.StatusNo}`, `${item.BarcodeNo}`)}
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+
+                    function JudgeStatusNo@(itemName)(statusNo, barcodeNo) {
+                        let innerHtml = '';
+                        if (statusNo == "1" || statusNo == "0") {
+                            innerHtml += `<input type="checkbox" data-barcode-no="${barcodeNo}" value="${barcodeNo}" checked/>`;
+                        }
+                        else {
+                            innerHtml += `<input type="checkbox" data-barcode-no="${barcodeNo}" value="${barcodeNo}" disabled/>`;
+                        }
+                        return innerHtml;
+                    }
+
+                    function JudgeItemValue@(itemName)(itemValue) {
+                        let innerHtml = '';
+                        if (itemValue != "null") {
+                            let itemValueJson = JSON.parse(itemValue);
+                            $.each(itemValueJson["data"], function (k, item2) {
+                                innerHtml += `<code>${item2.ItemValue}</code><br>`;
+                            });
+                        }
+
+                        return innerHtml;
+                    }
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $(".radio-mode").hide();
+            $(".checkbox-mode").show();
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-barcode-no]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-barcode-no]").not(":disabled").prop("checked", false);
+                }
+            });
+        }
+
+        $("#txtBarcodeNoQ@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                Query@(itemName)();
+            }
+        });
+
+        $(window).keydown(function (event) {
+        if (event.keyCode == 13) {
+            event.preventDefault();
+            return false;
+        }
+        });
+
+        function PopModalRemark@(itemName)() {
+            $("#modalRemark@(itemName)").modal("show");
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                swal.fire({
+                    titleText: "確認要強制結束流程嗎?",
+                    text: "此動作無法復原，請確認是否要執行!",
+                    icon: "warning",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let barcodeList = [];
+                        if ($("input[type='checkbox'][data-barcode-no]:checked").length > 0) {
+                            $.each($("input[type='checkbox'][data-barcode-no]:checked"), function (i) {
+                                let barcodeNo = $(this).val();
+                                barcodeList.push(barcodeNo);
+                            });
+                        }
+
+                        if (barcodeList.length <= 0) {
+                            alert("至少需要一筆條碼資料!", "alert", 0);
+                            return false;
+                        }
+                        let targetUrl = "@Url.Action("AddTerminateOfMfg", "Production")";
+                        let postData = {
+                            "BarcodeData": barcodeList.toString(),
+                            "Remark": $("#txtRemark@(itemName)").val()
+                        };
+
+                        let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                        if (result) {
+                            ReturnTerminateOfManufactureOrder();
+                            Close@(itemName)();
+                        }
+                    }
+                });
+            };
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+            $("#modalRemark@(itemName)").modal('hide');
+        }
+    </script>
+                        )

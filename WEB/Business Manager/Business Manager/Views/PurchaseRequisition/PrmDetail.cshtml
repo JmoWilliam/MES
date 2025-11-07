@@ -1,0 +1,986 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "PrmDetail";
+    string itemNameText = "請購變更單詳細資料管理";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .help-block {
+             display: none;
+             margin: 5px 0 0;
+             border: 3px dashed #b1b1b1;
+             border-radius: 5px;
+             padding: 5px 10px;
+         }
+
+         dt {
+             float: left;
+             clear: left;
+             width: 110px;
+         }
+
+             dt::after {
+                 content: "：";
+             }
+
+         dd {
+             margin: 0 0 0 80px;
+             padding: 0;
+             color: #36a2f5;
+             font-weight: bold;
+         }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                                        )
+
+<!--清單-->
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-12 text-right" style="display: flex; justify-content: flex-end;">
+                        <a id="aTransferBpm@(itemName)" style="margin-right: 5px;" class="active-link auth-data-transfer" href="javascript:TransferBpmPrModification(prmId);"><i class="far fa-exchange-alt"> 拋轉BPM</i></a>
+                        <a style="margin-right: 5px;" class="btn btn-info auth-add" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="max-width: 75px;">#</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">序號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">原序號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">品號</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">品名</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">規格</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">庫別</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">請購數量</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">單位</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 130px;">需求日期</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 130px;">供應商</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">是否急料</th>
+                                        <th scope="col" style="max-width: 150px; min-width: 100px;">納入計畫</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">專案</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">變更原因</th>
+                                        <th scope="col" style="max-width: 200px; min-width: 100px;">備註</th>
+                                        <th scope="col" style="max-width: 175px; min-width: 100px;">參考單據</th>
+                                        <th scope="col" style="max-width: 175px; min-width: 100px;">ERP採購單據</th>
+                                        <th scope="col" style="max-width: 100px; min-width: 100px;">確認碼</th>
+                                        <th class="text-center col-sticky" scope="col" style="max-width: 250px; min-width: 100px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--新增修改-->
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="PrmDetailId" name="PrmDetailId" value="-1" />
+                        <div class="row">
+                            <div class="col-12 col-lg-12">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtPrDetailId@(itemName)">綁定請購單詳細資料</label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtPrDetailId@(itemName)" />
+                                        <div class="btn-group">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);" onclick="MtlItemClear@(itemName)()"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>原序號</dt>
+                                            <dd id="desPrSequence@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 col-lg-6">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtMtlItemId@(itemName)">綁定品號</label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtMtlItemId@(itemName)" />
+                                        <input type="hidden" id="txtMtlModify@(itemName)" />
+                                        <div class="btn-group">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);" onclick="MtlItemClear@(itemName)()"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>品號</dt>
+                                            <dd id="desMtlItemNo@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-6">
+                                <div class="form-group row">
+                                    <label class="col-12 col-form-label" for="txtSoDetailId@(itemName)">參考訂單</label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtSoDetailId@(itemName)" />
+                                        <div class="btn-group">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a id="aRdDesignControlClear@(itemName)" class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block">
+                                            <dt>客戶名稱</dt>
+                                            <dd id="desCustomer@(itemName)"></dd>
+                                            <dt>訂單編號</dt>
+                                            <dd id="desSoErpFullNo@(itemName)"></dd>
+                                            <dt>訂單序號</dt>
+                                            <dd id="desSoSequence@(itemName)"></dd>
+                                            <dt>客戶部番</dt>
+                                            <dd id="desCustomerMtlItemNo@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtMtlItemName@(itemName)">品名<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtMtlItemName@(itemName)" name="txtMtlItemName@(itemName)"
+                                               required
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtMtlItemSpec@(itemName)">規格</label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtMtlItemSpec@(itemName)" name="txtMtlItemSpec@(itemName)"
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPrmSequence@(itemName)">序號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtPrmSequence@(itemName)" name="txtPrmSequence@(itemName)"
+                                               required
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtDemandDate@(itemName)">需求日期<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtDemandDate@(itemName)" name="txtDemandDate@(itemName)"
+                                               placeholder="請輸入需求日期"
+                                               data-msg-required="請輸入需求日期" data-rule-required="true"
+                                               data-msg-extraRegex="請輸入正確的日期格式" data-rule-extraRegex="([12]\d{3}\-(0[1-9]|1[0-2])\-(0[1-9]|[12]\d|3[01]))" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboInventoryId@(itemName)">庫別<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboInventoryId@(itemName)" name="cboInventoryId@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboPrUomId@(itemName)">單位<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboPrUomId@(itemName)" name="cboPrUomId@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-4 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboSupplierId@(itemName)">供應商</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboSupplierId@(itemName)" name="cboSupplierId@(itemName)"></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboPrCurrency@(itemName)">幣別<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboPrCurrency@(itemName)" name="cboPrCurrency@(itemName)" required></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPrExchangeRate@(itemName)">匯率<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" step="any" min="0" max="99999" class="form-control" id="txtPrExchangeRate@(itemName)" name="txtPrExchangeRate@(itemName)"
+                                               value="1"
+                                               placeholder="請輸入匯率"
+                                               data-msg-required="請輸入匯率" data-rule-required="true" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-3 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPrQty@(itemName)">請購數量<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtPrQty@(itemName)" name="txtPrQty@(itemName)"
+                                               value="0"
+                                               oninput="EditPrUnitPrice@(itemName)()"
+                                               placeholder="請輸入請購數量"
+                                               data-msg-required="請輸入請購數量"
+                                               required />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPrUnitPrice@(itemName)">請購單價<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtPrUnitPrice@(itemName)" name="txtPrUnitPrice@(itemName)"
+                                               value="0"
+                                               oninput="EditPrUnitPrice@(itemName)()"
+                                               placeholder="請輸入請購單價"
+                                               data-msg-required="請輸入請購單價"
+                                               required />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPrPrice@(itemName)">請購金額<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtPrPrice@(itemName)" name="txtPrPrice@(itemName)"
+                                               readonly
+                                               required />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPrPriceTw@(itemName)">本幣金額<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="number" class="form-control" id="txtPrPriceTw@(itemName)" name="txtPrPriceTw@(itemName)"
+                                               readonly
+                                               required />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-4 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboUrgentMtl@(itemName)">急料<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboUrgentMtl@(itemName)" name="cboUrgentMtl@(itemName)" required>
+                                            <option value="Y">是</option>
+                                            <option value="N" selected>否</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboProductionPlan@(itemName)">納入生產計畫<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboProductionPlan@(itemName)" name="cboProductionPlan@(itemName)" required>
+                                            <option value="Y">是</option>
+                                            <option value="N" selected>否</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboClosureStatus@(itemName)">是否指定結案<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboClosureStatus@(itemName)" name="cboClosureStatus@(itemName)" required>
+                                            <option value="y">是</option>
+                                            <option value="N" selected>否</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboProject@(itemName)">專案代號</label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboProject@(itemName)" name="cboProject@(itemName)"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtModiReason@(itemName)">變更原因</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtModiReason@(itemName)" name="txtModiReason@(itemName)" rows="2"
+                                                  placeholder="請輸入變更原因"
+                                                  data-msg-required="請輸入變更原因"
+                                                  data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPrDetailRemark@(itemName)">備註</label>
+                                    <div class="col-12">
+                                        <textarea class="form-control" id="txtPrDetailRemark@(itemName)" name="txtPrDetailRemark@(itemName)" rows="2"
+                                                  placeholder="請輸入備註"
+                                                  data-msg-required="請輸入備註"
+                                                  data-msg-maxlength="必須少於 50 個字元" maxlength="50"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewMtlItem")
+@Html.Partial("ViewSoDetail")
+@Html.Partial("ViewPrDetail")
+
+@Html.Resource("js",
+    @<script>
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 9999
+        };
+
+        let prmId@(itemName);
+        let prId@(itemName);
+
+        function Expand@(itemName)(prmId, prId) {
+            if (prmId > 0) {
+                prmId@(itemName) = prmId;
+                prId@(itemName) = prId;
+                $(".advanced-block").slideDown("slow");
+
+                $("#aTransferBpm@(itemName)").prop('href', `javascript: TransferBpmPrModification('${prmId}');`)
+
+                if (!isMobile) {
+                    $("#cboInventoryId@(itemName)").select2({
+                        width: "100%"
+                    });
+                    $("#cboPrUomId@(itemName)").select2({
+                        width: "100%"
+                    });
+                    $("#cboSupplierId@(itemName)").select2({
+                        width: "100%"
+                    });
+                    $("#cboPrCurrency@(itemName)").select2({
+                        width: "100%"
+                    });
+                    $("#cboProject@(itemName)").select2({
+                        width: "100%"
+                    });
+                }
+
+                Return@(itemName)();
+            }
+            else {
+                alert("請購變更單展開詳細資料錯誤，請重新操作!", "alert");
+            }
+        }
+
+        $(function () {
+            $("#txtMtlModify@(itemName)").change(function () {
+                let MtlModify = $("#txtMtlModify@(itemName)").val();
+
+                if (MtlModify == "Y") {
+                    $("#txtMtlItemName@(itemName)").prop("readonly", false);
+                    $("#txtMtlItemSpec@(itemName)").prop("readonly", false);
+                }
+                else {
+                    $("#txtMtlItemName@(itemName)").prop("readonly", true);
+                    $("#txtMtlItemSpec@(itemName)").prop("readonly", true);
+                }
+            });
+
+            $("#txtMtlItemId@(itemName)").change(function () {
+                GetMtlItemTotalUomInfo@(itemName)();
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+            $("#modalQuery@(itemName)").modal("hide");
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetPrmDetail", "PurchaseRequisition")";
+
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "PrmId": prmId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PrmSequence}" style="max-width: 200px;">${item.PrmSequence}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PrSequence}" style="max-width: 200px;">${item.PrSequence}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 200px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PrMtlItemName}" style="max-width: 200px;">${item.PrMtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PrMtlItemSpec}" style="min-width: 150px;">${item.PrMtlItemSpec}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryNo}-${item.InventoryName}" style="min-width: 150px;">${item.InventoryNo}-${item.InventoryName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${Math.round(item.PrQty)}" style="min-width: 150px;">${Math.round(item.PrQty)}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PrUomNo} ${item.PrUomName}" style="min-width: 150px;">${item.PrUomNo} ${item.PrUomName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.DemandDate}" style="min-width: 150px;">${item.DemandDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.SupplierNo}-${item.SupplierName}" style="min-width: 150px;">${item.SupplierNo}-${item.SupplierName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.UrgentMtl == `Y` ? `是` : `否`}" style="min-width: 150px;">${item.UrgentMtl == `Y` ? `是` : `否`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ProductionPlan == `Y` ? `是` : `否`}" style="max-width: 175px;">${item.ProductionPlan == `Y` ? `是` : `否`}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Project}" style="min-width: 200px;">${item.Project}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ModiReason != null ? item.ModiReason : ``}" style="min-width: 200px;">${item.ModiReason != null ? item.ModiReason : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PrDetailRemark != null ? item.PrDetailRemark : ``}" style="min-width: 200px;">${item.PrDetailRemark != null ? item.PrDetailRemark : ``}</td>
+                                        ${JudgeSoDetail@(itemName)(`${item.SoErpPrefix}`, `${item.SoErpNo}`)}
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoErpPrefixNo != null ? item.PoErpPrefixNo : ``}" style="min-width: 200px;">${item.PoErpPrefixNo != null ? item.PoErpPrefixNo : ``}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.ConfirmStatus == `Y` ? `是` : `否`}" style="min-width: 100px;">${item.ConfirmStatus == `Y` ? `是` : `否`}</td>
+                                        <td class="text-center active-content col-sticky" style="min-width: 250px;">
+                                            <a class="active-link auth-update" href="javascript:Edit@(itemName)('${item.PrmDetailId}');"><i class="fas fa-edit"></i></a>
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)('${item.PrmDetailId}');"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`;
+                    });
+
+                    function JudgeSoDetail@(itemName)(soErpPrefix, soErpNo) {
+                        let innerHtml = '';
+                        if (soErpPrefix != "null") {
+                            innerHtml += `<td class="ellipsis" data-toggle="tooltip" title="${soErpPrefix}-${soErpNo}" style="max-width: 175px;">${soErpPrefix}-${soErpNo}</td>`;
+                        }
+                        else {
+                            innerHtml += `<td></td>`;
+                        }
+                        return innerHtml;
+                    }
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="20" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function Edit@(itemName)(prmDetailId) {
+            $("#PrmDetailId").val(prmDetailId ? prmDetailId : 0);
+            Switch("#editData@(itemName), .unit-block", "#listData@(itemName)");
+
+            $("#txtPrDetailId@(itemName)").siblings(".help-block").hide();
+            $("#txtMtlItemId@(itemName)").siblings(".help-block").hide();
+            $(".btn-group@(itemName)").show();
+            $("#txtSoDetailId@(itemName)").siblings(".help-block").hide();
+
+            $("#txtPrDetailId@(itemName)").val("");
+            $("#txtMtlItemId@(itemName)").val("");
+            $("#txtSoDetailId@(itemName)").val("");
+
+            ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", {}, "", "NA", "", "InventoryWithNo", "InventoryId");
+            ComboBoxs.Default("#cboPrUomId@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", {}, "", "NA", "", "UomWithNo", "UomId");
+            ComboBoxs.Default("#cboSupplierId@(itemName)", "@Url.Action("GetSupplier", "ScmBasicInformation")", { "PermitStatus": "1" }, "", "NA", "", "SupplierWithNo", "SupplierId");
+            ComboBoxs.WithText("#cboPrCurrency@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Currency" }, "", "NA", "", "CurrencyName", "Currency");
+            ComboBoxs.WithText("#cboProject@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Project"}, "", "NA", "", "ProjectName", "Project");
+
+            Suites.DateDropper("#txtDemandDate@(itemName)");
+            let currentDate = new Date();
+            Suites.SetDateDropper("#txtDemandDate@(itemName)", currentDate);
+
+            if (prmDetailId > 0) {
+                $("#txtPrDetailId@(itemName)").siblings(".help-block").show();
+                $("#txtMtlItemId@(itemName)").siblings(".help-block").show();
+                $(".btn-group@(itemName)").hide();
+
+                let targetUrl = "@Url.Action("GetPrmDetail", "PurchaseRequisition")";
+
+                let postData = {
+                    "PrmDetailId": prmDetailId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    if (data.result.length > 0) {
+                        $.each(data.result, function (i, item) {
+                            if (item.SoDetailId > 0) {
+                                $("#txtSoDetailId@(itemName)").siblings(".help-block").show();
+                                $(".btn-group@(itemName)").hide();
+                                $("#txtSoDetailId@(itemName)").val(item.SoDetailId);
+                                $("#desCustomer@(itemName)").html(item.CustomerName);
+                                $("#desSoErpFullNo@(itemName)").html(item.SoErpPrefix + "-" + item.SoErpNo);
+                                $("#desSoSequence@(itemName)").html(item.SoSequence);
+                                $("#desCustomerMtlItemNo@(itemName)").html(item.CustomerMtlItemNo);
+                            }
+
+                            if (item.MtlModify == "Y") {
+                                $("#txtMtlItemName@(itemName)").prop("readonly", false);
+                                $("#txtMtlItemSpec@(itemName)").prop("readonly", false);
+                            }
+                            else {
+                                $("#txtMtlItemName@(itemName)").prop("readonly", true);
+                                $("#txtMtlItemSpec@(itemName)").prop("readonly", true);
+                            }
+
+                            $("#txtPrDetailId@(itemName)").val(item.PrDetailId);
+                            $("#desPrSequence@(itemName)").html(item.PrSequence);
+                            $("#txtMtlItemId@(itemName)").val(item.MtlItemId);
+                            $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                            $("#txtMtlItemName@(itemName)").val(item.PrMtlItemName);
+                            $("#txtMtlItemSpec@(itemName)").val(item.PrMtlItemSpec);
+                            $("#txtPrmSequence@(itemName)").val(item.PrSequence);
+                            $("#txtDemandDate@(itemName)").val(item.DemandDate);
+                            $("#cboInventoryId@(itemName)").val(item.InventoryId);
+                            $("#cboPrUomId@(itemName)").val(item.PrUomId);
+                            $("#cboSupplierId@(itemName)").val(item.SupplierId);
+                            $("#cboPrCurrency@(itemName)").val(item.PrCurrency);
+                            $("#txtPrExchangeRate@(itemName)").val(item.PrExchangeRate);
+                            $("#txtPrQty@(itemName)").val(item.PrQty);
+                            $("#txtPrUnitPrice@(itemName)").val(item.PrUnitPrice);
+                            $("#txtPrPrice@(itemName)").val(item.PrPrice);
+                            $("#txtPrPriceTw@(itemName)").val(item.PrPriceTw);
+                            $("#cboUrgentMtl@(itemName)").val(item.UrgentMtl);
+                            $("#cboProductionPlan@(itemName)").val(item.ProductionPlan);
+                            $("#cboProject@(itemName)").val(item.Project);
+                            $("#txtPrDetailRemark@(itemName)").val(item.PrDetailRemark);
+                            $("#txtModiReason@(itemName)").val(item.ModiReason);
+                            $("#cboClosureStatus@(itemName)").val(item.ClosureStatus);
+                        });
+                    }
+                }
+
+                GetMtlItemTotalUomInfo@(itemName)();
+            }
+            else {
+                GetPrmSequence@(itemName)();
+            }
+
+            $("#cboSupplierId@(itemName)").change(function () {
+                if ($(this).val() > 0) {
+                    let targetUrl = "@Url.Action("GetSupplier", "ScmBasicInformation")";
+                    let postData = {
+                        "SupplierId": $(this).val()
+                    };
+                    let data = DataAccess.Get(targetUrl, postData, false);
+
+                    if (data.status == "success") {
+                        if (data.result.length > 0) {
+                            $.each(data.result, function (i, item) {
+                                //交易幣別
+                                ComboBoxs.WithText("#cboPrCurrency@(itemName)", "@Url.Action("GetErpData", "BasicInformation")", { "ColumnName": "Currency" }, "", "NA", "", "CurrencyName", "Currency");
+                                $("#cboPrCurrency@(itemName)").val(item.Currency);
+
+                                //匯率
+                                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                                postData = {
+                                    "ColumnName": "ExchangeRate",
+                                    "Condition": $("#cboPrCurrency@(itemName)").val()
+                                };
+                                data = DataAccess.Get(targetUrl, postData, false);
+                                if (data.status == "success") {
+                                    $.each(data.result, function (i, item) {
+                                        $("#txtPrExchangeRate@(itemName)").val(item.ExchangeRateName)
+                                    });
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+
+            $("#cboPrCurrency@(itemName)").change(function () {
+                //匯率
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "ExchangeRate",
+                    "Condition": $("#cboPrCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        $("#txtPrExchangeRate@(itemName)").val(item.ExchangeRateName)
+                    });
+                }
+
+                let prExchangeRate = $("#txtPrExchangeRate@(itemName)").val();
+                let prQty = $("#txtPrQty@(itemName)").val();
+                let prUnitPrice = $("#txtPrUnitPrice@(itemName)").val();
+
+                let UnitDecimal = -1;
+                let TotalDecimal = -1;
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "CurrencyDecimal",
+                    "Condition": $("#cboPrCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        UnitDecimal = item.UnitDecimal;
+                        TotalDecimal = item.TotalDecimal;
+                    });
+                }
+
+                let UnitDecimalNumber = "1";
+                let TotalDecimalNumber = "1";
+
+                for (var i = 1; i <= parseInt(UnitDecimal); i++) {
+                    UnitDecimalNumber += "0";
+                }
+
+                for (var i = 1; i <= parseInt(TotalDecimal); i++) {
+                    TotalDecimalNumber += "0";
+                }
+
+                //請購單價
+                $("#txtPrUnitPrice@(itemName)").val(Math.round(prUnitPrice * parseInt(UnitDecimalNumber)) / UnitDecimalNumber);
+
+                //請購金額
+                $("#txtPrPrice@(itemName)").val(Math.round(prQty * prUnitPrice * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+
+                //本幣金額
+                $("#txtPrPriceTw@(itemName)").val(Math.round(prQty * prUnitPrice * prExchangeRate * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+            });
+
+            let popConfig = {
+                targetSelector: "#txtMtlItemId@(itemName)",
+                popFunction: "PopViewMtlItem",
+                objectMtlItemId: "#txtMtlItemId@(itemName)",
+                objectMtlItemNo: "#desMtlItemNo@(itemName)",
+                objectMtlItemName: "#txtMtlItemName@(itemName)",
+                objectMtlItemSpec: "#txtMtlItemSpec@(itemName)",
+                objectInventoryId: "#cboInventoryId@(itemName)",
+                objectUomId: "#cboPrUomId@(itemName)",
+                objectCheckMtlDate: "@DateTime.Now.ToString("yyyy-MM-dd")",
+            };
+            InitPopView(popConfig);
+
+            let popConfig2 = {
+                targetSelector: "#txtSoDetailId@(itemName)",
+                popFunction: "PopViewSoDetail",
+                objectSoDetailId: "#txtSoDetailId@(itemName)",
+                objectCustomer: "#desCustomer@(itemName)",
+                objectSoErpFullNo: "#desSoErpFullNo@(itemName)",
+                objectSoSequence: "#desSoSequence@(itemName)",
+                objectCustomerMtlItemNo: "#desCustomerMtlItemNo@(itemName)",
+                type: "radio"
+            };
+            InitPopView(popConfig2);
+
+            let popConfig3 = {
+                targetSelector: "#txtPrDetailId@(itemName)",
+                popFunction: "PopViewPrDetail",
+                objectPrDetailId: "#txtPrDetailId@(itemName)",
+                objectMtlItemId: "#txtMtlItemId@(itemName)",
+                objectMtlItemNo: "#desMtlItemNo@(itemName)",
+                objectMtlItemName: "#txtMtlItemName@(itemName)",
+                objectMtlItemSpec: "#txtMtlItemSpec@(itemName)",
+                objectSoDetailId: "#txtSoDetailId@(itemName)",
+                objectCustomer: "#desCustomer@(itemName)",
+                objectSoErpFullNo: "#desSoErpFullNo@(itemName)",
+                objectSoSequence: "#desSoSequence@(itemName)",
+                objectCustomerMtlItemNo: "#desCustomerMtlItemNo@(itemName)",
+                objectDemandDate: "#txtDemandDate@(itemName)",
+                objectInventoryId: "#cboInventoryId@(itemName)",
+                objectPrUomId: "#cboPrUomId@(itemName)",
+                objectSupplierId: "#cboSupplierId@(itemName)",
+                objectPrCurrency: "#cboPrCurrency@(itemName)",
+                objectPrExchangeRate: "#txtPrExchangeRate@(itemName)",
+                objectPrQty: "#txtPrQty@(itemName)",
+                objectPrUnitPrice: "#txtPrUnitPrice@(itemName)",
+                objectPrPrice: "#txtPrPrice@(itemName)",
+                objectPrPriceTw: "#txtPrPriceTw@(itemName)",
+                objectUrgentMtl: "#cboUrgentMtl@(itemName)",
+                objectProductionPlan: "#cboProductionPlan@(itemName)",
+                objectProject: "#cboProject@(itemName)",
+                objectPrDetailRemark: "#txtPrDetailRemark@(itemName)",
+                objectPrSequence: "#desPrSequence@(itemName)",
+                objectMtlModify: "#txtMtlModify@(itemName)",
+                prId: prId@(itemName)
+            };
+            InitPopView(popConfig3);
+        }
+
+        let timer;
+        function EditPrUnitPrice@(itemName)() {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                let prExchangeRate = $("#txtPrExchangeRate@(itemName)").val();
+                let prQty = $("#txtPrQty@(itemName)").val();
+                let prUnitPrice = $("#txtPrUnitPrice@(itemName)").val();
+
+                let UnitDecimal = -1;
+                let TotalDecimal = -1;
+                targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+                postData = {
+                    "ColumnName": "CurrencyDecimal",
+                    "Condition": $("#cboPrCurrency@(itemName)").val()
+                };
+                data = DataAccess.Get(targetUrl, postData, false);
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        UnitDecimal = item.UnitDecimal;
+                        TotalDecimal = item.TotalDecimal;
+                    });
+                }
+
+                let UnitDecimalNumber = "1";
+                let TotalDecimalNumber = "1";
+
+                for (var i = 1; i <= parseInt(UnitDecimal); i++) {
+                    UnitDecimalNumber += "0";
+                }
+
+                for (var i = 1; i <= parseInt(TotalDecimal); i++) {
+                    TotalDecimalNumber += "0";
+                }
+
+                //請購單價
+                $("#txtPrUnitPrice@(itemName)").val(Math.round(prUnitPrice * parseInt(UnitDecimalNumber)) / UnitDecimalNumber);
+
+                //請購金額
+                $("#txtPrPrice@(itemName)").val(Math.round(prQty * prUnitPrice * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+
+                //本幣金額
+                $("#txtPrPriceTw@(itemName)").val(Math.round(prQty * prUnitPrice * prExchangeRate * parseInt(TotalDecimalNumber)) / TotalDecimalNumber);
+            }, 500);
+        }
+
+        function GetPrmSequence@(itemName)() {
+            let targetUrl = "@Url.Action("GetPrmSequence", "PurchaseRequisition")";
+
+            let postData = {
+                "PrmId": prmId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let count = (item.Count + 1).toString();
+                        let prSequence = count.padStart(4, 0);
+                        $("#txtPrmSequence@(itemName)").val(prSequence);
+                    });
+                }
+            }
+        }
+
+        function GetMtlItemTotalUomInfo@(itemName)() {
+
+            let OldUomId = $("#cboPrUomId@(itemName)").val();
+
+            $('#cboPrUomId@(itemName)').empty();
+
+            let targetUrl = "@Url.Action("GetMtlItemTotalUomInfo", "PurchaseRequisition")";
+
+            let postData = {
+                "MtlItemId": $("#txtMtlItemId@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $('#cboPrUomId@(itemName)').append($('<option>', {
+                            value: item.UomId,
+                            text: item.UomText
+                        }));
+                    });
+                }
+            }
+
+            $("#cboPrUomId@(itemName)").val(OldUomId);
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let PrmDetailId = parseInt($("#PrmDetailId").val());
+
+                let PrQty = $("#txtPrQty@(itemName)").val();
+                let ClosureStatus = $("#cboClosureStatus@(itemName)").val();
+                if (PrQty == 0 && ClosureStatus != "y") {
+                    alert("若請購變更數量為0，需將此單據指定結案!");
+                    return false;
+                }
+
+                if (PrmDetailId <= 0) {
+                    let targetUrl = "@Url.Action("AddPrmDetail", "PurchaseRequisition")";
+                    let postData = {
+                        "PrmId": prmId@(itemName),
+                        "PrDetailId": $("#txtPrDetailId@(itemName)").val(),
+                        "PrmSequence": $("#txtPrmSequence@(itemName)").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "PrMtlItemName": $("#txtMtlItemName@(itemName)").val(),
+                        "PrMtlItemSpec": $("#txtMtlItemSpec@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "PrUomId": $("#cboPrUomId@(itemName)").val(),
+                        "PrQty": $("#txtPrQty@(itemName)").val(),
+                        "DemandDate": $("#txtDemandDate@(itemName)").val(),
+                        "SupplierId": $("#cboSupplierId@(itemName)").val(),
+                        "PrCurrency": $("#cboPrCurrency@(itemName)").val(),
+                        "PrExchangeRate": $("#txtPrExchangeRate@(itemName)").val(),
+                        "PrUnitPrice": $("#txtPrUnitPrice@(itemName)").val(),
+                        "ProductionPlan": $("#cboProductionPlan@(itemName)").val(),
+                        "PrPrice": $("#txtPrPrice@(itemName)").val(),
+                        "PrPriceTw": $("#txtPrPriceTw@(itemName)").val(),
+                        "UrgentMtl": $("#cboUrgentMtl@(itemName)").val(),
+                        "Project": $("#cboProject@(itemName)").val(),
+                        "SoDetailId": $("#txtSoDetailId@(itemName)").val(),
+                        "PrDetailRemark": $("#txtPrDetailRemark@(itemName)").val(),
+                        "ModiReason": $("#txtModiReason@(itemName)").val(),
+                        "ClosureStatus": $("#cboClosureStatus@(itemName)").val()
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (data) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdatePrmDetail", "PurchaseRequisition")";
+                    let postData = {
+                        "PrmDetailId": PrmDetailId,
+                        "PrmId": prmId@(itemName),
+                        "PrDetailId": $("#txtPrDetailId@(itemName)").val(),
+                        "PrmSequence": $("#txtPrmSequence@(itemName)").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val(),
+                        "PrMtlItemName": $("#txtMtlItemName@(itemName)").val(),
+                        "PrMtlItemSpec": $("#txtMtlItemSpec@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "PrUomId": $("#cboPrUomId@(itemName)").val(),
+                        "PrQty": $("#txtPrQty@(itemName)").val(),
+                        "DemandDate": $("#txtDemandDate@(itemName)").val(),
+                        "SupplierId": $("#cboSupplierId@(itemName)").val(),
+                        "PrCurrency": $("#cboPrCurrency@(itemName)").val(),
+                        "PrExchangeRate": $("#txtPrExchangeRate@(itemName)").val(),
+                        "PrUnitPrice": $("#txtPrUnitPrice@(itemName)").val(),
+                        "ProductionPlan": $("#cboProductionPlan@(itemName)").val(),
+                        "PrPrice": $("#txtPrPrice@(itemName)").val(),
+                        "PrPriceTw": $("#txtPrPriceTw@(itemName)").val(),
+                        "UrgentMtl": $("#cboUrgentMtl@(itemName)").val(),
+                        "Project": $("#cboProject@(itemName)").val(),
+                        "SoDetailId": $("#txtSoDetailId@(itemName)").val(),
+                        "PrDetailRemark": $("#txtPrDetailRemark@(itemName)").val(),
+                        "ModiReason": $("#txtModiReason@(itemName)").val(),
+                        "ClosureStatus": $("#cboClosureStatus@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(PrmDetailId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeletePrmDetail", "PurchaseRequisition")";
+                    let postData = {
+                        "PrmDetailId": PrmDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            ResetForm(objForm@(itemName));
+            Query@(itemName)();
+        }
+    </script>
+                )

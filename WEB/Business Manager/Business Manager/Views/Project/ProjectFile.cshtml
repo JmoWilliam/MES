@@ -1,0 +1,271 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProjectFile";
+    string itemNameText = "專案檔案";
+}
+
+@Html.Resource("css",
+    @<style>
+        #tblData@(itemName) td {
+            vertical-align: middle;
+        }
+    </style>
+)
+
+<div class="card card-shadow">
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-12 proj-auth-file-upload">
+                <input type="file" id="fileProject@(itemName)" name="fileProject@(itemName)" multiple />
+                <input type="hidden" id="txtFileId@(itemName)" name="txtFileId@(itemName)" />
+            </div>
+        </div>
+        <div class="row" id="listData@(itemName)">
+            <div class="col-12">
+                <div class="table-custom">
+                    <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="min-width: 75px;">#</th>
+                                <th scope="col" style="min-width: 300px;">檔案名稱</th>
+                                <th scope="col" style="min-width: 200px;">閱覽檔案等級</th>
+                                <th scope="col" style="min-width: 200px;">檔案類型</th>
+                                <th scope="col" style="min-width: 200px;">上傳時間</th>
+                                <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="page@(itemName)"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 999
+        };
+
+        function Expand@(itemName)() {
+            if (parseInt($("#ProjectId").val()) > 0) {
+                let uploadConfig = {
+                    fileSelector: "#fileProject@(itemName)",
+                    targetSelector: "#txtFileId@(itemName)",
+                    required: false,
+                    uploadPath: "/Project/ProjectFile",
+                    maxFileCount: 5
+                };
+
+                let uploadSetting = {
+                    theme: "fas",
+                    language: "zh-TW",
+                    showCaption: true,
+                    showPreview: true,
+                    showRemove: false,
+                    showUpload: false,
+                    showCancel: false,
+                    uploadUrl: "/Web/Upload",
+                    uploadAsync: true,
+                    minFileCount: (uploadConfig.required ? 1 : 0),
+                    maxFileCount: uploadConfig.maxFileCount,
+                    validateInitialCount: true,
+                    overwriteInitial: false,
+                    initialPreviewAsData: true,
+                    browseOnZoneClick: true,
+                    uploadExtraData: {
+                        savePath: uploadConfig.uploadPath,
+                        isPreview: false
+                    },
+                    previewFileIconSettings: {
+                        doc: '<i class="fas fa-file-word" style="color: #0078d7;"></i>',
+                        docx: '<i class="fas fa-file-word" style="color: #0078d7;"></i>',
+                        xls: '<i class="fas fa-file-excel" style="color: #1d6f42;"></i>',
+                        xlsx: '<i class="fas fa-file-excel" style="color: #1d6f42;"></i>',
+                        csv: '<i class="fas fa-file-csv" style="color: #1d6f42;"></i>',
+                        ppt: '<i class="fas fa-file-powerpoint" style="color: #d04423"></i>',
+                        pptx: '<i class="fas fa-file-powerpoint" style="color: #d04423"></i>'
+                    }
+                };
+
+                $(uploadConfig.fileSelector).fileinput('destroy');
+                $(uploadConfig.fileSelector).fileinput(uploadSetting)
+                    .off('filebatchselected')
+                    .on('filebatchselected', function (event, files) {
+                        $(uploadConfig.fileSelector).fileinput("upload");
+                    })
+                    .off('fileuploaded')
+                    .on('fileuploaded', function (event, previewId, index, fileId) {
+                        let uploadPath = previewId.response.initialPreviewConfig[0]["key"];
+                        $(uploadConfig.fileSelector).fileinput('clear');
+
+                        let targetUrl = "@Url.Action("AddProjectFile", "Project")";
+                        let postData = {
+                            "ProjectId": $("#ProjectId").val(),
+                            "FileId": uploadPath
+                        };
+
+                        let result = DataAccess.Add(targetUrl, postData, false, false);
+
+                        if (result) {
+                            Query@(itemName)();
+                        }
+                    });
+
+                Query@(itemName)();
+            } else {
+                alert("請先儲存專案資料", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            SetProjectAuthorityProjectManagement($("#ProjectId").val());
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetProjectFile", "Project")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "ProjectId": $("#ProjectId").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td><span class="stack-title">#</span>${_row}</td>
+                                        <td class="active-content ellipsis" data-toggle="tooltip" title="${item.FileName}${item.FileExtension}" style="max-width: 300px;">
+                                          <span class="stack-title">檔案名稱</span>
+                                          <a class="active-link proj-auth-file-download" href="/Project/DownloadProjectFile?fileId=${item.FileId}&ProjectId=${$(`#ProjectId`).val()}" target="_blank"><i class="fas fa-download"></i><span>檔案下載</span></a>
+                                          ${item.FileName}${item.FileExtension}
+                                        </td>
+                                        <td class="proj-auth-file-update">
+                                          <span class="stack-title">閱覽檔案等級</span>
+                                          <select class="form-control" name="cboLevelId@(itemName)" data-project-file-id="${item.ProjectFileId}" data-level-id="${item.LevelId}"></select>
+                                        </td>
+                                        <td class="un-auth proj-auth-file-update"><span class="stack-title">閱覽檔案等級</span>${item.LevelName}</td>
+                                        <td class="proj-auth-file-update">
+                                          <span class="stack-title">檔案類型</span>
+                                          <select class="form-control" name="cboFileType@(itemName)" data-project-file-id="${item.ProjectFileId}" data-filetype="${item.FileType}"></select>
+                                        </td>
+                                        <td class="un-auth proj-auth-file-update"><span class="stack-title">檔案類型</span>${TypeName(`ProjectFile.FileType`, item.FileType)}</td>
+                                        <td><span class="stack-title">上傳時間</span>${item.CreateDate}</td>
+                                        <td class="text-center active-content">
+                                          <span class="stack-title">操作</span>
+                                          <a class="active-link proj-auth-file-delete" href="javascript:Delete@(itemName)(${item.ProjectFileId});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                      </tr>`
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+            ProjectAuthorityControl();
+            console.log(JSON.parse($(`#pageAuthority`).val()).map(m => m.DetailCode));
+            PageAuthorityControl();
+
+            ComboBoxs.Default("select[name=cboLevelId@(itemName)]", "@Url.Action("GetFileLevel", "PmisBasicInformation")", { "Status": "A" }, "", "CHOOSE-NUMBER", "", "LevelName", "LevelId");
+            ComboBoxs.Default("select[name=cboFileType@(itemName)]", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "ProjectFile.FileType" }, "", "CHOOSE", "", "TypeName", "TypeNo");
+
+            $("select[name=cboLevelId@(itemName)]").each(function () {
+                $(this).val($(this).data("level-id"));
+            });
+
+            $("select[name=cboFileType@(itemName)]").each(function () {
+                $(this).val($(this).data("filetype"));
+            });
+
+            $("select[name=cboLevelId@(itemName)]").off("change").on("change", function () {
+                let projectFileId = $(this).data("project-file-id");
+
+                let targetUrl = "@Url.Action("UpdateProjectFileLevel", "Project")";
+                let postData = {
+                    "ProjectFileId": projectFileId,
+                    "LevelId": $(`select[name=cboLevelId@(itemName)][data-project-file-id=${projectFileId}]`).val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, false);
+
+                if (result) {
+                    Query@(itemName)();
+                }
+            });
+
+            $("select[name=cboFileType@(itemName)]").off("change").on("change", function () {
+                let projectFileId = $(this).data("project-file-id");
+
+                let targetUrl = "@Url.Action("UpdateProjectFileFileType", "Project")";
+                let postData = {
+                    "ProjectFileId": projectFileId,
+                    "FileType": $(`select[name=cboFileType@(itemName)][data-project-file-id=${projectFileId}]`).val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, false);
+
+                if (result) {
+                    Query@(itemName)();
+                }
+            });
+
+            if (!isMobile) {
+                $("select[name=cboLevelId@(itemName)], select[name=cboFileType@(itemName)]").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+        }
+
+        function Delete@(itemName)(ProjectFileId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteProjectFile", "Project")";
+                    let postData = {
+                        "ProjectFileId": ProjectFileId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+    </script>
+)

@@ -1,0 +1,192 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewRoutingItemSettingDetail";
+    string itemNameText = "維護途程品號詳細加工參數";
+}
+
+@Html.Resource("css",
+    @<style>
+        .attribute-group {
+            border: 1px solid rgba(0,0,0,.125);
+            border-radius: 0.25rem;
+            padding: 15px;
+            box-shadow: 0 0 10px rgb(191 190 190 / 60%);
+            margin-bottom: 15px;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .attribute-font {
+            font-weight: 700;
+            color: blue;
+        }
+
+        .attribute-up-font {
+            font-weight: 700;
+            color: red;
+        }
+
+        .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">途程: <span class="sub-text" id="desRoutingName@(itemName)"></span></span>
+                    <span class="sub-title">品號: <span class="sub-text" id="desMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">生產模式: <span class="sub-text" id="desProdMode@(itemName)"></span></span>
+                    <span class="sub-title">研發設計圖: <span class="sub-text" id="desRdDesign@(itemName)"></span></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" style="padding: 10px" id="listData@(itemName)">
+                </div>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i> 關閉</button>
+                <button type="button" class="btn btn-success list-mode" onclick="Save@(itemName)()"><i class="fas fa-save"></i> 儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let routingItemId@(itemName);
+        let controlId@(itemName);
+        let attributeJson@(itemName) =
+        {
+            attributeInfo :[]
+        };
+        function Pop@(itemName)(routingItemId, controlId, mtlItemNo, cad2DFile, cad2DFileInfo) {
+            controlId@(itemName) = controlId;
+            routingItemId@(itemName) = routingItemId;
+            $("#desMtlItemNo@(itemName)").html(mtlItemNo);
+            $("#desRoutingName@(itemName)").html($("#txtRoutingNameRoutingManagement").val());
+            $("#desRdDesign@(itemName)").html('<a class="badge badge-info" href="/Drawing/GetPdmFile?fileId=' + cad2DFile + '"><i class="fas fa-download"></i> ' + cad2DFileInfo + '</a>');
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false
+            });
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+            let targetUrl = "@Url.Action("GetRoutingItemAttribute", "Routing")";
+            let postData = {
+                "RoutingItemId": routingItemId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $(".list-mode").show();
+                    $.each(data.result, function (i, item) {
+                        $("#desProdMode@(itemName)").html(item.ModeNo + "-" + item.ModeName);
+                        innerHtml += `<div class="col-12 attribute-group">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="form-group row">
+                                                    <label class="col-12 col-form-label attribute-font" for="txt${item.ItemNo}@(itemName)">${item.ItemDesc}</label>
+                                                    <div class="col-12" style="display: flex;">
+                                                        <input type="number" data-type="Attribute" data-attribute-id="${item.AttributeId}" data-attribute-item-id="${item.AttributeItemId}" data-attribute-value="${item.AttributeValue}" data-item-no="${item.ItemNo}" class="form-control" id="txt${item.ItemNo}@(itemName)" name="txt${item.ItemNo}@(itemName)"
+                                                            value="${item.AttributeValue}"
+                                                            data-msg-required="請輸入${item.ItemDesc}" data-rule-required="true"
+                                                            placeholder="請輸入${item.ItemDesc}" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="form-group row">
+                                                    <div class="col-6" style="display: flex;">
+                                                        <div class="up-down-style">
+                                                            <label class="col-form-label attribute-up-font" for="txt${item.ItemNo}UpperLimit@(itemName)">上限</label>
+                                                            <input type="number" class="form-control" id="txt${item.ItemNo}UpperLimit@(itemName)" name="txt${item.ItemNo}UpperLimit@(itemName)"
+                                                                value="${item.UpperLimit}"
+                                                                data-msg-required="請輸入${item.ItemDesc}上限" data-rule-required="true"
+                                                                placeholder="請輸入${item.ItemDesc}上限" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6" style="display: flex;">
+                                                        <div class="up-down-style">
+                                                            <label class="col-form-label attribute-up-font" for="txt${item.ItemNo}LowerLimit@(itemName)">下限</label>
+                                                            <input type="number" class="form-control" id="txt${item.ItemNo}LowerLimit@(itemName)" name="txt${item.ItemNo}LowerLimit@(itemName)"
+                                                                value="${item.LowerLimit}"
+                                                                data-msg-required="請輸入${item.ItemDesc}下限" data-rule-required="true"
+                                                                placeholder="請輸入${item.ItemDesc}下限" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                      </div>`;
+                    });
+                }
+                else {
+                    innerHtml += `<span>目前暫無此設計圖相關屬性資料</span>`;
+                    $(".list-mode").hide();
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#listData@(itemName)").html(innerHtml);
+        }
+
+        function Edit@(itemName)() {
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+        }
+
+        function Save@(itemName)() {
+            $("input[data-type='Attribute']").each(function (index) {
+                let attributeId = this.id;
+                let itemNo = $("#" + attributeId + "").data("item-no");
+                let inputData =
+                {
+                    "AttributeId": $("#" + attributeId + "").data("attribute-id"),
+                    "RoutingItemId": routingItemId@(itemName),
+                    "AttributeItemId": $("#" + attributeId + "").data("attribute-item-id"),
+                    "AttributeValue": $("#" + attributeId + "").val(),
+                    "UpperLimit": $("#txt" + itemNo + "UpperLimit@(itemName)").val(),
+                    "LowerLimit": $("#txt" + itemNo + "LowerLimit@(itemName)").val()
+                }
+                attributeJson@(itemName).attributeInfo.push(inputData);
+            });
+
+            let targetUrl = "@Url.Action("UpdateRoutingItemAttribute", "Routing")";
+            let postData = {
+                "AttributeData": JSON.stringify(attributeJson@(itemName))
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+            if (result) {
+                Return@(itemName)();
+                Close@(itemName)();
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+
+        function Return@(itemName)() {
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+        }
+    </script>
+)

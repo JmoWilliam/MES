@@ -1,0 +1,367 @@
+﻿
+@using Business_Manager.Helpers
+@{
+    string itemName = "QcFileManagement";
+    string itemNameText = "單據檔案管理";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+        .section-index {
+            padding: 18px;
+            background: white;
+            border-radius: 12px;
+        }
+
+        .input-group-append {
+            display: contents !important;
+        }
+
+        .parameter-bar-qcfile {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+    </style>
+                )
+
+     <section class="section-index">
+         <div class="row">
+             <div class="col-lg-12 col-md-12 ">
+                 <div class="form-group row">
+                     <label class="form-label col-12" for="cboQcRecordFile@(itemName)">其它檔案<code>(共夾上傳方式)</code><span class="text-danger"></span></label>
+                     <div class="col-12">
+                         <div style="display: flex;" class="btn-group btn-group-inv@(itemName)">
+                             <select id="cboQcRecordFile@(itemName)" name="cboQcRecordFile@(itemName)" class="form-control"></select>
+                             <a class="btn btn-success pop-view" href="javascript: PopViewLocalFile@(itemName)('QcRecordFile', 'Y');"><i class="fal fa-search"></i></a>
+                             <a class="btn pop-view" style="background-color: #ef3f5f !IMPORTANT;" href="javascript: RemoveQcRecordFile@(itemName)();"><i style="color: white;" class="fas fa-eraser"></i></a>
+                         </div>
+                         <dl id="QcRecordFileHelp@(itemName)" class="help-block qc-help">
+                             <dt>檔案預覽</dt>
+                             <dd style="display: none;" id="desQcRecordFile@(itemName)" class="absolute-path"></dd>
+                             <dd id="desQcRecordFilePreview@(itemName)" class="cad-preview"></dd>
+                         </dl>
+                     </div>
+                 </div>
+             </div>
+         </div>
+
+         <div class="qc-file-info">
+             <div class="input-type" style="margin-bottom: 12px; display:flex; align-content:center;">
+                 @*<div style="display: flex; align-items: center; width: 7%; gap: 0.25rem;">
+                     <input type="checkbox" id="cbxSelectAll@(itemName)" style="width: 15px; height: 15px;" />
+                     <label style="font-size: 18px; font-weight: 600; cursor:pointer;" for="cbxSelectAll@(itemName)">&nbsp;全選</label>
+                 </div>*@
+                 <div style="width: 100%; display: flex; align-items: center;">
+                     <select id="cboInputType@(itemName)" class="form-control">
+                         <option value="BarcodeNo">條碼</option>
+                         <option value="Lettering" selected>刻字</option>
+                         <option value="LotNumber">批號</option>
+                         <option value="Cavity">穴號</option>
+                     </select>
+                 </div>
+             </div>
+             <div id="divFileData@(itemName)" class="qc-file-body">
+             </div>
+             <div class="qc-file-footer">
+                 <a class="btn-remove-resolve" style="margin-right: 10px;" href="javascript:Delete@(itemName)();"><i class="fas fa-trash-alt"> 刪除暫存</i></a>
+                 <a class="btn-resolve" href="javascript:Upload@(itemName)();"><i class="fas fa-caret-square-up"></i> 上傳檔案</a>
+             </div>
+         </div>
+     </section>
+
+@Html.Resource("js",
+    @<script>
+        let uploadFileJson@(itemName) =
+        {
+            uploadFileInfo: []
+        };
+
+        let inputType@(itemName) = "";
+        let moId@(itemName);
+
+        $(document).ready(function () {
+            $("#cboInputType@(itemName)").change(function () {
+                inputType@(itemName) = $(this).val();
+                ResetViewOtherType@(itemName)();
+            });
+
+            $("#cboQcRecordFile@(itemName)").select2({
+                width: "100%"
+            });
+
+            ComboBoxs.Default("#cboQcRecordFile@(itemName)", "@Url.Action("GetUploadWhitelist", "BasicInformation")", { "ListNo": "QC" }, "", "NA", "", "FolderPath", "ListId");
+
+            $("#cboQcRecordFile@(itemName)").change(function () {
+                PopViewLocalFile@(itemName)("QcRecordFile", "Y");
+            });
+        });
+
+        function Expand@(itemName)() {
+            uploadFileJson@(itemName).uploadFileInfo = [];
+            Return@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            let targetUrl = "@Url.Action("GetQcRecordFile", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": $("#QcRecordId").val(),
+                "FileType": "file-management"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#cboInputType@(itemName)").val(item.InputType);
+                        inputType@(itemName) = item.InputType;
+                        moId@(itemName) = item.MoId;
+
+                        let filePath = item.PhysicalPath;
+                        let fileNameArray = item.PhysicalPath.split("\\");
+                        fileName = fileNameArray[fileNameArray.length - 1];
+
+                        let inputInfo =
+                        {
+                            "FilePath": filePath,
+                            "FileName": fileName,
+                            "BarcodeId": item.BarcodeId,
+                            "BarcodeNo": item.BarcodeNo,
+                            "LetteringNo": item.LetteringNo,
+                            "Cavity": item.Cavity
+                        };
+
+                        uploadFileJson@(itemName).uploadFileInfo.push(inputInfo);
+                    });
+                }
+            }
+        }
+
+        function ResetUploadInfo@(itemName)() {
+            uploadFileJson@(itemName).uploadFileInfo = uploadFileJson@(itemName).uploadFileInfo.filter((file, index, self) =>
+                index === self.findIndex((f) => f.FileName === file.FileName)
+            );
+
+            let innerHtml = `<dt>檔案預覽</dt>
+                                <div class="preview-group">`;
+            $.each(uploadFileJson@(itemName).uploadFileInfo, function (i, item) {
+                innerHtml += `<span class="tag-group">
+                                <div class="tag-info">
+                                    <a class="active-link mr-1" href="/BasicInformation/GetUploadFile?FilePath=${item.FilePath}&DownloadFlag=RD"><i class="fas fa-download"></i></a>${item.FileName}
+                                </div>
+                                <div class="tag-delete">
+                                    <a href="javascript:DeleteTag@(itemName)('${item.FileName}');">
+                                        <i style="color:slategrey" class="fas fa-times"></i>
+                                    </a>
+                                </div>
+                                </span>`;
+            });
+            innerHtml += `</div>`;
+            $("#QcRecordFileHelp@(itemName)").html(innerHtml);
+
+            ResetViewOtherType@(itemName)();
+        }
+
+        function ResetViewOtherType@(itemName)() {
+            $("#divFileData@(itemName)").html("");
+            let innerHtml = '';
+            $.each(uploadFileJson@(itemName).uploadFileInfo, function (i, item) {
+                let inputValue = "";
+                if (inputType@(itemName) == "") {
+                    inputType@(itemName) = $("#cboInputType@(itemName)").val();
+                } 
+                if (inputType@(itemName) == "BarcodeNo") {
+                    inputValue = typeof (item.BarcodeNo) != `undefined` ? item.BarcodeNo : ``;
+                }
+                else if (inputType@(itemName) == "Lettering") {
+                    inputValue = typeof (item.ItemSeq) != `undefined` ? item.ItemSeq : ``;
+                }
+                else if (inputType@(itemName) == "LotNumber") {
+                    inputValue = typeof (item.LotNumber) != `undefined` ? item.LotNumber : ``;
+                }
+                else if (inputType@(itemName) == "Cavity") {
+                    inputValue = typeof (item.Cavity) != `undefined` && item.Cavity != null ? item.Cavity : ``;
+                }
+
+                innerHtml += `<div class="qc-file-item">
+                                @*<input id="cbxFile@(itemName)${item.FileName}" type="checkbox" data-file-name="${item.FileName}" style="width: 15px; height: 15px; margin-right: 10px;" />*@
+                                <div class="item-file">
+                                    <input type="hidden" name="txtFilePath" data-file-name="${item.FileName}" value="${item.FilePath}">
+                                    <p>檔案名稱: ${item.FileName}</p>
+                                </div>
+                                <div class="parameter-bar-qcfile">
+                                    <div style="width: 100%; display: flex;" class="effective-diameter-r1">
+                                        ${JudgeInputType(`${item.FileName}`, `${item.LetteringNo}`)}
+                                    </div>
+                                    <a href="javascript: Delete@(itemName)('${item.FileName}');"><i class="fas fa-trash-alt"></i></a>
+                                </div>
+                              </div>`;
+
+                function JudgeInputType(fileName, letteringNo) {
+                    let innerHtml = '';
+                    switch (inputType@(itemName)) {
+                        case "BarcodeNo":
+                            innerHtml += `<input type="text" data-type="input" data-file-name="${fileName}" class="form-control" id="txtBarcodeId@(itemName)${fileName}" name="txtInputValue@(itemName)" placeholder="請輸入註冊內容..." value="${inputValue}" />`;
+                            break;
+                        case "Lettering":
+                            let letteringNos = GetLettering@(itemName)(letteringNo);
+                            innerHtml += `<select class="form-control" data-type="lettering" data-file-name="${fileName}" required>
+                                            <option value="">請選擇刻字</option>`;
+                            innerHtml += letteringNos;
+                            innerHtml += `</select>`;
+                            break;
+                        case "LotNumber":
+                        case "Cavity":
+                            innerHtml += `<input type="text" data-type="input" data-file-name="${fileName}" class="form-control" id="txtBarcodeId@(itemName)${fileName}" name="txtInputValue@(itemName)" placeholder="請輸入註冊內容..." value="${inputValue}" />
+                                          <select class="form-control" data-type="r1r2" data-file-name="${fileName}">
+                                            <option value="R1" ${item.EffectiveDiameter == `R1` ? `selected` : ``}>R1</option>
+                                            <option value="R2" ${item.EffectiveDiameter == `R2` ? `selected` : ``}>R2</option>
+                                          </select>`;
+                            break;
+                        default:
+                            return false;
+                    }
+
+                    return innerHtml;
+                }
+            });
+
+            $("#divFileData@(itemName)").html(innerHtml);
+
+            $(`select[data-type="lettering"]`).select2({
+                width: "100%"
+            });
+        }
+
+        function GetLettering@(itemName)(letteringNo) {
+            let innerHtml = '';
+            let targetUrl = "@Url.Action("GetLetteringBarcodeData", "QcDataManagement")";
+            let postData = {
+                "MoId": $("#txtMoIdQcDataManagement").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<option value="${item.ItemValue}" ${item.ItemValue == letteringNo ? `selected` : ``}>${item.ItemValue}</option>`;
+                    });
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+
+            return innerHtml;
+        }
+
+        function Upload@(itemName)() {
+            let uploadDatas =
+            {
+                datas: []
+            };
+
+            $.each($(`input[name="txtFilePath"]`), function (i, item) {
+                let filePath = $(this).val();
+                let fileName = $(this).data("file-name");
+
+                if (inputType@(itemName) == "BarcodeNo") {
+                    let inputData =
+                    {
+                        "FilePath": filePath,
+                        "InputValue": $(`input[name="txtInputValue@(itemName)"][data-file-name="${fileName}"]`).val()
+                    }
+                    uploadDatas.datas.push(inputData);
+                }
+                else if (inputType@(itemName) == "Lettering") {
+                    let inputData =
+                    {
+                        "FilePath": filePath,
+                        "InputValue": $(`select[data-type="lettering"][data-file-name="${fileName}"]`).val()
+                    }
+                    uploadDatas.datas.push(inputData);
+                }
+                else if (inputType@(itemName) == "LotNumber" || inputType@(itemName) == "Cavity") {
+                    let inputData =
+                    {
+                        "FilePath": filePath,
+                        "InputValue": $(`input[name="txtInputValue@(itemName)"][data-file-name="${fileName}"]`).val(),
+                        "EffectiveDiameter": $(`select[data-type="r1r2"][data-file-name="${fileName}"]`).val()
+                    }
+                    uploadDatas.datas.push(inputData);
+                }
+            });
+
+            let targetUrl = "@Url.Action("AddQcRecordFile", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": $("#QcRecordId").val(),
+                "InputType":$("#cboInputType@(itemName)").val(),
+                "FileInfo": JSON.stringify(uploadDatas)
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function Delete@(itemName)(fileName) {
+            swal.fire({
+                titleText: "確認要刪除暫存數據嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.each(uploadFileJson@(itemName).uploadFileInfo, function (i, item) {
+                        if (item.FileName == fileName) {
+                            uploadFileJson@(itemName).uploadFileInfo.splice(i, 1);
+                            return false;
+                        }
+                    });
+
+                    ResetUploadInfo@(itemName)();
+                    ResetViewOtherType@(itemName)();
+                }
+            });
+        }
+
+        function PopViewLocalFile@(itemName)(fileType, multipleType) {
+            let listId = $(`#cbo${fileType}@(itemName)`).val();
+            let folderHtmlPath = `#cbo${fileType}@(itemName)`;
+            let fileHtmlPath = `#des${fileType}@(itemName)`;
+            let filePreviewHtmlPath = `#des${fileType}Preview@(itemName)`;
+            let helpHtmlPath = `#${fileType}Help@(itemName)`;
+            PopViewLocalFile(listId, multipleType, folderHtmlPath, fileHtmlPath, filePreviewHtmlPath, helpHtmlPath, "QC", uploadFileJson@(itemName), '@(itemName)');
+        }
+
+        function DeleteTag@(itemName)(FileName) {
+            $.each(uploadFileJson@(itemName).uploadFileInfo, function (i, item) {
+                if (item.FileName == FileName) {
+                    uploadFileJson@(itemName).uploadFileInfo.splice(i, 1);
+                    return false;
+                }
+            });
+            ResetUploadInfo@(itemName)();
+        }
+
+        function RemoveQcRecordFile@(itemName)() {
+            uploadFileJson@(itemName).uploadFileInfo = [];
+            $("#QcRecordFileHelp@(itemName)").hide();
+            ResetUploadInfo@(itemName)();
+            ResetViewOtherType@(itemName)();
+        }
+
+        function Return@(itemName)() {
+            Query@(itemName)();
+            ResetUploadInfo@(itemName)();
+            ResetViewOtherType@(itemName)();
+        }
+    </script>
+)

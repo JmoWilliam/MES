@@ -1,0 +1,216 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewWipLink";
+    string itemNameText = "製令綁定";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">訂單 <span class="sub-text" id="desSoErpFullNo@(itemName)"></span></span>
+                    <span class="sub-title">品號 <span class="sub-text" id="desMtlItemNo@(itemName)"></span></span>
+                    <span class="sub-title">品名 <span class="sub-text" id="desMtlItemName@(itemName)"></span></span>
+                    <span class="sub-title">訂單數量 <span class="sub-text" id="desSoQty@(itemName)"></span></span>
+                </h5>
+                <button class="close" type="button" onclick="Close@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-12 col-md-auto col-lg-auto mb-2 mb-md-0 mb-lg-0">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                               placeholder="請輸入製令" />
+                                    </div>
+                                    <div class="col-12 col-md-auto col-lg-auto text-right text-md-left text-lg-left">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 170px;">製令</th>
+                                        <th class="text-right" scope="col" style="min-width: 100px;">數量</th>
+                                        <th scope="col" style="min-width: 200px;">綁定訂單</th>
+                                        <th class="text-center" scope="col" style="min-width: 100px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1.</td>
+                                        <td>5101-20230426001</td>
+                                        <td>5 <code>PCS</code></td>
+                                        <td class="text-center">
+                                            <input type="checkbox" name="chkStatus@(itemName)" />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let soDetailId@(itemName) = -1;
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        function Pop@(itemName)(SoDetailId) {
+            soDetailId@(itemName) = SoDetailId;
+
+            let targetUrl = "@Url.Action("GetSoDetail", "SaleOrder")";
+            let postData = {
+                "SoDetailId": SoDetailId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#desSoErpFullNo@(itemName)").html(`${item.SoErpFullNo}-${item.SoSequence}`);
+                        $("#desMtlItemNo@(itemName)").html(item.MtlItemNo);
+                        $("#desMtlItemName@(itemName)").html(item.MtlItemName);
+                        $("#desSoQty@(itemName)").html(item.SoQty);
+                    });
+
+                    $("#modal@(itemName)").modal({
+                        backdrop: "static",
+                        keyboard: false,
+                        show: true
+                    });
+
+                    Query@(itemName)();
+
+                    $("#queryForm@(itemName)").keydown(function (event) {
+                        if (event.keyCode == 13) {
+                            Query@(itemName)();
+                            event.preventDefault();
+                            return false;
+                        }
+                    });
+                } else {
+                    alert("訂單資料錯誤!");
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function Query@(itemName)() {
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetWipLink", "Delivery")";
+            let postData = {
+                "SoDetailId": soDetailId@(itemName),
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        let _row = (i + 1) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.WoErpPrefix}-${item.WoErpNo}</td>
+                                        <td class="text-right">${item.PlanQty}</td>
+                                        <td>
+                                          <span class="${item.LinkStatus == `Y` ? `text-success` : `text-secondary`}">${item.SoErpPrefix}-${item.SoErpNo}-${item.SoSequence}</span>
+                                        </td>
+                                        <td class="text-center">
+                                          ${item.BindSoStatus != `Y` || (item.BindSoStatus != `N` && item.LinkStatus == `Y`)
+                                            ? `<input type="checkbox" name="chkStatus@(itemName)" data-wip="${item.WoErpPrefix}-${item.WoErpNo}" ${(item.LinkStatus == `Y` ? `checked` : '')} value="Y" />`
+                                            : ``}
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+
+            DelayFn(
+                function () {
+                    $("input[name='chkStatus@(itemName)']").bootstrapToggle({
+                        on: "已綁定",
+                        off: "未綁定",
+                        onstyle: "success",
+                        offstyle: "danger",
+                        size: "mini"
+                    });
+
+                    $("input[name='chkStatus@(itemName)'][data-wip]").change(StatusSwitch@(itemName));
+                }, 1);
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+
+        function StatusSwitch@(itemName)() {
+            let wip = $(this).data("wip");
+            let msg = $(`input[name='chkStatus@(itemName)'][data-wip='${wip}']:checked`).val() ? "確認要綁定該訂單嗎?" : "確認要解除綁定該訂單嗎?";
+
+            swal.fire({
+                titleText: msg,
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateWipLink", "Delivery")";
+                    let postData = {
+                        "SoDetailId": soDetailId@(itemName),
+                        "WipNo": wip,
+                        "LinkStatus": $(`input[name='chkStatus@(itemName)'][data-wip='${wip}']:checked`).val() ?? "N"
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                } else {
+                    Query@(itemName)();
+                }
+            });
+        }
+    </script>
+)

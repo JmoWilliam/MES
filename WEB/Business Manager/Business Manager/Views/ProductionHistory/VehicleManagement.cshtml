@@ -1,0 +1,608 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "VehicleManagement";
+    string itemNameText = "載盤物料管理系統";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+@<link href="@Url.Content("~/Content/mes_scan.min.css")?20220623v1" rel="stylesheet" />
+                                                                                                )
+
+<style>
+    .card-body {
+        padding: 0.65rem;
+    }
+
+    .modal-body {
+        overflow: scroll;
+        max-height: 65vh;
+    }
+
+    .title {
+        font-size: 25px;
+        font-weight: 600;
+    }
+
+    .m-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .materials {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .m-img {
+        width: 50%;
+        font-size: 48px;
+        text-align: center;
+    }
+
+    .m-info {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        font-size: 15px;
+    }
+
+    .m-bind {
+        width: 100%;
+    }
+
+    .m-bind {
+        text-align: end;
+    }
+
+        .m-bind a {
+            padding: 25px;
+            background: #e7e7e7;
+            border-radius: 12px;
+            color: #1c2731;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all .3s;
+        }
+            .m-bind a:hover {
+                background: #f7f4f4
+            }
+
+    .close-item {
+        display: flex;
+        flex-direction: column;
+        align-items: end;
+        justify-content: center;
+        width: 100%;
+        gap: 25px;
+    }
+</style>
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="container">
+    <div class="login-content">
+
+        <div class="login-form">
+            <div class="logo">
+                <a class="title">
+                    @itemNameText
+                </a>
+            </div>
+            <div class="input-group" style="margin-bottom: 15px;">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    載盤條碼
+                </span>
+                <input type="text" class="form-control form-control-add lang" id="txtVehicleNo@(itemName)"
+                       aria-describedby="basic-addon13" placeholder="請輸入載盤條碼" key="CONTACT">
+                <div class="input-group-append">
+                    <button type="button" class="border-danger" onclick="cleanVehicleNo@(itemName) ()" title="清除">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="divWoErpFullNo" class="input-group" style="margin-bottom: 15px; display: none;">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    製令條碼
+                </span>
+                <input type="text" class="form-control form-control-add lang" id="txtWoErpFullNo@(itemName)"
+                       aria-describedby="basic-addon13" placeholder="請輸入製令條碼" key="CONTACT">
+                <div class="input-group-append">
+                    <button type="button" class="border-danger" onclick="cleanMoId@(itemName)()" title="清除">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="divMoProcessId" class="input-group" style="margin-bottom: 15px; display: none;">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    整盤製程
+                </span>
+                <select id="cboMoProcessId@(itemName)" class="form-control"></select>
+            </div>
+            <button type="button" class="btn-sure btn btn-success btn-flat mb-2 weight-600"
+                    onclick="javascript: PopModalBindVehicle@(itemName)();">
+                確定
+            </button>
+            <div class="logout" style="width:unset;padding:unset;margin-top: 10px;">
+                <a class="btn" href="/ProductionHistory">
+                    回首頁<i class="fa fa-sign-out ml-1" style=""></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalBindVehicle@(itemName)" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div style="display: flex; width: 100%; justify-content: center;">
+                    <h5 class="modal-title" style="width: 100%">
+                        設定載盤物料
+                        <span class="sub-title">載盤條碼: <span class="sub-text" id="desVehicleNo@(itemName)"></span></span>
+                        <span class="sub-title">製令: <span class="sub-text" id="desWoErpFullNo@(itemName)"></span></span>
+                        <span class="sub-title">製程: <span class="sub-text" id="desProcessAlias@(itemName)"></span></span>
+                    </h5>
+                    <div class="close-item">
+                        <button class="close" data-dismiss="modal" type="button">
+                            <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                        </button>
+                        <button style="font-size: 15px; font-weight: 600;" class="btn btn-danger" onclick="ChangeVehicle@(itemName)()">更換載盤</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div id="materialsData@(itemName)" class="col-12 list-mode">
+                    </div>
+                </div>
+                <div class="row" id="editDataB@(itemName)" style="display: none;">
+                    <input type="hidden" id="txtMtlItemIdB@(itemName)" />
+                    <div class="col-12 input-group mb-2" style="">
+                        <label class="input-group-addon" for="basic-addon" style="">
+                            <i class="far fa-barcode-alt"></i>
+                            <span style="padding-left: 5px;">條碼</span>
+                        </label>
+                        <input type="text" class="form-control form-control-add" id="txtBarcodeNo@(itemName)" placeholder="請輸入條碼">
+                    </div>
+                    <div class="col-12">
+                        <div class="table-custom" style="max-height: 35vh;">
+                            <table class="table table-bordered table-striped table-sticky" id="tblBarcodeComponentB@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">條碼</th>
+                                        <th scope="col">數量</th>
+                                        <th class="text-center" scope="col">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" id="editDataL@(itemName)" style="display: none;">
+                    <input type="hidden" id="txtMtlItemIdL@(itemName)" />
+                    <div class="col-12 input-group mb-2" style="">
+                        <label class="input-group-addon" for="basic-addon" style="">
+                            <i class="far fa-barcode-alt"></i>
+                            <span style="padding-left: 5px;">批號</span>
+                        </label>
+                        <input type="text" class="form-control form-control-add" id="txtLotNumber@(itemName)" placeholder="請輸入批號">
+                    </div>
+                    <div class="col-12">
+                        <div class="table-custom" style="max-height: 35vh;">
+                            <table class="table table-bordered table-striped table-sticky" id="tblBarcodeComponentL@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">批號</th>
+                                        <th scope="col">數量</th>
+                                        <th class="text-center" scope="col">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                @*<button type="button" class="btn btn-success" onclick="SaveBomSubstitution@(itemName)()"><i class="fas fa-save"></i>儲存</button>*@
+                <button type="button" class="btn btn-secondary edit-mode" onclick="Return@(itemName)();" style="display: none;"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let woErpFullNo@(itemName);
+        let moId@(itemName);
+        let bindType@(itemName);
+        $(document).ready(function () {
+            $("#txtWoErpFullNo@(itemName)").off('change');
+            $("#txtVehicleNo@(itemName)").change(function (i, item) {
+                let moIdVisible = $('#txtWoErpFullNo@(itemName)').is(':visible');
+                let moProcessVisible = $('#cboMoProcessId@(itemName)').is(':visible');
+
+                if (moIdVisible && moProcessVisible) {
+                    PopModalBindVehicle@(itemName)();
+                }
+                else {
+                    GetVehicle@(itemName)();
+                }
+            });
+
+            $("#txtVehicleNo@(itemName)").off('keydown');
+            $("#txtVehicleNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    let moIdVisible = $('#txtWoErpFullNo@(itemName)').is(':visible');
+                    let moProcessVisible = $('#cboMoProcessId@(itemName)').is(':visible');
+                    if (moIdVisible && moProcessVisible) {
+                        PopModalBindVehicle@(itemName)();
+                    }
+                    else {
+                        GetVehicle@(itemName)();
+                    }
+                    return false;
+                }
+            });
+
+            $("#txtWoErpFullNo@(itemName)").change(function (i, item) {
+                GetMoInfo@(itemName)();
+            });
+
+            $("#txtWoErpFullNo@(itemName)").off('keydown');
+            $("#txtWoErpFullNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    GetMoInfo@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#txtBarcodeNo@(itemName)").off('keydown');
+            $("#txtBarcodeNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    SaveB@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#txtLotNumber@(itemName)").off('keydown');
+            $("#txtLotNumber@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    SaveL@(itemName)();
+                    return false;
+                }
+            });
+        });
+
+        function GetVehicle@(itemName)() {
+            let vehicleNo = $("#txtVehicleNo@(itemName)").val();
+            if (vehicleNo.length <= 0) {
+                alert("請輸入載盤條碼!!");
+                $("#divWoErpFullNo").hide();
+                moId@(itemName) = -1;
+
+                $("#divMoProcessId").hide();
+                $("#cboMoProcessId").empty();
+                return false;
+            }
+            let targetUrl = "@Url.Action("GetVehicle", "ProductionHistory")";
+            let postData = {
+                "VehicleNo": $("#txtVehicleNo@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.Status != "A") {
+                            alert("此載盤狀態未啟用!!");
+                            return false;
+                        }
+
+                        $("#divWoErpFullNo").show();
+                    });
+                }
+                else {
+                    $("#divWoErpFullNo").hide();
+                    moId@(itemName) = -1;
+
+                    $("#divMoProcessId").hide();
+                    $("#cboMoProcessId").empty();
+
+                    alert("查無載盤資料!!");
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+
+        function GetMoInfo@(itemName)() {
+            let targetUrl = "@Url.Action("GetMoProcessForVehicle", "ProductionHistory")";
+            let postData = {
+                "WoErpFullNo": $("#txtWoErpFullNo@(itemName)").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            $("#cboMoProcessId@(itemName)").empty();
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.VehicleFlag != "Y") {
+                            alert("此製令設定非載盤上料!!");
+                            $("#divMoProcessId").hide();
+                            return false;
+                        }
+                        woErpFullNo@(itemName) = item.WoErpPrefix + "-" + item.WoErpNo + "(" + item.WoSeq + ")";
+                        moId@(itemName) = item.MoId;
+                        let newOption = $('<option></option>').val(item.MoProcessId).text(item.ProcessAlias);
+                        $("#cboMoProcessId@(itemName)").append(newOption);
+                        $("#divMoProcessId").show();
+                    });
+                }
+                else {
+                    $("#divMoProcessId").hide();
+                    moId@(itemName) = -1;
+                    $("#cboMoProcessId@(itemName)").val("");
+                    alert("找不到製令資料!!");
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+        }
+
+        function PopModalBindVehicle@(itemName)() {
+            Return@(itemName)();
+
+            let vehicleNo = $("#txtVehicleNo@(itemName)").val();
+            let processAlias = $("#cboMoProcessId@(itemName) option:selected").text();
+
+            if (vehicleNo.length <= 0 || processAlias.length <= 0 || woErpFullNo@(itemName).length <= 0) {
+                alert("有資料尚未設定完成!!");
+                return false;
+            }
+
+            $("#desVehicleNo@(itemName)").html(vehicleNo);
+            $("#desWoErpFullNo@(itemName)").html(woErpFullNo@(itemName));
+            $("#desProcessAlias@(itemName)").html(processAlias);
+
+            GetMaterials@(itemName)();
+
+            $("#modalBindVehicle@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function GetMaterials@(itemName)() {
+            let innerHtml = '';
+            let vehicleNo = $("#txtVehicleNo@(itemName)").val();
+            let targetUrl = "@Url.Action("GetMaterials", "ProductionHistory")";
+            let postData = {
+                "MoProcessId": $("#cboMoProcessId@(itemName)").val(),
+                "VehicleNo": vehicleNo
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<div class="card card-shadow mb-4">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-12">
+                                                    <div class="m-header">
+                                                        <code>#${i + 1}.</code>
+                                                        ${JudgeBindStatus(`${item.BindStatusB}`, `${item.BindStatusL}`)}
+                                                    </div>
+                                                    <div class="materials">
+                                                        <div class="m-img">
+                                                            <i class="fas fa-box-open"></i>
+                                                        </div>
+                                                        <div class="m-info">
+                                                            <span>物料品號: <code>${item.MtlItemNo}</code></span>
+                                                            <span>物料品名: <code>${item.MtlItemName}</code></span>
+                                                            <span>上料方式: <code>${item.BindType == `B` ? `條碼` : `批號`}</code></span>
+                                                        </div>
+                                                        <div class="m-bind">
+                                                            <a href="javascript: Edit@(itemName)('${vehicleNo}', '${moId@(itemName)}', '${item.BindType}', '${item.MtlItemId}');">上料綁定</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                      </div>`;
+                    });
+                }
+                else {
+                    innerHtml += `<span style="font-size: 18px; font-weight: 600;">此製程尚無需設定上料之物料!!</span>`;
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+
+            function JudgeBindStatus(bindStatusB, bindStatusL) {
+                let innerHtml = '';
+                if (bindStatusB == "1" || bindStatusL == "1") {
+                    innerHtml += `<span><i style="color: green;" class="fas fa-check-circle"></i> 已註冊</span>`;
+                }
+                else {
+                    innerHtml += `<span><i style="color: red;" class="fas fa-exclamation-circle"></i> 未註冊</span>`;
+                }
+
+                return innerHtml;
+            }
+
+            $("#materialsData@(itemName)").html(innerHtml);
+        }
+
+        function Edit@(itemName)(VehicleNo, MoId, BindType, MtlItemId) {
+            moId@(itemName) = MoId;
+            bindType@(itemName) = BindType;
+            Switch(`#editData${BindType}@(itemName), .edit-mode`, `#listData@(itemName), .list-mode`);
+            GetVehicleDetail@(itemName)(VehicleNo, BindType, MtlItemId)
+        }
+
+        function GetVehicleDetail@(itemName)(VehicleNo, BindType, MtlItemId) {
+            let innerHtml = '';
+            let vehicleNo = $("#txtVehicleNo@(itemName)").val();
+            let targetUrl = "@Url.Action("GetVehicleDetail", "ProductionHistory")";
+            let postData = {
+                "VehicleNo": VehicleNo,
+                "MoProcessId": $("#cboMoProcessId@(itemName)").val(),
+                "BindType": BindType,
+                "MtlItemId": MtlItemId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td>${i+1}.</td>
+                                        <td>
+                                            ${BindType == `B` ? item.BarcodeNo : item.LotNumberNo}<br>
+                                        </td>
+                                        <td>${BindType == `B` ? item.BarcodeQty : item.LotQty}</td>
+                                        <td class="text-center active-content">
+                                            <a class="active-link" href="javascript:Delete@(itemName)('${item.VdId}');">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="4" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            }
+            else {
+                alert(data.msg);
+            }
+
+            $(`#tblBarcodeComponent${BindType}@(itemName) tbody`).html(innerHtml);
+            TableComponentInit();
+
+            $(`#txtMtlItemId${bindType@(itemName)}@(itemName)`).val(MtlItemId);
+        }
+
+        function SaveB@(itemName)() {
+            let vehicleNo = $("#txtVehicleNo@(itemName)").val();
+            let barcodeNo = $("#txtBarcodeNo@(itemName)").val();
+            let mtlItemId = $(`#txtMtlItemId${bindType@(itemName)}@(itemName)`).val();
+            $("#txtBarcodeNo@(itemName)").val("");
+            if (barcodeNo == "") {
+                alert("上料條碼不能為空!");
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("AddVehicleDetail", "ProductionHistory")";
+            let postData = {
+                "VehicleNo": vehicleNo,
+                "MoProcessId": $("#cboMoProcessId@(itemName)").val(),
+                "BarcodeNo": barcodeNo,
+                "BindType": bindType@(itemName),
+                "MtlItemId": mtlItemId
+            };
+            let result = DataAccess.Add(targetUrl, postData, false, false);
+
+            if (result) {
+                //GetVehicleDetail@(itemName)(vehicleNo, moId@(itemName), bindType@(itemName), mtlItemId);
+                Return@(itemName)();
+            }
+        }
+
+        function SaveL@(itemName)() {
+            let vehicleNo = $("#txtVehicleNo@(itemName)").val();
+            let lotNumber = $("#txtLotNumber@(itemName)").val();
+            let mtlItemId = $(`#txtMtlItemId${bindType@(itemName)}@(itemName)`).val();
+            $("#txtLotNumber@(itemName)").val("");
+            if (lotNumber == "") {
+                alert("上料條碼不能為空!");
+                return false;
+            }
+
+            let targetUrl = "@Url.Action("AddVehicleDetail", "ProductionHistory")";
+            let postData = {
+                "VehicleNo": vehicleNo,
+                "MoProcessId": $("#cboMoProcessId@(itemName)").val(),
+                "LotNumberNo": lotNumber,
+                "BindType": bindType@(itemName),
+                "MtlItemId": mtlItemId
+            };
+            let result = DataAccess.Add(targetUrl, postData, false, false);
+
+            if (result) {
+                //GetVehicleDetail@(itemName)(vehicleNo, moId@(itemName), bindType@(itemName), mtlItemId);
+                Return@(itemName)();
+            }
+        }
+
+        function Return@(itemName)() {
+            $("#txtLotNumber@(itemName)").val("");
+            $("#txtBarcodeNo@(itemName)").val("");
+
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            $("#editDataB@(itemName)").hide();
+            $("#editDataL@(itemName)").hide();
+            $("#txtLotNumber@(itemName)").val("");
+            $("#txtBarcodeNo@(itemName)").val("");
+            GetMaterials@(itemName)();
+        }
+
+        function Delete@(itemName)(VdId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteVehicleDetail", "ProductionHistory")";
+                    let postData = {
+                        "VdId": VdId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        let vehicleNo = $("#txtVehicleNo@(itemName)").val();
+                        let mtlItemId = $(`#txtMtlItemId${bindType@(itemName)}@(itemName)`).val();
+                        GetVehicleDetail@(itemName)(vehicleNo, bindType@(itemName), mtlItemId);
+                    }
+                }
+            });
+        }
+
+        function ChangeVehicle@(itemName)() {
+            $("#modalBindVehicle@(itemName)").modal("hide");
+            $("#txtVehicleNo@(itemName)").val("");
+            $("#txtVehicleNo@(itemName)").focus();
+        }
+    </script>
+)

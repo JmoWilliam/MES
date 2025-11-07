@@ -1,0 +1,491 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProjectUser";
+    string itemNameText = "專案成員";
+}
+
+@Html.Resource("css",
+    @<style>
+        .read-control-icon {
+            color: #cbcbc9;
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            font-size: 20px;
+            margin-top: -5px;
+        }
+
+        .read-control-name {
+            margin-bottom: 10px;
+            padding-left: 30px;
+            display: inline-block;
+        }
+    </style>
+)
+
+<div class="card card-shadow">
+    <div class="card-body">
+        <div class="row" id="listData@(itemName)">
+            <div class="col-12">
+                <form autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-row align-items-center mb-2">
+                            <div class="col-auto">
+                                <select class="form-control" id="cboCompanyIdQ@(itemName)" name="cboCompanyIdQ@(itemName)"></select>
+                            </div>
+                            <div class="col-auto">
+                                <select class="form-control" id="cboDepartmentIdQ@(itemName)" name="cboDepartmentIdQ@(itemName)"></select>
+                            </div>
+                            <div class="col-auto">
+                                <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                       placeholder="請輸入使用者工號/姓名" />
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                <button type="button" class="btn btn-info proj-auth-user-add" onclick="Edit@(itemName)()"><i class="fas fa-plus"></i>新增</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+                <div class="table-custom">
+                    <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="min-width: 125px;" class="change-only">#</th>
+                                <th scope="col" style="min-width: 100px;" class="text-center">代理順序</th>
+                                <th scope="col" style="min-width: 200px;">部門</th>
+                                <th scope="col" style="min-width: 200px;">人員</th>
+                                <th scope="col" style="min-width: 50px;">全選</th>
+                                <th scope="col" style="min-width: 200px;">權限</th>
+                                <th scope="col" style="min-width: 200px;">閱覽檔案等級</th>
+                                <th scope="col" style="min-width: 125px;" class="text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="page@(itemName)"></div>
+            </div>
+        </div>
+        <div class="row" id="editData@(itemName)" style="display: none;">
+            <div class="col-12">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label" for="cboUsers@(itemName)">專案成員 <span class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <div class="input-group">
+                                    <select class="form-control" id="cboUsers@(itemName)" name="cboUsers@(itemName)"
+                                            data-msg-required="請選擇專案成員" data-rule-required="true" multiple></select>
+                                    <div class="input-group-append">
+                                        <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer text-center text-lg-right edit-mode" style="display: none;">
+        <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+        <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            pageIndex: 0,
+            pageSize: 999
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let admin@(itemName) = false;
+        let canEdit@(itemName) = false;
+        let canDelete@(itemName) = false;
+        
+        function Expand@(itemName)() {
+            if (parseInt($("#ProjectId").val()) > 0) {
+                ComboBoxs.Default("#cboCompanyIdQ@(itemName)", "@Url.Action("GetCompany", "BasicInformation")", { Status: "A" }, "", "CHOOSE-NUMBER", "請選擇公司", "CompanyWithNo", "CompanyId");
+                ComboBoxs.Default("#cboDepartmentIdQ@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { Status: "A" }, "", "CHOOSE-NUMBER", "請選擇部門", "DepartmentWithNo", "DepartmentId");
+
+                if (!isMobile) {
+                    $("#cboCompanyIdQ@(itemName), #cboDepartmentIdQ@(itemName)").select2({
+                        dropdownAutoWidth: true,
+                        width: "100%"
+                    });
+                }
+
+                $("#cboCompanyIdQ@(itemName)").change(function () {
+                    ComboBoxs.Default("#cboDepartmentIdQ@(itemName)", "@Url.Action("GetDepartment", "BasicInformation")", { CompanyId: $("#cboCompanyIdQ@(itemName)").val(), Status: "A" }, "", "CHOOSE-NUMBER", "請選擇部門", "DepartmentWithNo", "DepartmentId");
+                });
+
+                Query@(itemName)();
+
+                $("#queryForm@(itemName)").keydown(function (event) {
+                    if (event.keyCode == 13) {
+                        event.preventDefault();
+                        return false;
+                    }
+                });
+            } else {
+                alert("請先儲存專案資料", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            SetProjectAuthority@(itemName)($("#ProjectId").val());
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetProjectUser", "Project")";
+            let postData = {
+                OrderBy: "",
+                PageIndex: (objPage.pageIndex + 1),
+                PageSize: objPage.pageSize,
+                ProjectId: $("#ProjectId").val(),
+                CompanyId: $("#cboCompanyIdQ@(itemName)").val(),
+                DepartmentId: $("#cboDepartmentIdQ@(itemName)").val(),
+                SearchKey: $("#txtSearchKeyQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    admin@(itemName) = data.result.filter(f => f.UserRole == 'Admin').length > 0;
+
+                    @*let userAuthority = data.result.filter(f => f.UserId == @((int)Session["UserId"])).map(m => JSON.parse(m.Authority));
+                    $.each(userAuthority.map(m => m.data), function (i, item) {
+                        canEdit@(itemName) = item.filter(f => f.AuthorityCode == 'user-update' && f.AuthorityStatus == 1).length > 0;
+                        if (canEdit@(itemName)) return false; // 等於break
+                    });*@
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        let authoritys = JSON.parse(item.Authority);
+                        let isChecked = authoritys.data.filter(f => f.AuthorityStatus == 1).length == authoritys.data.length;
+
+                        //<td class="un-auth proj-auth-user-update"><span class="stack-title">#</span>${_row}</td>
+                        //<td class="un-auth proj-auth-user-update ${item.AgentSort == 1 ? `read-only` : ``}"><span class="stack-title">閱覽檔案等級</span>${item.LevelName}</td>
+                        //${item.AgentSort == 1 ? `un-read-only` : ``}
+
+                        innerHtml += `<tr id="${item.ProjectUserId}">
+                                        <td class="text-center active-content change-only">
+                                          <span class="stack-title">#</span>
+                                          ${item.AgentSort == 1 ? `` : canEdit@(itemName) ? `<a class="active-link sort-handle" href="javascript:void(0);"><i class="fas fa-arrows-alt"></i><span>排序</span></a>
+                                            <input type="hidden" id="ProjectUserId-${item.ProjectUserId}" value="${item.ProjectUserId}" />` : ``}
+                                        </td>
+                                        <td class="text-center"><span class="stack-title">代理順序</span>${item.AgentSort == 1 ? `<i class="fas fa-crown" style="color: gold;"></i>` : item.AgentSort}</td>
+                                        <td><span class="stack-title">部門</span>${item.LogoIcon == -1 ? `` : `<img class="company-logo" src="/Web/GetFile?fileId=${item.LogoIcon}" />`}${item.DepartmentNo} ${item.DepartmentName}</td>
+                                        <td><span class="stack-title">人員</span>${item.Gender == `M` ? `<span class="gender-male"><i class="fas fa-male"></i></span>` : item.Gender == `F` ? `<span class="gender-female"><i class="fas fa-female"></i></span>` : ``}${item.UserNo} ${item.UserName}</td>
+                                        <td><span class="stack-title">全選</span>
+                                            ${item.AgentSort == 1 ?
+                                                admin@(itemName) && !isChecked ? `
+                                                <label class="control control-solid control-solid-info control--checkbox">
+                                                    <input type="checkbox" id="cbxSelectAll@(itemName)-${item.ProjectUserId}" name="cbxSelectAll@(itemName)" class="cbxSelectAll@(itemName)" value="${item.ProjectUserId}" ${isChecked ? `checked` : ``} />
+                                                    <span class="control__indicator"></span>
+                                                </label>` :
+                                                `<div class="col read-only">
+                                                    <span class="read-control-icon"><i class="far ${isChecked ? `fa-check-square` : `fa-square`}"></i></span>
+                                                 </div>` :
+                                                admin@(itemName) || canEdit@(itemName) ? `
+                                                <label class="control control-solid control-solid-info control--checkbox">
+                                                    <input type="checkbox" id="cbxSelectAll@(itemName)-${item.ProjectUserId}" name="cbxSelectAll@(itemName)" class="cbxSelectAll@(itemName)" value="${item.ProjectUserId}" ${isChecked ? `checked` : ``} />
+                                                    <span class="control__indicator"></span>
+                                                </label>` :
+                                                `<div class="col read-only">
+                                                    <span class="read-control-icon"><i class="far ${isChecked ? `fa-check-square` : `fa-square`}"></i></span>
+                                                 </div>`
+                                            }
+                                        </td>
+                                        <td>
+                                          <span class="stack-title">權限</span>
+                                          <div class="row row-cols-2 row-cols-lg-3">${Authority@(itemName)(item.ProjectUserId, item.Authority, item.AgentSort)}</div>
+                                        </td>
+                                        <td>
+                                          <span class="stack-title">閱覽檔案等級</span>
+                                            ${canEdit@(itemName) ? `<select class="form-control proj-auth-user-update" name="cboLevelId@(itemName)" data-project-user-id="${item.ProjectUserId}" data-level-id="${item.LevelId}"></select>` : ``}
+                                        </td>
+                                        <td class="text-center active-content">
+                                          <span class="stack-title">操作</span>
+                                            ${item.AgentSort == 1 ? `` : canDelete@(itemName) ? `<a class="active-link proj-auth-user-delete" href="javascript:Delete@(itemName)(${item.ProjectUserId});"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+            ProjectAuthorityControl();
+            PageAuthorityControl();
+
+            ComboBoxs.Default("select[name=cboLevelId@(itemName)]", "@Url.Action("GetFileLevel", "PmisBasicInformation")", { Status: "A" }, "", "CHOOSE-NUMBER", "", "LevelName", "LevelId");
+
+            $(`input[name=cbxSelectAll@(itemName)]`).each(function(){
+                $(this).off("click").on("click", function () {
+                    if ($(this).is(":checked")) {
+                        $(`input[type='checkbox'][data-project-user-id='${$(this).val()}']`).not(":disabled").prop("checked", true);
+                    } else {
+                        $(`input[type='checkbox'][data-project-user-id='${$(this).val()}']`).not(":disabled").prop("checked", false);
+                    }
+
+                    let targetUrl = "@Url.Action("UpdateProjectAllUserAuthority", "Project")";
+                    let postData = {
+                        ProjectUserId: $(this).val(),
+                        Checked: $(this).is(":checked")
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, false);
+                });
+            });
+
+            $("select[name=cboLevelId@(itemName)]").each(function () {
+                $(this).val($(this).data("level-id"));
+            });
+
+            let isChange = getObjects(JSON.parse($("#projectAuthority").val()), "AuthorityCode", "change")[0].Authority;
+            if (isChange == 1) {
+                $(".change-only").show();
+                $("#tblData@(itemName) tbody").sortable({
+                    cancel: ".disabled-sort",
+                    handle: ".sort-handle",
+                    update: function (event, ui) {
+                        let targetUrl = "@Url.Action("UpdateProjectUserAgentSort", "Project")";
+                        let postData = {
+                            ProjectId: $("#ProjectId").val(),
+                            ProjectUserList: $(this).sortable("toArray", { attribute: 'id' }).join()
+                        };
+
+                        let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                        if (result) {
+                            Query@(itemName)();
+                        }
+                    }
+                });
+            } else {
+                $(".change-only").hide();
+            }
+            $(".read-only").show();
+            $(".un-read-only").hide();
+
+            $("input[name=cbxAuthority@(itemName)]").off("change").on("change", function () {
+                let projectUserId = $(this).data("project-user-id");
+                let authorityId = $(this).data("authority-id");
+
+                let targetUrl = "@Url.Action("UpdateProjectUserAuthority", "Project")";
+                let postData = {
+                    ProjectUserId: projectUserId,
+                    AuthorityId: authorityId,
+                    Checked: $(this).is(":checked")
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, false);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            });
+
+            $("select[name=cboLevelId@(itemName)]").off("change").on("change", function () {
+                let projectUserId = $(this).data("project-user-id");
+
+                let targetUrl = "@Url.Action("UpdateProjectUserLevel", "Project")";
+                let postData = {
+                    ProjectUserId: projectUserId,
+                    LevelId: $(`select[name=cboLevelId@(itemName)][data-project-user-id=${projectUserId}]`).val()
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, false);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            });
+
+            if (!isMobile) {
+                $("select[name=cboLevelId@(itemName)]").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            function Authority@(itemName)(projectUserId, source, sort) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    for (let x = 0; x < json.data.length; x++) {
+                        let isChecked = parseInt(json.data[x].AuthorityStatus) == 1;
+                        if (sort == 1) {
+                            if (admin@(itemName) && !isChecked) {
+                                //可選方塊
+                                html += `<div class="col">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                ${json.data[x].AuthorityName}
+                                                <input type="checkbox" name="cbxAuthority@(itemName)" data-project-user-id="${projectUserId}" data-authority-id="${json.data[x].AuthorityId}"
+                                                    ${isChecked ? `checked` : ``} />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </div>`;
+                            }
+                            else {
+                                //唯讀方塊
+                                html += `<div class="col read-only">
+                                            <span class="read-control-icon">
+                                                <i class="far ${isChecked ? `fa-check-square` : `fa-square`}"></i>
+                                            </span>
+                                            <span class="read-control-name">${json.data[x].AuthorityName}</span>
+                                         </div>`
+                            }
+                        }
+                        else {
+                            if (admin@(itemName) || canEdit@(itemName)) {
+                                //可選方塊
+                                html += `<div class="col">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                                ${json.data[x].AuthorityName}
+                                                <input type="checkbox" name="cbxAuthority@(itemName)" data-project-user-id="${projectUserId}" data-authority-id="${json.data[x].AuthorityId}"
+                                                    ${isChecked ? `checked` : ``} />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </div>`;
+                            }
+                            else {
+                                //唯讀方塊
+                                html += `<div class="col read-only">
+                                        <span class="read-control-icon">
+                                            <i class="far ${isChecked ? `fa-check-square` : `fa-square`}"></i>
+                                        </span>
+                                        <span class="read-control-name">${json.data[x].AuthorityName}</span>
+                                     </div>`
+                            }
+                        }
+                    }
+
+                    //if (sort == 1) {
+                    //    for (let x = 0; x < json.data.length; x++) {
+                    //        html += `<div class="col un-auth proj-auth-user-update ${sort == 1 ? `read-only` : ``}">
+                    //                    <span class="read-control-icon">
+                    //                        <i class="far ${parseInt(json.data[x].AuthorityStatus) == 1 ? `fa-check-square` : `fa-square`}"></i>
+                    //                    </span>
+                    //                    <span class="read-control-name">${json.data[x].AuthorityName}</span>
+                    //                 </div>`
+                    //    }
+                    //}
+                }
+
+                return html;
+            }
+        }
+
+        function Edit@(itemName)() {
+            Switch("#editData@(itemName), .edit-mode", "#listData@(itemName), .list-mode");
+
+            ComboBoxs.Default("#cboUsers@(itemName)", "@Url.Action("GetUser", "BasicInformation")", { Status: "A" }, "", "CHOOSE-NUMBER", "請選擇任務成員", "UserWithNo", "UserId");
+
+            if (!isMobile) {
+                $("#cboUsers@(itemName)").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+
+            let popConfig = {
+                targetSelector: "#cboUsers@(itemName)",
+                popFunction: "PopViewUser",
+                objectUserId: "#cboUsers@(itemName)",
+                type: "checkbox"
+            };
+            InitPopView(popConfig);
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let targetUrl = "@Url.Action("AddProjectUser", "Project")";
+                let postData = {
+                    ProjectId: $("#ProjectId").val(),
+                    Users: $("#cboUsers@(itemName) option:selected").toArray().map(item => item.value).join()
+                };
+
+                let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                if (result) {
+                    Return@(itemName)();
+                }
+            }
+        }
+
+        function Delete@(itemName)(ProjectUserId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteProjectUser", "Project")";
+                    let postData = {
+                        ProjectUserId: ProjectUserId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Query@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName), .list-mode", "#editData@(itemName), .edit-mode");
+            Query@(itemName)();
+        }
+
+        function SetProjectAuthority@(itemName)(ProjectId) {
+            let targetUrl = "@Url.Action("SetProjectAuthority", "Project")";
+            let postData = {
+                ProjectId: ProjectId
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $("#projectAuthority").val(JSON.stringify(data.result));
+                ProjectAuthorityControl();
+                canEdit@(itemName) = data.result.filter(f => f.AuthorityCode == 'user-update' && f.Authority == 1).length > 0;
+                canAdd@(itemName) = data.result.filter(f => f.AuthorityCode == 'user-add' && f.Authority == 1).length > 0;
+                canDelete@(itemName) = data.result.filter(f => f.AuthorityCode == 'user-delete' && f.Authority == 1).length > 0;
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+    </script>
+)

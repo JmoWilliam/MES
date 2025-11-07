@@ -1,0 +1,599 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "TemplateTaskGantt";
+    string parentName = "TemplateManagement";
+    string itemNameText = "任務甘特圖";
+}
+
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/dhtmlx/gantt.commercial/7.1.12/dhtmlxgantt.css")" rel="stylesheet" />
+)
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="container-fluid">
+                    <div class="gantt-container">
+                        <form class="gantt-control">
+                            <a class="btn btn-light" href="javascript:void(0);" onclick="GanttZoom@(itemName)('default')"><i class="fas fa-search"></i>預設檢視</a>
+                            <a class="btn btn-light" href="javascript:void(0);" onclick="GanttZoom@(itemName)('in')"><i class="fas fa-search-plus"></i>放大</a>
+                            <a class="btn btn-light" href="javascript:void(0);" onclick="GanttZoom@(itemName)('out')"><i class="fas fa-search-minus"></i>縮小</a>
+                            <label class="control control-solid control-solid-info control--radio">
+                                半時 檢視
+                                <input type="radio" name="rdoScale@(itemName)" value="half-hour" />
+                                <span class="control__indicator"></span>
+                            </label>
+                            <label class="control control-solid control-solid-info control--radio">
+                                時 檢視
+                                <input type="radio" name="rdoScale@(itemName)" value="hour" />
+                                <span class="control__indicator"></span>
+                            </label>
+                            <label class="control control-solid control-solid-info control--radio">
+                                日 檢視
+                                <input type="radio" name="rdoScale@(itemName)" value="day" />
+                                <span class="control__indicator"></span>
+                            </label>
+                            <label class="control control-solid control-solid-info control--radio">
+                                週 檢視
+                                <input type="radio" name="rdoScale@(itemName)" value="week" checked />
+                                <span class="control__indicator"></span>
+                            </label>
+                            <label class="control control-solid control-solid-info control--radio">
+                                月 檢視
+                                <input type="radio" name="rdoScale@(itemName)" value="month" />
+                                <span class="control__indicator"></span>
+                            </label>
+                            <label class="control control-solid control-solid-info control--radio">
+                                季 檢視
+                                <input type="radio" name="rdoScale@(itemName)" value="quarter" />
+                                <span class="control__indicator"></span>
+                            </label>
+                            <button type="button" class="btn btn-danger" onclick="Reset@(itemName)()"><i class="fas fa-undo"></i>復原</button>
+                        </form>
+                        <div class="gantt-body" id="gantt@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script src="@Url.Content("~/Scripts/dhtmlx/gantt.commercial/7.1.12/dhtmlxgantt.js")"></script>
+)
+
+@Html.Resource("js",
+    @<script>
+        let gantt@(itemName);
+
+        function Expand@(itemName)() {
+            if (parseInt($("#TemplateId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+
+                InitData@(itemName)();
+            } else {
+                alert("請先儲存樣板資料", "alert");
+            }
+        }
+
+        function InitData@(itemName)() {
+            let targetUrl = "@Url.Action("GetTemplateTaskGantt", "PmisBasicInformation")";
+            let postData = {
+                "TemplateId": $("#TemplateId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                Gantt@(itemName)(data.result);
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function Gantt@(itemName)(data) {
+            if (gantt@(itemName)) gantt@(itemName).destructor();
+            gantt@(itemName) = Gantt.getGanttInstance();
+
+            //#region 時間格式組態檔
+            let dateToStr = gantt@(itemName).date.date_to_str("%Y-%m-%d"); //日期格式
+            let dateOfWeekToStr = gantt@(itemName).date.date_to_str("%Y-%m-%d (%D)"); //日期格式(含星期)
+            let datetimeToStr = gantt@(itemName).date.date_to_str("%Y-%m-%d %H:%i"); //日期時間格式
+            let timeToStr = gantt@(itemName).date.date_to_str("%H:%i"); //時間格式
+            //#endregion
+
+            //#region 檢視組態檔
+            let minuteFormat = function (step) {
+                return function (date) {
+                    var intervalEnd = new Date(gantt@(itemName).date.add(date, step, "minute") - 1)
+                    return timeToStr(date);
+                };
+            };
+
+            let minuteRangeFormat = function (step) {
+                return function (date) {
+                    var intervalEnd = new Date(gantt@(itemName).date.add(date, step, "minute") - 1)
+                    return timeToStr(date) + " - " + timeToStr(intervalEnd);
+                };
+            };
+
+            let hourFormat = function (step) {
+                return function (date) {
+                    var intervalEnd = new Date(gantt@(itemName).date.add(date, step, "hour") - 1)
+                    return timeToStr(date);
+                };
+            };
+
+            let hourRangeFormat = function (step) {
+                return function (date) {
+                    var intervalEnd = new Date(gantt@(itemName).date.add(date, step, "hour") - 1)
+                    return timeToStr(date) + " - " + timeToStr(intervalEnd);
+                };
+            };
+
+            let zoomConfig = {
+                levels: [
+                    {
+                        name: "half-hour",
+                        scale_height: 70,
+                        min_column_width: 70,
+                        scales: [
+                            { unit: "day", step: 1, format: "%m月%d日" },
+                            { unit: "minute", step: 30, format: minuteFormat(30) }
+                        ]
+                    },
+                    {
+                        name: "hour",
+                        scale_height: 70,
+                        min_column_width: 70,
+                        scales: [
+                            { unit: "day", step: 1, format: "%m月%d日 (%D)" },
+                            { unit: "hour", step: 1, format: "%H:%i" }
+                        ]
+                    },
+                    {
+                        name: "day",
+                        scale_height: 70,
+                        min_column_width: 110,
+                        scales: [
+                            { unit: "week", step: 1, format: "%Y年 第%w週" },
+                            { unit: "day", step: 1, format: "%m月%d日 (%D)" }
+                        ]
+                    },
+                    {
+                        name: "week",
+                        scale_height: 70,
+                        min_column_width: 100,
+                        scales: [
+                            { unit: "month", step: 1, format: "%Y年 %F" },
+                            { unit: "week", step: 1, format: "第%w週" }
+                        ]
+                    },
+                    {
+                        name: "month",
+                        scale_height: 70,
+                        min_column_width: 100,
+                        scales: [
+                            { unit: "year", step: 1, format: "%Y年" },
+                            { unit: "month", step: 1, format: "%F" }
+                        ]
+                    },
+                    {
+                        name: "quarter",
+                        scale_height: 70,
+                        min_column_width: 150,
+                        scales: [
+                            { unit: "year", step: 1, format: "%Y年" },
+                            {
+                                unit: "quarter", step: 1, format: function (date) {
+                                    var dateToStr = gantt@(itemName).date.date_to_str("%F");
+                                    var endDate = gantt@(itemName).date.add(gantt@(itemName).date.add(date, 3, "month"), -1, "day");
+                                    return dateToStr(date) + " ~ " + dateToStr(endDate);
+                                }
+                            }
+                        ]
+                    }
+                ]
+            };
+            gantt@(itemName).ext.zoom.init(zoomConfig); //設定檢視
+            gantt@(itemName).ext.zoom.setLevel($("input[name='rdoScale@(itemName)']:checked").val());
+            //#endregion
+
+            //#region 欄位組態檔
+            let columnsConfig = [
+                { name: "text", tree: true, width: '*', min_width: 200, resize: true },
+                {
+                    name: "start_date", align: "center", width: 130, min_width: 130, max_width: 130, resize: true, template: function (obj) {
+                        return datetimeToStr(obj.start_date);
+                    }
+                },
+                {
+                    name: "end_date", align: "center", width: 130, min_width: 130, max_width: 130, resize: true, template: function (obj) {
+                        return datetimeToStr(obj.end_date);
+                    }
+                },
+                {
+                    name: "duration", align: "center", width: 130, min_width: 130, max_width: 130, resize: true, template: function (obj) {
+                        let days = parseInt(obj.duration / 60 / 24);
+                        let hours = parseInt((obj.duration - days * 24 * 60) / 60);
+                        let minutes = parseInt(obj.duration - (days * 24 * 60) - (hours * 60));
+
+                        let output = `${days > 0 ? `${days} 天` : ``} ${hours > 0 ? `${hours} 小時` : ``} ${minutes > 0 ? `${minutes} 分` : ``}`;
+
+                        return output;
+                    }
+                }
+            ];
+            gantt@(itemName).config.columns = columnsConfig; //設定欄位
+            //#endregion
+
+            //#region 版面配置組態檔
+            let layoutConfig = {
+                css: "gantt_container",
+                cols: [
+                    {
+                        width: 500,
+                        rows: [
+                            { view: "grid", scrollX: "gridScroll", scrollable: true, scrollY: "scrollVer" },
+                            { view: "scrollbar", id: "gridScroll", group: "horizontal" }
+                        ]
+                    },
+                    { resizer: false, width: 1 },
+                    {
+                        rows: [
+                            { view: "timeline", scrollX: "scrollHor", scrollY: "scrollVer" },
+                            { view: "scrollbar", id: "scrollHor", group: "horizontal" }
+                        ]
+                    },
+                    { view: "scrollbar", id: "scrollVer" }
+                ]
+            }
+            gantt@(itemName).config.layout = layoutConfig; //設定版面配置
+            //#endregion
+
+            gantt@(itemName).i18n.setLocale(ganttLocales); //設定語系
+            gantt@(itemName).message.position = "bottom"; //提示訊息位置
+            gantt@(itemName).plugins({
+                auto_scheduling: true, //自動排程
+                drag_timeline: true, //拖拉時間軸
+                fullscreen: true, //全螢幕模式
+                multiselect: true, //任務多選
+                tooltip: true, //任務資訊查看
+                marker: true, //標記線
+            });
+
+            gantt@(itemName).config.date_format = "%Y-%m-%d %H:%i:%s"; //日期格式
+            gantt@(itemName).config.work_time = ($("#cboWorkTimeStatus@(parentName)").val() == "Y") // 工作天模式
+            gantt@(itemName).config.duration_unit = "minute"; //持續時間單位
+            gantt@(itemName).config.skip_off_time = false; // 隱藏休息日
+            gantt@(itemName).config.start_on_monday = false; //一周起始
+            gantt@(itemName).config.round_dnd_dates = false; //不允許將任務的開始和結束日期四捨五入到最接近的刻度標記
+            //gantt@(itemName).config.order_branch = "marker"; //任務之間拖曳
+            gantt@(itemName).config.scroll_size = 10;  //滾動條
+            gantt@(itemName).config.time_step = 30;
+
+            gantt@(itemName).config.drag_project = true; //專案類型任務允許拖曳
+            gantt@(itemName).config.drag_progress = false; //任務進度禁止調整
+
+            //#region 設定工作時段
+            if ($("#cboWorkTimeStatus@(parentName)").val() == "Y" && $("#txtWorkTimeInterval@(parentName)").val()) {
+                let hourDatas = ToHalfChar($("#txtWorkTimeInterval@(parentName)").val());
+                let hourRanges = hourDatas.split(',');
+                let ranges = [];
+
+                $.each(hourRanges, function (i, d) {
+                    let t = d.split('-');
+                    if (t.length == 2) {
+                        if (t[0] > t[1]) {
+                            ranges.push(t[0] + '-24:00');
+                            ranges.push('00:00-' + t[1]);
+                        } else {
+                            ranges.push(d);
+                        }
+                    }
+                });
+                gantt@(itemName).setWorkTime({ hours: ranges.sort() });
+            }
+            //#endregion
+
+            //#region 自動排程
+            gantt@(itemName).config.auto_scheduling = true; //自動排程
+            gantt@(itemName).config.auto_scheduling_strict = true; //連結任務需接續進行
+            gantt@(itemName).config.auto_scheduling_compatibility = true; //自動調度相容性(開啟後自動可能導致往後位移)
+            gantt@(itemName).attachEvent("onBeforeAutoSchedule", DelayTrigger(function () {
+                gantt@(itemName).message({
+                    text: '重新計算中...',
+                    expire: 1000
+                });
+                return true;
+            }, 100));
+
+            gantt@(itemName).attachEvent("onAfterTaskUpdate", function (taskId, task) { //更新任務後觸發 (僅傳出受影響的task)
+                gantt@(itemName).autoSchedule(); //重新計算專案進度
+            });
+
+            gantt@(itemName).attachEvent("onTaskDrag", function (taskId, mode, task, original) { //任務拖曳時
+                let modes = gantt@(itemName).config.drag_mode;
+                if (mode == modes.move) {
+                    let diff = task.start_date - original.start_date;
+                    gantt@(itemName).eachTask(function (child) {
+                        if (child.$source.length != 0 || child.$target.length != 0) {
+                            child.start_date = new Date(+child.start_date + diff);
+                            child.end_date = new Date(+child.end_date + diff);
+                            gantt@(itemName).refreshTask(child.id, true);
+                        }
+                    }, taskId);
+                }
+                return true;
+            });
+
+            gantt@(itemName).attachEvent("onAfterTaskAutoSchedule", function (task, new_date, constraint, predecessor) {
+                if (task && predecessor) {
+                    let text = `
+                        <i class="fas fa-chevron-double-left"></i> <b class="text-danger">${task.text}</b> <i class="fas fa-chevron-double-right"></i><br />
+                        調整為 ${dateOfWeekToStr(new_date)} 開始`;
+
+                    gantt@(itemName).message({
+                        text: text,
+                        expire: 1000
+                    });
+                }
+            });
+
+            gantt@(itemName).attachEvent("onAfterAutoSchedule", DelayTrigger(function (taskId, updatedTasks) {
+                let taskJson = JSON.parse('{ "data" : []}');
+                gantt@(itemName).eachTask(function (task) {
+                    if (task.id != "1.1") {
+                        let json = {
+                            TemplateTaskId: task.id,
+                            StartDate: datetimeToStr(task.start_date),
+                            Duration: task.duration
+                        };
+                        taskJson.data.push(json);
+                    }
+                });
+
+                let targetUrl = "@Url.Action("UpdateTemplateAllTaskSchedule", "PmisBasicInformation")";
+                let postData = {
+                    "TaskData": JSON.stringify(taskJson)
+                };
+
+                let result = DataAccess.Update(targetUrl, postData, false, false);
+            }, 250));
+            //#endregion
+
+            //#region 全螢幕模式
+            gantt@(itemName).attachEvent("onTemplatesReady", function () {
+                let toggle = document.createElement("i");
+                toggle.className = "fas fa-expand-alt gantt-fullscreen";
+                gantt@(itemName).toggleIcon = toggle;
+                gantt@(itemName).$container.appendChild(toggle);
+                toggle.onclick = function () {
+                    gantt@(itemName).ext.fullscreen.toggle();
+                };
+            });
+
+            gantt@(itemName).attachEvent("onExpand", function () {
+                let icon = gantt@(itemName).toggleIcon;
+                if (icon) {
+                    icon.className = icon.className.replace("fa-expand-alt", "fa-compress-alt");
+                }
+
+                $(".gantt-body").addClass("fullscreen");
+                $(".smart-scroll").removeClass("scrolled-up").addClass("scrolled-down");
+            });
+
+            gantt@(itemName).attachEvent("onCollapse", function () {
+                let icon = gantt@(itemName).toggleIcon;
+                if (icon) {
+                    icon.className = icon.className.replace("fa-compress-alt", "fa-expand-alt");
+                }
+
+                $(".gantt-body").removeClass("fullscreen");
+                $(".smart-scroll").removeClass("scrolled-down").addClass("scrolled-up");
+                ScrollPosition(0, GetElementPosition(`#tabTemplateTaskGantt`).y - 63);
+            });
+
+            gantt@(itemName).ext.fullscreen.getFullscreenElement = function () {
+                return $(".gantt-container")[0];
+            }
+            //#endregion
+
+            //#region 標記線
+            let markerId = gantt@(itemName).addMarker({
+                start_date: new Date(`${dateToStr(new Date())} 08:00`), //a Date object that sets the marker's date
+                css: "today", //a CSS class applied to the marker
+                text: `<i class="fas fa-flag"></i> 基準日`, //the marker title
+                title: dateOfWeekToStr(new Date()) // the marker's tooltip
+            });
+
+            gantt@(itemName).getMarker(markerId);
+            //#endregion
+
+            //#region 任務資訊查看
+            gantt@(itemName).templates.tooltip_text = function (start, end, task) {
+                return `
+                    <b>任務:</b> ${task.text} <br/>
+                    <b>開始時間:</b> ${datetimeToStr(start)} <br/>
+                    <b>結束時間:</b> ${datetimeToStr(end)}`;
+            };
+            //#endregion
+
+            //#region 檢視
+            gantt@(itemName).ext.zoom.attachEvent("onAfterZoom", function (level, config) {
+                $(`input[name="rdoScale@(itemName)"][value="${config.name}"]`).prop("checked", true);
+            });
+
+            $("input[name='rdoScale@(itemName)']").off("change").on("change", function () {
+                gantt@(itemName).ext.zoom.setLevel($("input[name='rdoScale@(itemName)']:checked").val());
+            });
+            //#endregion
+
+            //#region 自定義任務條文字
+            gantt@(itemName).templates.task_text = function (start, end, task) {
+                return task.text;
+            };
+            //#endregion
+
+            //#region 自定義每個row的class
+            gantt@(itemName).templates.grid_row_class = gantt@(itemName).templates.task_row_class = function (start, end, task) {
+                return "";
+            };
+            //#endregion
+
+            //#region 自定義每個任務條的class
+            gantt@(itemName).templates.task_class = function (start, end, task) {
+                return "";
+            };
+            //#endregion
+
+            //#region 自定義彈跳視窗
+            gantt@(itemName).showLightbox = function (id) {
+                if (id != "1.1") {
+                    EditViewTemplateTask(id);
+                }
+            }
+            //#endregion
+
+            //#region 自定義連結拖曳文字
+            gantt@(itemName).templates.drag_link = function (from, from_start, to, to_start) {
+                from = gantt@(itemName).getTask(from);
+
+                let text = `
+                    從 <i class="fas fa-chevron-double-left"></i> <b class="text-danger">${from.text}</b> (${(from_start ? `開始` : `結束`)}) <i class="fas fa-chevron-double-right"></i><br />`;
+                if (to) {
+                    to = gantt@(itemName).getTask(to);
+                    text += `
+                        連結到 <i class="fas fa-chevron-double-left"></i> <b class="text-danger">${to.text}</b> (${(to_start ? `開始` : `結束`)}) <i class="fas fa-chevron-double-right"></i>`;
+                }
+
+                return text;
+            };
+            //#endregion
+
+            //#region 自定義連結刪除提示框文字
+            gantt@(itemName).templates.link_description = function (link) {
+                let from = gantt@(itemName).getTask(link.source),
+                    to = gantt@(itemName).getTask(link.target),
+                    types = gantt@(itemName).config.links;
+
+                let fromStart = link.type == types.start_to_start || link.type == types.start_to_finish;
+                let toStart = link.type == types.finish_to_start || link.type == types.start_to_start;
+                let text = `
+                    是否要刪除連結？<br /> 
+                    <i class="fas fa-chevron-double-left"></i> <b class="text-danger">${from.text}</b> (${(fromStart ? `開始` : `結束`)}) <i class="fas fa-chevron-double-right"></i><br />
+                    到<br />
+                    <i class="fas fa-chevron-double-left"></i> <b class="text-danger">${to.text}</b> (${(toStart ? `開始` : `結束`)}) <i class="fas fa-chevron-double-right"></i>`;
+
+                return text;
+            };
+            //#endregion
+
+            //#region 新增連結判斷
+            gantt@(itemName).attachEvent("onBeforeLinkAdd", function (id, link) {
+                if (link.type != '0') {
+                    let from = gantt@(itemName).getTask(link.source),
+                        to = gantt@(itemName).getTask(link.target),
+                        types = gantt@(itemName).config.links;
+
+                    let fromStart = link.type == types.start_to_start || link.type == types.start_to_finish;
+                    let toStart = link.type == types.finish_to_start || link.type == types.start_to_start;
+                    let text = `
+                        無法從<br />
+                        <i class="fas fa-chevron-double-left"></i> <b class="text-danger">${from.text}</b> (${(fromStart ? `開始` : `結束`)}) <i class="fas fa-chevron-double-right"></i><br />
+                        連結到<br />
+                        <i class="fas fa-chevron-double-left"></i> <b class="text-danger">${to.text}</b> (${(toStart ? `開始` : `結束`)}) <i class="fas fa-chevron-double-right"></i>`;
+
+                    gantt@(itemName).message({
+                        text: text,
+                        expire: 1000
+                    });
+                    return false;
+                } else {
+                    //#region 新增連結
+                    let targetUrl = "@Url.Action("AddTemplateTaskLink", "PmisBasicInformation")";
+                    let postData = {
+                        "SourceTaskId": link.source,
+                        "TargetTaskId": link.target,
+                        "LinkType": link.type
+                    };
+
+                    let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                    if (!!data) {
+                        $.each(data.result, function (i, item) {
+                            link.id = item.TemplateTaskLinkId;
+                        });
+                        return true;
+                    } else {
+                        return false;
+                    }
+                    //#endregion
+                }
+            });
+            //#endregion
+
+            //#region 新增連結之後
+            gantt@(itemName).attachEvent("onAfterLinkAdd", function (id, link) {
+                gantt@(itemName).autoSchedule(); //重新計算專案進度
+            });
+           //#endregion
+
+            //#region 刪除連結
+            gantt@(itemName).attachEvent("onBeforeLinkDelete", function (id, item) {
+                let targetUrl = "@Url.Action("DeleteTemplateTaskLink", "PmisBasicInformation")";
+                let postData = {
+                    "TemplateTaskLinkId": id,
+                    "SourceTaskId": item.source,
+                    "TargetTaskId": item.target,
+                    "LinkType": item.type
+                };
+
+                let result = DataAccess.Delete(targetUrl, postData, false, false);
+
+                if (result) {
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+            //#endregion
+
+            //#region 不同父任務之間不允許移動
+            gantt@(itemName).attachEvent("onBeforeTaskMove", function (id, parent, tindex) {
+                var task = gantt@(itemName).getTask(id);
+                if (task.parent != parent)
+                    return false;
+                return true;
+            });
+            //#endregion
+
+            gantt@(itemName).init("gantt@(itemName)");
+            gantt@(itemName).parse(data);
+        }
+
+        function GanttZoom@(itemName)(type) {
+            switch (type) {
+                case "default":
+                    gantt@(itemName).ext.zoom.setLevel("week");
+                    break;
+                case "in":
+                    gantt@(itemName).ext.zoom.zoomIn();
+                    break;
+                case "out":
+                    gantt@(itemName).ext.zoom.zoomOut()
+                    break;
+            }
+        }
+
+        function Reset@(itemName)() {
+            InitData@(itemName)();
+        }
+    </script>
+)

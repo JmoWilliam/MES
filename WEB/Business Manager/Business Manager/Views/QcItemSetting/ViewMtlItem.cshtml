@@ -1,0 +1,244 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewMtlItem";
+    string itemNameText = "查看品號相關資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3" id="query@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入品號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNameQ@(itemName)" name="txtMtlItemNameQ@(itemName)"
+                                               placeholder="請輸入品名" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtCustomerMtlItemNoQ@(itemName)" name="txtCustomerMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入部番" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 175px;">品號</th>
+                                        <th scope="col" style="min-width: 175px;">品名</th>
+                                        <th scope="col" style="min-width: 200px;">部番</th>
+                                        <th scope="col" style="min-width: 150px;">規格</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let targetSelector@(itemName);
+        let mtlItemId@(itemName);
+        let mtlItemNo@(itemName);
+        let mtlItemName@(itemName);
+        let mtlItemSpec@(itemName);
+        let inventoryId@(itemName);
+        let uomId@(itemName);
+        let uomNo@(itemName);
+        let mtlModify@(itemName);
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            mtlItemId@(itemName) = config.objectMtlItemId;
+            mtlItemNo@(itemName) = config.objectMtlItemNo;
+            mtlItemName@(itemName) = config.objectMtlItemName;
+            mtlItemSpec@(itemName) = config.objectMtlItemSpec;
+            inventoryId@(itemName) = config.objectInventoryId;
+            uomId@(itemName) = config.objectUomId;
+            uomNo@(itemName) = config.objectUomNo;
+            mtlModify@(itemName) = config.objectMtlModify;
+            
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetMtlItem", "Product")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+                "MtlItemName": $("#txtMtlItemNameQ@(itemName)").val(),
+                "CustomerMtlItemNo": $("#txtCustomerMtlItemNoQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        let CustomerMtlItemRow = 0;
+                        let CustomerMtlItem;
+                        if (item.CustomerMtlItem) {
+                            CustomerMtlItem = JSON.parse(item.CustomerMtlItem);
+                            CustomerMtlItemRow = CustomerMtlItem.data.length;
+                        }
+
+                        innerHtml += `<tr>
+                                        <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)}>${_row}</td>
+                                        <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)} class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 175px;">${item.MtlItemNo}</td>
+                                        <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)} class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 175px;">${item.MtlItemName}</td>
+                                        ${CustomerMtlItemRow > 0
+                                            ? `<td class="ellipsis" data-toggle="tooltip" title="${CustomerMtlItem.data[0].CustomerMtlItemNo}(${CustomerMtlItem.data[0].CustomerNo})" style="max-width: 200px;">${CustomerMtlItem.data[0].CustomerMtlItemNo}<code>(${CustomerMtlItem.data[0].CustomerNo})</code></td>`
+                                            : `<td ${(CustomerMtlItemRow > 1 ? `rowspan="${CustomerMtlItemRow}"` : ``)}></td>`
+                                        }
+                                        <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)} class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 150px;">${item.MtlItemSpec}</td>
+                                        <td ${(CustomerMtlItemRow > 0 ? `rowspan="${CustomerMtlItemRow}"` : ``)} class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" name="chkMtlItemId@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtMtlItemNo@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemNo}" />
+                                          <input type="hidden" name="txtMtlItemName@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemName}" />
+                                          <input type="hidden" name="txtMtlItemSpec@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlItemSpec}" />
+                                          <input type="hidden" name="txtInventoryId@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.InventoryId}" />
+                                          <input type="hidden" name="txtUomId@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.InventoryUomId}" />
+                                          <input type="hidden" name="txtUomNo@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.InventoryUomNo}" />
+                                          <input type="hidden" name="txtMtlModify@(itemName)" data-mtl-item-id="${item.MtlItemId}" value="${item.MtlModify}" />
+                                        </td>
+                                      </tr>
+                                      ${CustomerMtlItem@(itemName)(item.CustomerMtlItem)}`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="11" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-mtl-item-id]:checked") {
+                    let mtlItemId = $(this).data("mtl-item-id");
+
+                    if (mtlItemId) {
+                        let mtlItemNo = $(`input[name="txtMtlItemNo@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let mtlItemName = $(`input[name="txtMtlItemName@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let mtlItemSpec = $(`input[name="txtMtlItemSpec@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let inventoryId = $(`input[name="txtInventoryId@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let uomId = $(`input[name="txtUomId@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let uomNo = $(`input[name="txtUomNo@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+                        let mtlModify = $(`input[name="txtMtlModify@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val();
+
+                        if (mtlItemId@(itemName)) ElementSetValue(mtlItemId@(itemName), mtlItemId, "change");
+                        if (mtlItemNo@(itemName)) ElementSetValue(mtlItemNo@(itemName), mtlItemNo, "change");
+                        if (mtlItemName@(itemName)) ElementSetValue(mtlItemName@(itemName), mtlItemName, "change");
+                        if (mtlItemSpec@(itemName)) ElementSetValue(mtlItemSpec@(itemName), mtlItemSpec, "change");
+                        if (inventoryId@(itemName)) ElementSetValue(inventoryId@(itemName), inventoryId, "change");
+                        if (uomId@(itemName)) ElementSetValue(uomId@(itemName), uomId, "change");
+                        if (uomNo@(itemName)) ElementSetValue(uomNo@(itemName), uomNo, "change");
+                        if (mtlModify@(itemName)) ElementSetValue(mtlModify@(itemName), mtlModify, "change");
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+
+            function CustomerMtlItem@(itemName)(source) {
+                let html = '';
+
+                if (source) {
+                    let json = JSON.parse(source);
+
+                    for (let x = 1; x < json.data.length; x++) {
+                        html += `<tr>
+                                   <td class="ellipsis" data-toggle="tooltip" title="${json.data[x].CustomerMtlItemNo}(${json.data[x].CustomerNo})" style="max-width: 200px;">${json.data[x].CustomerMtlItemNo}<code>(${json.data[x].CustomerNo})</code></td>
+                                 </tr>`;
+                    }
+                }
+
+                return html;
+            }
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+        )

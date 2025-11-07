@@ -1,0 +1,198 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewStorageLocation";
+    string itemNameText = "查看庫別儲位資料";
+    string sourceText = "";
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+        .customer-control {
+            border: 1px solid #5387a1 !important;
+        }
+        /*.table-custom.table-storage table.table.table-bordered.table-striped.table-sticky label.control.control-solid.control-solid-info.control--radio .control__indicator {
+            border: 1px solid #6e91a3;
+        }*/
+    </style>
+        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtStorageLocationQ@(itemName)" name="txtStorageLocationQ@(itemName)"
+                                               placeholder="請輸入儲位編號/名稱" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">庫別</th>
+                                        <th scope="col" style="min-width: 200px;">儲位編號</th>
+                                        <th scope="col" style="min-width: 200px;">儲位名稱</th>
+                                        <th scope="col" style="min-width: 200px;">剩餘數量</th>
+                                        <th scope="col" style="min-width: 200px;">備註</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 250px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let targetSelector@(itemName);
+        let inventoryId@(itemName);
+        let storageLocation@(itemName);
+        let mtlItemNo@(itemName);
+        let sourceText@(itemName);
+
+        function Pop@(itemName)(inventoryId, storageLocation, mtlItemNo, targetSelector, sourceText) {
+            //$("#txtStorageLocationQ@(itemName)").val(storageLocation);
+            targetSelector@(itemName) = targetSelector;
+            inventoryId@(itemName) = inventoryId;
+            storageLocation@(itemName) = storageLocation;
+            mtlItemNo@(itemName) = mtlItemNo;
+            sourceText@(itemName) = sourceText;
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        $("#txtStorageLocationQ@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                Query@(itemName)();
+                return false;
+            }
+        });
+
+        $("#queryForm@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetStorageLocation", "InventoryTransaction")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "InventoryId": inventoryId@(itemName),
+                "StorageLocation": $("#txtStorageLocationQ@(itemName)").val(),
+                "MtlItemNo": mtlItemNo@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td scope="col" style="min-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryNo} ${item.InventoryName}" style="min-width: 200px;">${item.InventoryNo} ${item.InventoryName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StorageLocation}" style="min-width: 200px;">${item.StorageLocation}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StorageLocationName}" style="min-width: 200px;">${item.StorageLocationName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.StorageLocationQty}" style="min-width: 200px;">${item.StorageLocationQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="min-width: 200px;">${item.Remark}</td>
+                                        <td class="text-center col-sticky">
+                                            <label class="control control-solid control-solid-info control--radio">
+                                                <input type="radio" data-storage-location="${item.StorageLocation}" value="${item.StorageLocation}" />
+                                                <span style="" class="control__indicator"></span>
+                                            </label>
+                                        </td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;此品號尚無任何儲位資料
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-storage-location]:checked") {
+                    let storageLocation = $(this).val();
+                    $("" + targetSelector@(itemName) + "").val(storageLocation);
+                }
+
+                window["GetLocationQty" + sourceText@(itemName)]();
+
+                Close@(itemName)();
+            });
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+                                                )

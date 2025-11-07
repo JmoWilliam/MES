@@ -1,0 +1,251 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "InventoryQuery";
+    string itemNameText = "庫存整合查詢";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+    string SearchKey = Request["SearchKey"] ?? "";
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-12 col-md-auto col-lg-auto mb-2 mb-md-0 mb-lg-0">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                               placeholder="請輸入品號/品名/客戶品號" />
+                                    </div>
+                                    <div class="col-12 col-md-auto col-lg-auto text-right text-md-left text-lg-left">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky tiny-table" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 175px;">品號</th>
+                                        <th scope="col" style="min-width: 225px;">品名</th>
+                                        <th scope="col" style="min-width: 150px;">規格</th>
+                                        <th class="text-center" scope="col" style="min-width: 75px;">操作</th>
+                                        <th style="padding: 0; min-width: 300px;">
+                                            <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 175px;">庫別</th>
+                                                        <th style="width: 125px;">數量</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAvailable@(itemName)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">庫存可用量</h5>
+                <button class="close" type="button" onclick="CloseAvailable@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblAvailableData@(itemName)">
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        $(document).ready(function () {
+            $("#txtSearchKeyQ@(itemName)").val("@(SearchKey)");
+
+            Query@(itemName)();
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetInventoryQuery", "ScmInventory")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val(),
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="max-width: 175px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="max-width: 225px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemSpec}" style="max-width: 150px;">${item.MtlItemSpec}</td>
+                                        <td class="text-center active-content">
+                                          <div class="btn-group mb-4 show" style="margin-bottom: 0 !important;">
+                                            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" style="padding-top: 0; padding-bottom: 0;">動作</button>
+                                            <div class="dropdown-menu btn-text-left-block" x-placement="bottom-start" style="overflow-y: auto; z-index: 999; max-height: 150px;">
+                                              <a class="dropdown-item btn-text-left" href="javascript:PopAvailable@(itemName)(${item.MtlItemId});" ><i class="fas fa-inventory"></i>庫存可用量</a>
+                                            </div>
+                                          </div>
+                                          <input type="hidden" data-mtl-item-id="${item.MtlItemId}" name="txtMtlItemNo@(itemName)" value="${item.MtlItemNo}" />
+                                          <input type="hidden" data-mtl-item-id="${item.MtlItemId}" name="txtScheduledPurchase@(itemName)" value="${item.ScheduledPurchase}" />
+                                          <input type="hidden" data-mtl-item-id="${item.MtlItemId}" name="txtScheduledIn@(itemName)" value="${item.ScheduledIn}" />
+                                          <input type="hidden" data-mtl-item-id="${item.MtlItemId}" name="txtScheduledProduce@(itemName)" value="${item.ScheduledProduce}" />
+                                          <input type="hidden" data-mtl-item-id="${item.MtlItemId}" name="txtShippedQuantity@(itemName)" value="${item.ShippedQuantity}" />
+                                          <input type="hidden" data-mtl-item-id="${item.MtlItemId}" name="txtAvailableInventory@(itemName)" value="${item.AvailableInventory}" />
+                                        </td>
+                                        <td style="padding: 0;">
+                                          <table class="table table-bordered table-sm mb-0 table-non-rwd table-striped-custom table-row-detail">
+                                            <tbody>
+                                              ${DetailData@(itemName)(item.InventoryDatas)}
+                                            </tbody>
+                                          </table>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+        }
+
+        function DetailData@(itemName)(json) {
+            let html = '';
+
+            if (json) {
+                for (let x = 0; x < json.length; x++) {
+                    html += `<tr>
+                               <td style="width: 175px;">${json[x].InventoryNo} ${json[x].InventoryName}</td>
+                               <td style="width: 125px;">${json[x].InventoryQty}</td>
+                             </tr>`;
+                }
+            }
+
+            return html;
+        }
+
+        function PopAvailable@(itemName)(mtlItemId) {
+            $("#modalAvailable@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            let innerHtml = `<tr>
+                               <th>品號</th>
+                               <td>${$(`input[name="txtMtlItemNo@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val()}</td>
+                             </tr>
+                             <tr>
+                               <th>預計請購</th>
+                               <td>${$(`input[name="txtScheduledPurchase@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val()}</td>
+                             </tr>
+                             <tr>
+                               <th>預計進貨</th>
+                               <td>${$(`input[name="txtScheduledIn@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val()}</td>
+                             </tr>
+                             <tr>
+                               <th>預計生產</th>
+                               <td>${$(`input[name="txtScheduledProduce@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val()}</td>
+                             </tr>
+                             <tr>
+                               <th>暫出數量</th>
+                               <td>${$(`input[name="txtShippedQuantity@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val()}</td>
+                             </tr>
+                             <tr>
+                               <th>可用庫存</th>
+                               <td>${$(`input[name="txtAvailableInventory@(itemName)"][data-mtl-item-id="${mtlItemId}"]`).val()}</td>
+                             </tr>`;
+
+            $("#tblAvailableData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function CloseAvailable@(itemName)() {
+            $("#modalAvailable@(itemName)").modal("hide");
+        }
+    </script>
+)

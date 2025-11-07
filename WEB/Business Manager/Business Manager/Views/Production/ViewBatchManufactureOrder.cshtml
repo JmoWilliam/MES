@@ -1,0 +1,613 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewBatchManufactureOrder";
+    string itemNameText = "批量新增MES製令作業";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                                                        )
+<div style="height: 750px; width: 100vw;" id="spreadsheet@(itemName)"></div>
+
+<!--日期選擇-->
+<div class="modal fade" id="modalDatePicker@(itemName)" data-keyboard="false" data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">日期選擇</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="datePickerForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="txtCell@(itemName)" />
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtDatePicker@(itemName)">選擇日期</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <input type="date" class="form-control" id="txtDatePicker@(itemName)" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer text-center">
+                <button type="button" class="btn btn-success" onclick="SaveDate@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+                @*<button type="button" class="btn btn-success" onclick="Copy@(itemName)()"><i class="fas fa-copy"></i>取消</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--庫存資料-->
+<div class="modal fade" id="modalInventoryQty@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    庫存資料
+                </h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtMtlItemNoQ@(itemName)" name="txtMtlItemNoQ@(itemName)"
+                                               placeholder="請輸入品號" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">品號</th>
+                                        <th scope="col" style="min-width: 200px;">品名</th>
+                                        <th scope="col" style="min-width: 200px;">庫別</th>
+                                        <th scope="col" style="min-width: 200px;">庫存數量</th>
+                                        <th scope="col" style="min-width: 200px;">存放位置</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewRoutingForBatch")
+
+<script src="@Url.Content("~/Scripts/spreadsheet-default/batch-mo.js")"></script>
+
+@Html.Resource("js",
+    @<script>
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfo: []
+        };
+
+        let spreadsheet@(itemName);
+
+        let defaultCell@(itemName) = [];
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 100
+        };
+
+        $(document).ready(function () {
+            for (let i = 0; i < 26; i++) {
+                defaultCell@(itemName).push(String.fromCharCode(65 + i) + "1");
+            }
+
+            ResetSpreadsheet@(itemName)();
+        });
+
+        function Pop@(itemName)() {
+            $("#spreadsheet@(itemName)").show();
+            $("#spreadsheetViewBatchPurchaseRequisition").hide();
+        }
+
+        function ResetSpreadsheet@(itemName)() {
+            $("#spreadsheet@(itemName)").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("spreadsheet@(itemName)", {
+                menu: false,
+                //rowsCount: 10,
+                colsCount: 26,
+                exportModulePath: "https://bm.zy-tech.com.tw/Scripts/json2excel-master/worker.js",
+                importModulePath: "https://bm.zy-tech.com.tw/Scripts/excel2json-master/worker.js",
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-arrow-alt-square-up",
+                tooltip: "拋轉製令並確認",
+                id: "Upload"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-sync-alt",
+                tooltip: "重新載入",
+                id: "Reload"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-excel",
+                tooltip: "匯入EXCEL",
+                id: "Import"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-download",
+                tooltip: "匯出EXCEL",
+                id: "Export"
+            });
+
+            spreadsheet@(itemName).parse(defaultMo);
+
+            spreadsheet@(itemName).setFormat("A1:Z99", "text");
+
+            GetWoErpPrefix@(itemName)();
+            GetInventoryNo@(itemName)();
+
+            let shippingMethodArray = ["成品出貨", "組立試模", "組立組模", "半成品出貨"];
+            spreadsheet@(itemName).setValidation("J2:J99", shippingMethodArray);
+
+            spreadsheet@(itemName).events.on("afterEditEnd", function (cell, value) {
+                if ((cell.indexOf("C") != -1 && cell != "C1"
+                    || cell.indexOf("K") != -1 && cell != "K1"
+                    || cell.indexOf("L") != -1 && cell != "L1")
+                    && typeof (value) != `undefined`) {
+                    if (ValidDate@(itemName)(value)) {
+                        spreadsheet@(itemName).setValue(cell, value);
+                    }
+                    else {
+                        alert("日期格式錯誤，請雙擊輸入框使用日期選擇器!!", alert);
+                        spreadsheet@(itemName).setValue(cell, "");
+                    }
+                }
+                return true;
+            });
+
+            spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                let editMode = $("#cboEditMode").val();
+                if (cell.indexOf("D") != -1 && cell != "D1" && editMode == "Y") {
+                    let cellNo = cell.substring(1);
+                    let mtlItemNoCell = cell;
+                    let mtlItemNameCell = "E" + cellNo;
+                    let mtlItemSpecCell = "F" + cellNo;
+                    let InventoryNoCell = "H" + cellNo;
+                    PopViewMtlItem@(itemName)(mtlItemNoCell, mtlItemNameCell, mtlItemSpecCell, InventoryNoCell);
+                }
+                else if (cell.indexOf("M") != -1 && cell != "M1" && editMode == "Y") {
+                    PopViewSoDetail@(itemName)(cell);
+                }
+                else if (editMode == "Y" && ((cell.indexOf("C") != -1 && cell != "C1") ||
+                    (cell.indexOf("K") != -1 && cell != "K1") ||
+                    (cell.indexOf("L") != -1 && cell != "L1"))) {
+                    PopModalDatePicker@(itemName)(cell);
+                }
+                else if (cell.indexOf("I") != -1 && cell != "I1") {
+                    PopModalInventoryQty@(itemName)(cell);
+                }
+                else if (editMode == "Y" && ((cell.indexOf("N") != -1 && cell != "N1"))) {
+                    PopRoutingForBatch@(itemName)(cell);
+                }
+            });
+
+            spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                if (id == "Upload") {
+                    swal.fire({
+                        titleText: "確定要執行上傳嗎?",
+                        text: "此動作會同步建立ERP、MES製令，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Upload@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Reload") {
+                    swal.fire({
+                        titleText: "確定要重整EXCEL嗎?\n這會導致目前資料遺失!!",
+                        text: "此動作無法復原，請確認是否要執行!",
+                        icon: "warning",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showCancelButton: true,
+                        confirmButtonText: "確認",
+                        cancelButtonText: "取消"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            ResetSpreadsheet@(itemName)();
+                        }
+                    });
+                }
+                else if (id == "Import") {
+                    spreadsheet@(itemName).load("", "xlsx");
+                }
+                else if (id == "Export") {
+                    spreadsheet@(itemName).export.xlsx("batch-" + '@DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")');
+                }
+            });
+
+            spreadsheet@(itemName).events.on("afterAction", (actionName, config) => {
+                if (actionName === "groupAction") {
+                    spreadsheet@(itemName).sortCells("A2:Z99", -1);
+                    return false;
+                }
+            });
+        }
+
+        function ValidDate@(itemName)(dateString) {
+            const regex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!regex.test(dateString)) {
+                return false;
+            }
+
+            const date = new Date(dateString);
+            const timestamp = date.getTime();
+
+            if (typeof timestamp !== 'number' || isNaN(timestamp)) {
+                return false;
+            }
+
+            return dateString === date.toISOString().split('T')[0];
+        }
+
+        function GetWoErpPrefix@(itemName)() {
+            let targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+
+            let postData = {
+                "ColumnName": "WipErpPrefix"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let woErpPrefixArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        woErpPrefixArray.push(item.WoErpPrefix);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation("A2:A99", woErpPrefixArray);
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function GetInventoryNo@(itemName)() {
+            let targetUrl = "@Url.Action("GetInventory", "ScmBasicInformation")";
+
+            let postData = {
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let inventoryNoArray = [];
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        inventoryNoArray.push(item.InventoryNo);
+                    });
+                }
+
+                spreadsheet@(itemName).setValidation("H2:H99", inventoryNoArray);
+            }
+            else {
+                alert(data.msg, "alert");
+            }
+        }
+
+        function PopViewMtlItem@(itemName)(mtlItemNoCell, mtlItemNameCell, mtlItemSpecCell, inventoryNoCell) {
+            let popConfig = {
+                popFunction: "PopViewMtlItemForSpreadsheet",
+                objectSpreadsheet: spreadsheet@(itemName),
+                objectMtlItemNoCell: mtlItemNoCell,
+                objectMtlItemNameCell: mtlItemNameCell,
+                objectMtlItemSpecCell: mtlItemSpecCell,
+                objectInventoryNoCell: inventoryNoCell,
+                objectCheckMtlDate: "@DateTime.Now.ToString("yyyy-MM-dd")",
+            };
+            PopViewMtlItemForSpreadsheet(popConfig);
+        }
+
+        function PopViewSoDetail@(itemName)(cell) {
+            let popConfig = {
+                popFunction: "PopViewSoDetailForSpreadsheet",
+                objectSpreadsheet: spreadsheet@(itemName),
+                objectCell: cell,
+                objectCompanyId: companyId,
+                type: "radio"
+            };
+            PopViewSoDetailForSpreadsheet(popConfig);
+        }
+
+        function LoadMoSpreadsheet(moListJson) {
+            ResetSpreadsheet@(itemName)();
+            let initIndex = 2;
+            $.each(moListJson.MoListInfo, function (i, item) {
+                spreadsheet@(itemName).setValue("A" + initIndex.toString(), item.WoErpPrefix);
+                spreadsheet@(itemName).setValue("B" + initIndex.toString(), item.WoErpNo);
+                spreadsheet@(itemName).setValue("C" + initIndex.toString(), item.DocDate);
+                spreadsheet@(itemName).setValue("D" + initIndex.toString(), item.MtlItemNo);
+                spreadsheet@(itemName).setValue("E" + initIndex.toString(), item.MtlItemName);
+                spreadsheet@(itemName).setValue("F" + initIndex.toString(), item.MtlItemSpec);
+                spreadsheet@(itemName).setValue("G" + initIndex.toString(), item.PlanQty);
+                spreadsheet@(itemName).setValue("H" + initIndex.toString(), item.InventoryNo);
+                spreadsheet@(itemName).setValue("I" + initIndex.toString(), "查詢庫存:" + item.MtlItemNo);
+                spreadsheet@(itemName).setValue("J" + initIndex.toString(), "");
+                spreadsheet@(itemName).setValue("K" + initIndex.toString(), item.ExpectedStart);
+                spreadsheet@(itemName).setValue("L" + initIndex.toString(), item.ExpectedEnd);
+                spreadsheet@(itemName).setValue("M" + initIndex.toString(), item.SoErpFullNo);
+                spreadsheet@(itemName).setValue("O" + initIndex.toString(), "由批次開立作業建立");
+                initIndex++;
+            });
+        }
+
+        function Upload@(itemName)() {
+            let data = spreadsheet@(itemName).serialize().sheets[0].data;
+            let initIndex;
+            let woErpPrefix = "";
+            let woErpNo = "";
+            let docDate = "";
+            let mtlItemNo = "";
+            let mtlItemName = "";
+            let mtlItemSpec = "";
+            let planQty = "";
+            let inventoryNo = "";
+            let shippingMethod = "";
+            let expectedStart = "";
+            let expectedEnd= "";
+            let soErpFullNo = "";
+            let routingItemId = "";
+            let remark = "";
+
+            let uploadJson =
+            {
+                uploadInfo: []
+            };
+
+            let dataIndex = [];
+            $.each(data, function (i, item) {
+                if (defaultCell@(itemName).indexOf(item.cell) == -1) {
+                    initIndex = item.cell.substring(1);
+                    woErpPrefix = spreadsheet@(itemName).getValue("A" + initIndex.toString());
+                    if (woErpPrefix != null) {
+                        if (dataIndex.indexOf(initIndex) == -1) {
+                            dataIndex.push(initIndex);
+                        }
+                    }
+                    else {
+                        return false;
+                    }
+                }
+            });
+
+            $.each(dataIndex, function (i, item) {
+                woErpPrefix = spreadsheet@(itemName).getValue("A" + item);
+                woErpNo = spreadsheet@(itemName).getValue("B" + item);
+                docDate = spreadsheet@(itemName).getValue("C" + item);
+                mtlItemNo = spreadsheet@(itemName).getValue("D" + item);
+                mtlItemName = spreadsheet@(itemName).getValue("E" + item);
+                mtlItemSpec = spreadsheet@(itemName).getValue("F" + item);
+                planQty = spreadsheet@(itemName).getValue("G" + item);
+                inventoryNo = spreadsheet@(itemName).getValue("H" + item);
+                shippingMethod = spreadsheet@(itemName).getValue("J" + item);
+                expectedStart = spreadsheet@(itemName).getValue("K" + item);
+                expectedEnd = spreadsheet@(itemName).getValue("L" + item);
+                soErpFullNo = spreadsheet@(itemName).getValue("M" + item);
+                routingItemId = spreadsheet@(itemName).getValue("N" + item);
+                remark = spreadsheet@(itemName).getValue("O" + item) != null ? spreadsheet@(itemName).getValue("O" + item) : "";
+
+                let inputUploadInfo =
+                {
+                    WoErpPrefix: woErpPrefix,
+                    WoErpNo: woErpNo,
+                    DocDate: docDate,
+                    MtlItemNo: mtlItemNo,
+                    MtlItemName: mtlItemName,
+                    MtlItemSpec: mtlItemSpec,
+                    PlanQty: planQty,
+                    InventoryNo: inventoryNo,
+                    ExpectedStart: expectedStart,
+                    ExpectedEnd: expectedEnd,
+                    SoErpFullNo: soErpFullNo,
+                    RoutingItemId: routingItemId,
+                    Remark: shippingMethod != null && shippingMethod != `` ? remark + "/出貨方式:" + shippingMethod : remark,
+                };
+                uploadJson.uploadInfo.push(inputUploadInfo);
+            });
+
+            if (uploadJson.uploadInfo.length > 0) {
+                let targetUrl = "@Url.Action("BatchAddManufactureOrder", "Production")";
+                let postData = {
+                    "UploadJson": JSON.stringify(uploadJson)
+                };
+
+                let data = DataAccess.EditContinued(targetUrl, postData, false);
+
+                if (data) {
+                    Swal.fire(
+                        "批量新增成功", //標題
+                        "請確認拋轉後的單據單號是否正確!!", //訊息內容(可省略)
+                        "success",
+                    );
+
+                    if (data.result.length > 0) {
+                        ResetSpreadsheet@(itemName)();
+                        let initIndex = 2;
+                        $.each(data.result, function (i, item) {
+                            spreadsheet@(itemName).setValue("A" + initIndex.toString(), item.WoErpPrefix);
+                            spreadsheet@(itemName).setValue("B" + initIndex.toString(), item.WoErpNo);
+                            spreadsheet@(itemName).setValue("C" + initIndex.toString(), item.DocDate);
+                            spreadsheet@(itemName).setValue("D" + initIndex.toString(), item.MtlItemNo);
+                            spreadsheet@(itemName).setValue("E" + initIndex.toString(), item.MtlItemName);
+                            spreadsheet@(itemName).setValue("F" + initIndex.toString(), item.MtlItemSpec);
+                            spreadsheet@(itemName).setValue("G" + initIndex.toString(), item.PlanQty);
+                            spreadsheet@(itemName).setValue("H" + initIndex.toString(), item.InventoryNo);
+                            spreadsheet@(itemName).setValue("I" + initIndex.toString(), "查詢庫存:" + item.MtlItemNo);
+                            spreadsheet@(itemName).setValue("J" + initIndex.toString(), "已合併至備註");
+                            spreadsheet@(itemName).setValue("K" + initIndex.toString(), item.ExpectedStart);
+                            spreadsheet@(itemName).setValue("L" + initIndex.toString(), item.ExpectedEnd);
+                            spreadsheet@(itemName).setValue("M" + initIndex.toString(), item.SoErpFullNo);
+                            spreadsheet@(itemName).setValue("N" + initIndex.toString(), item.RoutingName);
+                            spreadsheet@(itemName).setValue("O" + initIndex.toString(), item.Remark);
+                            spreadsheet@(itemName).setValue("P" + initIndex.toString(), item.Source);
+                            spreadsheet@(itemName).setValue("Q" + initIndex.toString(), item.TrayBarcode);
+                            spreadsheet@(itemName).setValue("R" + initIndex.toString(), item.LotStatus);
+                            spreadsheet@(itemName).setValue("S" + initIndex.toString(), item.LotQty);
+                            spreadsheet@(itemName).setValue("N" + initIndex.toString(), parseInt(item.RoutingItemId) > 0 ? item.RoutingItemId + ":" + item.RoutingName : "");
+                            spreadsheet@(itemName).setValue("T" + initIndex.toString(), item.BarcodeCtrl);
+                            initIndex++;
+                        });
+                    }
+                }
+            }
+        }
+
+        function PopModalDatePicker@(itemName)(cell) {
+            $("#txtCell@(itemName)").val(cell);
+            $("#txtDatePicker@(itemName)").val("@DateTime.Now.ToString("yyyy-MM-dd")");
+            $("#modalDatePicker@(itemName)").modal("show");
+
+            $("#txtDatePicker@(itemName)").on("change input", function () {
+                let cell = $("#txtCell@(itemName)").val();
+                let $this = $(this);
+                $this.blur().focus();
+                spreadsheet@(itemName).setValue(cell, $(this).val());
+                $("#modalDatePicker@(itemName)").modal("hide");
+            });
+        }
+
+        function SaveDate@(itemName)() {
+            let cell = $("#txtCell@(itemName)").val();
+            let date = $("#txtDatePicker@(itemName)").val();
+            spreadsheet@(itemName).setValue(cell, date);
+            $("#modalDatePicker@(itemName)").modal("hide");
+        }
+
+        function PopModalInventoryQty@(itemName)(cell) {
+            initIndex = cell.substring(1);
+            let mtlItemNo = spreadsheet@(itemName).getValue("D" + initIndex);
+
+            $("#txtMtlItemNoQ@(itemName)").val(mtlItemNo);
+
+            GetInventoryQty@(itemName)();
+
+            $("#txtMtlItemNoQ@(itemName)").keydown(function (event) {
+            if (event.keyCode == 13) {
+                    event.preventDefault();
+                    GetInventoryQty@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            $("#cboInventoryIdQ@(itemName)").change(function () {
+                GetInventoryQty@(itemName)();
+            });
+
+            $("#modalInventoryQty@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+        }
+
+        function GetInventoryQty@(itemName)() {
+            let objPage = objPage@(itemName);
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetErpInventoryQty", "Production")";
+            let postData = {
+                "MtlItemNo": $("#txtMtlItemNoQ@(itemName)").val(),
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td scope="col" style="min-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="min-width: 200px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemName}" style="min-width: 200px;">${item.MtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryNo}-${item.InventoryName}" style="min-width: 200px;">${item.InventoryNo}-${item.InventoryName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventoryQty}" style="min-width: 200px;">${item.InventoryQty}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.InventorySite}" style="min-width: 200px;">${item.InventorySite}</td>
+                                      </tr>`;
+                    });
+                }
+                else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;此品號及庫別尚無任何庫存資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, GetInventoryQty@(itemName));
+        }
+
+        function PopRoutingForBatch@(itemName)(cell) {
+            let cellNo = cell.substring(1);
+            let mtlItemNo = spreadsheet@(itemName).getValue("D" + cellNo);
+            let mtlItemName = spreadsheet@(itemName).getValue("E" + cellNo);
+            let mtlItemSpec = spreadsheet@(itemName).getValue("F" + cellNo);
+            PopViewRoutingForBatch(mtlItemNo, mtlItemName, mtlItemSpec, cell);
+        }
+
+        function Close@(itemName)() {
+            $("#modalInventoryQty@(itemName)").modal("hide");
+        }
+    </script>
+                                    )

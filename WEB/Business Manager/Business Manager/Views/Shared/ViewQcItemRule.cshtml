@@ -1,0 +1,787 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewQcItemRule";
+    string itemNameText = "品檢項目維護";
+    string authority = ViewBag.authority;
+}
+
+<script src="@Url.Content("~/Scripts/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.js")"></script>
+<link href="@Url.Content("~/Content/dhtmlx/spreadsheet.commercial/4.3.0/spreadsheet.min.css")" rel="stylesheet" />
+
+
+@Html.Resource("css",
+    @<style>
+    </style>
+                         )
+
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog" style="max-width: 1680px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <form autocomplete="off" id="editForm@(itemName)">
+                    <input type="hidden" id="txtQcItemNo@(itemName)" name="txtQcItemNo@(itemName)" value="" />
+                    <div class="form-group row text-right">
+                        <div class="col-12">
+                            <label class="col-form-label" for="chkDesignType@(itemName)">規格選擇模式</label>
+                            <input type="checkbox" name="chkDesignType@(itemName)" checked />
+                        </div>
+                        <div class="col-12">
+                            <label class="col-form-label" for="chkPopSelectType@(itemName)">項目選擇模式</label>
+                            <input type="checkbox" name="chkPopSelectType@(itemName)" checked />
+                        </div>
+                    </div>
+                    <div style="height: 75%; width: 100%;" id="spreadsheet@(itemName)"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fas fa-times"></i>關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--選擇機台-->
+<div class="modal fade" id="machineSelect@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">選擇機台</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container" autocomplete="off" id="queryForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">車間</label>
+                            <div class="col-12">
+                                <select id="cboShopId@(itemName)" class="form-control"></select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-form-label">量測機台</label>
+                            <div class="col-12">
+                                <select id="cboQmmDetailId@(itemName)" class="form-control"></select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                @*<button type="button" class="btn btn-primary" onclick="Query@(itemName)()" style="margin: auto;"><i class="fal fa-wrench"></i>套用</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewQcItem")
+@Html.Partial("ViewDrawingDesign")
+
+@Html.Resource("js",
+    @<script>
+        let excelCtrls@(itemName) = new ComponentControl@(itemName)(); //取得excel自定義控制方法
+        let objForm@(itemName) = "#editForm@(itemName)";
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let targetSelector@(itemName);
+        let mtlItemId@(itemName);
+
+        let spreadsheet@(itemName); //excel套件
+
+        let data@(itemName) = [];
+
+        let identify@(itemName); //資料唯一識別欄位名稱
+
+        let message@(itemName); //暫存訊息的欄位
+
+        let barcodeJson@(itemName) =
+        {
+            barcodeInfo: []
+        }
+
+        let spreadsheetJson@(itemName) =
+        {
+            spreadsheetInfo: []
+        }
+
+        let chkDesignType@(itemName) = 'semiatuo'; //設計值預設的模式
+
+
+        let chkPopSelectType@(itemName) = 'radio'; //組件資料預設的選擇模式
+
+
+        let configs = {
+            menu: true,
+            //rowsCount: 10,
+            colsCount: 12,
+            toolbarBlocks: [
+                "undo",
+                "colors",
+                "decoration",
+                "align",
+                //"lock",
+                "clear",
+                //"rows",
+                //"columns",
+                //"help",
+                "format",
+                //"file"
+            ],
+            formats: [
+                { name: "DesignValue", id: "designValue", mask: "#,##0.000000" },
+            ]
+        }
+
+        let columns@(itemName) = [
+            { column: "A", title: "QcItemNo", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "B", title: "Graphics", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "C", title: "BallMark", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "D", title: "QcItemName", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "E", title: "DesignValue", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "F", title: "UpperTolerance", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "G", title: "LowerTolerance", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "H", title: "Unit", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "I", title: "MachineDesc", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "J", title: "QcItemDesc", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "K", title: "Regulation", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+            { column: "M", title: "Notice", dataType: "text", format: "text", type: "show", validation: { switch: false, msg: "" } },
+        ];
+
+        let excelData =
+        {
+            sheets: [
+                {
+                    name: "第一頁",
+                    id: "sheet_1",
+                    cols: [{ width: 150 }, { width: 80 }, { width: 50 }, { width: 150 }, { width: 120 }, { width: 120 }, { width: 120 }, { width: 50 }, { width: 200 }, { width: 200 }, { width: 200 }, { width: 200 }, { width: 500 }],
+                    data: [
+                        {
+                            cell: "A1",
+                            value: "序號",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "B1",
+                            value: "圖形",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "C1",
+                            value: "球標",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "D1",
+                            value: "檢測項目*",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "E1",
+                            value: "設計值",
+                            css: "design-value-blue"
+                        },
+                        {
+                            cell: "F1",
+                            value: "上限",
+                            css: "design-value-red"
+                        },
+                        {
+                            cell: "G1",
+                            value: "下限",
+                            css: "design-value-red"
+                        },
+                        {
+                            cell: "H1",
+                            value: "單位",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "I1",
+                            value: "量測儀器",
+                            css: "title-class"
+                        },
+                        {
+                            cell: "J1",
+                            value: "檢測備註",
+                            css: "title-desc"
+                        },
+                        {
+                            cell: "K1",
+                            value: "相關規範",
+                            css: "title-desc"
+                        },
+                        {
+                            cell: "L1",
+                            value: "注意事項",
+                            css: "title-desc"
+                        },
+                        {
+                            cell: "M1",
+                            value: "訊息",
+                            css: ""
+                        }
+                    ]
+                }
+            ],
+            styles: {
+                "title-class": {
+                    background: "rgba(146,231,220,1)",
+                    color: "#000"
+                },
+                "design-value-blue": {
+                    background: "#BCE4CE",
+                    color: "blue"
+                },
+                "design-value-red": {
+                    background: "#BCE4CE",
+                    color: "red"
+                },
+                "title-desc": {
+                    background: "rgba(197,192,218,1)",
+                    color: "#000"
+                }
+            }
+        };
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            mtlItemId@(itemName) = config.mtlItemId;
+            identify@(itemName) = config.identify;
+            message@(itemName) = config.message;
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            InitSpreadsheet@(itemName)();
+            InitData@(itemName)(objPage@(itemName));
+
+            @*if (parseInt(mtlItemId@(itemName)) > 0) {
+                InitSpreadsheet@(itemName)();
+                InitData@(itemName)(objPage@(itemName));
+            } else {
+                alert("品號資料錯誤，請重新操作!", "alert");
+            }*@
+        }
+
+        function InitSpreadsheet@(itemName)() {
+            $("#spreadsheet@(itemName)").empty();
+
+            spreadsheet@(itemName) = new dhx.Spreadsheet("spreadsheet@(itemName)", configs);
+
+            //#region 自定義按鈕
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-file-excel",
+                tooltip: "匯入Excel",
+                id: "Import"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-save",
+                tooltip: "儲存",
+                id: "Save"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-trash-alt",
+                tooltip: "刪除",
+                id: "Delete"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-download",
+                tooltip: "下載當前EXCEL",
+                id: "Download"
+            });
+
+            spreadsheet@(itemName).toolbar.data.add({
+                type: "button",
+                icon: "fas fa-database",
+                tooltip: "自動取得圖面規格",
+                id: "AutoGetDesign"
+            });
+            //#endregion
+
+            //#region 自定義樣式
+            $("#spreadsheet@(itemName)").css("height", "650px");
+            //#endregion
+
+            //#region 載入新工作表後偵測
+            spreadsheet@(itemName).events.on("afterSheetChange", function (sheet) {
+                console.log('載入新工作表後偵測');
+            });
+            //#endregion
+
+            //#region 將焦點設定在儲存格上後觸發
+            spreadsheet@(itemName).events.on("afterFocusSet", function (cell) {
+                console.log('將焦點設定在儲存格上後觸發');
+                data@(itemName) = spreadsheet@(itemName).serialize().sheets[0].data;
+                InitPopViewQcItem@(itemName)(cell);
+            });
+            //#endregion
+
+            //#region 編輯結束後
+            spreadsheet@(itemName).events.on("afterEditEnd", function (cell, value) {
+                console.log('編輯結束後');
+                data@(itemName) = spreadsheet@(itemName).serialize().sheets[0].data;
+            });
+            //#endregion
+
+            //#region 功能列 按鈕觸發事件
+            spreadsheet@(itemName).toolbar.events.on("click", function (id) {
+                console.log('功能列 按鈕觸發事件');
+                if (id == "Save") {
+                    Save@(itemName)();
+                }
+                else if (id == "Delete") {
+                    Delete@(itemName)();
+                }
+                else if (id == "Transfer") {
+                    Transfer@(itemName)();
+                }
+                else if (id == "Download") {
+                    ExportXlsx@(itemName)();
+                }
+                else if (id == "Import") {
+                    ImportExcel@(itemName)();
+                }
+                else if (id == "CheckData") {
+                    CheckData@(itemName)();
+                }
+                else if (id == "AutoGetDesign") {
+                    AutoGetDesign@(itemName)();
+                }
+            });
+            //#endregion
+
+            excelCtrls@(itemName).InitFirstRow@(itemName)(); //初始化第一列
+            excelCtrls@(itemName).LockFirstRow@(itemName)(); //鎖定第一列
+
+            //format欄位
+            $.each(columns@(itemName), function (j, col) {
+                if (!!col.format) spreadsheet@(itemName).setFormat(`${col.column}2:${col.column}1001`, col.format);
+            });
+        }
+
+        function ComponentControl@(itemName)() {
+            addMethod(this, "LockFirstRow@(itemName)", function () {
+                $.each(excelData.sheets, function (i, sheet) {
+                    spreadsheet@(itemName).lock(`${sheet.data.map(m => m.cell).slice(0, 1)}:${sheet.data.map(m => m.cell).slice(-1)}`);
+                });
+            });
+            addMethod(this, "InitFirstRow@(itemName)", function () {
+                spreadsheet@(itemName).parse(excelData); //產生第一列欄位名稱
+            });
+        }
+
+        function InitData@(itemName)(objPage) {
+            if (!isMobile) {
+                $("#cboShopId@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboQmmDetailId@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+            ComboBoxs.Default("#cboShopId@(itemName)", "@Url.Action("GetWorkShop", "QcDataManagement")", {}, "", "NA", "", "ShopName", "ShopId");
+            ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", {}, "", "NA", "", "MachineName", "MachineNumber");
+
+            let targetUrl = "@Url.Action("GetMtlQcItem", "Product")";
+            let postData = {
+                //"OrderBy": "",
+                //"PageIndex": (objPage.pageIndex + 1),
+                //"PageSize": objPage.pageSize,
+                "MtlItemId": mtlItemId@(itemName)
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    i++;
+                    $.each(columns@(itemName), function (j, col) {
+                        if (col.type == 'hidden') return; //跳過隱藏屬性的欄位
+                        //if (!!col.format) spreadsheet@(itemName).setFormat(col.column + (i + 1), col.format);
+                        spreadsheet@(itemName).setValue(col.column + (i + 1), item[col.title]);
+
+                        if (col.title == 'MachineDesc') {
+                            if (item[col.title] != null) {
+                                let newItemNo = item['QcItemNo'].substr(0, 3) + item['MachineNumber'] + item['QcItemNo'].substr(3);
+                                spreadsheet@(itemName).setValue('A' + (i + 1), newItemNo);
+                            }
+                        }
+                    });
+                });
+            }
+
+            $("input[name='chkPopSelectType@(itemName)']").bootstrapToggle({
+                on: "單選",
+                off: "多選",
+                onstyle: "success",
+                offstyle: "info",
+                size: "mini",
+                width: "70px",
+                height: "20px"
+            });
+            
+            $("input[name='chkPopSelectType@(itemName)']").off("change").on("change", function () {
+                switch (this.checked) {
+                    case false:
+                        chkPopSelectType@(itemName) = "checkbox";
+                        break;
+                    case true:
+                        chkPopSelectType@(itemName) = "radio";
+                        break;
+                }
+            });
+            
+            $("input[name='chkDesignType@(itemName)']").bootstrapToggle({
+                on: "半自動",
+                off: "手動",
+                onstyle: "success",
+                offstyle: "info",
+                size: "mini",
+                width: "70px",
+                height: "20px"
+            });
+
+            $("input[name='chkDesignType@(itemName)']").off("change").on("change", function () {
+                switch (this.checked) {
+                    case false:
+                        chkDesignType@(itemName) = "manual";
+                        break;
+                    case true:
+                        chkDesignType@(itemName) = "semiatuo";
+                        break;
+                }
+            });
+        }
+
+        function ReLoadSpreadsheetData@(itemName)() {
+            let errorFlag = false;
+
+            spreadsheetJson@(itemName).spreadsheetInfo = [];
+            data@(itemName) = spreadsheet@(itemName).serialize().sheets[0].data;
+
+            let rows = [...new Set(data@(itemName).map(m => parseInt(m.cell.replace(/^\D+/g, ''))))];
+
+            let idx = 1;
+
+            let dataList = [];
+
+            //逐列取值
+            $.each(rows, function (i, row) { //row
+                if (row == 1) return; //表頭跳過
+
+                let cell = data@(itemName).find(f => f.cell == identify@(itemName) + row);
+                if (!cell) return; //跳過沒有序號欄位的row
+
+                if (!cell.value) return; //跳過沒有序號的row
+
+                if (spreadsheetJson@(itemName).spreadsheetInfo.some(s => s.QcItemNo == cell.value))
+                    return; //跳過重複序號的row
+
+                let obj = {};
+                let msg = [];
+                $.each(columns@(itemName), function (i, col) { //Get A ~ K
+                    cell = data@(itemName).find(f => f.cell == col.column + row);
+
+                    if (col.validation.switch && !cell) {
+                        msg.push(`${col.column + row}${col.validation.msg}`);
+                    }
+
+                    if (!!(cell && cell.value)) {
+                        switch (col.dataType) {
+                            case "text":
+                                obj[col.title] = cell.value.toString();
+                                break;
+                            case "number":
+                                obj[col.title] = !!parseFloat(cell.value.toString()) ? parseFloat(cell.value.toString()) : ''
+                                break;
+                        }
+
+                        if (col.column == identify@(itemName)) {
+                            obj["Row"] = idx;
+                            dataList.push(cell.value);
+                        }
+                    }
+                    else {
+                        switch (col.dataType) {
+                            case "text":
+                                obj[col.title] = '';
+                                break;
+                            case "number":
+                                obj[col.title] = '';
+                                break;
+                        }
+                    }
+                });
+
+                if (msg.length > 0) {
+                    spreadsheet@(itemName).setValue(message@(itemName) + row, msg.join('; '));
+                    spreadsheet@(itemName).setStyle(message@(itemName) + row, { background: "red", color: "#fff" });
+                    errorFlag = true;
+                }
+                else {
+                    spreadsheet@(itemName).setValue(message@(itemName) + row, "");
+                    spreadsheet@(itemName).setStyle(message@(itemName) + row, { background: "#fff", color: "#000" });
+                }
+
+                spreadsheetJson@(itemName).spreadsheetInfo.push(obj);
+                idx++;
+            });
+
+            if (!!targetSelector@(itemName)) ElementSetValue(targetSelector@(itemName), dataList, "change");
+
+            console.log(spreadsheetJson@(itemName).spreadsheetInfo);
+            return errorFlag;
+        }
+
+        function Save@(itemName)() {
+            swal.fire({
+                titleText: "確定要儲存更改?",
+                text: "請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (!ReLoadSpreadsheetData@(itemName)()) {
+                        if (spreadsheetJson@(itemName).spreadsheetInfo.length <= 0) { alert("沒有任何資料變更!", "alert"); return false; }
+                        let targetUrl = "@Url.Action("UpdateMtlQcItemBatch", "Product")";
+                        let postData = {
+                            "MtlItemId": mtlItemId@(itemName),
+                            "SpreadsheetData": JSON.stringify(spreadsheetJson@(itemName))
+                        };
+
+                        let data = DataAccess.Update(targetUrl, postData, false, true);
+
+                        if (data) {
+                            InitSpreadsheet@(itemName)();
+                            InitData@(itemName)(objPage@(itemName));
+                        }
+                    }
+                }
+            });
+        }
+
+        function Delete@(itemName)() {
+            swal.fire({
+                titleText: "確定要刪除資料?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteMtlQcItem", "Product")";
+                    let postData = {
+                        "MtlItemId": mtlItemId@(itemName)
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        InitSpreadsheet@(itemName)();
+                        InitData@(itemName)(objPage@(itemName));
+                    }
+                }
+            });
+        }
+                
+        function CheckBarcodeAccurately@(itemName)() {
+            let accuratelyResult = "";
+            let barcodeList = [];
+            $.each(barcodeJson@(itemName).barcodeInfo, function (i, item) {
+                if (item.BarcodeNo == null) {
+                    return false;
+                }
+                else {
+                    if (barcodeList.indexOf(item.BarcodeNo) == -1) {
+                        barcodeList.push(item.BarcodeNo);
+                    }
+                }
+            });
+
+            if (barcodeList.length > 0) {
+                let targetUrl = "@Url.Action("GetBarcodeAccurately", "QcDataManagement")";
+                let postData = {
+                    "QcRecordId": qcRecordId@(itemName),
+                    "BarcodeListData": barcodeList.toString(),
+                    "QcType": qcType@(itemName),
+                    "MoProcessId": moProcessId@(itemName)
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status != "success") {
+                    accuratelyResult = data.msg;
+                }
+            }
+
+            return accuratelyResult
+        }
+
+        function GetCheckQcMeasureData@(itemName)() {
+            let targetUrl = "@Url.Action("GetCheckQcMeasureData", "QcDataManagement")";
+            let postData = {
+                "QcRecordId": qcRecordId@(itemName)
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        checkQcMeasureData@(itemName) = item.CheckQcMeasureData;
+                        supportAqFlag@(itemName) = item.SupportAqFlag;
+                        supportProcessFlag@(itemName) = item.SupportProcessFlag;
+                    });
+                }
+            }
+        }
+
+        $("#cboQmmDetailId@(itemName)").change(function (e) {
+            let cell = spreadsheet@(itemName).selection.getSelectedCell();
+            let machineName = $("#cboQmmDetailId@(itemName) option:selected").text();
+            $("#machineSelect@(itemName)").modal("hide");
+
+            let machineNumber = $("#cboQmmDetailId@(itemName)").val();
+            let row = cell.split('I')[1];
+
+            let shopId = $("#cboShopId@(itemName)").val();
+            ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": shopId }, "", "NA", "", "MachineName", "MachineNumber");
+
+            let fullItemNo = spreadsheet@(itemName).getValue("A" + row);
+            if (fullItemNo == null) {
+                alert("請先維護量測項目後再選擇量測機台!!")
+                return false;
+            }
+
+            spreadsheet@(itemName).setValue(cell, machineName);
+
+            let newItemNo = "";
+            if (fullItemNo.length == 10) {
+                newItemNo = fullItemNo.substr(0, 3) + machineNumber + fullItemNo.substr(6, 4);
+            }
+            else {
+                newItemNo = fullItemNo.substr(0, 3) + machineNumber + fullItemNo.substr(3, 4);
+            }
+            spreadsheet@(itemName).setValue("A" + row, newItemNo);
+        });
+
+        $("#cboShopId@(itemName)").change(function () {
+            let shopId = $("#cboShopId@(itemName)").val();
+            ComboBoxs.Default("#cboQmmDetailId@(itemName)", "@Url.Action("GetQmmDetail", "QcDataManagement")", { "ShopId": shopId }, "", "NA", "", "MachineName", "MachineNumber");
+        });
+
+        function ExportXlsx@(itemName)() {
+            spreadsheet@(itemName).export.xlsx(); // exports data into a .xlsx file
+        };
+
+        function ExportJson() {
+            spreadsheet@(itemName).export.json(); // exports data into a .json file
+        };
+
+        function InitPopViewQcItem@(itemName)(cell) {
+            if (cell.indexOf("D") != -1 && cell != "D1") {
+                let row = cell.split('D')[1]; //取得目前row
+                let writeColumn = ["A", "D", "J"]; //要複寫的欄位
+                let identify = "A"; //資料唯一識別欄位名稱
+                let popConfig = {
+                    targetSelector: "#txtQcItemNo@(itemName)",
+                    //qcItemId: "G" + row, //id欄位(隱藏)
+                    identify,
+                    columns: columns@(itemName).filter(f => writeColumn.includes(f.column)).map(m => { return { column: m.column, title: m.title, format: m.format, type: m.type } }),
+                    message: 'M',//message@(itemName), //暫存訊息的欄位
+                    row, //起始列數
+                    type: chkPopSelectType@(itemName), //checkbox, radio
+                    spreadsheet: spreadsheet@(itemName) //excel 套件
+                }
+                PopViewQcItem(popConfig);
+            }
+            else if (cell.indexOf("I") != -1 && cell != "I1") {
+                $("#machineSelect@(itemName)").modal("show");
+            }
+            else if (cell.indexOf("E") != -1 && cell != "E1" && chkDesignType@(itemName) == 'semiatuo') {
+                let row = cell.split('E')[1]; //取得目前row
+                let writeColumn = ["A", "D", "J", "E", "F", "G"]; //要複寫的欄位
+                let identify = "A"; //資料唯一識別欄位名稱
+                let popConfig = {
+                    targetSelector: "#txtQcItemNo@(itemName)",
+                    qcItemId: $("#txtQcItemNo@(itemName)").val(), //id欄位(隱藏)
+                    mtlItemId: mtlItemId@(itemName),
+                    identify,
+                    columns: columns@(itemName).filter(f => writeColumn.includes(f.column)).map(m => { return { column: m.column, title: m.title, format: m.format, type: m.type } }),
+                    message: 'M',//message@(itemName), //暫存訊息的欄位
+                    row, //起始列數
+                    type: chkPopSelectType@(itemName), //checkbox, radio
+                    spreadsheet: spreadsheet@(itemName) //excel 套件
+                }
+                PopViewDrawingDesign(popConfig);
+            }
+        }
+
+        function AutoGetDesign@(itemName)() {
+            swal.fire({
+                titleText: "是否取得圖面規格",
+                text: "請確認是否有上傳CAD圖面!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("AddAutoReadCadDesign", "Drawing")";
+                    let postData = {
+                        "MtlItemId": mtlItemId@(itemName)
+                    };
+
+                    let airesult = DataAccess.Add(targetUrl, postData, false, true);
+                }
+            });
+        }
+
+
+        function ImportExcel@(itemName)() {
+            //移除焦點設定在儲存格上後觸發
+            spreadsheet@(itemName).events.detach("afterFocusSet");
+            spreadsheet@(itemName).load("", "xlsx").then(function () {
+            excelCtrls@(itemName).LockFirstRow@(itemName)(); //鎖定第一列
+                //將焦點設定在儲存格上後觸發
+                spreadsheet@(itemName).events.on("afterFocusSet", function (cell) { InitPopViewQcItem@(itemName)(cell) });
+            });
+        }
+
+        @*function Return@(itemName)() {
+            InitData@(itemName)(objPage@(itemName));
+        }*@
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+</script>
+                        )

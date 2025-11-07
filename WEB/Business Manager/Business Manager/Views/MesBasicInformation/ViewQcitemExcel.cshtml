@@ -1,0 +1,217 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewQcitemExcel";
+    string itemNameText = "查看量測項目資料";
+    string authority = ViewBag.authority;
+}
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="queryForm@(itemName)">
+                    <div class="col-12">
+                        <div class="col-12">
+                            <form autocomplete="off" id="queryForm@(itemName)">
+                                <fieldset>
+                                    <div class="form-row align-items-center mb-2">
+                                        <div class="col-3">
+                                            <select id="cboQcGroupQ@(itemName)" name="cboQcGroupQ@(itemName)" class="form-control" title="輸入群組"></select>
+                                        </div>
+                                        <div class="col-3">
+                                            <select id="cboQcClassQ@(itemName)" name="cboQcClassQ@(itemName)" class="form-control" title="輸入類別"></select>
+                                        </div>
+                                        <div class="col-3">
+                                            <input class="form-control" id="txtQcItemNameQ@(itemName)" placeholder="請輸入項目名稱/編號" />
+                                        </div>
+                                        <div class="col-3">
+                                            <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </div>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">群組</th>
+                                        <th scope="col" style="min-width: 200px;">類別</th>
+                                        <th scope="col" style="min-width: 200px;">項目</th>
+                                        <th scope="col" style="min-width: 200px;">項目備註</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 200px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                @*<button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                    <button type="button" class="btn btn-success save-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>*@
+            </div>
+        </div>
+    </div>
+</div>
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let itemNo@(itemName);
+        let cell@(itemName);
+        let qcNameCell@(itemName);
+        let qcItemDescCell@(itemName);
+        let spreadsheet@(itemName);
+
+        function Pop@(itemName)(cell, itemNo, qcNameCell, qcItemDescCell, spreadsheet) {
+
+            itemNo@(itemName) = itemNo;
+            cell@(itemName) = cell;
+            qcNameCell@(itemName) = qcNameCell;
+            qcItemDescCell@(itemName) = qcItemDescCell;
+            spreadsheet@(itemName) = spreadsheet;
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#txtQcItemNameQ@(itemName)").val("");
+
+            Query@(itemName)();
+        }
+
+        $(document).ready(function () {
+            if (!isMobile) {
+                $("#cboQcGroupQ@(itemName)").select2({
+                    width: "100%"
+                });
+                $("#cboQcClassQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+            ComboBoxs.Default("#cboQcGroupQ@(itemName)", "@Url.Action("GetQcGroup", "QcItemSetting")", {}, "", "ALL", "", "QcGroupName", "QcGroupId");
+
+            $("#txtQcItemNameQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+        });
+
+        $("#cboQcGroupQ@(itemName)").change(function () {
+            if (!isMobile) {
+                $("#cboQcClassQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+            ComboBoxs.Default("#cboQcClassQ@(itemName)", "@Url.Action("GetQcClass", "QcItemSetting")", { "QcGroupId": $("#cboQcGroupQ@(itemName)").val() }, "", "ALL", "", "QcClassName", "QcClassId");
+            Query@(itemName)();
+        });
+
+        $("#cboQcClassQ@(itemName)").change(function () {
+            Query@(itemName)();
+        });
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetQcItem", "QcItemSetting")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "QcClassId": $("#cboQcClassQ@(itemName)").val(),
+                "QcGroupId": $("#cboQcGroupQ@(itemName)").val(),
+                "QcItemName": $("#txtQcItemNameQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcGroupName}" style="max-width: 200px;">${item.QcGroupName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcClassName}" style="max-width: 200px;">${item.QcClassName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemName}" style="max-width: 200px;">${item.QcItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemDesc}" style="max-width: 200px;">${item.QcItemDesc}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--radio">
+                                            <input type="radio" data-qc-id="${item.QcItemId}" value="${item.QcItemId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" name="txtQcItemName@(itemName)" data-qc-id="${item.QcItemId}" value="${item.QcItemName}" />
+                                          <input type="hidden" name="txtQcItemNo@(itemName)" data-qc-id="${item.QcItemId}" value="${item.QcItemNo}" />
+                                          <input type="hidden" name="txtQcItemId@(itemName)" data-qc-id="${item.QcItemId}" value="${item.QcItemId}" />
+                                          <input type="hidden" name="txtQcItemType@(itemName)" data-qc-id="${item.QcItemId}" value="${item.QcItemType}" />
+                                          <input type="hidden" name="txtQcItemDesc@(itemName)" data-qc-id="${item.QcItemId}" value="${item.QcItemDesc}" />
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="6" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-qc-id]:checked") {
+                    let qcItemId = $(this).data("qc-id");
+                    let qcItemNo = $(`input[name='txtQcItemNo@(itemName)'][data-qc-id='${qcItemId}']`).val();
+                    let qcItemName = $(`input[name='txtQcItemName@(itemName)'][data-qc-id='${qcItemId}']`).val();
+                    let qcItemDesc = $(`input[name='txtQcItemDesc@(itemName)'][data-qc-id='${qcItemId}']`).val();
+                    let newQcItemNo = "";
+                    if (itemNo@(itemName) == null || itemNo@(itemName).length < 10) {
+                        newQcItemNo = qcItemNo;
+                    }
+                    else if (itemNo@(itemName).length == 10) {
+                        let machineNumber = itemNo@(itemName).substr(3,3);
+                        newQcItemNo = qcItemNo.substr(0, 3) + machineNumber + qcItemNo.substr(3, 4);
+                    }
+                    spreadsheet@(itemName).setValue(cell@(itemName), newQcItemNo);
+                    spreadsheet@(itemName).setValue(qcNameCell@(itemName), qcItemName);
+                    spreadsheet@(itemName).setValue(qcItemDescCell@(itemName), qcItemDesc);
+                    $(this).prop("checked", false);
+                }
+                $("#modal@(itemName)").modal('hide');
+
+            });
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+</script>
+                        )

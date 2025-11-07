@@ -1,0 +1,545 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewDeliveryFinalizeOrder";
+    string itemNameText = "出貨定版管理";
+    string authority = ViewBag.authority;
+}
+
+@Html.Resource("css",
+    @<style>
+         .modal-xl {
+             max-width: 1680px;
+         }
+
+         .customization .table {
+             border-collapse: collapse !important;
+         }
+
+         .customer-border td {
+             border-top: 5px solid #6d94d9 !important;
+         }
+
+         .customization .table.table-striped tbody tr:nth-of-type(odd) td:not(.col-sticky) {
+             background-color: transparent;
+         }
+    </style>
+                        )
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-lg-2 col-6">
+                                        <label class="form-label" for="txtSoErpFullNo@(itemName)">訂單單號</label>
+                                        <input type="text" class="form-control" id="txtSoErpFullNo@(itemName)" name="txtSoErpFullNo@(itemName)" placeholder="請輸入訂單單號"
+                                               data-msg-extraRegex="請輸入訂單單號" />
+                                    </div>
+                                    <div class="col-lg-2 col-3 mt-4">
+                                        <button type="button" class="btn btn-primary" onclick="Import@(itemName)()"><i class="fas fa-arrow-circle-down"></i>載入</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="new-delivery">
+                            <div class="table-custom">
+                                <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)Add">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" style="min-width: 50px;">#</th>
+                                            <th class="text-center" scope="col" style="min-width: 100px;">操作</th>
+                                            <th scope="col" style="min-width: 125px;">出貨日期</th>
+                                            <th scope="col" style="min-width: 125px;">出貨時間</th>
+                                            <th scope="col" style="min-width: 150px;">客戶</th>
+                                            <th scope="col" style="min-width: 200px;">訂單單號</th>
+                                            <th scope="col" style="min-width: 300px;">品名</th>
+                                            <th scope="col" style="min-width: 120px;">正常品數量</th>
+                                            <th scope="col" style="min-width: 100px;">贈品數量</th>
+                                            <th scope="col" style="min-width: 100px;">備品數量</th>
+                                            <th scope="col" style="min-width: 150px;">出貨客戶</th>
+                                            <th scope="col" style="min-width: 150px;">出貨工程</th>
+                                            <th scope="col" style="min-width: 230px;">訂單狀況</th>
+                                            <th scope="col" style="min-width: 230px;">寄送方式</th>
+                                            <th scope="col" style="min-width: 300px;">備註</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-center" colspan="15" style="background-color: #fff3cd;">
+                                                <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let deliveryJson = JSON.parse('{ "data" : []}');
+
+        $(document).ready(function () {
+            $("#txtSoErpFullNo@(itemName)").on("keydown", function (event) {
+                if (event.keyCode == 13) {
+                    Import@(itemName)();
+                    return false;
+                }
+            });
+        });
+
+        function Pop@(itemName)() {
+            deliveryJson.data = [];
+            init@(itemName)();
+            $("#txtSoErpFullNo@(itemName)").val("");
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            initListener@(itemName)();
+        }
+
+        function Import@(itemName)() {
+            let soErpFullNo = $("#txtSoErpFullNo@(itemName)").val();
+            if (soErpFullNo.length <= 0) {
+                alert("請輸入訂單資料!");
+                return false;
+            }
+
+            let errorMessage = "";
+
+            let targetUrl = "@Url.Action("GetSoDetailForDeliveryOrder", "Delivery")";
+            let postData = {
+                "SoErpFullNo": $("#txtSoErpFullNo@(itemName)").val(),
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        if (item.ConfirmStatus != "Y") {
+                            errorMessage += `訂單${item.SoErpFullNo}(${item.SoSequence}) 狀態非確認!!<br>`;
+                            return;
+                        }
+
+                        if (item.ClosureStatus != "N") {
+                            errorMessage += `訂單${item.SoErpFullNo}(${item.SoSequence}) 已結案!!<br>`;
+                            return;
+                        }
+
+                        let availableQty = item.SoQty - item.SiQty;
+                        if (availableQty <= 0) {
+                            errorMessage += `訂單${item.SoErpFullNo}(${item.SoSequence}) 數量已滿!!<br>`;
+                            return;
+                        }
+
+                        let totalDoQty = item.TotalDoQty;
+                        if (totalDoQty > availableQty) {
+                            errorMessage += `訂單${item.SoErpFullNo}(${item.SoSequence}) 出貨單據數量已達可收數量!!<br>`;
+                            return;
+                        }
+
+                        let soQty = item.SiQty >= (item.TempShippingQty + item.ReturnTempShippingQty) ? item.SoQty - item.SiQty - item.TotalDoQty : item.SoQty - (item.TempShippingQty + item.ReturnTempShippingQty) - item.TotalDoQty;
+                        if (soQty <= 0) {
+                            errorMessage += `訂單${item.SoErpFullNo}(${item.SoSequence}) 出貨單據數量已達可收數量!!<br>`;
+                            return;
+                        }
+
+                        let json = {
+                            index: GetNextIndex(deliveryJson.data),
+                            soDetailId: item.SoDetailId,
+                            pcPromiseDate: item.PcPromiseDate,
+                            pcPromiseTime: "00:00:00",
+                            customerId: item.CustomerId,
+                            customerNo: item.CustomerNo,
+                            customerName: item.CustomerShortName,
+                            soNo: item.SoErpFullNo,
+                            soSeq: item.SoSequence,
+                            mtlItemName: item.MtlItemName,
+                            soQty: item.SiQty >= (item.TempShippingQty + item.ReturnTempShippingQty) ? item.SoQty - item.SiQty - item.TotalDoQty : item.SoQty - (item.TempShippingQty + item.ReturnTempShippingQty) - item.TotalDoQty,
+                            freebieQty: item.FreebieQty,
+                            spareQty: item.SpareQty,
+                            deliveryCustomer: "",
+                            deliveryProcess: -1,
+                            orderSituation: -1,
+                            deliveryMethod: -1,
+                            pcDoDetailRemark: item.SoDetailRemark
+                        };
+
+                        deliveryJson.data.push(json);
+                    });
+                }
+                else {
+                    alert("查無訂單資料!");
+                }
+            }
+
+            if (errorMessage.length > 0) {
+                //alert(errorMessage, "error", 500);
+            }
+
+            init@(itemName)();
+
+            $("#txtSoErpFullNo@(itemName)").val("");
+        }
+
+        function init@(itemName)() {
+            let innerHtml = '';
+
+            if (deliveryJson.data.length > 0) {
+                for (var i = 0; i < deliveryJson.data.length; i++) {
+                    if (deliveryJson.data[i].parentIndex) {
+                        continue;
+                    }
+
+                    innerHtml += `<tr data-index="${deliveryJson.data[i].index}">
+                                    <td style="min-width: 75px;"><a href="javascript: AddDetail@(itemName)(${deliveryJson.data[i].index})"><i class="fas fa-plus-square"></i></a> ${i + 1}.</td>
+                                    <td class="text-center active-content">
+                                      <a class="active-link auth-delete" href="javascript:Delete@(itemName)Add(${deliveryJson.data[i].index});"><i class="fas fa-trash-alt"></i></a>
+                                    </td>
+                                    <td><input type="date" class="form-control" name="cboPcPromiseDate@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].pcPromiseDate}" /></td>
+                                    <td>
+                                      <input type="text" class="form-control timedropper" name="txtPcPromiseTime@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].pcPromiseTime}">
+                                    </td>
+                                    <td>${deliveryJson.data[i].customerNo} ${deliveryJson.data[i].customerName}</td>
+                                    <td>${deliveryJson.data[i].soNo}<code>(${deliveryJson.data[i].soSeq})</code></td>
+                                    <td class="ellipsis" data-toggle="tooltip" title = "${deliveryJson.data[i].mtlItemName}" style = "max-width: 300px;">${deliveryJson.data[i].mtlItemName}</td>
+                                    <td>
+                                      <input type="text" class="form-control" name="txtSoQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].soQty}">
+                                    </td>BB
+                                    <td>
+                                      <input type="text" class="form-control" name="txtFreebieQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].freebieQty}">
+                                    </td>
+                                    <td>
+                                      <input type="text" class="form-control" name="txtSpareQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].spareQty}">
+                                    </td>
+                                    <td>
+                                      <select class="form-control" name="cboDeliveryCustomer@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                    </td>
+                                    <td>
+                                      <select class="form-control" name="cboDeliveryProcess@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                    </td>
+                                    <td>
+                                      <div class="input-group">
+                                        <select class="form-control" name="cboOrderSituation@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                        <input type="text" class="form-control" name="txtOrderSituation@(itemName)" data-index="${deliveryJson.data[i].index}"/>
+                                      </div>
+                                    </td>
+                                    <td>
+                                      <div class="input-group">
+                                        <select class="form-control" name="cboDeliveryMethod@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                        <input type="text" class="form-control" name="txtDeliveryMethod@(itemName)" data-index="${deliveryJson.data[i].index}"/>
+                                      </div>
+                                    </td>
+                                    <td>
+                                      <textarea class="form-control" name="txtPcDoDetailRemark@(itemName)" data-index="${deliveryJson.data[i].index}" rows="1">${deliveryJson.data[i].pcDoDetailRemark}</textarea>
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                innerHtml += `<tr>
+                                    <td class="text-center" colspan="15" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+            }
+            $("#tblData@(itemName)Add tbody").html(innerHtml);
+            TableComponentInit();
+
+            for (var i = 0; i < deliveryJson.data.length; i++) {
+                if (!deliveryJson.data[i].parentIndex) {
+                    continue;
+                }
+
+                let deatalInnerHtml = `<tr>
+                                        <td style="min-width: 75px;"><i class="fas fa-share"></i></td>
+                                        <td class="text-center active-content">
+                                            <a class="active-link auth-delete" href="javascript:Delete@(itemName)Add(${deliveryJson.data[i].index});"><i class="fas fa-trash-alt"></i></a>
+                                        </td>
+                                        <td><input type="date" class="form-control" name="cboPcPromiseDate@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].pcPromiseDate}" /></td>
+                                        <td>
+                                            <input type="text" class="form-control timedropper" name="txtPcPromiseTime@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].pcPromiseTime}">
+                                        </td>
+                                        <td>${deliveryJson.data[i].customerNo} ${deliveryJson.data[i].customerName}</td>
+                                        <td>${deliveryJson.data[i].soNo}<code>(${deliveryJson.data[i].soSeq})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title = "${deliveryJson.data[i].mtlItemName}" style = "max-width: 300px;">${deliveryJson.data[i].mtlItemName}</td>
+                                        <td>
+                                            <input type="text" class="form-control" name="txtSoQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].soQty}">
+                                        </td>BB
+                                        <td>
+                                            <input type="text" class="form-control" name="txtFreebieQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].freebieQty}">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control" name="txtSpareQty@(itemName)" data-index="${deliveryJson.data[i].index}" value="${deliveryJson.data[i].spareQty}">
+                                        </td>
+                                        <td>
+                                            <select class="form-control" name="cboDeliveryCustomer@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                        </td>
+                                        <td>
+                                            <select class="form-control" name="cboDeliveryProcess@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                        </td>
+                                        <td>
+                                            <div class="input-group">
+                                            <select class="form-control" name="cboOrderSituation@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                            <input type="text" class="form-control" name="txtOrderSituation@(itemName)" data-index="${deliveryJson.data[i].index}"/>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="input-group">
+                                            <select class="form-control" name="cboDeliveryMethod@(itemName)" data-index="${deliveryJson.data[i].index}"></select>
+                                            <input type="text" class="form-control" name="txtDeliveryMethod@(itemName)" data-index="${deliveryJson.data[i].index}"/>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <textarea class="form-control" name="txtPcDoDetailRemark@(itemName)" data-index="${deliveryJson.data[i].index}" rows="1">${deliveryJson.data[i].pcDoDetailRemark}</textarea>
+                                        </td>
+                                      </tr>`;
+
+                $(`tr[data-index="${deliveryJson.data[i].parentIndex}"]`).after(deatalInnerHtml);
+            }
+
+            Suites.TimeDropper("#txtPcPromiseTime@(itemName)");
+
+            for (var i = 0; i < deliveryJson.data.length; i++) {
+
+                Suites.TimeDropper("#txtPcPromiseTime@(itemName)");
+
+                ComboBoxs.Default("select[name='cboDeliveryCustomer@(itemName)'][data-index='" + deliveryJson.data[i].index + "']", "@Url.Action("GetDeliveryCustomer", "ScmBasicInformation")", { "CustomerId": deliveryJson.data[i].customerId, "Status": "A" }, deliveryJson.data[i].deliveryCustomer, "NA", "", "DcShortName", "DcId");
+                ComboBoxs.Default("select[name='cboDeliveryProcess@(itemName)'][data-index='" + deliveryJson.data[i].index + "']", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DeliveryProcess" }, deliveryJson.data[i].deliveryProcess, "NA", "", "TypeName", "TypeNo");
+                ComboBoxs.Default("select[name='cboOrderSituation@(itemName)'][data-index='" + deliveryJson.data[i].index + "']", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "OrderSituation" }, deliveryJson.data[i].orderSituation, "NA", "", "TypeName", "TypeName");
+                ComboBoxs.Default("select[name='cboDeliveryMethod@(itemName)'][data-index='" + deliveryJson.data[i].index + "']", "@Url.Action("GetType", "BasicInformation")", { "TypeSchema": "DeliveryMethod" }, deliveryJson.data[i].deliveryMethod, "NA", "", "TypeName", "TypeName");
+            }
+
+            if (!isMobile) {
+                $("select[name=cboDeliveryCustomer@(itemName)], select[name=cboDeliveryProcess@(itemName)]").select2({
+                    dropdownAutoWidth: true,
+                    width: "100%"
+                });
+            }
+        }
+
+        function initListener@(itemName)() {
+            const container = "#tblData@(itemName)Add";
+
+            $(container).on("change", "input[name='txtPcPromiseTime@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.pcPromiseTime = $(this).val();
+            });
+
+            $(container).on("change", "input[name='txtSoQty@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.soQty = $(this).val();
+            });
+
+            $(container).on("change", "input[name='txtFreebieQty@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.freebieQty = $(this).val();
+            });
+
+            $(container).on("change", "input[name='txtSpareQty@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.spareQty = $(this).val();
+            });
+
+            $(container).on("change", "select[name='cboDeliveryCustomer@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) {
+                    item.deliveryCustomer = $(this).val();
+                    item.deliveryCustomerName = $(this).find("option:selected").text();
+                }
+            });
+
+            $(container).on("change", "select[name='cboDeliveryProcess@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) {
+                    item.deliveryProcess = $(this).val();
+                    item.deliveryProcessName = $(this).find("option:selected").text();
+                }
+            });
+
+            $(container).on("change", "select[name='cboOrderSituation@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                $(`input[name='txtOrderSituation@(itemName)'][data-index='${index}']`).val($(this).val()).trigger("change");
+            });
+
+            $(container).on("change", "input[name='txtOrderSituation@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.orderSituation = $(this).val();
+            });
+
+            $(container).on("change", "select[name='cboDeliveryMethod@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                $(`input[name='txtDeliveryMethod@(itemName)'][data-index='${index}']`).val($(this).val()).trigger("change");
+            });
+
+            $(container).on("change", "input[name='txtDeliveryMethod@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.deliveryMethod = $(this).val();
+            });
+
+            $(container).on("change", "textarea[name='txtPcDoDetailRemark@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.pcDoDetailRemark = $(this).val();
+            });
+
+            $(container).on("change", "textarea[name='txtPcDoDetailRemark@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.pcDoDetailRemark = $(this).val();
+            });
+
+            $(container).on("change", "input[name='cboPcPromiseDate@(itemName)'][data-index]", function () {
+                const index = $(this).data("index");
+                const item = deliveryJson.data.find(x => x.index === index);
+                if (item) item.pcPromiseDate = $(this).val();
+            });
+        }
+
+        function AddDetail@(itemName)(index) {
+            const data = deliveryJson.data.find(item => item.index.toString() === index.toString());
+            if (data) {
+                let json = {
+                    index: GetNextIndex(deliveryJson.data),
+                    soDetailId: data.soDetailId,
+                    pcPromiseDate: data.pcPromiseDate,
+                    pcPromiseTime: data.pcPromiseTime,
+                    customerId: data.customerId,
+                    customerNo: data.customerNo,
+                    customerName: data.customerName,
+                    soNo: data.soNo,
+                    soSeq: data.soSeq,
+                    mtlItemName: data.mtlItemName,
+                    soQty: 0,
+                    freebieQty: 0,
+                    spareQty: 0,
+                    deliveryCustomer: data.deliveryCustomer,
+                    deliveryProcess: data.deliveryProcess,
+                    orderSituation: data.orderSituation,
+                    deliveryMethod: data.deliveryMethod,
+                    pcDoDetailRemark: data.pcDoDetailRemark,
+                    parentIndex: index
+                };
+
+                deliveryJson.data.push(json);
+
+                init@(itemName)();
+            }
+        }
+
+        function GetNextIndex(dataArray) {
+            if (!Array.isArray(dataArray) || dataArray.length === 0) return 1;
+            const maxIndex = Math.max(...dataArray.map(item => item.index ?? 0));
+            return maxIndex + 1;
+        }
+
+        function Delete@(itemName)Add(index) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    for (var i in deliveryJson.data) {
+                        if (deliveryJson.data[i]["index"] == index || deliveryJson.data[i]["parentIndex"] == index) {
+                            deliveryJson.data.splice(i, 1);
+                        }
+                    }
+                    
+                    init@(itemName)();
+                }
+            });
+        }
+
+        function Save@(itemName)() {
+            if (deliveryJson.data.length > 0) {
+
+                let isValid = true;
+                let errorMsg = "";
+
+                for (var i = 0; i < deliveryJson.data.length; i++) {
+                    if (!isNaN(deliveryJson.data[i].soQty)) {
+                        if (parseInt(deliveryJson.data[i].soQty) <= 0) {
+                            $("input[type='hidden'][data-index='" + deliveryJson.data[i].index + "']").parents("tr").addClass("text-danger");
+                            isValid = false;
+                            errorMsg += "單號(序號):" + deliveryJson.data[i].soNo + "(" + deliveryJson.data[i].soSeq + ")" + "，出貨數量不能小於零!!<br />";
+                        }
+                    } else {
+                        $("input[type='hidden'][data-index='" + deliveryJson.data[i].index + "']").parents("tr").addClass("text-danger");
+                        isValid = false;
+                        errorMsg += "單號(序號):" + deliveryJson.data[i].soNo + "(" + deliveryJson.data[i].soSeq + ")" + "，出貨數量不正確!!<br />";
+                    }
+
+                    if (!deliveryJson.data[i].deliveryCustomer) {
+                        $("input[type='hidden'][data-index='" + deliveryJson.data[i].index + "']").parents("tr").addClass("text-danger");
+                        isValid = false;
+                        errorMsg += "單號(序號):" + deliveryJson.data[i].soNo + "(" + deliveryJson.data[i].soSeq + ")" + "，請選擇出貨客戶!!<br />";
+                    }
+
+                    if (!deliveryJson.data[i].deliveryProcess) {
+                        $("input[type='hidden'][data-index='" + deliveryJson.data[i].index + "']").parents("tr").addClass("text-danger");
+                        isValid = false;
+                        errorMsg += "單號(序號):" + deliveryJson.data[i].soNo + "(" + deliveryJson.data[i].soSeq + ")" + "，請選擇出貨工程!!<br />";
+                    }
+                }
+
+                if (isValid) {
+                    let targetUrl = "@Url.Action("AddDeliveryFinalizeOrder", "Delivery")";
+                    let postData = {
+                        "Delieverys": JSON.stringify(deliveryJson)
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        QueryDeliveryPlanning();
+                        Close@(itemName)();
+                    }
+                } else {
+                    alert(errorMsg);
+                }
+            }
+            else {
+                alert("查無任何定版資料!")
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+        )

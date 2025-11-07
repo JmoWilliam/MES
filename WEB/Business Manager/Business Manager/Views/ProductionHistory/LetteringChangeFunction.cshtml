@@ -1,0 +1,293 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "LetteringChangeFunction";
+    string itemNameText = "模仁改刻字置換";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+    string BarcodeNo = Request["BarcodeNo"] ?? "";
+}
+@Html.Resource("css",
+    @<link href="@Url.Content("~/Content/mes_scan.min.css")" rel="stylesheet" />
+)
+@Html.Resource("css",
+    @<style>
+
+         /*版頭設定*/
+         .container-fluid {
+             padding: 0;
+             padding-right: 8px;
+             padding-left: 8px;
+         }
+
+         .container_full {
+             margin-top: 0;
+         }
+
+         .modal-header {
+             padding: 0.5rem 1rem;
+         }
+
+         select.select3 {
+             padding: 5px 10px;
+             border-color: #c9cdcf;
+             border-radius: 3px;
+             height: 40px;
+             width: 100%;
+             outline: none;
+         }
+
+             select.select3:focus-visible {
+                 border: 1px solid #a768f3;
+                 outline: none;
+             }
+
+         .lot-scanner {
+             display: flex;
+         }
+    </style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="mes_content" id="MesScanningInterface">
+    <div class="col-12">
+        <div class="infonfunc card-body">
+            <div class="row">
+                <!-- 左方列表 -->
+                <div class="mes_info col-xs-12 col-sm-12 col-md-7" style="" id="divMoInfo">
+                    <div class="row">
+                        <div class="" style="width:45%;">
+                            <ul style="margin-bottom: 5px;">
+                                <li class="list-btn-block">
+                                    <div class="" style="">
+                                        <p>製令</p>
+                                        <h2 id="txtWoErpNo@(itemName)"></h2>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="" style="">
+                                        <p>品名</p>
+                                        <h2 id="txtMtlItemName@(itemName)"></h2>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div style="width:55%">
+                            <ul>
+                                <li class="list-btn-block">
+                                    <div class="" style="">
+                                        <p>人員</p>
+                                        <h2 id="txtUserNo@(itemName)"></h2>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="" style="">
+                                        <p>品號</p>
+                                        <h2 id="txtMtlItemNo@(itemName)"></h2>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!-- 右方按鈕 -->
+                <div class="col-xs-12 col-sm-12  col-md-5 pl-0 pr-1">
+                    <div class="function-content">
+                        <div class="function-item2">
+                            <div class="logout">
+                                <a class="btn" onclick="javascript:Logout@(itemName)();">
+                                    登出
+                                    <i class="fa fa-sign-out ml-1" style=""></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <main class="mes_table_wrapper">
+        <div class="row">
+            <div class=" col-12">
+                <div class="card card-shadow">
+                    <div class="table-outer">
+                        <table id="tblData@(itemName)" class="table-platform-sticky">
+                            <thead>
+                                <tr class="headerrow">
+                                    <th scope="col" width="35%">
+                                        <form></form>
+                                        <div class="form-row align-items-center">
+                                            <div class="col-auto">
+                                                <label class="sr-only" for="txtBarcodeNo@(itemName)">請輸入模仁條碼</label>
+                                                <div class="input-group ">
+                                                    <div class="input-group-prepend">
+                                                        <div class="input-group-text">
+                                                            <div class="check-follow">
+                                                                <input type="checkbox" id="followBarcode" checked="">
+                                                                <div class="state p-on" style="color: #ff0000;">
+                                                                    <i class="fas fa-lightbulb"></i>
+                                                                    <label style="text-indent: 0px;">條碼</label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <input type="text" class="form-control" id="txtBarcodeNo@(itemName)" placeholder="請輸入模仁條碼">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </th>
+                                    <th scope="col">刻號</th>
+                                    <th scope="col">開始時間</th>
+                                    <th scope="col">結束時間</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="loadingdiv" id="loading" style="display: none">
+    <img src="~/assets/images/new-loading.gif" style="width: 75px;" />
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let userId = -1;
+        let barcodeNo = "@BarcodeNo";
+
+        $(document).ready(function () {
+            GetLoginByKey@(itemName)();
+            Return@(itemName)();
+
+            if (barcodeNo) {
+                BarcodeInfo@(itemName)(barcodeNo);
+            }
+
+            $("#txtBarcodeNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Save@(itemName)($(this).val());
+                }
+            });
+        });
+
+        function GetLoginByKey@(itemName)() {
+            let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+            let postData = {
+                "UserNo": $.cookie("Login"),
+                "KeyText": $.cookie("LoginKey")
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                userId = data.returnData.UserId;
+                $("#txtUserNo@(itemName)").html(data.returnData.UserName + "(" + $.cookie("Login") + ")");
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function ManufactureOrder@(itemName)(BarcodeNo) {
+            let targetUrl = "@Url.Action("GetBarcodeRelevantData", "ProductionHistory")";
+            let postData = {
+                "BarcodeNo": BarcodeNo
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    $("#txtWoErpNo@(itemName)").html(item.WoErpPrefix + "-" + item.WoErpNo + "(" + item.WoSeq + ")");
+                    $("#txtMtlItemName@(itemName)").html(item.MtlItemName);
+                    $("#txtMtlItemNo@(itemName)").html(item.MtlItemNo);
+
+                });
+            } else {
+                alert(data.msg, "alert", 1000);
+            }
+        }
+
+        function BarcodeInfo@(itemName)(BarcodeNo) {
+            let targetUrl = "@Url.Action("GetBarcodeLetteringChangeInfo", "ProductionHistory")";
+            let postData = {
+                "BarcodeNo": BarcodeNo,
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            let innerHtml = '';
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr class="line-even">
+                                        <th>
+                                            <p>${item.BarcodeNo}</p>
+                                        </th>
+                                        <td>${item.ItemSeq}</td>
+                                        <td>${item.StartDate}</td>
+                                        <td>${item.FinishDate}</td>
+                                      </tr>`;
+                    });
+
+                    //左上方列表
+                    ManufactureOrder@(itemName)(BarcodeNo);
+                } else {
+                    window.history.replaceState(null, null, "LetteringChangeFunction");
+                    Return@(itemName)();
+                }
+            }
+            else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").append(innerHtml);
+        }
+
+        function Save@(itemName)(BarcodeNo) {
+            let targetUrl = "@Url.Action("TxBarcodeAttributeLog", "ProductionHistory")";
+            let postData = {
+                "BarcodeNo": BarcodeNo,
+                "UserId": userId
+            };
+            let result = DataAccess.EditContinued(targetUrl, postData, false);
+
+            if (result) {
+                $('#txtBarcodeNo@(itemName)').val(""); //輸入後清空欄位值
+                
+                window.history.replaceState(null, null,
+                    `?BarcodeNo=${BarcodeNo}`);
+
+                BarcodeInfo@(itemName)(BarcodeNo);
+
+                if (result.result > 0) {
+                    alert("條碼輸入成功!", "success", 2500);
+                } else {
+                    alert("【查無該條碼之置換紀錄】或【模仁已完成置換】!", "alert", 0);
+                }
+            }
+        }
+
+        function Logout@(itemName)() {
+            let targetUrl = "@Url.Action("Logout", "User")";
+            let postData = {
+            };
+
+            var result = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (result) window.location.reload();
+        }
+
+        function Close@(itemName)(modalName) {
+            $("#" + modalName).modal("hide");
+            $('#txtBarcodeId@(itemName)').val("")
+            $("#txtStartTime@(itemName)").html("")
+        }
+
+        function Return@(itemName)() {
+            $("#tblData@(itemName) tbody").empty();
+        }
+    </script>
+)

@@ -1,0 +1,342 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewPoDetail";
+    string itemNameText = "查看採購單身資料";
+}
+
+@Html.Resource("css",
+    @<style>
+         .source-user {
+             font-size: 1rem;
+             color: #4d80c4;
+         }
+
+         .source-contact {
+             font-size: 1rem;
+             color: #27b390;
+         }
+
+             .source-user i, .source-contact i {
+                 margin-right: 5px;
+             }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+    </style>
+                        )
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtPoErpFullNoQ@(itemName)" name="txtPoErpFullNoQ@(itemName)"
+                                               placeholder="請輸入採購單號" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                               placeholder="請輸入品號/品名/規格" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-control" id="cboSupplierIdQ@(itemName)" name="cboSupplierIdQ@(itemName)" disabled></select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 145px;">採購單號</th>
+                                        <th scope="col" style="min-width: 135px;">品號</th>
+                                        <th scope="col" style="min-width: 145px;">品名</th>
+                                        <th scope="col" style="min-width: 135px;">規格</th>
+                                        <th scope="col" style="min-width: 110px;">採購數量</th>
+                                        <th scope="col" style="min-width: 110px;">已交數量</th>
+                                        <th scope="col" style="min-width: 110px;">預交日</th>
+                                        <th scope="col" style="min-width: 110px;">交易條件</th>
+                                        <th scope="col" style="min-width: 110px;">幣別</th>
+                                        <th scope="col" style="min-width: 110px;">匯率</th>
+                                        <th scope="col" style="min-width: 110px;">檢驗狀態</th>
+                                        <th scope="col" style="min-width: 135px;">採購人員</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">
+                                            <label class="control control-solid control-solid-info control--checkbox" style="margin-bottom: 0px;">
+                                                <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                                <span class="control__indicator"></span>
+                                                全選
+                                            </label>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 30
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        let supplierId@(itemName);
+
+        let paymentTermNo@(itemName);
+
+        let currencyCode@(itemName);
+
+        let exchange@(itemName);
+
+        let poDetailIdList@(itemName) = [];
+
+        function Pop@(itemName)(supplierId, paymentTermNo, currencyCode, exchange) {
+
+            supplierId@(itemName) = supplierId;
+
+            paymentTermNo@(itemName) = paymentTermNo;
+
+            currencyCode@(itemName) = currencyCode;
+
+            exchange@(itemName) = exchange;
+
+            poDetailIdList@(itemName) = [];
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $("#cboSupplierIdQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            ComboBoxs.Default("#cboSupplierIdQ@(itemName)", "@Url.Action("GetSupplier", "ScmBasicInformation")", { "PermitStatus": "1" }, supplierId@(itemName), "NA", "", "SupplierWithNo", "SupplierId");
+
+            $("#txtPoErpFullNoQ@(itemName), #txtSearchKeyQ@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+
+            Query@(itemName)();
+
+            $("#cboSupplierIdQ@(itemName)").change(function () {
+                Query@(itemName)();
+            });
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-po-detail-id][data-po-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-po-detail-id][data-po-id]").not(":disabled").prop("checked", false);
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetPoDetail", "PurchaseOrder")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "PoErpFullNo": $("#txtPoErpFullNoQ@(itemName)").val(),
+                "SupplierId": $("#cboSupplierIdQ@(itemName)").val(),
+                "ClosureStatus": "N",
+                "ConfirmStatus": "Y",
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoErpPrefix}-${item.PoErpNo}(${item.PoSeq})" style="min-width: 150px;">${item.PoErpPrefix}-${item.PoErpNo}<code>(${item.PoSeq})</code></td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="min-width: 150px;">${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoMtlItemName}" style="min-width: 150px;">${item.PoMtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoMtlItemSpec}" style="min-width: 135px;">${item.PoMtlItemSpec}</td>
+                                        <td>${item.Quantity.toLocaleString(`en`)}</td>
+                                        <td>${item.SiQty.toLocaleString(`en`)}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PromiseDate}" style="min-width: 135px;">${item.PromiseDate}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PaymentTerm}" style="min-width: 135px;">${item.PaymentTermNo} ${item.PaymentTerm}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.CurrencyCode}" style="min-width: 135px;">${item.CurrencyCode}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Exchange}" style="min-width: 135px;">${item.Exchange}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcStatusName}" style="min-width: 135px;">${item.QcStatusName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoUserNo} ${item.PoUserName}" style="min-width: 135px;"><i class="fas fa-user"></i>&nbsp;<code>${item.PoUserNo}</code>&nbsp;${item.PoUserName}</td>
+                                        <td class="text-center col-sticky">
+                                          <label class="control control-solid control-solid-info control--checkbox">
+                                            <input type="checkbox" data-po-detail-id="${item.PoDetailId}" data-po-id="${item.PoId}" value="${item.PoDetailId}" />
+                                            <span class="control__indicator"></span>
+                                          </label>
+                                          <input type="hidden" id="txtPoErpPrefix@(itemName)" data-po-detail-id="${item.PoDetailId}" data-po-id="${item.PoId}" value="${item.PoErpPrefix}-${item.PoErpNo}"/>
+                                          <input type="hidden" id="txtPoUserFullNo@(itemName)" data-po-detail-id="${item.PoDetailId}" data-po-id="${item.PoId}" value="${item.PoUserNo} ${item.PoUserName}"/>
+                                          <input type="hidden" id="txtPaymentTermNo@(itemName)" data-po-detail-id="${item.PoDetailId}" data-po-id="${item.PoId}" value="${item.PaymentTermNo}"/>
+                                          <input type="hidden" id="txtCurrencyCode@(itemName)" data-po-detail-id="${item.PoDetailId}" data-po-id="${item.PoId}" value="${item.CurrencyCode}"/>
+                                          <input type="hidden" id="txtExchange@(itemName)" data-po-detail-id="${item.PoDetailId}" data-po-id="${item.PoId}" value="${item.Exchange}"/>
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="14" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            $("input[type='radio']").click(function () {
+                if ("[data-po-id]:checked") {
+                    let poId = $(this).data("po-id");
+
+                    if (poId) {
+                        let poErpFullNo = $(`input[id="txtPoErpPrefix@(itemName)"][data-po-id="${poId}"]`).val();
+                        let poUserFullNo = $(`input[id="txtPoUserFullNo@(itemName)"][data-po-id="${poId}"]`).val();
+                        let paymentTermNo = $(`input[id="txtPaymentTermNo@(itemName)"][data-po-id="${poId}"]`).val();
+                        let currencyCode = $(`input[id="txtCurrencyCode@(itemName)"][data-po-id="${poId}"]`).val();
+                        let exchange = $(`input[id="txtExchange@(itemName)"][data-po-id="${poId}"]`).val();
+
+                        if (paymentTermNo@(itemName).toString() != paymentTermNo.toString()) {
+                            alert("進貨單付款條件【" + paymentTermNo@(itemName) + "】與採購單付款條件【" + poUserFullNo + "】不同!!");
+                            return false;
+                        }
+
+                        if (currencyCode@(itemName).toString() != currencyCode.toString()) {
+                            alert("進貨單幣別【" + currencyCode@(itemName) + "】與採購單幣別【" + currencyCode + "】不同!!");
+                            return false;
+                        }
+
+                        @*if (parseFloat(exchange@(itemName)) != parseFloat(exchange)) {
+                            alert("進貨單匯率【" + exchange@(itemName) + "】與採購單匯率【" + exchange + "】不同!!");
+                            return false;
+                        }*@
+
+                        if (poId@(itemName)) ElementSetValue(poId@(itemName), poId, "change");
+                        if (poErpFullNo@(itemName)) ElementSetValue(poErpFullNo@(itemName), poErpFullNo, "change");
+                        if (poUserFullNo@(itemName)) ElementSetValue(poUserFullNo@(itemName), poUserFullNo, "change");
+
+                        $(".po-user-info").show();
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                    }
+                }
+
+                Close@(itemName)();
+            });
+
+            $("input[type='checkbox']").click(function () {
+                if ("[data-po-id]:checked") {
+                    let poId = $(this).data("po-id");
+
+                    if (poId) {
+                        let paymentTermNo = $(`input[id="txtPaymentTermNo@(itemName)"][data-po-id="${poId}"]`).val();
+                        if (paymentTermNo@(itemName).toString() != paymentTermNo.toString()) {
+                            alert("進貨單付款條件【" + paymentTermNo@(itemName) + "】與採購單付款條件【" + paymentTermNo + "】不同!!");
+                            return false;
+                        }
+
+                        let currencyCode = $(`input[id="txtCurrencyCode@(itemName)"][data-po-id="${poId}"]`).val();
+                        if (currencyCode@(itemName).toString() != currencyCode.toString()) {
+                            alert("進貨單幣別【" + currencyCode@(itemName) + "】與採購單幣別【" + currencyCode + "】不同!!");
+                            return false;
+                        }
+
+                        @*let exchange = $(`input[id="txtExchange@(itemName)"][data-po-id="${poId}"]`).val();
+                        if (parseFloat(exchange@(itemName)) != parseFloat(exchange)) {
+                            alert("進貨單匯率【" + exchange@(itemName) + "】與採購單匯率【" + exchange + "】不同!!");
+                            return false;
+                        }*@
+                    }
+                }
+            });
+        }
+
+        function Save@(itemName)() {
+            poDetailIdList@(itemName) = [];
+            $.each($("input[type='checkbox'][data-po-detail-id][data-po-id]:checked"), function (i) {
+                let poDetailId = $(this).data("po-detail-id");
+                poDetailIdList@(itemName).push(poDetailId);
+            });
+
+            let targetUrl = "@Url.Action("ImportPoDetail", "GoodsReceipt")";
+            let postData = {
+                "GrId": $("#GrId").val(),
+                "PoDetailIdList": poDetailIdList@(itemName).toString()
+            };
+
+            let data = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (data) {
+                Close@(itemName)();
+                ReturnGrDetail();
+            }
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+                        )

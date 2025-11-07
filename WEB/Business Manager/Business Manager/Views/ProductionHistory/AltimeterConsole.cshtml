@@ -1,0 +1,542 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "AltimeterConsole";
+    string itemNameText = "高度計量測";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+
+    //string UserId = "-1";
+    //UserId = Request["UserId"].ToString();
+}
+@Html.Resource("css",
+@<link href="@Url.Content("~/Content/mes_scan.min.css")?20220623v1" rel="stylesheet" />
+                                                                        )
+@Html.Resource("css",
+@<style>
+     .container_full {
+         margin-top: 0;
+     }
+
+     /* login_03 */
+     .select-content {
+         display: flex;
+         justify-content: space-around;
+         flex-direction: row;
+     }
+
+         .select-content .select-item {
+             display: flex;
+             width: 50%;
+         }
+
+             .select-content .select-item .select-self {
+                 flex-direction: column;
+             }
+
+                 .select-content .select-item .select-self a, .select-content .select-item .select-self .select-font {
+                     color: #fff;
+                 }
+
+                 .select-content .select-item .select-self span {
+                     font-size: 18px;
+                     color: #fff;
+                 }
+
+     /* login_03 彈窗 機台&站別選擇表格 */
+     .dataselect_table {
+         display: table;
+         border-collapse: collapse;
+         text-align: center;
+         width: 100%;
+         /* margin-top: 0.5rem; */
+     }
+
+     .dataselect_td .button_choose {
+         padding: 10px 20px;
+         background-color: #a768f3;
+         color: #fff;
+         border-radius: 10px;
+         box-shadow: none;
+     }
+
+         .dataselect_td .button_choose:hover {
+             background-color: #a768f3;
+         }
+
+
+     .dataselect_td, .dataselect_th {
+         padding: 0.3rem;
+         font-size: 16px;
+         line-height: 2.2;
+         border-bottom: 1px solid #dee2e6;
+     }
+
+     .dataselect_th {
+         display: table-cell;
+         background-color: #ccc;
+         font-weight: bold;
+     }
+
+     .dataselect_tr:nth-of-type(odd) {
+         background-color: rgba(0,0,0,.03);
+     }
+
+
+     .line-active {
+         background-color: #e3b9ff;
+     }
+
+     .form-control {
+         font-size: 1rem;
+     }
+
+     .border-danger {
+         color: #dc3545;
+         border-color: #dc3545;
+     }
+</style>
+                                                                        )
+<div class="container" id="MesConsole">
+    <div class="login-content">
+
+        <div class="login-form">
+            <div class="logo">
+                <a>
+                    <img src="@Url.Content("~/Content/images/logo.png")" />
+                </a>
+            </div>
+            <input type="hidden" id="txtMfgOrderId" value="-1" />
+            <input type="hidden" id="txtMachineId" value="-1" />
+            <input type="hidden" id="txtOrderProcessId" value="-1" />
+            <div class="input-group">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> ＩＰ
+                </span>
+                <input type="text" class="form-control form-control-add" id="txtDeviceIp@(itemName)"
+                       aria-describedby="basic-addon13" readonly>
+            </div>
+            <div class="input-group">
+                <span class="input-group-addon font18" id="basic-addon13">
+                    <i class="fa fa-paint-brush" style="padding-right: 5px;"></i> 製令
+                </span>
+                <input type="text" class="form-control form-control-add lang" id="txtWipOrderId@(itemName)"
+                       aria-describedby="basic-addon13" placeholder="請輸入製令號碼" key="CONTACT">
+                <div class="input-group-append">
+                    <button type="button" class="border-danger" onclick="cleanMoId@(itemName)()" title="清除">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="quick-links-grid mb-3 mt-3">
+
+                <div id="viewMachineProcess" style="display:none">
+                    <div class="select-content">
+                        <div class="select-item mr-3" id="spanMachine@(itemName)">
+                            <a href="#" class="select-self ql-grid-item  btn" style="background-color: #03256C;" data-toggle="modal">
+                                <i class="select-font fa fa-microchip mr-1" aria-hidden="true"></i>
+                                <span class="ql-grid-title" id="spanMachineLabel@(itemName)"></span>
+                            </a>
+                        </div>
+                        <div class="select-item" id="spanProcess@(itemName)">
+                            <a href="#" class="select-self ql-grid-item btn" style="background-color: #B3679B;" data-toggle="modal">
+                                <i class="select-font fa fa-laptop mr-1" aria-hidden="true"></i>
+                                <span class="ql-grid-title" id="spanProcessLabel@(itemName)"></span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn-sure btn btn-success btn-flat mb-2 weight-600"
+                    onclick="javascript: EnterMesScanningInterface();">
+                確定
+            </button>
+            <div class="logout" style="width:unset;padding:unset;margin-top: 10px;">
+                <a class="btn" onclick="javascript:Logout@(itemName)();">
+                    登出<i class="fa fa-sign-out ml-1" style=""></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 彈出窗 選擇機台畫面 -->
+<div class="modal fade" id="machineModal" style="display:none">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    選擇 - 機台資料<br />
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <!-- 選擇車間 -->
+                        <div class="row">
+                            <div class="col-md-10 text-md-left">
+                                <form id="queryDataViewMachineInfo" autocomplete="off">
+                                    <label>
+                                        車間
+                                        <select class="form-control pull-right" id="cboShopQ@(itemName)" name="cboShopQ@(itemName)"></select>
+                                    </label>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="table-outer" style="border: solid 1px #eee;">
+                            <table class="dataselect_table" style="padding: 0.2rem;" id="tblMachineData@(itemName)">
+                                <thead>
+                                    <tr class="dataselect_tr">
+                                        <th scope="col" width="5%" class="dataselect_th">ID</th>
+                                        <th scope="col" width="25%" class="dataselect_th">機台編號</th>
+                                        <th scope="col" width="25%" class="dataselect_th">機台名稱</th>
+                                        <th scope="col" width="25%" class="dataselect_th">機台描述</th>
+                                        <th scope="col" width="20%" class="dataselect_th">
+                                            選擇
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 彈出窗 選擇站別畫面 -->
+<div class="modal fade" id="stationModal" style="display:none">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    選擇 - 站別<br />
+                </h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-outer" style="border: solid 1px #eee;">
+                            <table class="dataselect_table" style="padding: 0.2rem;" id="tblStationData@(itemName)">
+                                <thead>
+                                    <tr class="dataselect_tr">
+                                        <th scope="col" width="60%" class="dataselect_th">站別選擇</th>
+                                        <th scope="col" width="30%" class="dataselect_th">
+                                            選擇
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+@<script>
+    let deviceIp@(itemName) = "";
+    let objPage@(itemName) = {
+        "pageIndex": 0,
+        "pageSize": 10
+    };
+
+    let MoId = -1;
+    let MachineId = -1;
+    let MoProcessId = -1;
+
+    let userId = -1;
+    let companyId = -1;
+
+    let QcMachine = "";
+
+    $(document).ready(function () {
+        //$.getScript("MesScannerLang_EN.js", function () {
+        //    alert("Script loaded but not necessarily executed.");
+        //});
+
+        $("#spanMachineLabel@(itemName)").html("選擇機台");
+        $("#spanProcessLabel@(itemName)").html("選擇製程");
+
+        let targetUrl = "@Url.Action("GetLoginByKey", "User")";
+        let postData = {
+            "UserNo": $.cookie("Login"),
+            "KeyText": $.cookie("LoginKey")
+        };
+
+        let data = DataAccess.Get(targetUrl, postData, false);
+
+        if (data.status == "success") {
+            userId = data.returnData.UserId
+            companyId = data.returnData.CompanyId
+        } else {
+            alert(data.msg, "alert", 0);
+        }
+
+        ComboBoxs.Default("#cboShopQ@(itemName)", "@Url.Action("GetWorkShop", "ProductionHistory")", { "CompanyId": companyId }, "", "ALL", "", "ShopName", "ShopId");
+
+        $("#txtDeviceIp@(itemName)").val(GetDeviceIp());
+    });
+    /*機台&站別-選擇作業*/
+    //a中含有[data-mtl-id]屬性值
+    $(document).ready(function () {
+        $("a[data-mtl-id]").on("click", function () {
+            $("a[data-mtl-id]").closest("tr").find("td").removeClass('line-active');
+            let id = $(this).data("mtl-id");
+            $(this).closest("tr").find("td").addClass('line-active');
+        });
+
+        $("#txtWipOrderId@(itemName)").focus();
+        $("#viewMachineProcess").hide();
+        $("#viewMachineTimeCount").show();
+    });
+
+    $("#txtWipOrderId@(itemName)").keypress(function (event) {
+        var keycode = (event.keyCode ? event.keyCode : event.which);
+        if (keycode == '13') {
+            SelectMoId@(itemName)();
+        }
+
+
+    });
+
+    $("#cboShopQ@(itemName)").change(function () {
+        let shopId = $("#cboShopQ@(itemName)").val();
+        InitMachineData(objPage@(itemName), shopId);
+    });
+
+    function SelectMoId@(itemName)() {
+        if ($("#txtWipOrderId@(itemName)").val() == "") {
+            alert("製令不可為空", "alert", 0);
+            $("#viewMachineProcess").hide();
+            $("#viewMachineTimeCount").show();
+        } else {
+            let targetUrl = "@Url.Action("GetManufactureOrder", "Production")";
+            let postData = {
+                "OtherInfo":$("#txtWipOrderId@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                //pageCount = data.result.length;
+                if (data.result.length > 0) {
+                    deviceIp@(itemName) = GetDeviceIp();
+                    $.each(data.result, function (i, item) {
+                        MoId = item.MoId;
+                        console.log(MoId);
+                        $("#txtQuantityMesScanningInterface").val(item.Quantity);
+                        $("#txtWoErpNoMesScanningInterface").val(item.WoErpPrefix + "-" + item.WoErpNo + "(" + item.WoSeq + ")");
+                        $("#txtMtlItemNoMesScanningInterface").val(item.MtlItemNo);
+                        $("#txtMtlItemNameMesScanningInterface").val(item.MtlItemName);
+                    });
+                    $("#viewMachineProcess").show();
+                    $("#viewMachineTimeCount").hide();
+                } else {
+                    alert("查無製令", "alert", 0);
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+    }
+
+    $("#spanMachine@(itemName)").click(function () {
+        if ($("#txtWipOrderId@(itemName)").val() == "") {
+            alert("製令欄位 不可為空");
+            $("#machineModal").hide();
+        } else {
+            $("#spanProcessLabel@(itemName)").html("選擇製程");
+            $("#machineModal").modal('show');
+            InitMachineData(objPage@(itemName));
+        }
+    });
+
+
+    
+
+    function InitMachineData(objPage, shopId) {
+        let innerHtml = '';
+        let pageCount = 0;
+
+        let targetUrl = "@Url.Action("GetQcAltimeter", "ProductionHistory")";
+        let postData = {
+            "OrderBy": "",
+            "PageIndex": (objPage.pageIndex + 1),
+            "PageSize": objPage.pageSize,
+            "DeviceIdentifierCode": deviceIp@(itemName),
+            "ShopId": $("#cboShopQ@(itemName)").val()
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+            if (pageCount > 0) {
+                objPage = PageCaculate(pageCount, objPage);
+                $.each(data.result, function (i, item) {
+                    let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+                    innerHtml += `<tr class="dataselect_tr">
+                                    <td width="5%" class="dataselect_td">${_row}</td>
+                                    <td width="25%" class="dataselect_td">${item.MachineNo}</td>
+                                    <td width="25%" class="dataselect_td">${item.MachineName}</td>
+                                    <td width="25%" class="dataselect_td">${item.MachineDesc}</td>
+                                    <td width="20%" class="dataselect_td">
+                                        <a class="button_choose auth-update" href="javascript:chooseMachine('${item.MachineId}','${item.MachineDesc}','${item.MachineNo}');" data-mtl-id="1">
+                                            選擇
+                                        </a>
+                                    </td>
+                                  </tr>`;
+                });
+            } else {
+                innerHtml += `<tr>
+                                <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                    <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                </td>
+                              </tr>`;
+            }
+        }
+        $("#tblMachineData@(itemName) tbody").html(innerHtml);
+
+        Pager("#page@(itemName)", pageCount, objPage, InitMachineData);
+    }
+
+    function chooseMachine(chooseMachineId, MachineDesc, MachineNo) {
+        MachineId = chooseMachineId;
+        QcMachine = MachineNo;
+        $("#spanMachineLabel@(itemName)").html(MachineDesc);
+        $("#machineModal").modal('hide');
+    }
+
+    $("#spanProcess@(itemName)").click(function () {
+        let innerHtml = '';
+        let pageCount = 0;
+
+        if ($("#txtWipOrderId@(itemName)").val() == "") {
+            alert("製令欄位 不可為空");
+            $("#stationModal").hide();
+        } else if (MachineId== -1) {
+            alert("尚未選擇機台");
+            $("#stationModal").hide();
+        } else
+        {
+            let targetUrl = "@Url.Action("GetMoByProcess", "ProductionHistory")";
+            let postData = {
+                "MoId": MoId,
+                "MachineId": MachineId
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+                $("#stationModal").modal('show');
+                pageCount = data.result.length > 0 ? parseInt(data.result.length) : 0;
+                if (pageCount > 0) {
+                    $.each(data.result, function (i, item) {
+                        innerHtml += `<tr>
+                                        <td style="max-width:60%;" class="dataselect_td">${item.ProcessAlias}</td>
+                                        <td style="max-width:30%;" class="dataselect_td">
+                                            <a class="button_choose" href="javascript:chooseMoProcess(${item.MoProcessId},'${item.ProcessAlias}');" data-mtl-id="1">
+                                                選擇
+                                            </a>
+                                        </td>
+                                        </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="2" style="background-color: #fff3cd;">
+                                        <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                    </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+            $("#tblStationData@(itemName) tbody").html(innerHtml);
+        }
+    });
+
+    function chooseMoProcess(chooseMoProcessId, ProcessAlias) {
+        MoProcessId = chooseMoProcessId;
+        $("#spanProcessLabel@(itemName)").html(ProcessAlias);
+        $("#stationModal").modal('hide');
+    }
+
+    function GetDeviceIp() {
+        let deviceIp = "";
+        let targetUrl = "@Url.Action("GetDeviceIp", "ProductionHistory")";
+        let postData = {
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            deviceIp  = data.result;
+        }
+        return deviceIp
+    }
+
+    function EnterMesScanningInterface() {
+        if (MoId <= 0) {
+            SelectMoId@(itemName)();
+            return false;
+        }
+
+        if (MoProcessId <= 0 || MachineId <= 0) {
+            alert("製程與機台不能為空!", "alert", 0);
+            return false;
+        }
+        window.location.href = "@Url.Action("AltimeterCollection", "ProductionHistory")?MoId=" + MoId + "&MoProcessId=" + MoProcessId
+            + "&MachineId=" + MachineId + "&QcMachine=" + QcMachine + "&UserId=" + userId;
+    }
+
+    function Logout@(itemName)() {
+        let targetUrl = "@Url.Action("Logout", "User")";
+        let postData = {
+        };
+
+        var result = DataAccess.Update(targetUrl, postData, false, false);
+
+        if (result) window.location.reload();
+    }
+
+    function cleanMoId@(itemName) () {
+        $('#txtWipOrderId@(itemName)').val('');
+        $("#viewMachineProcess").hide();
+        $("#viewMachineTimeCount").show();
+    }
+
+
+    function Close@(itemName)(modalName) {
+        $("#" + modalName).modal("hide");
+        $('#cboEventItem@(itemName)').val("")
+        $('#txtBarcodeId@(itemName)').val("")
+        $("#txtStartTime@(itemName)").html("")
+    }
+
+    function User@(itemName)() {
+        let targetUrl = "@Url.Action("GetUser", "ProductionHistory")";
+        let postData = {
+            "UserId": userId
+        };
+        let data = DataAccess.Get(targetUrl, postData, false);
+        if (data.status == "success") {
+            $.each(data.result, function (i, item) {
+                $("#txtCountTimeUserNo@(itemName)").html( "當前使用者：" + item.UserName + "(" + item.UserNo + ")");
+            });
+        } else {
+            alert(data.msg, "alert", 1000);
+        }
+    }
+
+
+
+</script>
+                                )

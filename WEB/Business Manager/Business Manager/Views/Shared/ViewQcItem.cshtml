@@ -1,0 +1,334 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewQcItem";
+    string itemNameText = "量測項目查詢";
+    string authority = ViewBag.authority;
+}
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-3">
+                                        <select id="cboQcGroupQ@(itemName)" name="cboQcGroupQ@(itemName)" class="form-control" title="輸入群組"></select>
+                                    </div>
+                                    <div class="col-3">
+                                        <select id="cboQcClassQ@(itemName)" name="cboQcClassQ@(itemName)" class="form-control" title="輸入類別"></select>
+                                    </div>
+                                    <div class="col-3">
+                                        <input class="form-control" id="txtSearchKeyQ@(itemName)" placeholder="請輸入項目名稱/項目編號" />
+                                    </div>
+                                    <div class="col-3">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 150px;">群組</th>
+                                        <th scope="col" style="min-width: 150px;">類別</th>
+                                        <th scope="col" style="min-width: 150px;">編號</th>
+                                        <th scope="col" style="min-width: 200px;">名稱</th>
+                                        <th scope="col" style="min-width: 200px;">備註</th>
+                                        <th scope="col" style="min-width: 100px;" class="text-center col-sticky">
+                                            <div class="checkbox-mode">
+                                                <label class="control control-solid control-solid-info control--checkbox">
+                                                    全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                                    <span class="control__indicator"></span>
+                                                </label>
+                                            </div>
+                                            <div class="radio-mode">請選擇</div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Close@(itemName)()"><i class="fas fa-times"></i>關閉</button>
+                <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+@Html.Resource("js",
+    @<script>
+        let targetSelector@(itemName); //array id 儲存容器 (input:元素id
+        let type@(itemName); //選擇模式 radio, checkbox
+        let spreadsheet@(itemName); //excel 套件
+
+        let data@(itemName) = [];
+
+        let identify@(itemName); //資料唯一識別欄位名稱
+        let columns@(itemName); //要複寫的欄位名稱
+        let message@(itemName); //暫存訊息的欄位
+        let row@(itemName); //起始row數
+
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        $(function () {
+            $("#txtSearchKeyQ@(itemName)").val("");
+            $(`#txtSearchKeyQ@(itemName)`).keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    Query@(itemName)();
+                    return false;
+                }
+            });
+
+            ComboBoxs.Default("#cboQcGroupQ@(itemName)", "@Url.Action("GetQcGroup", "QcItemSetting")", {}, "", "ALL", "", "QcGroupName", "QcGroupId");
+            @*ComboBoxs.Default("#cboQcClassQ@(itemName)", "@Url.Action("GetQcClass", "QcItemSetting")", {}, "", "ALL", "", "QcClassName", "QcClassId");*@
+
+            $("#cboQcGroupQ@(itemName)").off("change").on("change", function () {
+                if (this.value < 0) $("#cboQcClassQ@(itemName)").html('');
+                else ComboBoxs.Default("#cboQcClassQ@(itemName)", "@Url.Action("GetQcClass", "QcItemSetting")", { "QcGroupId": this.value }, "", "ALL", "", "QcClassName", "QcClassId");
+            });
+
+            if (!isMobile) {
+                $("#cboQcGroupQ@(itemName), #cboQcClassQ@(itemName)").select2({
+                    width: "100%"
+                });
+            }
+        });
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            type@(itemName) = config.type;
+            spreadsheet@(itemName) = config.spreadsheet;
+
+            data@(itemName) = [];
+
+            identify@(itemName) = config.identify;
+            columns@(itemName) = config.columns;
+            message@(itemName) = config.message;
+            row@(itemName) = config.row;
+
+            if (!!spreadsheet@(itemName)) { //套件 欄位資訊
+                let dataInfo = spreadsheet@(itemName).serialize();
+                let rows = [...new Set(dataInfo.sheets[0].data.map(m => parseInt(m.cell.replace(/^\D+/g, ''))))];
+
+                $.each(rows, function (i, row) {
+                    if (row == 1) return;
+                    let cell = dataInfo.sheets[0].data.find(f => f.cell == identify@(itemName) + row);
+                    if (!!cell) data@(itemName).push(cell.value);
+                });
+            }
+            else { //一般資料 欄位資訊
+                data@(itemName) = $(targetSelector@(itemName)).val().split(',');
+            }
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+            let targetUrl = "@Url.Action("GetQcItem", "QcItemSetting")";
+            let postData = {
+                "OrderBy": "QcItemNo",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "QcClassId": $("#cboQcClassQ@(itemName)").val(),
+                "QcGroupId": $("#cboQcGroupQ@(itemName)").val(),
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val()
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+            if (data.status == "success") {
+
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px;">${_row}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcGroupName}">${item.QcGroupName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcClassName}">${item.QcClassName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemNo}">${item.QcItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemName1}">${item.QcItemName1}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.QcItemDesc}">${item.QcItemDesc}</td>
+                                        <td class="text-center col-sticky">`;
+
+                        switch (type@(itemName)) {
+                            case "radio":
+                                innerHtml += `<label class="control control-solid control-solid-info control--radio">
+                                                <input type="radio" data-mainkey="${item.QcItemId}" value="${item.QcItemId}" />
+                                                <span class="control__indicator"></span>
+                                              </label>`;
+                                break;
+                            case "checkbox":
+                                innerHtml += `<label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-mainkey="${item.QcItemId}" value="${item.QcItemId}" />
+                                                <span class="control__indicator"></span>
+                                              </label>`;
+                                break;
+                        }
+
+                        innerHtml += `  <input type="hidden" name="txtQcItemId@(itemName)" data-mainkey="${item.QcItemId}" value="${item.QcItemId}" />
+                                        <input type="hidden" name="txtQcItemNo@(itemName)" data-mainkey="${item.QcItemId}" value="${item.QcItemNo}" />
+                                        <input type="hidden" name="txtQcItemName@(itemName)" data-mainkey="${item.QcItemId}" value="${item.QcItemName1}" />
+                                        <input type="hidden" name="txtQcItemType@(itemName)" data-mainkey="${item.QcItemId}" value="${item.QcItemType}" />
+                                        <input type="hidden" name="txtQcItemDesc@(itemName)" data-mainkey="${item.QcItemId}" value="${item.QcItemDesc}" />
+                                    </td></tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="8" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            InitElement@(itemName)();
+        }
+
+        function SetRowData@(itemName)(dataId) {
+            if (!!spreadsheet@(itemName)) { //excel 套件模式
+                $.each(columns@(itemName), function (i, col) {
+                    let cellValue = $(`input[name='txt${col.title}@(itemName)'][data-mainkey='${dataId}']`).val();
+
+                    //if (!!col.format) spreadsheet@(itemName).setFormat(col.column + row@(itemName), col.format);
+
+                    if (col.column == identify@(itemName)) {
+                        //#region 判斷資料是否存在
+                        if (!!message@(itemName)) {
+                            let existsRow = data@(itemName).filter(f => f == cellValue);
+                            if (existsRow.length > 0) {
+                                spreadsheet@(itemName).setStyle(message@(itemName) + row@(itemName), { background: "red", color: "#fff" });
+                                spreadsheet@(itemName).setValue(message@(itemName) + row@(itemName), "資料重複!");
+                            }
+                            else {
+                                spreadsheet@(itemName).setStyle(message@(itemName) + row@(itemName), { background: "fff", color: "#000" });
+                                spreadsheet@(itemName).setValue(message@(itemName) + row@(itemName), "");
+                            }
+                        }
+                        //#endregion
+
+                        data@(itemName).push(cellValue); //推送當前準備寫入的編號
+                    }
+
+                    if (col.type == 'hidden') return; //跳過隱藏屬性的欄位
+
+                    spreadsheet@(itemName).setValue(col.column + row@(itemName), cellValue);
+                });
+
+                row@(itemName)++;
+            }
+            else { //一般模式
+                $.each(columns@(itemName), function (i, col) {
+                    let cellValue = $(`input[name='txt${col.title}@(itemName)'][data-mainkey='${dataId}']`).val();
+                    if (col.title == identify@(itemName)) data@(itemName).push(cellValue); //推送當前準備寫入的編號
+                });
+            }
+        }
+
+        function InitElement@(itemName)() {
+            let chkRows = $("input[type='checkbox'][data-mainkey]");
+            let checkRows = $("input[type='checkbox'][data-mainkey]:checked");
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+            if (checkRows.length == chkRows.length && checkRows > 0) $("#cbxSelectAll@(itemName)").prop("checked", true);
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $(`input[type='checkbox'][data-mainkey]`).not(":disabled").prop("checked", true);
+                }
+                else {
+                    $(`input[type='checkbox'][data-mainkey]`).not(":disabled").prop("checked", false);
+                }
+            });
+
+            $("input[type='checkbox'][data-mainkey]").off("change").on("change", function (e) {
+                checkRows = $("input[type='checkbox'][data-mainkey]:checked");
+                if (checkRows.length == chkRows.length) $("#cbxSelectAll@(itemName)").prop("checked", true);
+                else $("#cbxSelectAll@(itemName)").prop("checked", false);
+            });
+
+            switch (type@(itemName)) {
+                case "radio":
+                    $(".radio-mode").show();
+                    $(".checkbox-mode, btn-select").hide();
+
+                    $("input[type='radio']").click(function () {
+                        let dataId = $(this).data("mainkey");
+                        SetRowData@(itemName)(dataId);
+
+                        $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                        $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+
+                        if (!!targetSelector@(itemName)) ElementSetValue(targetSelector@(itemName), dataId, "change");
+
+                        Close@(itemName)();
+                    });
+                    break;
+                case "checkbox":
+                    $(".radio-mode").hide();
+                    $(".checkbox-mode").show();
+                    break;
+            }
+        }
+
+        function Save@(itemName)() {
+            let dataList = [];
+
+            let checkRows = $("input[type='checkbox'][data-mainkey]:checked");
+
+            $.each(checkRows, function (i, e) {
+                let dataId = $(this).data("mainkey");
+
+                dataList.push(dataId);
+
+                SetRowData@(itemName)(dataId);
+            });
+
+            if (!!targetSelector@(itemName)) ElementSetValue(targetSelector@(itemName), dataList, "change");
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal('hide');
+        }
+</script>
+    )

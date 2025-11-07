@@ -1,0 +1,885 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "UA3PContourf";
+    string itemNameText = "UA3P等高分析";
+    string authority = ViewBag.authority;
+
+    ViewBag.Title = itemNameText;
+}
+
+@Html.Resource("css",
+@<style>
+     .card-body {
+         position: relative;
+         padding: 1.5rem;
+     }
+
+     .history-btn {
+         position: absolute;
+         top: 1rem;
+         right: 1rem;
+     }
+
+     .background-color-set {
+         background-color: #c3e1f6;
+         padding: 1rem;
+         margin: 1rem 0;
+         border-radius: 0.5rem;
+     }
+
+     .file-upload-zone {
+         border: 3px dashed #ccc;
+         background-color: #ffffff;
+         padding: 3rem;
+         margin: 2rem 0;
+         border-radius: 0.5rem;
+         display: inline-block;
+         position: relative;
+         left: 50%;
+         transform: translateX(-50%);
+         width: 80%;
+         transition: border-color 0.3s;
+     }
+
+     .file-upload-zone.drag-over {
+         border-color: #007bff;
+         background-color: rgba(0, 123, 255, 0.1);
+     }
+
+     .file-input-group {
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         gap: 1rem;
+         margin-top: 1rem;
+         margin-bottom: 1rem;
+     }
+
+     .file-name-input {
+         width: 250px;
+     }
+
+     .download-buttons {
+         display: flex;
+         justify-content: center;
+         padding: 1rem;
+         margin: 1rem 0;
+         gap: 1rem;
+     }
+
+     .selected-file-buttons {
+         display: flex;
+         justify-content: center;
+         padding: 1rem;
+         margin: 1rem 0;
+         gap: 1rem;
+     }
+
+     .custom-label {
+         font-size: 1.2rem;
+         font-weight: bold;
+         color: #767676;
+     }
+
+     /* 新增拖放提示樣式 */
+     .drop-zone-text {
+         text-align: center;
+         color: #666;
+         margin-bottom: 1rem;
+         padding: 1rem;
+     }
+
+     .upload-title {
+         font-size: 2rem;
+         font-weight: bold;
+         border-bottom-width: 3px !important;
+         padding-bottom: 0.5rem !important;
+         margin-bottom: 1rem !important;
+     }
+
+     .upload-text {
+         font-size: 1.3rem;
+         color: #808080;
+         margin-bottom: 1rem;
+     }
+
+     .selected-file-text {
+         font-size: 1.3rem;
+         color: #808080;
+         margin-bottom: 1rem;
+         word-break: break-all;
+         text-align: center;
+         margin: 1rem 0;
+     }
+
+     /* 新增大型按鈕樣式 */
+     .btn-xl {
+         padding: 1rem 1rem;
+         font-size: 1.5rem;
+         border-radius: 0.5rem;
+         min-width: 200px;
+     }
+
+     /* 新增檔案類型說明樣式 */
+     .file-type-info {
+         background-color: #f8f9fa;
+         padding: 1rem;
+         border-radius: 0.5rem;
+         margin: 0.5rem auto;
+         max-width: 80%;
+     }
+
+     .file-type-text {
+         font-size: 1.2rem;
+         color: #495057;
+         margin-bottom: 0.5rem;
+     }
+
+     .file-type-note {
+         font-size: 1rem;
+         color: #0d6efd;
+         margin-top: 0.5rem;
+         margin-bottom: 0;
+     }
+
+     /* 上傳後的文件顯示 */
+     .file-info {
+         display: none;
+         text-align: center;
+         margin-bottom: 1rem;
+     }
+
+     .file-info.show {
+         display: block;
+     }
+
+     /* Loading indicator 樣式 */
+     .loading-overlay {
+         display: none;
+         position: fixed;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         background: rgba(0, 0, 0, 0.5);
+         z-index: 9999;
+     }
+
+     .loading-spinner {
+         position: fixed;
+         top: 50%;
+         left: 50%;
+         transform: translate(-50%, -50%);
+         text-align: center;
+         color: white;
+     }
+
+     .loading-spinner i {
+         font-size: 4rem;
+         margin-bottom: 1rem;
+         animation: spin 1s linear infinite;
+     }
+
+     .loading-text {
+         font-size: 1.2rem;
+         margin-top: 1rem;
+     }
+
+</style>
+)
+
+<input type="hidden" id="pageAuthority" value="@authority" />
+
+<div class="row">
+    <div class="col-12 title-block">
+        <h1 class="pt-2 pb-3">@(itemNameText)</h1>
+        <div class="unit-block">
+            <div class="button-block mb-1">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 主頁面內容 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-end mb-3">
+                    <button type="button" class="btn btn-success btn-lg auth-read" onclick="ShowHistory@(itemName)()">
+                        <i class="fas fa-history me-2"></i> 歷史紀錄
+                    </button>
+                </div>
+
+                <div class="background-color-set">
+                    <div class="file-upload-zone">
+                        <form id="uploadForm@(itemName)" enctype="multipart/form-data">
+                            <!-- 初始上傳介面 -->
+                            <div id="initialUpload@(itemName)">
+                                <!-- 標題區塊 -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5 class="upload-title border-bottom pb-2 mb-2 text-center">
+                                            <strong>請上傳UA3P弓字型量測檔案</strong>
+                                        </h5>
+                                    </div>
+                                </div>
+
+                                <!-- 拖拉文件區塊 -->
+                                <div class="drop-zone-text">
+                                    <i class="fas fa-cloud-upload-alt fa-9x mb-4"></i>
+                                    <p class="upload-text">拖放文件至此處或點擊下方按鈕選擇檔案</p>
+                                    <div class="file-type-info">
+                                        <p class="file-type-text">支援的檔案類型：CSV</p>
+                                        <p class="file-type-note">※ 請上傳UA3P弓字型量測檔(alx,aly)共2個</p>
+                                    </div>
+                                </div>
+
+                                <!-- 按鈕區塊 -->
+                                <div class="file-input-group" id="fileInputGroup@(itemName)">
+                                    <div class="d-flex justify-content-center w-100">
+                                        <input type="file" class="d-none" id="fileInput@(itemName)" name="files" accept=".csv" multiple="multiple">
+                                        <button type="button" class="btn btn-info btn-xl" onclick="$('#fileInput@(itemName)').click()">
+                                            <i class="fas fa-file-upload me-2 fa-lg"></i>選擇檔案
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 文件選擇後的介面 -->
+                            <div id="fileSelected@(itemName)" style="display: none;">
+                                <!-- 檔案資訊區塊 -->
+                                <div class="text-center mb-4">
+                                    <i class="fas fa-file-csv fa-7x mb-4"></i>
+                                    <div id="selectedFileName@(itemName)" class="selected-file-text"></div>
+                                </div>
+
+                                <!-- 參數輸入區塊 -->
+                                <div class="row justify-content-center mb-4">
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label custom-label">半徑</label>
+                                            <input type="text" class="form-control" id="txtRadius@(itemName)" placeholder="請輸入要分析的半徑值">
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="form-label custom-label">最大 Z值</label>
+                                            <input type="text" class="form-control" id="txtMaxZ@(itemName)" placeholder="請輸入Z軸最大值">
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="form-label custom-label">最小 Z值</label>
+                                            <input type="text" class="form-control" id="txtMinZ@(itemName)" placeholder="請輸入Z軸最小值">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 按鈕區塊 -->
+                                <div class="text-center selected-file-buttons">
+                                    <button type="button" class="btn btn-primary me-2 btn-lg auth-file-add" onclick="Upload@(itemName)()" id="uploadBtn@(itemName)" disabled>
+                                        <i class="fas fa-upload me-2"></i>送出檔案
+                                    </button>
+                                    <button type="button" class="btn btn-info me-2 btn-lg" onclick="resetFileSelection@(itemName)()">
+                                        <i class="fas fa-redo me-2"></i>重新選擇
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 下載按鈕區域 -->
+                            <div class="download-section" id="downloadSection@(itemName)" style="display: none;">
+                                <!-- 標題區塊 -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5 class="upload-title border-bottom pb-2 mb-2 text-center"><strong>結果解析</strong></h5>
+                                    </div>
+                                </div>
+
+                                <!-- 按鈕區塊 -->
+                                <div class="download-buttons">
+                                    <button type="button" class="btn btn-success btn-lg auth-file-read" onclick="Download@(itemName)()">
+                                        <i class="fas fa-file-download me-2"></i>下載圖檔
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 歷史紀錄視窗 -->
+<div class="modal fade" id="modalQuery@(itemName)" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- 標題區塊 -->
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-search me-2"></i>搜尋歷史紀錄
+                </h5>
+                <button class="close" type="button" data-dismiss="modal">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+
+            <!-- 歷史紀錄區塊 -->
+            <div class="modal-body">
+                <!-- 搜尋條件區塊 -->
+                <form id="queryForm@(itemName)">
+                    <div class="mb-3">
+                        <label class="form-label">檔案名稱</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-file-alt"></i>
+                            </span>
+                            <input type="text" class="form-control" id="txtFileNameQ@(itemName)" placeholder="請輸入檔案名稱">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">處理日期範圍</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-calendar-alt"></i>
+                            </span>
+                            <input type="date" class="form-control" id="txtStartDateQ@(itemName)">
+                            <span class="input-group-text">至</span>
+                            <input type="date" class="form-control" id="txtEndDateQ@(itemName)">
+                        </div>
+                    </div>
+                </form>
+
+                <!-- 歷史紀錄列表 -->
+                <table class="table table-bordered table-striped table-sticky">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>檔案名稱</th>
+                            <th class="text-center">半徑</th>
+                            <th class="text-center">(最大Z值,最小Z值)</th>
+                            <th class="text-center">上傳時間</th>
+                            <th class="text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableData@(itemName)"></tbody>
+                </table>
+                <div class="pagination justify-content-center" id="page@(itemName)"></div>
+            </div>
+
+            <!-- 操作區塊 -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>關閉
+                </button>
+                <button type="button" class="btn btn-primary" onclick="Query@(itemName)()">
+                    <i class="fas fa-search me-2"></i>搜尋
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Indicator -->
+<div class="loading-overlay" id="loadingIndicator@(itemName)">
+    <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin fa-4x"></i>
+        <div class="loading-text">處理中，請稍候...</div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+
+        let outputFileDir@(itemName) = '';
+
+        let fileUploader@(itemName) = {
+            dropZone: null,
+            fileInput: null,
+            selectedFiles: {
+                x: null,
+                y: null
+            },
+
+            init: function() {
+                this.dropZone = document.querySelector('.file-upload-zone');
+                this.fileInput = document.getElementById('fileInput@(itemName)');
+
+                if (this.dropZone && this.fileInput) {
+                    this.bindEvents();
+                    this.initializeInputValidation();
+                }
+            },
+
+            bindEvents: function() {
+                // Prevent default drag behaviors
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    this.dropZone.addEventListener(eventName, this.preventDefaults.bind(this), false);
+                    document.body.addEventListener(eventName, this.preventDefaults.bind(this), false);
+                });
+
+                // Highlight drop zone when dragging over it
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    this.dropZone.addEventListener(eventName, this.highlight.bind(this), false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    this.dropZone.addEventListener(eventName, this.unhighlight.bind(this), false);
+                });
+
+                // Handle dropped files
+                this.dropZone.addEventListener('drop', this.handleDrop.bind(this), false);
+                this.fileInput.addEventListener('change', this.handleFileSelect.bind(this), false);
+            },
+
+            initializeInputValidation: function() {
+                const paramInputs = ['txtRadius', 'txtMaxZ', 'txtMinZ'].map(id =>
+                    document.getElementById(`${id}@(itemName)`)
+                );
+
+                paramInputs.forEach(input => {
+                    // Add error message div after each input
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.style.display = 'none';
+                    errorDiv.style.color = '#dc3545';
+                    errorDiv.style.fontSize = '0.875em';
+                    errorDiv.style.marginTop = '0.25rem';
+                    input.parentNode.appendChild(errorDiv);
+
+                    input.addEventListener('input', () => {
+                        this.validateSingleInput(input.id);
+                        this.validateInputs();
+                    });
+
+                    // Add blur event to show error when focus leaves the input
+                    input.addEventListener('blur', () => {
+                        this.validateSingleInput(input.id);
+                    });
+                });
+            },
+
+            validateSingleInput: function (inputId) {
+                const input = document.getElementById(inputId);
+                const value = input.value.trim();
+                const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+                const isValid = value !== '' && /^-?\d*\.?\d+$/.test(value);
+
+                if (!isValid) {
+                    input.style.borderColor = '#dc3545';
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = value === '' ? '此為必填欄位' : '請輸入有效的數字';
+                } else {
+                    input.style.borderColor = '';
+                    errorDiv.style.display = 'none';
+                    errorDiv.textContent = '';
+                }
+
+                return isValid;
+            },
+
+            validateInputs: function() {
+                const paramInputs = ['txtRadius', 'txtMaxZ', 'txtMinZ'].map(id =>
+                    this.validateSingleInput(`${id}@(itemName)`)
+                );
+
+                const allParamsValid = paramInputs.every(isValid => isValid);
+                const allFilesSelected = this.selectedFiles.x && this.selectedFiles.y;
+
+                document.getElementById(`uploadBtn@(itemName)`).disabled = !(allParamsValid && allFilesSelected);
+            },
+
+            preventDefaults: function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            },
+
+            highlight: function(e) {
+                this.dropZone.classList.add('drag-over');
+            },
+
+            unhighlight: function(e) {
+                this.dropZone.classList.remove('drag-over');
+            },
+
+            handleDrop: function(e) {
+                const dt = e.dataTransfer;
+                const files = Array.from(dt.files);
+                this.handleFiles(files);
+            },
+
+            handleFileSelect: function (e) {
+                const files = Array.from(e.target.files);
+                this.handleFiles(files);
+            },
+
+            handleFiles: function (files) {
+                if (files.length !== 2) {
+                    alert('請同時選擇2個檔案 (alx 和 aly)');
+                    this.reset();
+                    return;
+                }
+
+                // Reset current selection
+                this.selectedFiles = { x: null, y: null };
+                let fileMessages = [];
+                let hasError = false;
+
+                files.forEach(file => {
+                    if (hasError) return;
+
+                    if (!file.name.toLowerCase().endsWith('.csv')) {
+                        alert(`${file.name} 不是CSV檔案`);
+                        hasError = true;
+                        return;
+                    }
+
+                    const fileName = file.name.toLowerCase();
+                    if (fileName.includes('alx')) {
+                        if (this.selectedFiles.x) {
+                            alert('已選擇多個X軸檔案');
+                            hasError = true;
+                            return;
+                        }
+                        this.selectedFiles.x = file;
+                        fileMessages.push(`X軸檔案: ${file.name}`);
+                    } else if (fileName.includes('aly')) {
+                        if (this.selectedFiles.y) {
+                            alert('已選擇多個Y軸檔案');
+                            hasError = true;
+                            return;
+                        }
+                        this.selectedFiles.y = file;
+                        fileMessages.push(`Y軸檔案: ${file.name}`);
+                    } else {
+                        alert(`檔案 ${file.name} 必須包含 alx 或 aly`);
+                        hasError = true;
+                        return;
+                    }
+                });
+
+                if (hasError || !this.selectedFiles.x || !this.selectedFiles.y) {
+                    if (!hasError) {
+                        alert('請同時上傳 alx 和 aly 檔案');
+                    }
+                    this.reset();
+                    return;
+                }
+
+                // Only proceed if we have both X and Y files
+                if (this.selectedFiles.x && this.selectedFiles.y) {
+                    this.updateFileDisplay(fileMessages);
+                }
+            },
+
+            updateFileDisplay: function (fileMessages) {
+                if (fileMessages.length === 2) {
+                    const fileNameDiv = document.getElementById(`selectedFileName@(itemName)`);
+                    fileNameDiv.innerHTML = fileMessages.join('<br>');
+
+                    // Show/Hide elements based on file selection
+                    document.getElementById(`initialUpload@(itemName)`).style.display = 'none';
+                    document.getElementById(`fileSelected@(itemName)`).style.display = 'block';
+                    document.getElementById(`fileInputGroup@(itemName)`).style.display = 'none';
+
+                    outputFileDir@(itemName) = null;
+                    // 隱藏下載區塊
+                    document.getElementById('downloadSection@(itemName)').style.display = 'none';
+                } else {
+                    this.reset();
+                }
+            },
+
+            reset: function() {
+                this.selectedFiles = { x: null, y: null };
+                this.fileInput.value = '';
+                document.getElementById(`selectedFileName@(itemName)`).innerHTML = '';
+                document.getElementById(`uploadBtn@(itemName)`).disabled = true;
+
+                // Reset inputs and error messages
+                ['txtRadius', 'txtMaxZ', 'txtMinZ'].forEach(id => {
+                    const input = document.getElementById(`${id}@(itemName)`);
+                    input.value = '';
+                    input.style.borderColor = '';
+                    const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+                    if (errorDiv) {
+                        errorDiv.style.display = 'none';
+                        errorDiv.textContent = '';
+                    }
+                });
+
+                // Reset display
+                document.getElementById(`fileInputGroup@(itemName)`).style.display = 'block';
+                document.getElementById(`fileSelected@(itemName)`).style.display = 'none';
+            }
+        };
+
+        $(document).ready(function () {
+             // Hide download section initially
+            $("#downloadSection@(itemName)").hide();
+
+            fileUploader@(itemName).init();
+
+            // Bind modal close button event
+            $("[data-dismiss='modal']").on("click", function() {
+                $("#modalQuery@(itemName)").modal("hide");
+            });
+
+            // Add enter key event listener for search
+            $("#queryForm@(itemName)").on("keypress", function(e) {
+                if (e.which === 13) { // Enter key code
+                    e.preventDefault();
+                    Query@(itemName)();
+                }
+            });
+        });
+
+        function resetFileSelection@(itemName)() {
+            fileUploader@(itemName).reset();
+            outputFileDir@(itemName) = null;
+
+            // Hide download section if visible
+            document.getElementById('downloadSection@(itemName)').style.display = 'none';
+
+            // Switch back to initial upload interface
+            document.getElementById('initialUpload@(itemName)').style.display = 'block';
+        }
+
+        function Upload@(itemName)() {
+            try {
+                const uploader = fileUploader@(itemName);
+                const { x: fileX, y: fileY } = uploader.selectedFiles;
+
+                if (!fileX || !fileY) {
+                    alert('請選擇兩個檔案 (alx 和 aly)');
+                    return;
+                }
+
+                const params = ['txtRadius', 'txtMaxZ', 'txtMinZ'].map(id => {
+                    const value = document.getElementById(`${id}@(itemName)`).value.trim();
+
+                    // Validate that the entire string is a number
+                    if (!/^-?\d*\.?\d+$/.test(value)) {
+                        throw new Error(`${id.replace('txt', '')} 必須是有效的數字`);
+                    }
+
+                    return value;
+                });
+
+                const fileKeys = {
+                    "path_x": fileX.name,
+                    "path_y": fileY.name
+                };
+
+                const formData = new FormData();
+                formData.append("path_x", fileX);
+                formData.append("path_y", fileY);
+                formData.append("fileKeys", JSON.stringify(fileKeys));
+                formData.append("radius", params[0]);
+                formData.append("maxZ", params[1]);
+                formData.append("minZ", params[2]);
+                formData.append("folderName", "design");
+                formData.append("programName", "UA3P_Contourf");
+
+                let targetUrl = "@Url.Action("ExecutePythonScript", "RDToolSet")";
+
+                $.ajax({
+                    url: targetUrl,
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    beforeSend: function () {
+                        // 顯示 loading indicator
+                        $("#loadingIndicator@(itemName)").fadeIn();
+                        // 禁用上傳按鈕
+                        $("button").prop("disabled", true);
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            // 儲存回傳的檔案路徑
+                            outputFileDir@(itemName) = response.data.output_file_dir;
+
+                            // 成功處理
+                            alert(response.message, "success", 1);
+                            $("#downloadSection@(itemName)").show();
+                        } else {
+                            // 失敗處理
+                            alert(response.message, "error", 0);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        // 錯誤處理
+                        alert("發生錯誤: " + error);
+                    },
+                    complete: function () {
+                        // 隱藏 loading indicator
+                        $("#loadingIndicator@(itemName)").fadeOut();
+                        // 啟用上傳按鈕
+                        $("button").prop("disabled", false);
+                    }
+                });
+            } catch (error) {
+                alert("發生錯誤: " + error.message);
+                // 隱藏 loading indicator
+                $("#loadingIndicator@(itemName)").fadeOut();
+                // 啟用上傳按鈕
+                $("button").prop("disabled", false);
+            }
+        }
+
+        function Return@(itemName)() {
+            window.history.back();
+        }
+
+        function ShowHistory@(itemName)() {
+            $("#modalQuery@(itemName)").modal("show");
+            Query@(itemName)();
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitHistoryData@(itemName)(objPage@(itemName));
+        }
+
+        function InitHistoryData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetUA3PContourfHistory", "RDToolSet")";
+            let postData = {
+                "OrderBy": "request_time DESC",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "FileName": $("#txtFileNameQ@(itemName)").val().trim(),
+                "StartDate": $("#txtStartDateQ@(itemName)").val().trim(),
+                "EndDate": $("#txtEndDateQ@(itemName)").val().trim()
+            };
+
+            let response = DataAccess.Get(targetUrl, postData, false);
+
+            if (response.status == "success") {
+                const { total, rows } = response.data;
+                pageCount = total;
+
+                if (rows && rows.length > 0) {
+                    objPage = PageCaculate(total, objPage);
+
+                    rows.forEach((item, index) => {
+                        // 計算序號
+                        const rowNumber = (objPage.pageSize * objPage.pageIndex + (index + 1));
+
+                        // 處理參數
+                        const radius = item.parameter.split(',')[0];
+                        const maxZ = isNaN(item.parameter.split(',')[1]) ? "-" : parseFloat(item.parameter.split(',')[1]);
+                        const minZ = isNaN(item.parameter.split(',')[2]) ? "-" : parseFloat(item.parameter.split(',')[2]);
+                        const rangeZ = `(${maxZ},${minZ})`
+
+                        // 格式化時間
+                        const uploadTime = new Date(item.uploadTime).toLocaleString('zh-TW', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+
+                        innerHtml += `
+                        <tr data-output-dir="${item.outputFileDir}">
+                            <td>${rowNumber}.</td>
+                            <td>${item.fileName}</td>
+                            <td class="text-center">${radius}</td>
+                            <td class="text-center">${rangeZ}</td>
+                            <td class="text-center">${uploadTime}</td>
+                            <td class="text-center">
+                                <a class="active-link auth-file-read" href="javascript:void(0);" 
+                                   onclick="DownloadHistory@(itemName)('${item.fileName}', '${encodeURIComponent(item.outputFileDir)}');">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </td>
+                        </tr>`;
+                    });
+                } else {
+                    innerHtml = `
+                    <tr>
+                        <td class="text-center" colspan="7" style="background-color: #fff3cd;">
+                            <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                        </td>
+                    </tr>`;
+                }
+            } else {
+                alert(response.msg, "alert", 0);
+            }
+
+            $("#historyTableData@(itemName)").html(innerHtml);
+            if (response.status === "success") {
+                Pager("#page@(itemName)", pageCount, objPage, InitHistoryData@(itemName));
+            }
+        }
+
+        function commonDownload@(itemName)(fileType, errorMessage, fileName = null) {
+            let originalFileName = '';
+            if (fileName) {
+                fileName = fileName.split('<br>')[0];
+                originalFileName = fileName.split('.')[0];
+            } else {
+                const uploader = fileUploader@(itemName);
+                const { x: fileX, y: fileY } = uploader.selectedFiles;
+                originalFileName = fileX.name.split('.')[0];
+            }
+
+            let targetUrl = '@Url.Action("DownloadRDToolSet", "RDToolSet")';
+
+            // 建立 FormData
+            let formData = new FormData();
+            formData.append('programName', 'UA3P_Contourf');
+            formData.append('fileType', fileType);
+            formData.append('originalFileName', originalFileName);
+            if (outputFileDir@(itemName)) {
+                formData.append('outputFileDir', outputFileDir@(itemName));
+            }
+
+            console.log(formData);
+
+            $.ajax({
+                url: targetUrl,
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                beforeSend: function() {
+                    $("#loadingIndicator@(itemName)").fadeIn();
+                },
+                success: function(data, status, xhr) {
+                    var blob = new Blob([data], { type: xhr.getResponseHeader('content-type') });
+                    var link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+
+                    link.download = `${originalFileName}.png`;
+                    link.click();
+                },
+                error: function() {
+                    alert(errorMessage, "alert", 0);
+                },
+                complete: function() {
+                    $("#loadingIndicator@(itemName)").fadeOut();
+                }
+            });
+        }
+
+        function Download@(itemName)() {
+            commonDownload@(itemName)("png", "下載失敗");
+        }
+
+        function DownloadHistory@(itemName)(fileName, outputFileDir) {
+            outputFileDir@(itemName) = decodeURIComponent(outputFileDir);
+            commonDownload@(itemName)("png", "歷史檔案下載失敗", fileName);
+        }
+    </script>
+)

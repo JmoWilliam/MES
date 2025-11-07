@@ -1,0 +1,125 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewStatusCompany";
+    string itemNameText = "狀態公司對應";
+}
+
+@Html.Resource("css",
+    @<style>
+        td {
+            vertical-align: middle;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @(itemNameText)
+                    <span class="sub-title">狀態綱要 <span class="sub-text" id="desStatusSchema@(itemName)"></span></span>
+                    <span class="sub-title">狀態代碼 <span class="sub-text" id="desStatusNo@(itemName)"></span></span>
+                </h5>
+                <a class="close list-mode" href="javascript:void(0);" onclick="Close@(itemName)()"><i class="fas fa-times"></i></a>
+            </div>
+            <div class="modal-body">
+                <div class="table-custom">
+                    <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="min-width: 75px;">#</th>
+                                <th scope="col" style="min-width: 200px;">公司</th>
+                                <th scope="col" style="min-width: 200px;">狀態名稱</th>
+                                <th scope="col" style="min-width: 200px;">狀態描述</th>
+                                <th class="text-center" scope="col" style="min-width: 125px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let statusId@(itemName);
+
+        function Pop@(itemName)(statusId, statusSchema, statusNo) {
+            statusId@(itemName) = statusId;
+
+            $("#desStatusSchema@(itemName)").html(`${statusSchema}`);
+            $("#desStatusNo@(itemName)").html(`${statusNo}`);
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            InitData@(itemName)();
+        }
+
+        function InitData@(itemName)() {
+            let innerHtml = '';
+
+            let targetUrl = "@Url.Action("GetStatusCompany", "BasicInformation")";
+            let postData = {
+                "StatusId": statusId@(itemName),
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    let _row = (i + 1) + ".";
+
+                    innerHtml += `<tr>
+                                    <td><span class="stack-title">#</span>${_row}</td>
+                                    <td><span class="stack-title">公司</span>${item.LogoIcon == -1 ? `` : `<img class="company-logo" src="/Web/GetFile?fileId=${item.LogoIcon}" />`}${item.CompanyNo} ${item.CompanyName}</td>
+                                    <td>
+                                      <span class="stack-title">狀態名稱</span>
+                                      <input class="form-control" name="txtStatusName@(itemName)" data-company-id="${item.CompanyId}" value="${item.StatusName}" autocomplete="off" />
+                                    </td>
+                                    <td>
+                                      <span class="stack-title">狀態描述</span>
+                                      <input class="form-control" name="txtStatusDesc@(itemName)" data-company-id="${item.CompanyId}" value="${item.StatusDesc}" autocomplete="off" />
+                                    </td>
+                                    <td class="text-center active-content">
+                                      <span class="stack-title">操作</span>
+                                      <a class="active-link" href="javascript:Save@(itemName)(${item.CompanyId});"><i class="fas fa-save"></i></a>
+                                    </td>
+                                  </tr>`;
+                });
+
+                
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+        }
+
+        function Save@(itemName)(companyId) {
+            let targetUrl = "@Url.Action("UpdateStatusCompany", "BasicInformation")";
+            let postData = {
+                "StatusId": statusId@(itemName),
+                "CompanyId": companyId,
+                "StatusName": $(`input[name=txtStatusName@(itemName)][data-company-id=${companyId}]`).val(),
+                "StatusDesc": $(`input[name=txtStatusDesc@(itemName)][data-company-id=${companyId}]`).val()
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                InitData@(itemName)();
+            }
+        }
+
+        function Close@(itemName)() {
+            $("#modal@(itemName)").modal("hide");
+        }
+    </script>
+)

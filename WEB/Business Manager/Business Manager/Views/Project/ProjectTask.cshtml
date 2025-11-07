@@ -1,0 +1,150 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ProjectTask";
+    string itemNameText = "專案任務";
+}
+
+@Html.Resource("css", @<style></style>)
+
+<div class="row">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body task-card-body">
+                <div class="container">
+                    <div class="tree-container">
+                        <div id="tree@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.Resource("js",
+    @<script>
+        let tree;
+        
+        function Expand@(itemName)() {
+            $(".task-nav").removeClass("active");
+            if (parseInt($("#ProjectId").val()) > 0) {
+                $(".advanced-block").slideDown("slow");
+
+                InitData@(itemName)();
+            } else {
+                alert("請先儲存專案資料", "alert");
+            }
+        }
+
+        function InitData@(itemName)() {
+            editFlagProjectTaskGantt = 0;
+
+            if (tree) tree.destructor();
+
+            let targetUrl = "@Url.Action("GetProjectTaskTree", "Project")";
+            let postData = {
+                ProjectId: $("#ProjectId").val(),
+                OpenedLevel: 5
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                tree = new dhx.Tree("tree@(itemName)", {
+                    editable: false,
+                    checkbox: false,
+                    template: ({ value, id, status }, isFolder) => {
+                        let template;
+                        switch (status) {
+                            case "P":
+                                switch (id) {
+                                    case "-1":
+                                        template = `<div class="tree-list" data-tree-index="${id}">
+                                                      <span class="tree-text">${value}</span>
+                                                      <div class="tree-active">
+                                                        <a class="tree-link tree-add" title="新增" href="javascript:AddViewProjectTaskPlanned({ ProjectTaskId: -1, ParentTaskId: ${parseInt(id)} });">
+                                                          <i class="far fa-plus tree-icon"></i>
+                                                        </a>
+                                                      </div>
+                                                    </div>`;
+                                        break;
+                                    default:
+                                        template = `<div class="tree-list" data-tree-index="${id}">
+                                                      <span class="tree-text">${value}</span>
+                                                      <div class="tree-active">
+                                                        <a class="tree-link tree-sort-top" title="前移" href="javascript:Sort@(itemName)(${id}, 'top');">
+                                                          <i class="far fa-arrow-alt-from-bottom tree-icon"></i>
+                                                        </a>
+                                                        <a class="tree-link tree-sort-bottom" title="後移" href="javascript:Sort@(itemName)(${id}, 'bottom');">
+                                                          <i class="far fa-arrow-alt-from-top tree-icon"></i>
+                                                        </a>
+                                                        <a class="tree-link tree-add" title="新增" href="javascript:AddViewProjectTaskPlanned({ ProjectTaskId: -1, ParentTaskId: ${parseInt(id)} });">
+                                                          <i class="far fa-plus tree-icon"></i>
+                                                        </a>
+                                                        <a class="tree-link tree-delete" title="刪除" href="javascript:DeleteViewProjectTaskPlanned({ ProjectTaskId: ${parseInt(id)}, ParentTaskId: -1 });">
+                                                          <i class="fas fa-trash-alt"></i>
+                                                        </a>
+                                                      </div>
+                                                    </div>`;
+                                        break;
+                                }
+                                break;
+                            default:
+                                template = `<div class="tree-list" data-tree-index="${id}">
+                                              <span class="tree-text">${value}</span>
+                                            </div>`;
+                                break;
+                        }
+                        return template;
+                    }
+                });
+
+                tree.data.parse(data.result);
+
+                tree.events.on("itemDblClick", function (id, e) {
+                    if (id != "-1") {
+                        let config = { ProjectTaskId: parseInt(id), ParentTaskId: -1 };
+                        switch (projectStatus) {
+                            case "P":
+                                EditViewProjectTaskPlanned(config);
+                                break;
+                            default:
+                                EditViewProjectTask(config);
+                                break;
+                        }
+                    }
+                });
+
+                tree.events.on("afterExpand", function (id) {
+                    DelayFn(function () {
+                        PageAuthorityControl();
+                        ProjectAuthorityControl();
+                    }, 50);
+                });
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            DelayFn(function () {
+                PageAuthorityControl();
+                ProjectAuthorityControl();
+            }, 50);
+        }
+
+        function Sort@(itemName)(ProjectTaskId, SortType) {
+            let targetUrl = "@Url.Action("UpdateProjectTaskSort", "Project")";
+            let postData = {
+                ProjectTaskId: ProjectTaskId,
+                SortType: SortType
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, false);
+
+            if (result) {
+                InitData@(itemName)();
+
+                DelayFn(function () { ScrollPosition(0, GetElementPosition(`[data-tree-index="${ProjectTaskId}"]`).y); }, 50);
+            }
+        }
+    </script>
+        )

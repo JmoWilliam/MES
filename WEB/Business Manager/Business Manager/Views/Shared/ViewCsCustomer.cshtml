@@ -1,0 +1,267 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "ViewCsCustomer";
+    string itemNameText = "客戶資料";
+}
+
+@Html.Resource("css",
+    @<style>
+        .table-sticky thead .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+
+        .table-sticky tbody .col-sticky:nth-last-child(1) {
+            right: 0;
+        }
+    </style>
+)
+
+<div class="modal fade" id="modal@(itemName)">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(itemNameText)</h5>
+                <button class="close" type="button" onclick="Close@(itemName)()">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="listData@(itemName)">
+                    <div class="col-12">
+                        <form autocomplete="off" id="queryForm@(itemName)">
+                            <fieldset>
+                                <div class="form-row align-items-center mb-2">
+                                    <div class="col-12 col-md-auto col-lg-auto mb-2 mb-md-0 mb-lg-0">
+                                        <select class="form-control" id="cboCsCustIdQ@(itemName)" name="cboCsCustIdQ@(itemName)"></select>
+                                    </div>
+
+                                    <div class="col-12 col-md-auto col-lg-auto mb-2 mb-md-0 mb-lg-0">
+                                        <input type="text" class="form-control" id="txtSearchKeyQ@(itemName)" name="txtSearchKeyQ@(itemName)"
+                                               placeholder="請輸入客戶中文名/英文名" />
+                                    </div>
+                                    <div class="col-12 col-md-auto col-lg-auto text-right text-md-left text-lg-left">
+                                        <button type="button" class="btn btn-primary" onclick="Query@(itemName)()"><i class="fal fa-search"></i>搜尋</button>
+                                        <button type="button" class="btn btn-success checkbox-mode" onclick="Save@(itemName)()"><i class="fas fa-check"></i>確定</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="min-width: 75px;">#</th>
+                                        <th scope="col" style="min-width: 200px;">客戶名稱</th>
+                                        <th scope="col" class="text-center checkbox-mode" style="min-width: 110px;">
+                                            <label class="control control-solid control-solid-info control--checkbox" style="margin: 0;">全選
+                                                <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                                <span class="control__indicator"></span>
+                                            </label>
+                                        </th>
+                                        <th class="text-center radio-mode" scope="col" style="min-width: 110px;">請選擇</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+
+@Html.Resource("js",
+    @<script>
+        let targetSelector@(itemName);
+        let objectId@(itemName);
+        let object@(itemName);
+
+        let companyId@(itemName);
+        let company@(itemName);
+        let type@(itemName);
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#queryForm@(itemName)";
+
+        $(function () {
+            $(`#txtSearchKeyQ@(itemName)`).keydown(function (event) {
+                if (event.keyCode == 13) Query@(itemName)();
+            });
+        })
+
+        function Pop@(itemName)(config) {
+            targetSelector@(itemName) = config.targetSelector;
+            objectId@(itemName) = config.objectCsCustId;
+            object@(itemName) = config.objectCsCustomer;
+
+            @*companyId@(itemName) = config.objectCsCustId;
+            company@(itemName) = config.objectCompany;*@
+            type@(itemName) = config.type;
+
+            ComboBoxs.Default("#cboCsCustIdQ@(itemName)", "@Url.Action("GetCsCustomer", "EipSystemSetting")", { "Status": "A" }, "", "CHOOSE-NUMBER", "請選擇客戶", "CNameAndEName", "CsCustId");
+
+            $("#cboCsCustIdQ@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            Query@(itemName)();
+
+            $("#modal@(itemName)").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: true
+            });
+
+            $('#cbxSelectAll@(itemName)').prop('checked', false);
+
+            $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                    $("input[type='checkbox'][data-cscust-id]").not(":disabled").prop("checked", true);
+                } else {
+                    $("input[type='checkbox'][data-cscust-id]").not(":disabled").prop("checked", false);
+                }
+            });
+
+            $("#queryForm@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetCsCustomer", "EipSystemSetting")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "CsCustId": $("#cboCsCustIdQ@(itemName)").val(),
+                "SearchKey": $("#txtSearchKeyQ@(itemName)").val(),
+                "Status": "A"
+            };
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td>${_row}</td>
+                                        <td>${item.CNameAndEName}</td>
+                                        <td class="text-center">`;
+                        switch (type@(itemName)) {
+                            case "radio":
+                                innerHtml += `<label class="control control-solid control-solid-info control--radio">
+                                                <input type="radio" data-cscust-id="${item.CsCustId}" value="${item.CsCustId}" />
+                                                <span class="control__indicator"></span>
+                                              </label>`;
+                                break;
+                            case "checkbox":
+                                innerHtml += `<label class="control control-solid control-solid-info control--checkbox">
+                                                <input type="checkbox" data-cscust-id="${item.CsCustId}" value="${item.CsCustId}" />
+                                                <span class="control__indicator"></span>
+                                              </label>`;
+                                break;
+                        }
+                        innerHtml += `<input type="hidden" name="txtCsCustId@(itemName)" data-cscust-id="${item.CsCustId}" value="${item.CsCustId}" />
+                                      <input type="hidden" name="txtCustomerName@(itemName)" data-cscust-id="${item.CsCustId}" value="${item.CustomerName}" />
+                                      <input type="hidden" name="txtCustomerEnglishName@(itemName)" data-cscust-id="${item.CsCustId}" value="${item.CustomerEnglishName}" />
+                                      <input type="hidden" name="txtCNameAndEName@(itemName)" data-cscust-id="${item.CsCustId}" value="${item.CNameAndEName}" />
+                                      </td></tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="5" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            switch (type@(itemName)) {
+                case "radio":
+                    $(".radio-mode").show();
+                    $(".checkbox-mode").hide();
+
+                    $("input[type='radio']").click(function () {
+                        if ("[data-cscust-id]:checked") {
+                            let cscustId = $(this).data("cscust-id");
+
+                            if (cscustId) {
+                                let customerName = $(`input[name='txtCustomerName@(itemName)'][data-cscust-id='${cscustId}']`).val();
+                                let customerEnglishName = $(`input[name='txtCustomerEnglishName@(itemName)'][data-cscust-id='${cscustId}']`).val();
+                                let cNameAndEName = $(`input[name='txtCNameAndEName@(itemName)'][data-cscust-id='${cscustId}']`).val();
+
+                                let memberIcon = $(`input[name='txtCsCustomerIcon@(itemName)'][data-cscust-id='${cscustId}']`).val();
+
+                                if (objectId@(itemName)) ElementSetValue(objectId@(itemName), cscustId, "change");
+                                if (object@(itemName)) {
+                                    let object = `${cNameAndEName}`;
+
+                                    ElementSetValue(object@(itemName), object, "change");
+                                }
+
+                                $(targetSelector@(itemName)).parent().find(".help-block").css("display", "grid");
+                                $(targetSelector@(itemName)).parent().siblings().find(".help-block").css("display", "grid");
+                            }
+                        }
+
+                        Close@(itemName)();
+                    });
+                    break;
+                case "checkbox":
+                    $(".radio-mode").hide();
+                    $(".checkbox-mode").show();
+                    break;
+            }
+        }
+
+        function Save@(itemName)() {
+            let dataList = [];
+
+            if ($("input[type='checkbox'][data-cscust-id]:checked").length > 0) {
+                $.each($("input[type='checkbox'][data-cscust-id]:checked"), function (i) {
+                    let cscustId = $(this).data("cscust-id");
+
+                    dataList.push(cscustId);
+                });
+
+                if (objectId@(itemName)) ElementSetValue(objectId@(itemName), dataList, "change");
+            }
+
+            $("#cbxSelectAll@(itemName)").prop("checked", false);
+            Close@(itemName)();
+        }
+
+        function Close@(itemName)() {
+            ResetForm(objForm@(itemName));
+            $("#modal@(itemName)").modal('hide');
+        }
+    </script>
+)

@@ -1,0 +1,1611 @@
+﻿@using Business_Manager.Helpers
+@{
+    string itemName = "GrDetail";
+}
+
+@Html.Resource("css",
+    @<style>
+         .table-detail {
+             margin: 0;
+             padding: 0;
+             max-height: 30vh;
+             display: none;
+         }
+
+             .table-detail.active {
+                 display: block;
+                 margin-bottom: .75rem;
+             }
+
+             .table-detail th {
+                 background-color: #d7ecfa !important;
+             }
+
+             .table-detail th, .table-detail td {
+                 padding: 5px 0;
+                 text-align: center;
+             }
+
+         .table-sticky thead .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+         .table-sticky tbody .col-sticky:nth-last-child(1) {
+             right: 0;
+         }
+
+        .batch-delete {
+            background-color: #ef6c7a !important;
+            border-color: #ef6c7a !important;
+        }
+    </style>
+                        )
+
+<div class="row" id="listData@(itemName)">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6 col-sm-6 col-md-6"></div>
+                    <div class="col-6 col-sm-6 col-md-6 text-right">
+                        <a class="btn btn-danger auth-add read-hide" href="javascript:PopModalCopy@(itemName)();"><i class="fas fa-copy"></i>複製前置單據</a>
+                        <a id="aPopViewPoDetail@(itemName)" class="btn btn-success auth-add read-hide" href="javascript:PopViewPoDetail();"><i class="fas fa-search-plus"></i>採購單身帶出</a>
+                        <a id="aTransfer@(itemName)" class="btn btn-secondary auth-data-transfer read-hide" href="javascript:Transfer@(itemName)();"><i class="fas fa-file-import"></i>拋轉進貨單據</a>
+                        <a class="btn btn-danger auth-update read-hide" style="background: #e77f6d !important;border-color: #e77f6d !important;" href="javascript:EditReceiptQty@(itemName)();"><i class="fas fa-edit"></i>編輯進貨數量</a>
+                        <a class="btn btn-info auth-delete batch-delete read-hide" href="javascript:BatchDelete@(itemName)();"><i class="fas fa-trash-alt"></i>批量刪除</a>
+                        <a class="btn btn-info auth-add read-hide" href="javascript:Edit@(itemName)();"><i class="fas fa-plus"></i>新增</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-custom">
+                            <table class="table table-bordered table-striped table-sticky table-stack" id="tblData@(itemName)">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 110px;">
+                                            <label class="col-12 col-form-label ">
+                                                全選 <input type="checkbox" id="cbxSelectAll@(itemName)" />
+                                            </label>
+                                        </th>
+                                        <th scope="col" style="min-width: 100px;">流水號</th>
+                                        <th scope="col" style="min-width: 250px;">品號</th>
+                                        <th scope="col" style="min-width: 250px;">品名</th>
+                                        <th scope="col" style="min-width: 150px;">規格</th>
+                                        <th scope="col" style="min-width: 135px;">數量</th>
+                                        <th scope="col" style="min-width: 150px;">庫別</th>
+                                        <th scope="col" style="min-width: 150px;">批號</th>
+                                        <th scope="col" style="min-width: 200px;">採購單號</th>
+                                        <th scope="col" style="min-width: 110px;">檢驗狀態</th>
+                                        <th scope="col" style="min-width: 120px;">驗收日期</th>
+                                        <th scope="col" style="min-width: 100px;">驗收數量</th>
+                                        <th scope="col" style="min-width: 100px;">計價數量</th>
+                                        <th scope="col" style="min-width: 100px;">驗退數量</th>
+                                        <th scope="col" style="min-width: 200px;">備註</th>
+                                        <th class="text-center col-sticky" scope="col" style="min-width: 200px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="page@(itemName)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <div class="subject-content">
+                    <label>&nbsp進貨單總數量：<span class="text-danger" id="desQuantity@(itemName)" name="desQuantity@(itemName)"></span></label>
+                    <label>&nbsp進貨金額：<span class="text-danger" id="desTotalAmount@(itemName)" name="desTotalAmount@(itemName)"></span></label>
+                    <label>&nbsp扣款金額：<span class="text-danger" id="desDeductAmount@(itemName)" name="desDeductAmount@(itemName)"></span></label>
+                    <label>&nbsp進貨費用：<span class="text-danger" id="desReceiptAmount@(itemName)" name="desReceiptAmount@(itemName)"></span></label>
+                </div>
+                <div class="subject-content">
+                    <label style="color: #cd5656; font-weight: 600;">原幣</label>
+                    <label>&nbsp貨款金額：<span class="text-danger" id="desOrigPreTaxAmount@(itemName)" name="desOrigPreTaxAmount@(itemName)"></span></label>
+                    <label>&nbsp稅額：<span class="text-danger" id="desOrigTax@(itemName)" name="desOrigTax@(itemName)"></span></label>
+                    <label>&nbsp合計：<span class="text-danger" id="desOriTotal@(itemName)" name="desOriTotal@(itemName)"></span></label>
+                </div>
+                <div class="subject-content">
+                    <label style="color: #363885; font-weight: 600;">本幣</label>
+                    <label>&nbsp貨款金額：<span class="text-danger" id="desPreTaxAmount@(itemName)" name="desPreTaxAmount@(itemName)"></span></label>
+                    <label>&nbsp稅額：<span class="text-danger" id="desTaxAmount@(itemName)" name="desTaxAmount@(itemName)"></span></label>
+                    <label>&nbsp合計：<span class="text-danger" id="desTotal@(itemName)" name="desTotal@(itemName)"></span></label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="editData@(itemName)" style="display: none;">
+    <div class="col-12">
+        <div class="card card-shadow mb-4">
+            <div class="card-body">
+                <form class="container" autocomplete="off" id="editForm@(itemName)">
+                    <fieldset>
+                        <input type="hidden" id="GrDetailId" name="GrDetailId" value="-1" />
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 podetail">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPoDetailId@(itemName)">採購單身資料<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtPoDetailId@(itemName)" value="" />
+                                        <div class="btn-group btn-group@(itemName)">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block help-po">
+                                            <dt>採購單號</dt>
+                                            <dd id="desPoErpFullNo@(itemName)"></dd>
+                                            <dt>採購數量</dt>
+                                            <dd id="desPoQuantity@(itemName)"></dd>
+                                            <dt>已交數量</dt>
+                                            <dd id="desSiQty@(itemName)"></dd>
+                                            <dt>品號</dt>
+                                            <dd id="desMtlItemNo@(itemName)"></dd>
+                                            <dt>品名</dt>
+                                            <dd id="desPoMtlItemName@(itemName)"></dd>
+                                            <dt>規格</dt>
+                                            <dd id="desPoMtlItemSpec@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6 col-md-12 mtlitem">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtPoDetailId@(itemName)">品號資料<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="hidden" id="txtMtlItemId@(itemName)" value="" />
+                                        <div class="btn-group btn-group@(itemName)">
+                                            <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                            <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                        </div>
+                                        <dl class="help-block help-mtlitem">
+                                            <dt>品號</dt>
+                                            <dd id="desSingleMtlItemNo@(itemName)"></dd>
+                                            <dt>品名</dt>
+                                            <dd id="desSingleMtlItemName@(itemName)"></dd>
+                                            <dt>規格</dt>
+                                            <dd id="desSingleMtlItemSpec@(itemName)"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtGrSeq@(itemName)">序號<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtGrSeq@(itemName)" name="txtGrSeq@(itemName)"
+                                               value=""
+                                               placeholder="系統自動產生"
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtLotNumber@(itemName)">批號</label>
+                                    <input type="hidden" id="txtLotManagement@(itemName)" />
+                                    <div class="col-12">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="txtLotNumber@(itemName)" name="txtLotNumber@(itemName)" placeholder="請輸入批號" readonly />
+                                            <div class="input-group-append">
+                                                <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                                <a class="btn btn-outline-danger pop-clear" href="javascript:void(0);"><i class="fas fa-eraser"></i></a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="cboInventoryId@(itemName)">進貨庫別<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <select class="form-control" id="cboInventoryId@(itemName)" name="cboInventoryId@(itemName)" required disabled></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 ">
+                                <div class="form-group row">
+                                    <label class="form-label col-12" for="txtAcceptanceDate@(itemName)">驗收日期<span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" id="txtAcceptanceDate@(itemName)" name="txtAcceptanceDate@(itemName)"
+                                               placeholder="請輸入驗收日期"
+                                               value=""
+                                               readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab" style="white-space:unset;">
+                            <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="tabActive" data-toggle="tab" href="#tabQuote">
+                                        <i class="fad fa-money-check-edit-alt"></i> 單價設定
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="tab-content">
+                            <div class="tab-pane active" id="tabQuote">
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtReceiptQty@(itemName)">進貨數量</label>
+                                            <div class="col-12">
+                                                <input type="text" class="form-control" id="txtReceiptQty@(itemName)" name="txtReceiptQty@(itemName)"
+                                                       oninput="EditReceiptStatusQty@(itemName)()"
+                                                       value="0" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtReceiptExpense@(itemName)">進貨費用<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtReceiptExpense@(itemName)" name="txtReceiptExpense@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入進貨費用"
+                                                       data-msg-required="請輸入進貨費用" data-rule-required="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtQcStatus@(itemName)">檢驗狀態<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select id="cboQcStatus@(itemName)" class="form-control" disabled></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtAcceptQty@(itemName)">驗收數量<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtAcceptQty@(itemName)" name="txtAcceptQty@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入驗收數量"
+                                                       data-msg-required="請輸入驗收數量" data-rule-required="true"
+                                                       oninput="EditAcceptQty@(itemName)()" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtReturnQty@(itemName)">驗退數量<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtReturnQty@(itemName)" name="txtReturnQty@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入驗退數量"
+                                                       data-msg-required="請輸入驗退數量" data-rule-required="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtAvailableQty@(itemName)">計價數量<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtAvailableQty@(itemName)" name="txtAvailableQty@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入計價數量"
+                                                       data-msg-required="請輸入計價數量" data-rule-required="true"
+                                                       oninput="EditOrigUnitPrice@(itemName)()" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="cboAvailableUomId@(itemName)">計價單位<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <select class="form-control" id="cboAvailableUomId@(itemName)" name="cboAvailableUomId@(itemName)" required disabled></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigUnitPrice@(itemName)">原幣進貨單價<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigUnitPrice@(itemName)" name="txtOrigUnitPrice@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣進貨單價"
+                                                       data-msg-required="請輸入原幣進貨單價" data-rule-required="true"
+                                                       oninput="EditOrigUnitPrice@(itemName)()"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigAmount@(itemName)">原幣進貨金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigAmount@(itemName)" name="txtOrigAmount@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣進貨金額"
+                                                       data-msg-required="請輸入原幣進貨金額" data-rule-required="true" readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigDiscountAmt@(itemName)">原幣扣款金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigDiscountAmt@(itemName)" name="txtOrigDiscountAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣扣款金額"
+                                                       data-msg-required="請輸入原幣扣款金額" data-rule-required="true"
+                                                       oninput="EditOrigDiscountAmt@(itemName)()" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigPreTaxAmt@(itemName)">原幣未稅金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigPreTaxAmt@(itemName)" name="txtOrigPreTaxAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣未稅金額"
+                                                       data-msg-required="請輸入原幣未稅金額" data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtOrigTaxAmt@(itemName)">原幣稅金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtOrigTaxAmt@(itemName)" name="txtOrigTaxAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入原幣稅金額"
+                                                       data-msg-required="請輸入原幣稅金額" data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtPreTaxAmt@(itemName)">本幣未稅金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtPreTaxAmt@(itemName)" name="txtPreTaxAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入本幣未稅金額"
+                                                       data-msg-required="請輸入本幣未稅金額" data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtTaxAmt@(itemName)">本幣稅金額<span class="text-danger">*</span></label>
+                                            <div class="col-12">
+                                                <input type="number" class="form-control" id="txtTaxAmt@(itemName)" name="txtTaxAmt@(itemName)"
+                                                       value="0"
+                                                       placeholder="請輸入本幣稅金額"
+                                                       data-msg-required="請輸入本幣稅金額" data-rule-required="true"
+                                                       readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtDiscountDescription@(itemName)">扣款說明</label>
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="txtDiscountDescription@(itemName)" name="txtDiscountDescription@(itemName)" rows="2"
+                                                          placeholder="請輸入扣款說明"
+                                                          data-msg-required="請輸入扣款說明"
+                                                          data-msg-maxlength="必須少於 40 個字元" maxlength="40"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 ">
+                                        <div class="form-group row">
+                                            <label class="form-label col-12" for="txtRemark@(itemName)">備註</label>
+                                            <div class="col-12">
+                                                <textarea class="form-control" id="txtRemark@(itemName)" name="txtRemark@(itemName)" rows="2"
+                                                          placeholder="請輸入備註"
+                                                          data-msg-required="請輸入備註"
+                                                          data-msg-maxlength="必須少於 255 個字元" maxlength="255"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="card-footer text-center text-lg-right">
+                <button type="button" class="btn btn-secondary" onclick="Return@(itemName)()"><i class="fas fa-undo"></i>返回</button>
+                <button type="button" class="btn btn-success read-hide" onclick="Save@(itemName)()"><i class="fas fa-save"></i>儲存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--複製前置單據-->
+<div class="modal fade" id="modalCopy@(itemName)" data-keyboard="false" data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">複製前置單據</h5>
+                <button class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="container custom-form-container" autocomplete="off" id="copyForm@(itemName)">
+                    <fieldset>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtGrErpFullNo@(itemName)">複製來源</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <select class="form-control" id="cboSource@(itemName)">
+                                    <option value="PO" selected>採購單</option>
+                                    <option value="DO">供應商出貨單</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label" for="txtPoErpFullNo@(itemName)">前置單號</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="input-group po-input">
+                                    <input type="hidden" id="txtPoId@(itemName)" />
+                                    <input type="text" class="form-control" id="txtPoErpFullNo@(itemName)" name="txtPoErpFullNo@(itemName)" placeholder="請輸入前置單號" />
+                                    <div class="input-group-append">
+                                        <a class="btn btn-success pop-view" href="javascript:void(0);"><i class="fal fa-search"></i></a>
+                                        <a class="btn btn-outline-danger pop-clear" href="javascript:ClearPoId@(itemName)();"><i class="fas fa-eraser"></i></a>
+                                    </div>
+                                </div>
+                                <div class="input-group do-input">
+                                    <input type="text" class="form-control" id="txtDoNo@(itemName)" name="txtDoNo@(itemName)" placeholder="請輸入供應商出貨單號" />
+                                </div>
+                                <div class="po-user-info" style="padding: 12px; background: #f1f1f1; display: none;">
+                                    採購人員: <span id="desPoUserFullNo@(itemName)">張麗珍</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-12 col-md-3 col-lg-3 col-form-label">複製前置匯率</label>
+                            <div class="col-12 col-md-9 col-lg-9">
+                                <div class="row">
+                                    <div class="col">
+                                        <label class="control control-solid control-solid-info control--checkbox">
+                                            <input type="checkbox" id="cbxCopyExchange@(itemName)" name="cbxCopyExchange@(itemName)" checked />
+                                            <span class="control__indicator"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer text-center">
+                <button type="button" class="btn btn-success" onclick="Copy@(itemName)()"><i class="fas fa-copy"></i>複製</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.Partial("ViewPurchaseOrder")
+@Html.Partial("ViewPoDetail")
+@Html.Partial("ViewSinglePoDetail")
+@Html.Partial("ViewLotNumber")
+@Html.Partial("ViewBarcodeBindLot")
+@Html.Partial("ViewMtlItem")
+
+@Html.Resource("js",
+    @<script>
+        let objPage@(itemName) = {
+            "pageIndex": 0,
+            "pageSize": 10
+        };
+        let objForm@(itemName) = "#editForm@(itemName)";
+
+        let totalAmount@(itemName);
+
+        let supplierId@(itemName);
+
+        let UnitDecimal@(itemName);
+
+        let TotalDecimal@(itemName);
+
+        let grErpPrefix@(itemName);
+
+        let documentVerification = "Y";
+
+        let paymentTermNo@(itemName);
+
+        let currencyCode@(itemName);
+
+        let exchange@(itemName);
+
+        $(document).ready(function () {
+            $("#cboSource@(itemName)").change(function () {
+                let source = $(this).val();
+                if (source == "PO" || source.length <= 0) {
+                    $(".po-input").show();
+                    $(".do-input").hide();
+                }
+                else if (source == "DO") {
+                    $(".do-input").show();
+                    $(".po-input").hide();
+                    $("#txtDoNo@(itemName)").focus();
+                }
+            });
+
+            $("#txtDoNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    Copy@(itemName)();
+                    return false;
+                }
+            });
+        })
+
+        function Expand@(itemName)() {
+            if (parseInt($("#GrId").val()) > 0) {
+                let grId = $("#GrId").val();
+
+                $(".advanced-block").slideDown("slow");
+
+                supplierId@(itemName) = $("#cboSupplierIdGoodsReceiptManagement").val();
+                paymentTermNo@(itemName) = $("#cboPaymentTermGoodsReceiptManagement").val();
+                currencyCode@(itemName) = $("#cboCurrencyCodeGoodsReceiptManagement").val();
+                exchange@(itemName) = $("#txtExchangeGoodsReceiptManagement").val();
+
+                $(".po-user-info").hide();
+
+                $("#aPopViewPoDetail@(itemName)").prop("href", `javascript:PopViewPoDetail('${supplierId@(itemName)}', '${paymentTermNo@(itemName)}', '${currencyCode@(itemName)}', '${exchange@(itemName)}');`)
+                $("#aTransfer@(itemName)").prop("href", `javascript:Transfer@(itemName)('${grId}');`)
+
+                GetDocumentVerification@(itemName)();
+
+                Return@(itemName)();
+
+                $("#cbxSelectAll@(itemName)").prop("checked", false);
+
+                $("#cbxSelectAll@(itemName)").off("click").on("click", function () {
+                    if ($("#cbxSelectAll@(itemName)").is(":checked")) {
+                        $("input[type='checkbox'][data-gr-detail-id]").not(":disabled").prop("checked", true);
+                    } else {
+                        $("input[type='checkbox'][data-gr-detail-id]").not(":disabled").prop("checked", false);
+                    }
+                });
+            } else {
+                alert("請先儲存進貨單單頭", "alert");
+            }
+        }
+
+        function Query@(itemName)() {
+            objPage@(itemName).pageIndex = 0;
+            InitData@(itemName)(objPage@(itemName));
+
+            Calculate@(itemName)();
+        }
+
+        function InitData@(itemName)(objPage) {
+            let innerHtml = '';
+            let pageCount = 0;
+
+            let targetUrl = "@Url.Action("GetGrDetail", "GoodsReceipt")";
+            let postData = {
+                "OrderBy": "",
+                "PageIndex": (objPage.pageIndex + 1),
+                "PageSize": objPage.pageSize,
+                "GrId": $("#GrId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                pageCount = data.result.length > 0 ? parseInt(data.result[0]["TotalCount"]) : 0;
+
+                if (pageCount > 0) {
+                    objPage = PageCaculate(pageCount, objPage);
+
+                    $.each(data.result, function (i, item) {
+                        let _row = (objPage.pageSize * objPage.pageIndex + (i + 1)) + ".";
+
+                        innerHtml += `<tr>
+                                        <td style="max-width: 75px; text-center col-sticky">
+                                            <label class="control control-solid control-solid-info control--checkbox">
+                                              <input type="checkbox" data-gr-detail-id="${item.GrDetailId}" value="${item.GrDetailId}" />
+                                              <span class="control__indicator"></span>
+                                              ${_row}
+                                            </label>
+                                        </td>
+                                        <td><span class="stack-title">流水號</span>${item.GrSeq}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.MtlItemNo}" style="width: 175px; max-width: 250px;"><span class="stack-title">品號</span>${item.MtlItemNo}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.GrMtlItemName}" style="width: 200px; max-width: 250px;"><span class="stack-title">品名</span>${item.GrMtlItemName}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.GrMtlItemSpec}" style="width: 150px; max-width: 150px;"><span class="stack-title">規格</span>${item.GrMtlItemSpec}</td>
+                                        <td name="tdReceiptQty@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-receipt-qty="${item.ReceiptQty}"><span class="stack-title">數量</span>${item.ReceiptQty.toLocaleString(`en`)} <code>${item.UomNo}</code></td>
+                                        <td name="tdInventoryId@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-inventory-id="${item.InventoryId}"><span class="stack-title">庫別</span>${item.InventoryNo} ${item.InventoryName}</td>
+                                        <td name="tdLotNumber@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-lot-number="${item.LotNumber}"><span class="stack-title">批號</span>${item.LotNumber}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.PoErpPrefix}-${item.PoErpNo}(${item.PoSeq})" style="width: 175px; max-width: 175px;"><span class="stack-title">採購單號</span>${item.PoErpPrefix}-${item.PoErpNo}<code>(${item.PoSeq})</code></td>
+                                        <td><span class="stack-title">檢驗狀態</span>${item.QcStatusName}</td>
+                                        <td name="tdAcceptanceDate@(itemName)" data-gr-detail-id="${item.GrDetailId}" data-acceptance-date="${item.AcceptanceDate}"><span class="stack-title">驗收日期</span>${item.AcceptanceDate}</td>
+                                        <td><span class="stack-title">驗收數量</span>${item.AcceptQty.toLocaleString(`en`)}</td>
+                                        <td><span class="stack-title">計價數量</span>${item.AvailableQty.toLocaleString(`en`)}</td>
+                                        <td><span class="stack-title">驗退數量</span>${item.ReturnQty.toLocaleString(`en`)}</td>
+                                        <td class="ellipsis" data-toggle="tooltip" title="${item.Remark}" style="width: 200px; max-width: 200px;"><span class="stack-title">備註</span>${item.Remark}</td>
+                                        <td class="text-center active-content col-sticky" style="min-width: 450px;">
+                                          <span class="stack-title">操作</span>
+                                          <a class="active-link" href="javascript:Read@(itemName)(${item.GrDetailId});"><i class="fas fa-eye"></i></a>
+                                          ${item.ConfirmStatus == `N` ? `<a class="active-link auth-update read-hide" href="javascript:Edit@(itemName)(${item.GrDetailId});"><i class="fas fa-edit"></i></a>` : ``}
+                                          ${item.ConfirmStatus == `N` ? `<a class="active-link auth-delete read-hide" href="javascript:Delete@(itemName)(${item.GrDetailId});"><i class="fas fa-trash-alt"></i></a>` : ``}
+                                          <a class="active-link auth-add read-hide ${item.LotManagement == `T` ? `` : `active-disable`}" href="javascript:${item.LotManagement == `T` ? `Pop2ViewLotNumber('${item.GrDetailId}', '${item.MtlItemNo}');` : `void(0);`}"><i class="fas fa-tasks"></i> 批號管理</a>
+                                          ${item.LotNumber != `` && item.ConfirmStatus == `Y` ? `<a class="active-link auth-delete" href="javascript:PopViewBarcodeBindLot(${item.GrDetailId});"><i class="fas fa-barcode"></i></a>` : ``}
+                                          ${item.QcGoodsReceiptId != null ? `<a class="active-link auth-read" href="@Url.Action("QcGoodsReceiptManagement", "QcDataManagement")?QcGoodsReceiptId=${item.QcGoodsReceiptId}" target="_blank"><i class="fas fa-eye"></i> 查看進貨檢驗紀錄</a>` : ``}
+                                        </td>
+                                      </tr>`;
+                    });
+                } else {
+                    innerHtml += `<tr>
+                                    <td class="text-center" colspan="16" style="background-color: #fff3cd;">
+                                      <i class="fal fa-exclamation-circle"></i>&nbsp;目前尚無資料。
+                                    </td>
+                                  </tr>`;
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+
+            $("#tblData@(itemName) tbody").html(innerHtml);
+            TableComponentInit();
+            Pager("#page@(itemName)", pageCount, objPage, InitData@(itemName));
+
+            if ($("#ViewMode").val() == "read") {
+                $(".read-hide").hide();
+            }
+        }
+
+        function Edit@(itemName)(GrDetailId) {
+            $("#GrDetailId").val(GrDetailId ? GrDetailId : 0);
+
+            $(".help-block dd").text("");
+
+            $(objForm@(itemName) + " fieldset").attr("disabled", false);
+            $(objForm@(itemName) + " select").attr("disabled", false);
+            $("#editData@(itemName) .help-block").hide();
+            $("#txtPoDetailId@(itemName)").val(-1);
+            $("#txtMtlItemId@(itemName)").val("");
+            $("#desMtlItemNo@(itemName)").html("");
+
+            $("#txtLotNumber@(itemName)").prop("readonly", true);
+
+            Switch("#editData@(itemName)", "#listData@(itemName)");
+
+            let currentDate = new Date();
+            Suites.DatePicker("txtAcceptanceDate@(itemName)", currentDate);
+
+            ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", { "Status": "A" }, "", "NA", "", "InventoryWithNo", "InventoryId");
+
+            ComboBoxs.Default("#cboAvailableUomId@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", {}, "", "NA", "", "UomWithNo", "UomId");
+
+            ComboBoxs.Default("#cboQcStatus@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "GrDetail.QcStatus" }, "", "NA", "", "StatusName", "StatusNo");
+            $("#cboQcStatus@(itemName)").prop("disabled", true);
+
+            $("#cboInventoryId@(itemName), #cboAvailableUomId@(itemName), #cboQcStatus@(itemName)").select2({
+                dropdownAutoWidth: true,
+                width: "100%"
+            });
+
+            //確認單別是否為核對採購單
+            if (documentVerification == "Y") {
+                $(".podetail").removeClass("col-lg-6").addClass("col-lg-12");
+                $(".mtlitem").css("display", "none");
+            }
+            else {
+                $(".podetail").removeClass("col-lg-12").addClass("col-lg-6");
+                $(".mtlitem").css("display", "block");
+            }
+
+            if (GrDetailId > 0) {
+                let targetUrl = "@Url.Action("GetGrDetail", "GoodsReceipt")";
+                let postData = {
+                    "GrDetailId": GrDetailId
+                };
+
+                let data = DataAccess.Get(targetUrl, postData, false);
+
+                if (data.status == "success") {
+                    $.each(data.result, function (i, item) {
+                        if (item.PoDetailId != null) {
+                            $("#txtPoDetailId@(itemName)").val(item.PoDetailId);
+                            $("#desPoErpFullNo@(itemName)").html(item.PoErpFullNo + "(" + item.PoSeq + ")");
+                            $("#desPoQuantity@(itemName)").html(item.PoQuantity);
+                            $("#desSiQty@(itemName)").html(item.SiQty);
+                            $("#desMtlItemNo@(itemName)").html(item.PoMtlItemNo);
+                            $("#desPoMtlItemName@(itemName)").html(item.PoMtlItemName);
+                            $("#desPoMtlItemSpec@(itemName)").html(item.PoMtlItemSpec);
+                            $("#editData@(itemName) .help-po").css("display", "grid");
+                        }
+
+                        $("#desSingleMtlItemNo@(itemName)").html(item.MtlItemNo);
+                        $("#desSingleMtlItemName@(itemName)").html(item.GrMtlItemName);
+                        $("#desSingleMtlItemSpec@(itemName)").html(item.GrMtlItemSpec);
+
+                        $("#editData@(itemName) .help-mtlitem").css("display", "grid");
+
+                        $("#txtLotNumber@(itemName)").val(item.LotNumber);
+                        $("#txtLotManagement@(itemName)").val(item.LotManagement);
+                        if (item.LotManagement == "Y" || item.LotManagement == "T") {
+                            $("#txtLotNumber@(itemName)").prop("readonly", false);
+                        }
+
+                        $("#txtGrSeq@(itemName)").val(item.GrSeq);
+                        ComboBoxs.Default("#cboInventoryId@(itemName)", "@Url.Action("GetInventory", "ScmBasicInformation")", { "Status": "A" }, "", "NA", "", "InventoryWithNo", "InventoryId");
+                        $("#cboInventoryId@(itemName)").val(item.InventoryId);
+                        $("#txtAcceptanceDate@(itemName)").val(item.AcceptanceDate);
+
+                        $("#txtReceiptQty@(itemName)").val(item.ReceiptQty);
+                        $("#txtReceiptExpense@(itemName)").val(item.ReceiptExpense);
+
+                        ComboBoxs.Default("#cboQcStatus@(itemName)", "@Url.Action("GetStatus", "BasicInformation")", { "StatusSchema": "GrDetail.QcStatus" }, "", "NA", "", "StatusName", "StatusNo");
+                        $("#cboQcStatus@(itemName)").val(item.QcStatus);
+                        if (item.QcStatus == "0") {
+                            $("#cboQcStatus@(itemName)").prop("disabled", true);
+                        }
+
+                        $("#txtAcceptQty@(itemName)").val(item.AcceptQty);
+                        $("#txtReturnQty@(itemName)").val(item.ReturnQty);
+                        $("#txtAvailableQty@(itemName)").val(item.AvailableQty);
+
+                        ComboBoxs.Default("#cboAvailableUomId@(itemName)", "@Url.Action("GetUnitOfMeasure", "PdmBasicInformation")", {}, "", "NA", "", "UomWithNo", "UomId");
+                        $("#cboAvailableUomId@(itemName)").val(item.UomId);
+
+                        $("#txtOrigUnitPrice@(itemName)").val(item.OrigUnitPrice);
+                        $("#txtOrigAmount@(itemName)").val(item.OrigAmount);
+                        $("#txtOrigDiscountAmt@(itemName)").val(item.OrigDiscountAmt);
+                        $("#txtOrigPreTaxAmt@(itemName)").val(item.OrigPreTaxAmt);
+                        $("#txtOrigTaxAmt@(itemName)").val(item.OrigTaxAmt);
+                        $("#txtPreTaxAmt@(itemName)").val(item.PreTaxAmt);
+                        $("#txtTaxAmt@(itemName)").val(item.TaxAmt);
+                        $("#txtDiscountDescription@(itemName)").val(item.DiscountDescription);
+                        $("#txtRemark@(itemName)").val(item.Remark);
+                        $("#txtMtlItemId@(itemName)").val(item.MtlItemId);
+
+                    });
+                } else {
+                    alert(data.msg, "alert", 0);
+                }
+
+                EditOrigUnitPrice@(itemName)();
+            }
+
+            let popConfig = {
+                targetSelector: "#txtPoDetailId@(itemName)",
+                popFunction: "PopViewSinglePoDetail",
+                objectPoDetailId: "#txtPoDetailId@(itemName)",
+                objectPoErpFullNo: "#desPoErpFullNo@(itemName)",
+                objectPoQuantity: "#desPoQuantity@(itemName)",
+                objectSiQty: "#desSiQty@(itemName)",
+                objectMtlItemNo: "#desMtlItemNo@(itemName)",
+                objectPoMtlItemName: "#desPoMtlItemName@(itemName)",
+                objectPoMtlItemSpec: "#desPoMtlItemSpec@(itemName)",
+                objectInventoryId: "#cboInventoryId@(itemName)",
+                objectReceiptQty: "#txtReceiptQty@(itemName)",
+                objectAcceptQty: "#txtAcceptQty@(itemName)",
+                objectAvailableQty: "#txtAvailableQty@(itemName)",
+                objectAvailableUomId: "#cboAvailableUomId@(itemName)",
+                objectOrigUnitPrice: "#txtOrigUnitPrice@(itemName)",
+                objectOrigAmount: "#txtOrigAmount@(itemName)",
+                objectRemark: "#txtRemark@(itemName)",
+                objectQcStatus: "#cboQcStatus@(itemName)",
+                objectSupplierId: supplierId@(itemName),
+                objectLotManagement: "#txtLotManagement@(itemName)",
+                objectPaymentTermNo: paymentTermNo@(itemName),
+                objectCurrencyCode: currencyCode@(itemName),
+                objectExchange: exchange@(itemName)
+            };
+            InitPopView(popConfig);
+
+            let popConfig2 = {
+                targetSelector: "#txtLotNumber@(itemName)",
+                popFunction: "PopViewLotNumber",
+                objectLotNumber: "#txtLotNumber@(itemName)",
+                objectMtlItemNo: $("#desMtlItemNo@(itemName)").html(),
+                objectInventoryId: $("#cboInventoryId@(itemName)").val(),
+                objectLotManagement: $("#txtLotManagement@(itemName)").val(),
+            };
+            InitPopView(popConfig2);
+
+            let popConfig3 = {
+                targetSelector: "#txtMtlItemId@(itemName)",
+                popFunction: "PopViewMtlItem",
+                objectMtlItemId: "#txtMtlItemId@(itemName)",
+                objectMtlItemNo: "#desSingleMtlItemNo@(itemName)",
+                objectMtlItemName: "#desSingleMtlItemName@(itemName)",
+                objectMtlItemSpec: "#desSingleMtlItemSpec@(itemName)",
+                objectUomId: "#cboAvailableUomId@(itemName)",
+                objectInventoryId: "#cboInventoryId@(itemName)",
+                objectCheckMtlDate: "@DateTime.Now.ToString("yyyy-MM-dd")",
+                objectQcStatus: "#cboQcStatus@(itemName)",
+                objectLotManagementFlag: "#txtLotManagement@(itemName)",
+            };
+            InitPopView(popConfig3);
+
+            $("#txtLotManagement@(itemName)").change(function () {
+                let lotManagement = $(this).val();
+                if (lotManagement == "Y" || lotManagement == "T") {
+                    $("#txtLotNumber@(itemName)").prop("readonly", false);
+                }
+                else {
+                    $("#txtLotNumber@(itemName)").prop("readonly", true);
+                }
+
+                let popConfig = {
+                    targetSelector: "#txtLotNumber@(itemName)",
+                    popFunction: "PopViewLotNumber",
+                    objectLotNumber: "#txtLotNumber@(itemName)",
+                    objectMtlItemNo: $("#desMtlItemNo@(itemName)").html().length > 0 ? $("#desMtlItemNo@(itemName)").html() : $("#desSingleMtlItemNo@(itemName)").html(),
+                    objectInventoryId: $("#cboInventoryId@(itemName)").val(),
+                    objectLotManagement: $("#txtLotManagement@(itemName)").val(),
+                };
+                InitPopView(popConfig);
+            });
+
+            $("#txtOrigAmount@(itemName)").change(function () {
+                GetCurrencyDecimal@(itemName)();
+
+                let editNumber = "1";
+                for (let i = 1; i <= parseInt(TotalDecimal@(itemName)); i++) {
+                    editNumber += "0";
+                }
+
+                editNumber = parseInt(editNumber);
+
+                let editUnitNumber = "1";
+                for (let i = 1; i <= parseInt(UnitDecimal@(itemName)); i++) {
+                    editUnitNumber += "0";
+                }
+
+                editUnitNumber = parseInt(editUnitNumber);
+
+                //原幣進貨單價
+                let origUnitPrice = Math.round($("#txtOrigUnitPrice@(itemName)").val() * editUnitNumber) / editUnitNumber;
+                $("#txtOrigUnitPrice@(itemName)").val(origUnitPrice);
+
+                let receiptQty = parseFloat($("#txtReceiptQty@(itemName)").val()); //進貨數量
+                let availableQty = parseFloat($("#txtAvailableQty@(itemName)").val()); //計價數量
+                let origDiscountAmt = Math.round(parseFloat($("#txtOrigDiscountAmt@(itemName)").val()) * editNumber) / editNumber; //原幣扣款金額
+
+                if (receiptQty < availableQty) {
+                    alert("計價數量不可超過進貨數量!!")
+                    $("#txtAvailableQty@(itemName)").val(receiptQty)
+                    availableQty = receiptQty;
+                }
+
+                //原幣進貨金額
+                let origAmount = Math.round(availableQty * origUnitPrice * editNumber) / editNumber;
+                $("#txtOrigAmount@(itemName)").val(origAmount);
+
+                let taxType = $("#cboTaxTypeGoodsReceiptManagement").val(); //課稅別
+                let taxRate = parseFloat($("#txtTaxRateGoodsReceiptManagement").val()); //營業稅率
+                let exchange = parseFloat($("#txtExchangeGoodsReceiptManagement").val()); //匯率
+
+                let origPreTaxAmt; //原幣未稅金額
+                let origTaxAmt; //原幣稅額
+                let preTaxAmt; //本幣未稅金額
+                let taxAmt; //本幣稅金額
+                if (taxType == "1") //內含
+                {
+                    origPreTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) / (1 + taxRate) * editNumber) / editNumber;
+                    $("#txtOrigPreTaxAmt@(itemName)").val(origPreTaxAmt);
+
+                    origTaxAmt = Math.round((origAmount - origPreTaxAmt) * editNumber) / editNumber;
+                    $("#txtOrigTaxAmt@(itemName)").val(origTaxAmt);
+
+                    preTaxAmt = Math.round(origPreTaxAmt * exchange * editNumber) / editNumber
+                    $("#txtPreTaxAmt@(itemName)").val(preTaxAmt);
+
+                    taxAmt = Math.round(origTaxAmt * exchange * editNumber) / editNumber
+                    $("#txtTaxAmt@(itemName)").val(taxAmt);
+                }
+                else if (taxType == "2") //外加
+                {
+                    origPreTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) * editNumber) / editNumber;
+                    $("#txtOrigPreTaxAmt@(itemName)").val(origPreTaxAmt);
+
+                    origTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) * taxRate * editNumber) / editNumber;
+                    $("#txtOrigTaxAmt@(itemName)").val(origTaxAmt);
+
+                    preTaxAmt = Math.round(origPreTaxAmt * exchange * editNumber) / editNumber;
+                    $("#txtPreTaxAmt@(itemName)").val(preTaxAmt);
+
+                    taxAmt = Math.round(origTaxAmt * exchange * editNumber) / editNumber
+                    $("#txtTaxAmt@(itemName)").val(taxAmt);
+                }
+                else if (taxType == "3" || taxType == "4" || taxType == "9") //免稅
+                {
+                    origPreTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) * editNumber) / editNumber;
+                    $("#txtOrigPreTaxAmt@(itemName)").val(origPreTaxAmt);
+
+                    origTaxAmt = 0;
+                    $("#txtOrigTaxAmt@(itemName)").val(origTaxAmt);
+
+                    preTaxAmt = Math.round(origPreTaxAmt * exchange * editNumber) / editNumber;
+                    $("#txtPreTaxAmt@(itemName)").val(preTaxAmt);
+
+                    taxAmt = 0
+                    $("#txtTaxAmt@(itemName)").val(taxAmt);
+                }
+            });
+
+            $("#cboQcStatus@(itemName)").change(function () {
+                let qcStatus = $(this).val();
+                if (qcStatus == "0") {
+                    $("#cboQcStatus@(itemName)").prop("disabled", true);
+                }
+                else if (qcStatus == "1")
+                {
+                    $("#txtAcceptQty@(itemName)").val("0");
+                    $("#txtReturnQty@(itemName)").val("0");
+                    $("#txtAvailableQty@(itemName)").val("0");
+
+                    //$("#cboQcStatus@(itemName)").prop("disabled", false);
+
+                    EditOrigUnitPrice@(itemName)();
+                }
+                else {
+                    //$("#cboQcStatus@(itemName)").prop("disabled", false);
+                }
+            });
+        }
+
+        function PopModalCopy@(itemName)() {
+            $("#txtPoId@(itemName)").val("");
+            $("#txtPoErpFullNo@(itemName)").val("");
+            $("#desPoUserFullNo@(itemName)").html("");
+            $(".po-user-info").hide();
+            $("#cboSource@(itemName)").val("PO");
+            $("#txtDoNo@(itemName)").val("");
+            $(".po-input").show();
+            $(".do-input").hide();
+
+            $("#modalCopy@(itemName)").modal("show");
+
+            $("#txtPoErpFullNo@(itemName)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    GetPurchaseOrder@(itemName)();
+                    return false;
+                }
+            });
+
+            let popConfig = {
+                targetSelector: "#txtPoId@(itemName)",
+                popFunction: "PopViewPurchaseOrder",
+                objectPoId: "#txtPoId@(itemName)",
+                objectPoErpFullNo: "#txtPoErpFullNo@(itemName)",
+                objectPoUserFullNo: "#desPoUserFullNo@(itemName)",
+                objectSupplierId: supplierId@(itemName)
+            };
+            InitPopView(popConfig);
+        }
+
+        function ClearPoId@(itemName)() {
+            $("#txtPoId@(itemName)").val("");
+            $("#txtPoErpFullNo@(itemName)").val("");
+            $("#desPoUserFullNo@(itemName)").val("");
+            $(".po-user-info").hide();
+        }
+
+        function GetPurchaseOrder@(itemName)() {
+            let targetUrl = "@Url.Action("GetPurchaseOrder", "PurchaseOrder")";
+            let postData = {
+                "PoErpFullNo": $("#txtPoErpFullNo@(itemName)").val(),
+                "SupplierId": supplierId@(itemName),
+                "ClosureStatus": "N",
+                "ConfirmStatus": "Y"
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        $("#txtPoId@(itemName)").val(item.PoId);
+                        $("#txtPoErpFullNo@(itemName)").val(item.PoErpPrefix + "-" + item.PoErpNo);
+                        $("#desPoUserFullNo@(itemName)").html(item.PoUserNo + " " + item.PoUserName);
+                        $(".po-user-info").show();
+                    });
+                }
+                else {
+                    $("#txtPoId@(itemName)").val("");
+                    $("#txtPoErpFullNo@(itemName)").val("");
+                    $("#desPoUserFullNo@(itemName)").html("");
+                    $(".po-user-info").hide();
+                    alert("採購單資料錯誤!!", "alert", 0);
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function Read@(itemName)(SoDetailId) {
+            Edit@(itemName)(SoDetailId);
+            $(objForm@(itemName) + " fieldset").attr("disabled", true);
+            $(objForm@(itemName) + " select").attr("disabled", true);
+            $(".read-hide").hide();
+        }
+
+        function Copy@(itemName)() {
+            let grId = $("#GrId").val();
+            let source = $("#cboSource@(itemName)").val();
+
+            let targetUrl = "";
+            let postData = {};
+            switch (source) {
+                case "PO":
+                    targetUrl = "@Url.Action("ImportPurchaseOrder", "GoodsReceipt")";
+                    postData = {
+                        "GrId": grId,
+                        "PoId": $("#txtPoId@(itemName)").val(),
+                        "CopyExchange": $("#cbxCopyExchange@(itemName)").prop("checked") == true ? "Y" : "N"
+                    };
+                    break;
+                case "DO":
+                    targetUrl = "@Url.Action("ImportDeliveryOrder", "GoodsReceipt")";
+                    postData = {
+                        "GrId": grId,
+                        "DoNo": $("#txtDoNo@(itemName)").val(),
+                        "CopyExchange": $("#cbxCopyExchange@(itemName)").prop("checked") == true ? "Y" : "N"
+                    };
+                    break;
+                default:
+                    alert("複製來源錯誤!!")
+                    break;
+            }
+
+            let data = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (data) {
+                EditGoodsReceiptManagement(grId);
+                $("#modalCopy@(itemName)").modal("hide");
+            }
+
+            $("#txtDoNo@(itemName)").val("");
+        }
+
+        let timer;
+        function EditOrigUnitPrice@(itemName)() {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                GetCurrencyDecimal@(itemName)();
+
+                let editNumber = "1";
+                for (let i = 1; i <= parseInt(TotalDecimal@(itemName)); i++) {
+                    editNumber += "0";
+                }
+
+                editNumber = parseInt(editNumber);
+
+                let editUnitNumber = "1";
+                for (let i = 1; i <= parseInt(UnitDecimal@(itemName)); i++) {
+                    editUnitNumber += "0";
+                }
+
+                editUnitNumber = parseInt(editUnitNumber);
+
+                //原幣進貨單價
+                let origUnitPrice = Math.round($("#txtOrigUnitPrice@(itemName)").val() * editUnitNumber) / editUnitNumber;
+                $("#txtOrigUnitPrice@(itemName)").val(origUnitPrice);
+
+                let receiptQty = parseFloat($("#txtReceiptQty@(itemName)").val()); //進貨數量
+                let acceptQty = $("#txtAcceptQty@(itemName)").val(); //驗收數量
+                let availableQty = parseFloat($("#txtAvailableQty@(itemName)").val()); //計價數量
+                let origDiscountAmt = Math.round(parseFloat($("#txtOrigDiscountAmt@(itemName)").val()) * editNumber) / editNumber; //原幣扣款金額
+
+                if (receiptQty < availableQty) {
+                    alert("計價數量不可超過進貨數量!!")
+                    $("#txtAvailableQty@(itemName)").val(receiptQty)
+                    availableQty = receiptQty;
+                }
+
+                //原幣進貨金額
+                let origAmount = Math.round(availableQty * origUnitPrice * editNumber) / editNumber;
+                $("#txtOrigAmount@(itemName)").val(origAmount);
+
+                let taxType = $("#cboTaxTypeGoodsReceiptManagement").val(); //課稅別
+                let taxRate = parseFloat($("#txtTaxRateGoodsReceiptManagement").val()); //營業稅率
+                let exchange = parseFloat($("#txtExchangeGoodsReceiptManagement").val()); //匯率
+
+                let origPreTaxAmt; //原幣未稅金額
+                let origTaxAmt; //原幣稅額
+                let preTaxAmt; //本幣未稅金額
+                let taxAmt; //本幣稅金額
+                if (taxType == "1") //內含
+                {
+                    origPreTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) / (1 + taxRate) * editNumber) / editNumber;
+                    $("#txtOrigPreTaxAmt@(itemName)").val(origPreTaxAmt);
+
+                    origTaxAmt = Math.round((origAmount - origPreTaxAmt) * editNumber) / editNumber;
+                    $("#txtOrigTaxAmt@(itemName)").val(origTaxAmt);
+
+                    preTaxAmt = Math.round(origPreTaxAmt * exchange * editNumber) / editNumber
+                    $("#txtPreTaxAmt@(itemName)").val(preTaxAmt);
+
+                    taxAmt = Math.round(origTaxAmt * exchange * editNumber) / editNumber
+                    $("#txtTaxAmt@(itemName)").val(taxAmt);
+                }
+                else if (taxType == "2") //外加
+                {
+                    origPreTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) * editNumber) / editNumber;
+                    $("#txtOrigPreTaxAmt@(itemName)").val(origPreTaxAmt);
+
+                    origTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) * taxRate * editNumber) / editNumber;
+                    $("#txtOrigTaxAmt@(itemName)").val(origTaxAmt);
+
+                    preTaxAmt = Math.round(origPreTaxAmt * exchange * editNumber) / editNumber;
+                    $("#txtPreTaxAmt@(itemName)").val(preTaxAmt);
+
+                    taxAmt = Math.round(origTaxAmt * exchange * editNumber) / editNumber
+                    $("#txtTaxAmt@(itemName)").val(taxAmt);
+                }
+                else if (taxType == "3" || taxType == "4" || taxType == "9") //免稅
+                {
+                    origPreTaxAmt = Math.round((availableQty * origUnitPrice - origDiscountAmt) * editNumber) / editNumber;
+                    $("#txtOrigPreTaxAmt@(itemName)").val(origPreTaxAmt);
+
+                    origTaxAmt = 0;
+                    $("#txtOrigTaxAmt@(itemName)").val(origTaxAmt);
+
+                    preTaxAmt = Math.round(origPreTaxAmt * exchange * editNumber) / editNumber;
+                    $("#txtPreTaxAmt@(itemName)").val(preTaxAmt);
+
+                    taxAmt = 0
+                    $("#txtTaxAmt@(itemName)").val(taxAmt);
+                }
+            }, 500);
+        }
+
+        function EditReceiptStatusQty@(itemName)() {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                let qcStatus = $("#cboQcStatus@(itemName)").val();
+                if (qcStatus == "0") {
+                    let receiptQty = parseFloat($("#txtReceiptQty@(itemName)").val()); //進貨數量
+                    $("#txtAcceptQty@(itemName)").val(receiptQty);
+                    EditAcceptQty@(itemName)();
+                }
+            }, 500);
+        }
+
+        function EditAcceptQty@(itemName)() {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                let receiptQty = parseFloat($("#txtReceiptQty@(itemName)").val()); //進貨數量
+                let acceptQty = parseFloat($("#txtAcceptQty@(itemName)").val()); //驗收數量
+
+                if (acceptQty < 0) {
+                    alert("驗收數量不可小於0!!", "alert", 1000);
+                    acceptQty = receiptQty;
+                    $("#txtAcceptQty@(itemName)").val(acceptQty);
+                }
+
+                if (acceptQty > receiptQty) {
+                    alert("驗收數量不可大於進貨數量!!");
+                    acceptQty = receiptQty;
+                    $("#txtAcceptQty@(itemName)").val(acceptQty);
+                }
+
+                $("#txtReturnQty@(itemName)").val(receiptQty - acceptQty);
+                $("#txtAvailableQty@(itemName)").val(acceptQty);
+                EditOrigUnitPrice@(itemName)();
+            }, 500);
+        }
+
+        function GetCurrencyDecimal@(itemName)() {
+            let targetUrl = "@Url.Action("GetErpData", "BasicInformation")";
+            let postData = {
+                "ColumnName": "CurrencyDecimal",
+                "Condition": $("#cboCurrencyCodeOspReceiptConfirm").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    UnitDecimal@(itemName) = parseInt(item.UnitDecimal);
+                    TotalDecimal@(itemName) = parseInt(item.TotalDecimal);
+                });
+            }
+        }
+
+        function Transfer@(itemName)(GrId) {
+            swal.fire({
+                titleText: "確認要拋轉嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("UpdateTransferGoodsReceipt", "GoodsReceipt")";
+                    let postData = {
+                        "GrId": GrId
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        EditGoodsReceiptManagement(GrId);
+                    }
+                }
+            });
+        }
+
+        function Save@(itemName)() {
+            if ($(objForm@(itemName)).valid()) {
+                let GrDetailId = parseInt($("#GrDetailId").val());
+
+                if (GrDetailId <= 0) {
+                    let targetUrl = "@Url.Action("AddGrDetail", "GoodsReceipt")";
+                    let postData = {
+                        "GrId": $("#GrId").val(),
+                        "PoDetailId": $("#txtPoDetailId@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "AcceptanceDate": $("#txtAcceptanceDate@(itemName)").val(),
+                        "ReceiptQty": $("#txtReceiptQty@(itemName)").val(),
+                        "ReceiptExpense": $("#txtReceiptExpense@(itemName)").val(),
+                        "AcceptQty": $("#txtAcceptQty@(itemName)").val(),
+                        "AvailableQty": $("#txtAvailableQty@(itemName)").val(),
+                        "ReturnQty": $("#txtReturnQty@(itemName)").val(),
+                        "UomId": $("#cboAvailableUomId@(itemName)").val(),
+                        "OrigUnitPrice": $("#txtOrigUnitPrice@(itemName)").val(),
+                        "OrigAmount": $("#txtOrigAmount@(itemName)").val(),
+                        "OrigDiscountAmt": $("#txtOrigDiscountAmt@(itemName)").val(),
+                        "DiscountDescription": $("#txtDiscountDescription@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                        "QcStatus": $("#cboQcStatus@(itemName)").val(),
+                        "LotNumber": $("#txtLotNumber@(itemName)").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Add(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                } else {
+                    let targetUrl = "@Url.Action("UpdateGrDetail", "GoodsReceipt")";
+                    let postData = {
+                        "GrDetailId": GrDetailId,
+                        "GrId": $("#GrId").val(),
+                        "PoDetailId": $("#txtPoDetailId@(itemName)").val(),
+                        "InventoryId": $("#cboInventoryId@(itemName)").val(),
+                        "AcceptanceDate": $("#txtAcceptanceDate@(itemName)").val(),
+                        "ReceiptQty": $("#txtReceiptQty@(itemName)").val(),
+                        "ReceiptExpense": $("#txtReceiptExpense@(itemName)").val(),
+                        "AcceptQty": $("#txtAcceptQty@(itemName)").val(),
+                        "AvailableQty": $("#txtAvailableQty@(itemName)").val(),
+                        "ReturnQty": $("#txtReturnQty@(itemName)").val(),
+                        "UomId": $("#cboAvailableUomId@(itemName)").val(),
+                        "OrigUnitPrice": $("#txtOrigUnitPrice@(itemName)").val(),
+                        "OrigAmount": $("#txtOrigAmount@(itemName)").val(),
+                        "OrigDiscountAmt": $("#txtOrigDiscountAmt@(itemName)").val(),
+                        "DiscountDescription": $("#txtDiscountDescription@(itemName)").val(),
+                        "Remark": $("#txtRemark@(itemName)").val(),
+                        "QcStatus": $("#cboQcStatus@(itemName)").val(),
+                        "LotNumber": $("#txtLotNumber@(itemName)").val(),
+                        "MtlItemId": $("#txtMtlItemId@(itemName)").val()
+                    };
+
+                    let result = DataAccess.Update(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            }
+        }
+
+        function Delete@(itemName)(GrDetailId) {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let targetUrl = "@Url.Action("DeleteGrDetail", "GoodsReceipt")";
+                    let postData = {
+                        "GrDetailId": GrDetailId
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+        function Return@(itemName)() {
+            ResetForm(objForm@(itemName));
+            Switch("#listData@(itemName)", "#editData@(itemName)");
+            Query@(itemName)();
+            Calculate@(itemName)();
+        }
+
+        function Calculate@(itemName)() {
+            let targetUrl = "@Url.Action("GetTotal", "GoodsReceipt")";
+            let postData = {
+                "GrId": $("#GrId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                $.each(data.result, function (i, item) {
+                    $("#desQuantity@(itemName)").html(item.Quantity.toLocaleString('en'));
+                    $("#desTotalAmount@(itemName)").html(item.TotalAmount.toLocaleString('en'));
+                    $("#desDeductAmount@(itemName)").html(item.DeductAmount.toLocaleString('en'));
+                    $("#desOrigPreTaxAmount@(itemName)").html(item.OrigPreTaxAmount.toLocaleString('en'));
+                    $("#desOrigTax@(itemName)").html(item.OrigTax.toLocaleString('en'));
+                    $("#desOriTotal@(itemName)").html(item.OriTotal.toLocaleString('en'));
+
+                    $("#desReceiptAmount@(itemName)").html(item.ReceiptAmount.toLocaleString('en'));
+                    $("#desPreTaxAmount@(itemName)").html(item.PreTaxAmount.toLocaleString('en'));
+                    $("#desTaxAmount@(itemName)").html(item.TaxAmount.toLocaleString('en'));
+                    $("#desTotal@(itemName)").html(item.Total.toLocaleString('en'));
+                });
+
+                if (data.result.length <= 0) {
+                    $("#desQuantity@(itemName)").html("0");
+                    $("#desTotalAmount@(itemName)").html("0");
+                    $("#desDeductAmount@(itemName)").html("0");
+                    $("#desOrigPreTaxAmount@(itemName)").html("0");
+                    $("#desOrigTax@(itemName)").html("0");
+                    $("#desOriTotal@(itemName)").html("0");
+
+                    $("#desReceiptAmount@(itemName)").html("0");
+                    $("#desPreTaxAmount@(itemName)").html("0");
+                    $("#desTaxAmount@(itemName)").html("0");
+                    $("#desTotal@(itemName)").html("0");
+                }
+            } else {
+                alert(data.msg, "alert", 0);
+            }
+        }
+
+        function GetDocumentVerification@(itemName)() {
+            let targetUrl = "@Url.Action("GetDocumentVerification", "GoodsReceipt")";
+            let postData = {
+                "GrId": $("#GrId").val()
+            };
+
+            let data = DataAccess.Get(targetUrl, postData, false);
+
+            if (data.status == "success") {
+                if (data.result.length > 0) {
+                    $.each(data.result, function (i, item) {
+                        documentVerification = item.MQ019;
+                    });
+                }
+            }
+            else {
+                alert(data.msg, 5000);
+            }
+        }
+
+        function EditReceiptQty@(itemName)() {
+            let inputs = $(`input[name="editReceiptQty@(itemName)"]`);
+            if (inputs.length > 0) {
+                Return@(itemName)();
+                return false;
+            }
+
+            $.each($(`td[name="tdReceiptQty@(itemName)"][data-gr-detail-id][data-receipt-qty]`), function (i, item) {
+                let grDetailId = $(this).data("gr-detail-id");
+                let receiptQty = $(this).data("receipt-qty");
+                let innerHtml = `<span class="stack-title">數量</span><input type="number" class="form-control" name="editReceiptQty@(itemName)" data-gr-detail-id="${grDetailId}" value="${receiptQty}" />`;
+                $(this).html(innerHtml);
+            });
+
+            $.each($(`td[name="tdLotNumber@(itemName)"][data-gr-detail-id][data-lot-number]`), function (i, item) {
+                let grDetailId = $(this).data("gr-detail-id");
+                let lotNumber = $(this).data("lot-number");
+                let innerHtml = `<span class="stack-title">批號</span><input type="text" class="form-control" name="editLotNumber@(itemName)" data-gr-detail-id="${grDetailId}" value="${lotNumber}" />`;
+                $(this).html(innerHtml);
+            });
+
+            $.each($(`td[name="tdInventoryId@(itemName)"][data-gr-detail-id][data-inventory-id]`), function (i, item) {
+                let grDetailId = $(this).data("gr-detail-id");
+                let inventoryId = $(this).data("inventory-id");
+                let innerHtml = `<span class="stack-title">庫別</span><select class="form-control" name="editInventoryId@(itemName)" data-gr-detail-id="${grDetailId}" data-inventory-id="${inventoryId}"></select>`;
+                $(this).html(innerHtml);
+
+                $.each($(`select[name="editInventoryId@(itemName)"][data-gr-detail-id][data-inventory-Id]`), function (i, item) {
+                    let inventoryId = $(this).data("inventory-id");
+                    ComboBoxs.Default($(this), "@Url.Action("GetInventory", "ScmBasicInformation")", { "Status": "A" }, `${inventoryId}`, "NA", "", "InventoryWithNo", "InventoryId");
+                    $(this).select2({
+                        dropdownAutoWidth: true,
+                        width: "100%"
+                    });
+                });
+            });
+
+            $.each($(`td[name="tdAcceptanceDate@(itemName)"][data-gr-detail-id][data-acceptance-date]`), function (i, item) {
+                let grDetailId = $(this).data("gr-detail-id");
+                let acceptanceDate = $(this).data("acceptance-date");
+                let innerHtml = `<span class="stack-title">驗收日期</span><input type="date" class="form-control" name="editAcceptanceDate@(itemName)" data-gr-detail-id="${grDetailId}" value="${acceptanceDate}" />`;
+                $(this).html(innerHtml);
+            });
+
+            $(document).off('keydown', `input[name="editReceiptQty@(itemName)"]`).on('keydown', `input[name="editReceiptQty@(itemName)"]`, function (event) {
+                if (event.keyCode == 13) {
+                    UpdateReceiptQty@(itemName)();
+                    return false;
+                }
+            });
+
+            $(document).off('keydown', `input[name="editLotNumber@(itemName)"]`).on('keydown', `input[name="editLotNumber@(itemName)"]`, function (event) {
+                if (event.keyCode == 13) {
+                    UpdateReceiptQty@(itemName)();
+                    return false;
+                }
+            });
+
+            $(document).off('keydown', `select[name="editInventoryId@(itemName)"]`).on('keydown', `select[name="editInventoryId@(itemName)"]`, function (event) {
+                if (event.keyCode == 13) {
+                    UpdateReceiptQty@(itemName)();
+                    return false;
+                }
+            });
+
+            $(document).off('keydown', `input[name="editAcceptanceDate@(itemName)"]`).on('keydown', `input[name="editAcceptanceDate@(itemName)"]`, function (event) {
+                if (event.keyCode == 13) {
+                    UpdateReceiptQty@(itemName)();
+                    return false;
+                }
+            });
+        }
+
+        function UpdateReceiptQty@(itemName)() {
+            let uploadJson =
+            {
+                uploadInfo: []
+            };
+
+            $(`input[name="editReceiptQty@(itemName)"][data-gr-detail-id]`).each(function () {
+                let grDetailId = $(this).data("gr-detail-id");
+                let receiptQty = $(this).val();
+                let lotNumber = "";
+                let inventoryId = -1;
+                let acceptanceDate = "";
+
+                $(`input[name="editLotNumber@(itemName)"][data-gr-detail-id="${grDetailId}"]`).each(function () {
+                    lotNumber = $(this).val();
+                });
+
+                $(`select[name="editInventoryId@(itemName)"][data-gr-detail-id="${grDetailId}"]`).each(function () {
+                    inventoryId = $(this).val();
+                });
+
+                $(`input[name="editAcceptanceDate@(itemName)"][data-gr-detail-id="${grDetailId}"]`).each(function () {
+                    acceptanceDate = $(this).val();
+                });
+
+                let inputInfo =
+                {
+                    "GrDetailId": grDetailId,
+                    "ReceiptQty": receiptQty,
+                    "LotNumber": lotNumber,
+                    "InventoryId": inventoryId,
+                    "AcceptanceDate": acceptanceDate
+                }
+                uploadJson.uploadInfo.push(inputInfo);
+            });
+
+            let targetUrl = "@Url.Action("UpdateReceiptQty", "GoodsReceipt")";
+            let postData = {
+                "UploadJsonString": JSON.stringify(uploadJson)
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                Return@(itemName)();
+            }
+        }
+
+        function BatchDelete@(itemName)() {
+            swal.fire({
+                titleText: "確認要刪除嗎?",
+                text: "此動作無法復原，請確認是否要執行!",
+                icon: "warning",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let grDetailList = [];
+                    if ($("input[type='checkbox'][data-gr-detail-id]:checked").length > 0) {
+                        $.each($("input[type='checkbox'][data-gr-detail-id]:checked"), function (i) {
+                            let grDetailId = $(this).val();
+                            grDetailList.push(grDetailId);
+                        });
+                    }
+
+                    let targetUrl = "@Url.Action("BatchDeleteGrDetail", "GoodsReceipt")";
+                    let postData = {
+                        "GrDetailList": grDetailList.toString()
+                    };
+
+                    let result = DataAccess.Delete(targetUrl, postData, false, true);
+
+                    if (result) {
+                        Return@(itemName)();
+                    }
+                }
+            });
+        }
+
+
+        function UpdateGrdetailConfirm@(itemName)(grDetailId) { 
+            let targetUrl = "@Url.Action("UpdateGrdetailConfirm", "GoodsReceipt")";
+            let postData = {
+                "GrDetailId": grDetailId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                 Query@(itemName)()
+            }
+        }
+
+        function UpdateGrdetailReConfirm@(itemName)(grDetailId) {
+            //${item.ConfirmStatus == `Y` ? `<a class="active-link auth-reconfirm" href="javascript:UpdateGrdetailReConfirm@(itemName)(${item.GrDetailId});" ><i class="fas fa-undo-alt"></i>單身反確認</a>` :
+            //`<a class="active-link auth-confirm" href="javascript:UpdateGrdetailConfirm@(itemName)(${item.GrDetailId});" ><i class="fas fa-check-circle"></i>單身確認</a>`}
+           
+            let targetUrl = "@Url.Action("UpdateGrdetailReConfirm", "GoodsReceipt")";
+            let postData = {
+                "GrDetailId": grDetailId
+            };
+
+            let result = DataAccess.Update(targetUrl, postData, false, true);
+
+            if (result) {
+                 Query@(itemName)()
+            }
+        }
+    </script>
+                        )
