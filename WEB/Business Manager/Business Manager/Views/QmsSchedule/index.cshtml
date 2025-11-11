@@ -1,0 +1,411 @@
+﻿@{ Layout = null; }
+@{ Response.Charset = "UTF-8"; }
+@{ Response.ContentType = "text/html; charset=utf-8"; }
+@{
+    var machineId = ViewBag.MachineId as int?;
+    var companyId = ViewBag.CompanyId as int?;
+}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量测排程系统</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="/Content/bootstrap/4.5.3/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="/Content/fontawesome.pro/5.13.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="/Content/QmsSchedule/styles.css" rel="stylesheet">
+    
+    @if (machineId.HasValue)
+    {
+        <script>
+            window.machineId = @machineId.Value;
+            console.log('机器ID:', window.machineId);
+        </script>
+    }
+    @if (companyId.HasValue)
+    {
+        <script>
+            window.companyId = @companyId.Value;
+            console.log('公司ID:', window.companyId);
+        </script>
+    }
+</head>
+<body>
+    <!-- 头部导航 -->
+    <header class="bg-white shadow-sm border-bottom">
+        <div class="container-fluid">
+            <div class="row align-items-center py-3">
+                <div class="col">
+                    <h1 class="h2 mb-0 text-dark fw-bold">量测排程系统</h1>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-circle fa-2x text-secondary me-2"></i>
+                        
+                        <span class="me-3 text-muted" id="currentEmployeeInfo" style="display: none;">
+                            
+                            <span id="currentEmployeeText">量测员: </span>
+                        </span>
+                        <button class="btn btn-primary btn-sm" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt me-1"></i>登出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main class="container-fluid py-4 px-4">
+        <!-- 当前机台信息 -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-cog fa-lg text-primary me-2"></i>
+                        <span class="me-3">当前机台: <strong id="currentMachineId">M002</strong></span>
+                        <!-- <span class="text-muted">IP: 192.168.1.136</span> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 输入控制区域 -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label for="orderNumber1" class="form-label">送检单号:</label>
+                        <input type="text" class="form-control" id="orderNumber1" placeholder="请输入送检单号">
+                    </div>
+                    <div class="col-md-2">
+                      <button class="btn btn-primary w-100" id="toggleMeasurementBtn">开始/结束量测</button>
+                  </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" id="addToQueueBtn">添加到队列</button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- 移动机台按钮 -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <button class="btn btn-outline-primary" id="moveMachineBtn" disabled>移动机台</button>
+            </div>
+        </div>
+
+        <!-- 量测订单表格 -->
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">量测订单列表</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="orderTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center">
+                                            <input type="checkbox" class="form-check-input" id="selectAll">
+                                        </th>
+                                        <th>送检单号</th>
+                                        <th>送检人员</th>
+                                        <th>送检时间</th>
+                                        <th>量测开始时间</th>
+                                        <th>量测结束时间</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+       
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- 分页控件 -->
+                        <div class="card-footer bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <span class="me-3">共 <strong id="totalRecords">0</strong> 条记录</span>
+                                </div>
+                                <nav aria-label="分页导航">
+                                    <ul class="pagination pagination-sm mb-0" id="paginationNav">
+                                        <!-- 分页按钮将通过 JavaScript 动态生成 -->
+                                    </ul>
+                                </nav>
+                                <div class="d-flex align-items-center">
+                                    <button class="btn btn-sm btn-outline-secondary" id="refreshBtn">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QV 量测机台状态 -->
+        <div class="row mt-5">
+            <div class="col">
+                <h4 class="mb-3">QV 量测机台状态</h4>
+                <div class="row" id="machineStatusCards">
+                    <!-- 机台状态卡片将通过 JavaScript 动态生成 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 移动机台模态框 -->
+    <div class="modal fade" id="moveMachineModal" tabindex="-1" aria-labelledby="moveMachineModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="moveMachineModalLabel">移动机台</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <p class="mb-0" id="moveMachineInfo">
+                            <!-- 动态显示送检单号和当前机台信息 -->
+                        </p>
+                    </div>
+                    
+                    <div class="machine-grid-container" id="machineSelectionCards">
+                        <!-- 机台选择卡片将通过 JavaScript 动态生成 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirmMoveMachine" disabled>移动机台</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量移动机台模态框 -->
+    <div class="modal fade" id="batchMoveMachineModal" tabindex="-1" aria-labelledby="batchMoveMachineModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="batchMoveMachineModalLabel">批量移动机台</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <p class="mb-0" id="batchMoveMachineInfo">
+                            <!-- 动态显示选中的订单信息 -->
+                        </p>
+                    </div>
+                    
+                    <div class="machine-grid-container" id="batchMachineSelectionCards">
+                        <!-- 机台选择卡片将通过 JavaScript 动态生成 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirmBatchMoveMachine" disabled>批量移动机台</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作结果模态框 -->
+    <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div id="resultIcon" class="mb-3">
+                        <!-- 成功或失败的图标 -->
+                    </div>
+                    <h5 id="resultTitle" class="mb-2">操作结果</h5>
+                    <p id="resultMessage" class="mb-0">操作完成</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局登录弹窗 -->
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="false" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="loginModalLabel">
+                        <i class="fas fa-sign-in-alt me-2"></i>量测系统登录
+                    </h5>
+                </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-user fa-3x text-primary mb-3"></i>
+                            <h6 class="text-muted">请输入员工工号进行登录</h6>
+                        </div>
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="loginEmployeeId" class="form-label">员工工号</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                    <input type="text" class="form-control form-control-lg" id="loginEmployeeId" 
+                                           placeholder="请输入员工工号" autocomplete="off" required>
+                                </div>
+                                <div class="invalid-feedback" id="loginError">
+                                    请输入有效的员工工号
+                                </div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
+                                    <i class="fas fa-sign-in-alt me-2"></i>员工登录
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                <div class="modal-footer text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        系统将验证员工工号并完成登录
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 输入送检单号弹窗 -->
+    <div class="modal fade" id="inputOrderNumberModal" tabindex="-1" aria-labelledby="inputOrderNumberModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="inputOrderNumberModalLabel">
+                        <i class="fas fa-plus-circle me-2"></i>添加到队列
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-barcode fa-3x text-primary mb-3"></i>
+                        <h6 class="text-muted">请输入送检单号进行查询</h6>
+                    </div>
+                    <form id="inputOrderNumberForm">
+                        <div class="mb-3">
+                            <label for="modalOrderNumberInput" class="form-label">送检单号:</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="fas fa-qrcode"></i></span>
+                                <input type="text" class="form-control" id="modalOrderNumberInput" 
+                                       placeholder="请输入送检单号" autocomplete="off" required>
+                            </div>
+                            <div class="invalid-feedback" id="modalOrderNumberError">
+                                请输入有效的送检单号
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>取消
+                    </button>
+                    <button type="button" class="btn btn-primary" id="modalQueryBtn">
+                        <i class="fas fa-search me-1"></i>查询
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 接收/驳回弹窗 -->
+    <div class="modal fade" id="receiveRejectModal" tabindex="-1" aria-labelledby="receiveRejectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="receiveRejectModalLabel">处理送检单</h5>
+                    <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6 class="text-primary mb-3">量测单据信息</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>量测单号:</strong> <span id="modalQcRecordId"></span></p>
+                                <p class="mb-1"><strong>料件编号:</strong> <span id="modalMtlItemNo"></span></p>
+                                <p class="mb-1"><strong>工单号:</strong> <span id="modalWipNo"></span></p>
+                                <p class="mb-1"><strong>量测类型:</strong> <span id="modalQcTypeName"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>料件名称:</strong> <span id="modalMtlItemName"></span></p>
+                                <p class="mb-1"><strong>料件规格:</strong> <span id="modalMtlItemSpec"></span></p>
+                                <p class="mb-1"><strong>创建人:</strong> <span id="modalCreateByName"></span></p>
+                                <p class="mb-1"><strong>创建时间:</strong> <span id="modalCreateDate"></span></p>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <p class="mb-1"><strong>当前状态:</strong> <span class="badge bg-info" id="modalStatusName"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mb-3">
+                        <p class="text-muted">请选择处理方式：</p>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-success btn-lg" id="receiveBtn">
+                            <i class="fas fa-check-circle me-2"></i>接收
+                        </button>
+                        <button type="button" class="btn btn-danger btn-lg" id="rejectBtn">
+                            <i class="fas fa-times-circle me-2"></i>驳回
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 驳回原因弹窗 -->
+    <div class="modal fade" id="rejectReasonModal" tabindex="-1" aria-labelledby="rejectReasonModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectReasonModalLabel">驳回原因</h5>
+                    <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rejectReason" class="form-label">请输入驳回原因：</label>
+                        <textarea class="form-control" id="rejectReason" rows="3" placeholder="请详细说明驳回原因..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmRejectBtn">确认驳回</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="/Scripts/QmsSchedule/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="/Scripts/bootstrap/4.5.3/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/Scripts/QmsSchedule/script.js"></script>
+</body>
+</html>
+
